@@ -17,7 +17,14 @@ export async function registerAndSignIn(
 	await page.locator('input[name=username]').fill(username);
 	await page.locator('input[name=password]').fill(PASSWORD);
 	await page.getByRole('button', { name: 'Зарегистрироваться' }).click();
-	await expect(page.getByRole('heading', { name: 'Проверьте почту' })).toBeVisible();
+	// Лимит бэкенда (30 писем и входов в минуту с IP) легко выбрать подряд идущими прогонами:
+	// тогда падаем сразу и понятно, а не по таймауту ожидания письма.
+	const sent = page.getByRole('heading', { name: 'Проверьте почту' });
+	const limited = page.getByRole('alert').filter({ hasText: 'Слишком много попыток' });
+	await expect(sent.or(limited)).toBeVisible();
+	if (await limited.isVisible()) {
+		throw new Error(`Лимит бэкенда на письма: ${await limited.innerText()} Подождите минуту.`);
+	}
 	await page.goto(await linkFromMail(request, email, '/auth/verify-email'));
 	await expect(page.getByRole('button', { name: 'Меню пользователя' })).toBeVisible();
 	return { email, username };

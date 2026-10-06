@@ -34,7 +34,8 @@ src/
     components/        Navbar, Avatar, Alert, AuthCard, ProviderButtons, Stub
       catalog/         Poster, EntityCard, EntityGrid, PosterStrip, Pagination, KindTabs, TagChips,
                        PersonAvatar, RatingSummary, CardHero, TrailerButton, EmptyState, LoadError, Seo
-      social/          RatingBadge, MyReview, ReviewItem, ReviewSortTabs
+      social/          RatingBadge, MyReview, ReviewItem, ReviewSortTabs, FollowButton,
+                       FollowList, UserCard, ThreadItem
     utils/             safeNext, loginUrl
   routes/
     +layout.svelte     шапка, контейнер, подвал
@@ -49,7 +50,7 @@ scripts/api-types.mjs  генерация типов API
 ```
 
 Готовы auth, настройки, каталог (главная, разделы, карточки, люди, теги, поиск) и рецензии с
-оценками; остальная социальная часть (профили, коллекции, форум, лента) — пока заглушки (`Stub`).
+оценками, профили с подписками; коллекции, форум и лента — пока заглушки (`Stub`).
 
 ## Адреса
 
@@ -140,6 +141,14 @@ rating_asc`, «новые» в адрес не пишутся). Сводка и 
 подтверждением. После изменения — `invalidateAll()`: сводка и список перечитываются, трейлер в
 шапке не перезапускается. В списке только рецензии с текстом (оценки без текста — в сводке).
 Текст рецензии — обычный текст (`whitespace-pre-line`), без `{@html}`.
+
+**Профили и подписки** (`routes/u/[username]/`). Шапка — в `+layout.ts` / `+layout.svelte` для
+всех вкладок: `GET /users/{username}` на сервере как для гостя (`relation = null`), 404 — нет или
+заблокирован. `FollowButton` в браузере перечитывает профиль с токеном, чтобы узнать
+`relation`: «Подписаться» / «Вы подписаны» (наведение — «Отписаться») / «Читает вас»; на своём
+профиле — «Редактировать профиль», гостю — вход с возвратом. Подписка меняет счётчик
+подписчиков сразу, без перезагрузки шапки. «Коллекции» — пока заглушка до блока коллекций; темы
+ведут на `/forum/{id}` (блок форума).
 
 SEO: `Seo.svelte` — `<title>`, `meta description` (обрезанное по слову описание), `og:*`.
 
