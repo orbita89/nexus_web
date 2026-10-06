@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+	ageRating,
 	count,
 	countryName,
+	keyFacts,
+	leadCredits,
 	creditLabel,
 	groupWorks,
 	formatDate,
@@ -134,5 +137,45 @@ describe('работы человека', () => {
 			{ entity: a, caption: 'Режиссёр, Сценарист' },
 			{ entity: b, caption: 'Актёр — Дейл Купер' }
 		]);
+	});
+});
+
+describe('шапка карточки', () => {
+	it('строка фактов по типу', () => {
+		expect(keyFacts('movie', { runtime_min: 155, countries: ['US'] }, '2021-10-22')).toEqual([
+			'2021',
+			'2 ч 35 мин'
+		]);
+		expect(keyFacts('series', { seasons: 1 }, '2019-12-20')).toEqual(['2019', '1 сезон']);
+		expect(keyFacts('book', { pages: 896 }, null)).toEqual(['896 страниц']);
+		expect(keyFacts('game', { developer: 'CD Projekt Red' }, '2015-05-19')).toEqual([
+			'2015',
+			'CD Projekt Red'
+		]);
+		expect(keyFacts('movie', {}, null)).toEqual([]);
+	});
+
+	it('возрастной рейтинг — только у фильма', () => {
+		expect(ageRating('movie', { age_rating: 'PG-13' })).toBe('PG-13');
+		expect(ageRating('movie', {})).toBeNull();
+		expect(ageRating('series', {})).toBeNull();
+	});
+
+	it('главные люди: роль по типу, порядок титров', () => {
+		const credits = [
+			{ role: 'actor', person: 'Шаламе' },
+			{ role: 'director', person: 'Вильнёв' },
+			{ role: 'writer', person: 'Спейтс' }
+		];
+		expect(leadCredits('movie', credits)).toEqual({ label: 'Режиссёр', people: ['Вильнёв'] });
+		expect(leadCredits('book', [{ role: 'author', person: 'Герберт' }])).toEqual({
+			label: 'Автор',
+			people: ['Герберт']
+		});
+		expect(leadCredits('series', [{ role: 'creator', person: 'Хиссрич' }])).toEqual({
+			label: 'Создатель',
+			people: ['Хиссрич']
+		});
+		expect(leadCredits('movie', [{ role: 'actor', person: 'X' }])).toBeNull();
 	});
 });

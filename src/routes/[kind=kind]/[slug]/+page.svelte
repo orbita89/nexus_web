@@ -1,26 +1,46 @@
 <script lang="ts">
 	import { kindByApi } from '#lib/catalog/kinds.ts';
-	import { formatDate, metadataFields, roleLabel, summary, yearOf } from '#lib/catalog/labels.ts';
+	import {
+		ageRating,
+		formatDate,
+		keyFacts,
+		leadCredits,
+		metadataFields,
+		roleLabel,
+		summary,
+		yearOf
+	} from '#lib/catalog/labels.ts';
+	import { trailerSources } from '#lib/catalog/trailer.ts';
+	import CardHero from '#lib/components/catalog/CardHero.svelte';
 	import PersonAvatar from '#lib/components/catalog/PersonAvatar.svelte';
-	import Poster from '#lib/components/catalog/Poster.svelte';
 	import Seo from '#lib/components/catalog/Seo.svelte';
 	import TagChips from '#lib/components/catalog/TagChips.svelte';
 	import TrailerButton from '#lib/components/catalog/TrailerButton.svelte';
-	import { trailerSources } from '#lib/catalog/trailer.ts';
 	import type { PageProps } from './$types';
 
+	// Карточка как у Okko: трейлер — фон шапки, поверх — название, факты, описание и кнопки.
+	// Постера на карточке нет: он — в сетках разделов.
 	let { data }: PageProps = $props();
+
+	let hero = $state<CardHero>();
 
 	const entity = $derived(data.entity);
 	const kind = $derived(kindByApi(entity.kind));
 	const year = $derived(yearOf(entity.release_date));
+	const trailers = $derived(trailerSources(entity));
+	const facts = $derived([
+		...keyFacts(entity.kind, entity.metadata, entity.release_date).slice(0, 1),
+		...entity.tags.slice(0, 2).map((t) => t.name),
+		...keyFacts(entity.kind, entity.metadata, entity.release_date).slice(1)
+	]);
+	const age = $derived(ageRating(entity.kind, entity.metadata));
+	const lead = $derived(leadCredits(entity.kind, entity.credits));
 	const fields = $derived([
 		...(entity.release_date
 			? [{ label: 'Дата выхода', value: formatDate(entity.release_date) }]
 			: []),
 		...metadataFields(entity.kind, entity.metadata)
 	]);
-	const trailers = $derived(trailerSources(entity));
 	const description = $derived(
 		summary(entity.description) ||
 			`${kind.one} «${entity.title}»${year ? ` (${year})` : ''}: оценки, рецензии и обсуждения в Nexus.`
@@ -29,91 +49,66 @@
 
 <Seo title="{entity.title}{year ? ` (${year})` : ''}" {description} image={entity.cover_url} />
 
-<!-- Фон под шапкой карточки, как у Okko: размытый постер, уходящий в чёрный; без постера —
-     отсвет цвета раздела. -->
-<div
-	class="pointer-events-none absolute inset-x-0 top-16 -z-10 h-[34rem] overflow-hidden"
-	aria-hidden="true"
->
-	{#if entity.cover_url}
-		<img
-			src={entity.cover_url}
-			alt=""
-			class="h-full w-full scale-125 object-cover opacity-45 blur-3xl"
-		/>
-		<div class="absolute inset-0 bg-linear-to-b from-base-100/20 via-base-100/70 to-base-100"></div>
-	{:else}
-		<div
-			class={[
-				'h-full bg-linear-to-b to-transparent',
-				{
-					'from-primary/15': entity.kind === 'movie',
-					'from-secondary/15': entity.kind === 'series',
-					'from-accent/10': entity.kind === 'book',
-					'from-info/10': entity.kind === 'game'
-				}
-			]}
-		></div>
-	{/if}
-</div>
-
-<article class="relative grid gap-8 md:grid-cols-[minmax(0,15rem)_1fr] lg:gap-12">
-	<div class="mx-auto w-48 sm:w-56 md:w-full">
-		<Poster
-			title={entity.title}
-			kind={entity.kind}
-			coverUrl={entity.cover_url}
-			alt="Обложка: {entity.title}"
-			eager
-		/>
-	</div>
-
-	<div class="min-w-0">
-		<nav aria-label="Раздел" class="text-sm">
-			<a href="/{kind.slug}" class="link text-primary link-hover">{kind.title}</a>
-			{#if year}<span class="text-base-content/40"> · {year}</span>{/if}
+{#key entity.id}
+	<CardHero
+		bind:this={hero}
+		sources={trailers}
+		title={entity.title}
+		kind={entity.kind}
+		coverUrl={entity.cover_url}
+	>
+		<nav aria-label="Раздел" class="text-sm font-semibold tracking-widest uppercase">
+			<a href="/{kind.slug}" class="link text-primary link-hover">{kind.one}</a>
 		</nav>
-		<h1 class="mt-1 text-3xl leading-tight font-black sm:text-5xl">{entity.title}</h1>
+		<h1 class="mt-2 text-4xl leading-none font-black tracking-tight drop-shadow-lg sm:text-6xl">
+			{entity.title}
+		</h1>
 		{#if entity.original_title && entity.original_title !== entity.title}
-			<p class="mt-1 text-lg text-base-content/50">{entity.original_title}</p>
+			<p class="mt-2 text-lg text-base-content/60">{entity.original_title}</p>
+		{/if}
+
+		{#if facts.length || age}
+			<p class="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 font-medium text-base-content/70">
+				{#each facts as fact, i (i)}<span>{fact}</span>{/each}
+				{#if age}<span class="badge badge-outline badge-sm font-semibold">{age}</span>{/if}
+			</p>
+		{/if}
+
+		{#if entity.description}
+			<p class="mt-3 line-clamp-4 text-lg leading-snug text-base-content/90">
+				{entity.description}
+			</p>
+		{/if}
+
+		{#if lead}
+			<p class="mt-4 text-base-content/60">
+				{lead.label}:
+				{#each lead.people as person, i (person.slug)}{i ? ', ' : ''}<a
+						href="/people/{person.slug}"
+						class="link font-medium text-base-content decoration-base-content/30 underline-offset-4 hover:text-primary"
+						>{person.full_name}</a
+					>{/each}
+			</p>
 		{/if}
 
 		{#if trailers.length}
-			<div class="mt-5">
+			<div class="mt-6 flex flex-wrap gap-3">
 				<TrailerButton
 					sources={trailers}
 					title={entity.title}
-					kind={entity.kind}
 					coverUrl={entity.cover_url}
+					onopen={() => hero?.pause()}
+					onclose={() => hero?.resume()}
 				/>
 			</div>
 		{/if}
+	</CardHero>
+{/key}
 
-		{#if entity.tags.length}
-			<div class="mt-5"><TagChips tags={entity.tags} /></div>
-		{/if}
-
-		<div class="mt-6">
-			<div class="min-w-0">
-				{#if entity.description}
-					<p class="leading-relaxed whitespace-pre-line text-base-content/80">
-						{entity.description}
-					</p>
-				{/if}
-
-				{#if fields.length}
-					<dl class="mt-6 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
-						{#each fields as field (field.label)}
-							<dt class="text-base-content/50">{field.label}</dt>
-							<dd>{field.value}</dd>
-						{/each}
-					</dl>
-				{/if}
-			</div>
-		</div>
-
+<div class="grid gap-10 lg:grid-cols-[1fr_20rem]">
+	<div class="min-w-0">
 		{#if entity.credits.length}
-			<section class="mt-10" aria-labelledby="credits-title">
+			<section aria-labelledby="credits-title">
 				<h2 id="credits-title" class="mb-4 text-xl font-bold">Участники</h2>
 				<ul class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
 					{#each entity.credits as credit (credit.id)}
@@ -142,4 +137,32 @@
 			</section>
 		{/if}
 	</div>
-</article>
+
+	<aside class="flex flex-col gap-6">
+		{#if fields.length}
+			<section aria-labelledby="about-title">
+				<h2 id="about-title" class="mb-3 text-xl font-bold">
+					О {kind.kind === 'book'
+						? 'книге'
+						: kind.kind === 'game'
+							? 'игре'
+							: kind.kind === 'series'
+								? 'сериале'
+								: 'фильме'}
+				</h2>
+				<dl class="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
+					{#each fields as field (field.label)}
+						<dt class="text-base-content/50">{field.label}</dt>
+						<dd>{field.value}</dd>
+					{/each}
+				</dl>
+			</section>
+		{/if}
+		{#if entity.tags.length}
+			<section aria-labelledby="tags-title">
+				<h2 id="tags-title" class="mb-3 text-xl font-bold">Теги</h2>
+				<TagChips tags={entity.tags} />
+			</section>
+		{/if}
+	</aside>
+</div>

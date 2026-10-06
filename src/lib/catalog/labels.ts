@@ -204,3 +204,63 @@ export function groupWorks<E extends { id: string }>(
 	}
 	return [...byEntity.values()].map(({ entity, roles }) => ({ entity, caption: roles.join(', ') }));
 }
+
+/**
+ * Короткая строка фактов в шапке карточки, как у Okko: год, длительность или сезоны, страницы,
+ * разработчик. Остальные поля metadata — ниже, в списке.
+ */
+export function keyFacts(
+	kind: SchemaEntityKind,
+	metadata: SchemaMetadata,
+	releaseDate: string | null | undefined
+): string[] {
+	const facts: (string | null | undefined)[] = [yearOf(releaseDate)];
+	switch (kind) {
+		case 'movie': {
+			const m = metadata as SchemaMovieMetadata;
+			facts.push(m.runtime_min ? formatRuntime(m.runtime_min) : null);
+			break;
+		}
+		case 'series': {
+			const m = metadata as SchemaSeriesMetadata;
+			facts.push(m.seasons ? count(m.seasons, ['сезон', 'сезона', 'сезонов']) : null);
+			break;
+		}
+		case 'book': {
+			const m = metadata as SchemaBookMetadata;
+			facts.push(m.pages ? count(m.pages, ['страница', 'страницы', 'страниц']) : null);
+			break;
+		}
+		case 'game': {
+			const m = metadata as SchemaGameMetadata;
+			facts.push(m.developer);
+			break;
+		}
+	}
+	return facts.filter((f): f is string => !!f);
+}
+
+/** Возрастной рейтинг для бейджа в шапке (есть только у фильмов). */
+export function ageRating(kind: SchemaEntityKind, metadata: SchemaMetadata): string | null {
+	return kind === 'movie' ? ((metadata as SchemaMovieMetadata).age_rating ?? null) : null;
+}
+
+// Кого показывать строкой «Режиссёр: …» в шапке — по типу, первая роль, которая есть.
+const LEAD_ROLES: Record<SchemaEntityKind, string[]> = {
+	movie: ['director'],
+	series: ['creator', 'director'],
+	book: ['author'],
+	game: ['director', 'developer', 'creator']
+};
+
+/** Главные люди произведения: «Режиссёр» и люди с этой ролью в порядке титров. */
+export function leadCredits<P>(
+	kind: SchemaEntityKind,
+	credits: { role: string; person: P }[]
+): { label: string; people: P[] } | null {
+	for (const role of LEAD_ROLES[kind]) {
+		const people = credits.filter((c) => c.role === role).map((c) => c.person);
+		if (people.length) return { label: roleLabel(role), people };
+	}
+	return null;
+}

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+	backgroundUrl,
 	embedUrl,
+	playerCommand,
 	nextIndex,
 	playerSignal,
 	shouldFallback,
@@ -59,6 +61,42 @@ describe('embedUrl', () => {
 	});
 });
 
+describe('фоновый плеер', () => {
+	it('YouTube: без звука, без управления, по кругу', () => {
+		const url = new URL(backgroundUrl(yt, 'https://nexus.example'));
+		expect(url.origin + url.pathname).toBe('https://www.youtube-nocookie.com/embed/n9xhJrPXop4');
+		expect(Object.fromEntries(url.searchParams)).toMatchObject({
+			autoplay: '1',
+			mute: '1',
+			controls: '0',
+			loop: '1',
+			playlist: 'n9xhJrPXop4',
+			playsinline: '1',
+			enablejsapi: '1',
+			origin: 'https://nexus.example'
+		});
+	});
+
+	it('Rutube: без звука', () => {
+		expect(backgroundUrl(ru, 'https://nexus.example')).toBe(
+			'https://rutube.ru/play/embed/0ab1fc1e47f2e9b89e9e59d9db36f2b4?autoplay=1&mute=1'
+		);
+	});
+
+	it('команды плееру', () => {
+		expect(playerCommand('youtube', 'unmute').map((m) => JSON.parse(m).func)).toEqual(['unMute']);
+		expect(playerCommand('youtube', 'restart').map((m) => JSON.parse(m).func)).toEqual([
+			'seekTo',
+			'playVideo'
+		]);
+		expect(playerCommand('rutube', 'mute').map((m) => JSON.parse(m).type)).toEqual(['player:mute']);
+		expect(playerCommand('rutube', 'restart').map((m) => JSON.parse(m))).toEqual([
+			{ type: 'player:setCurrentTime', data: { time: 0 } },
+			{ type: 'player:play', data: {} }
+		]);
+	});
+});
+
 describe('выбор источника', () => {
 	it('стартовый: запомненный провайдер, иначе первый', () => {
 		expect(startIndex([yt, ru], 'rutube')).toBe(1);
@@ -105,6 +143,7 @@ describe('playerSignal', () => {
 		expect(
 			playerSignal('youtube', YT, ytMsg({ event: 'infoDelivery', info: { currentTime: 3 } }))
 		).toBe('ready');
+		expect(playerSignal('youtube', YT, ytMsg({ event: 'onStateChange', info: 0 }))).toBe('ended');
 		expect(playerSignal('youtube', YT, ytMsg({ event: 'onError', info: 150 }))).toBe('error');
 	});
 
@@ -116,6 +155,7 @@ describe('playerSignal', () => {
 			playerSignal('rutube', RU, { type: 'player:changeState', data: { state: 'paused' } })
 		).toBe('ready');
 		expect(playerSignal('rutube', RU, { type: 'player:ready' })).toBe('ready');
+		expect(playerSignal('rutube', RU, { type: 'player:playComplete' })).toBe('ended');
 		expect(playerSignal('rutube', RU, { type: 'player:error' })).toBe('error');
 	});
 

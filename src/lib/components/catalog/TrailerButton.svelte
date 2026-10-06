@@ -1,131 +1,53 @@
 <script lang="ts">
-	import type { SchemaEntityKind } from '#lib/api/generated/catalog.ts';
-	import {
-		PLAYER_ORIGIN,
-		PROVIDER_NAME,
-		embedUrl,
-		nextIndex,
-		playerSignal,
-		readPreferredProvider,
-		savePreferredProvider,
-		shouldFallback,
-		sourceLabel,
-		startIndex,
-		type Progress,
-		type TrailerSource
-	} from '#lib/catalog/trailer.ts';
-	import Poster from './Poster.svelte';
+	import { TrailerPlayer } from '#lib/catalog/trailer-player.svelte.ts';
+	import { embedUrl, sourceLabel, subscribe, type TrailerSource } from '#lib/catalog/trailer.ts';
 
-	// Кнопка «Трейлер» и модалка с плеером. iframe создаётся при открытии и удаляется при закрытии:
-	// заранее ничего не грузится, при закрытии видео останавливается. Источник выбирается в самом
-	// плеере: стартуем с автозапуском, ждём события «играет»; нет за timeoutMs — следующий.
+	// Кнопка «Трейлер» и модалка с полноценным плеером (со звуком и управлением). iframe создаётся
+	// при открытии и удаляется при закрытии: заранее ничего не грузится, при закрытии видео
+	// останавливается. Источник выбирается в самом плеере (TrailerPlayer).
 	let {
 		sources,
 		title,
-		kind,
 		coverUrl,
-		timeoutMs = 8000
+		timeoutMs = 8000,
+		onopen,
+		onclose
 	}: {
 		sources: TrailerSource[];
 		title: string;
-		kind: SchemaEntityKind;
 		coverUrl?: string | null;
 		/** Сколько ждать начала воспроизведения, прежде чем перейти к следующему источнику. */
 		timeoutMs?: number;
+		onopen?: () => void;
+		onclose?: () => void;
 	} = $props();
+
+	const player = new TrailerPlayer(
+		() => sources,
+		() => timeoutMs
+	);
 
 	let dialog: HTMLDialogElement;
 	let iframe = $state<HTMLIFrameElement>();
 	let isOpen = $state(false);
-	let index = $state(0);
-	let notice = $state('');
-	let allFailed = $state(false);
-	/** Опробованные источники в этом показе (не реактивно: в разметке не нужно). */
-	let tried: number[] = [];
-	let progress: Progress = { ready: false, buffering: false, playing: false };
-	let timer: ReturnType<typeof setTimeout> | undefined;
 
-	const current = $derived(sources[index]);
-	const src = $derived(isOpen ? embedUrl(current, location.origin) : '');
-
-	function arm() {
-		clearTimeout(timer);
-		progress = { ready: false, buffering: false, playing: false };
-		timer = setTimeout(() => {
-			if (shouldFallback(progress)) fallback();
-		}, timeoutMs);
-	}
-
-	function play(i: number) {
-		index = i;
-		allFailed = false;
-		if (!tried.includes(i)) tried.push(i);
-		arm();
-	}
+	const src = $derived(isOpen ? embedUrl(player.current, location.origin) : '');
 
 	function open() {
-		tried = [];
-		notice = '';
 		isOpen = true;
-		play(startIndex(sources, readPreferredProvider()));
+		player.start();
 		dialog.showModal();
-	}
-
-	/** Источник не работает — следующий не опробованный, а если таких нет — постер и сообщение. */
-	function fallback() {
-		const failed = current.provider;
-		const next = nextIndex(sources.length, tried);
-		if (next === null) {
-			clearTimeout(timer);
-			allFailed = true;
-			notice = '';
-			return;
-		}
-		const to = sources[next].provider;
-		notice =
-			to === failed
-				? `${PROVIDER_NAME[failed]}: видео недоступно, пробуем другое`
-				: `${PROVIDER_NAME[failed]} недоступен, показываем ${PROVIDER_NAME[to]}`;
-		play(next);
-	}
-
-	/** Ручной выбор в переключателе. */
-	function choose(i: number) {
-		notice = '';
-		tried = [i];
-		play(i);
+		onopen?.();
 	}
 
 	function onClose() {
 		isOpen = false;
-		clearTimeout(timer);
+		player.stop();
+		onclose?.();
 	}
 
 	function onMessage(event: MessageEvent) {
-		if (!isOpen || allFailed || !iframe || event.source !== iframe.contentWindow) return;
-		const signal = playerSignal(current.provider, event.origin, event.data);
-		if (signal === null) return;
-		if (signal === 'error') return fallback();
-		progress.ready = true;
-		if (signal === 'buffering') progress.buffering = true;
-		if (signal === 'playing' && !progress.playing) {
-			progress.playing = true;
-			clearTimeout(timer);
-			savePreferredProvider(current.provider);
-		}
-	}
-
-	// YouTube присылает события, только если страница «слушает»: рукопожатие IFrame API.
-	function onFrameLoad() {
-		if (current.provider !== 'youtube' || !iframe?.contentWindow) return;
-		const post = (message: object) =>
-			iframe?.contentWindow?.postMessage(
-				JSON.stringify({ ...message, id: 1, channel: 'widget' }),
-				PLAYER_ORIGIN.youtube
-			);
-		post({ event: 'listening' });
-		post({ event: 'command', func: 'addEventListener', args: ['onStateChange'] });
-		post({ event: 'command', func: 'addEventListener', args: ['onError'] });
+		if (isOpen) player.handle(event, iframe);
 	}
 </script>
 
@@ -148,10 +70,10 @@
 						<button
 							class={[
 								'btn join-item btn-xs sm:btn-sm',
-								{ 'btn-primary': i === index && !allFailed }
+								{ 'btn-primary': i === player.index && !player.failed }
 							]}
-							aria-pressed={i === index && !allFailed}
-							onclick={() => choose(i)}>{sourceLabel(sources, i)}</button
+							aria-pressed={i === player.index && !player.failed}
+							onclick={() => player.choose(i)}>{sourceLabel(sources, i)}</button
 						>
 					{/each}
 				</div>
@@ -163,12 +85,12 @@
 			>
 		</form>
 
-		{#if notice}
-			<p role="status" class="mb-2 text-sm text-warning">{notice}</p>
+		{#if player.notice}
+			<p role="status" class="mb-2 text-sm text-warning">{player.notice}</p>
 		{/if}
 
 		<div class="aspect-video w-full overflow-hidden rounded-box bg-black">
-			{#if isOpen && !allFailed}
+			{#if isOpen && !player.failed}
 				{#key src}
 					<iframe
 						bind:this={iframe}
@@ -178,15 +100,21 @@
 						allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
 						allowfullscreen
 						referrerpolicy="strict-origin-when-cross-origin"
-						onload={onFrameLoad}
+						onload={() => subscribe(iframe, player.current.provider)}
 					></iframe>
 				{/key}
-			{:else if allFailed}
-				<div class="flex h-full items-center justify-center gap-6 bg-base-300 p-6">
-					<div class="w-24 shrink-0 sm:w-36">
-						<Poster {title} {kind} {coverUrl} />
-					</div>
-					<div role="alert">
+			{:else if player.failed}
+				<div
+					class="relative flex h-full items-center justify-center overflow-hidden p-6 text-center"
+				>
+					{#if coverUrl}
+						<img
+							src={coverUrl}
+							alt=""
+							class="absolute inset-0 h-full w-full scale-125 object-cover opacity-30 blur-2xl"
+						/>
+					{/if}
+					<div role="alert" class="relative">
 						<p class="text-lg font-semibold">Трейлер недоступен в вашем регионе</p>
 						<p class="mt-1 text-sm text-base-content/60">
 							Ни один источник не запустился.{sources.length > 1

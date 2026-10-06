@@ -55,6 +55,82 @@ export function embedUrl(source: TrailerSource, origin: string): string {
 	return `${PLAYER_ORIGIN.rutube}/play/embed/${source.id}?autoplay=1`;
 }
 
+/**
+ * Адрес фонового плеера в шапке карточки, как у Okko: без звука (иначе браузер не даст
+ * автозапуск), без элементов управления, по кругу. Звук, пауза и полный экран — нашими кнопками
+ * через playerCommand().
+ */
+export function backgroundUrl(source: TrailerSource, origin: string): string {
+	if (source.provider === 'youtube') {
+		const q = new URLSearchParams({
+			autoplay: '1',
+			mute: '1',
+			controls: '0',
+			loop: '1',
+			playlist: source.id,
+			playsinline: '1',
+			rel: '0',
+			disablekb: '1',
+			iv_load_policy: '3',
+			enablejsapi: '1',
+			origin
+		});
+		return `${PLAYER_ORIGIN.youtube}/embed/${source.id}?${q}`;
+	}
+	return `${PLAYER_ORIGIN.rutube}/play/embed/${source.id}?autoplay=1&mute=1`;
+}
+
+export type PlayerCommand = 'mute' | 'unmute' | 'play' | 'pause' | 'restart';
+
+/** Сообщения плееру (postMessage) для команды: YouTube IFrame API или Rutube player API. */
+export function playerCommand(provider: Provider, command: PlayerCommand): string[] {
+	if (provider === 'youtube') {
+		const yt = (func: string, args: unknown[] = []) =>
+			JSON.stringify({ event: 'command', func, args, id: 1, channel: 'widget' });
+		const map: Record<PlayerCommand, string[]> = {
+			mute: [yt('mute')],
+			unmute: [yt('unMute')],
+			play: [yt('playVideo')],
+			pause: [yt('pauseVideo')],
+			restart: [yt('seekTo', [0, true]), yt('playVideo')]
+		};
+		return map[command];
+	}
+	const ru = (type: string, data: object = {}) => JSON.stringify({ type, data });
+	const map: Record<PlayerCommand, string[]> = {
+		mute: [ru('player:mute')],
+		unmute: [ru('player:unMute')],
+		play: [ru('player:play')],
+		pause: [ru('player:pause')],
+		restart: [ru('player:setCurrentTime', { time: 0 }), ru('player:play')]
+	};
+	return map[command];
+}
+
+/** Отправить команду плееру в iframe (только его origin). */
+export function sendCommand(
+	frame: HTMLIFrameElement | undefined,
+	provider: Provider,
+	command: PlayerCommand
+) {
+	for (const message of playerCommand(provider, command)) {
+		frame?.contentWindow?.postMessage(message, PLAYER_ORIGIN[provider]);
+	}
+}
+
+/** YouTube присылает события, только если страница «слушает»: рукопожатие IFrame API. */
+export function subscribe(frame: HTMLIFrameElement | undefined, provider: Provider) {
+	if (provider !== 'youtube') return;
+	const post = (message: object) =>
+		frame?.contentWindow?.postMessage(
+			JSON.stringify({ ...message, id: 1, channel: 'widget' }),
+			PLAYER_ORIGIN.youtube
+		);
+	post({ event: 'listening' });
+	post({ event: 'command', func: 'addEventListener', args: ['onStateChange'] });
+	post({ event: 'command', func: 'addEventListener', args: ['onError'] });
+}
+
 /** Подпись источника в переключателе: «YouTube», а при двух YouTube — «YouTube 2». */
 export function sourceLabel(sources: TrailerSource[], index: number): string {
 	const { provider } = sources[index];
@@ -80,10 +156,11 @@ export function nextIndex(count: number, tried: readonly number[]): number | nul
  * - ready — плеер загрузился (сервис отвечает), но видео ещё не идёт;
  * - buffering — видео начало грузиться (автозапуск сработал);
  * - playing — идёт воспроизведение;
+ * - ended — видео доиграло (фону нужно начать сначала);
  * - error — плеер сказал, что видео недоступно.
  * Сообщения не от плеера этого провайдера — null.
  */
-export type PlayerSignal = 'ready' | 'buffering' | 'playing' | 'error';
+export type PlayerSignal = 'ready' | 'buffering' | 'playing' | 'ended' | 'error';
 
 export function playerSignal(
 	provider: Provider,
@@ -104,9 +181,9 @@ export function playerSignal(
 
 	if (provider === 'youtube') {
 		// IFrame API (enablejsapi=1): onReady, onStateChange {info: state}, infoDelivery
-		// {info: {playerState}}, onError. Состояния: 1 — играет, 3 — буферизация.
+		// {info: {playerState}}, onError. Состояния: 1 — играет, 3 — буферизация, 0 — доиграло.
 		const state = (s: unknown): PlayerSignal =>
-			s === 1 ? 'playing' : s === 3 ? 'buffering' : 'ready';
+			s === 1 ? 'playing' : s === 3 ? 'buffering' : s === 0 ? 'ended' : 'ready';
 		switch (m.event) {
 			case 'onError':
 				return 'error';
@@ -126,13 +203,17 @@ export function playerSignal(
 		}
 	}
 
-	// Rutube: {type: 'player:ready' | 'player:changeState' | 'player:error', data: {state}}.
+	// Rutube: {type: 'player:ready' | 'player:changeState' | 'player:playComplete' |
+	// 'player:error', data: {state}}.
 	switch (m.type) {
 		case 'player:error':
 			return 'error';
+		case 'player:playComplete':
+			return 'ended';
 		case 'player:changeState': {
 			const d = m.data as Record<string, unknown> | null;
-			return d && typeof d === 'object' && d.state === 'playing' ? 'playing' : 'ready';
+			if (!d || typeof d !== 'object') return 'ready';
+			return d.state === 'playing' ? 'playing' : d.state === 'ended' ? 'ended' : 'ready';
 		}
 		case 'player:ready':
 			return 'ready';
