@@ -15,7 +15,7 @@ import {
 	summary,
 	yearOf
 } from './labels';
-import { entityHref } from './kinds';
+import { entityHref, refHref } from './kinds';
 
 describe('plural', () => {
 	const forms = ['сезон', 'сезона', 'сезонов'] as const;
@@ -61,6 +61,8 @@ describe('метки', () => {
 	it('адрес карточки по типу', () => {
 		expect(entityHref({ kind: 'movie', slug: 'dune-2021' })).toBe('/films/dune-2021');
 		expect(entityHref({ kind: 'book', slug: 'dune-novel' })).toBe('/books/dune-novel');
+		expect(refHref({ kind: 'game', slug: 'elden-ring' })).toBe('/games/elden-ring');
+		expect(refHref({ kind: 'comic', slug: 'x' })).toBeNull();
 	});
 });
 

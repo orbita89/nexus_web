@@ -29,3 +29,9 @@ export function kindByApi(kind: SchemaEntityKind) {
 export function entityHref(entity: { kind: SchemaEntityKind; slug: string }) {
 	return `/${kindByApi(entity.kind).slug}/${entity.slug}`;
 }
+
+/** Адрес карточки по ссылке из social (EntityRef.kind там — строка); неизвестный тип — null. */
+export function refHref(ref: { kind: string; slug: string }): string | null {
+	const kind = KINDS.find((k) => k.kind === ref.kind)?.kind;
+	return kind ? entityHref({ kind, slug: ref.slug }) : null;
+}
