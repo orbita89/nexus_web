@@ -3,12 +3,11 @@ import { publicApi } from '#lib/api/client.ts';
 import { unwrap } from '#lib/api/errors.ts';
 import { entityHref } from '#lib/catalog/kinds.ts';
 import { orError, settle } from '#lib/catalog/load.ts';
+import { PAGE_SIZE, readOffset } from '#lib/catalog/url.ts';
 import { readSort } from '#lib/social/reviews.ts';
 import type { PageLoad } from './$types';
 
-/** Рецензий на карточке; остальные — на /{раздел}/{slug}/reviews. */
-const CARD_REVIEWS = 6;
-
+// /films/dune-2021/reviews?sort=rating_desc&offset=24 — все рецензии с текстом.
 export const load: PageLoad = async ({ fetch, url, params }) => {
 	const api = publicApi(fetch, url);
 	const path = { slug: params.slug };
@@ -18,19 +17,17 @@ export const load: PageLoad = async ({ fetch, url, params }) => {
 			unwrap(api.catalog.GET('/api/v1/catalog/entities/{slug}', { params: { path } })),
 			'Такого произведения в каталоге нет.'
 		),
-		// Сводка и рецензии — из social: не загрузились — карточка всё равно показывается.
 		settle(unwrap(api.social.GET('/api/v1/social/entities/{slug}/rating', { params: { path } }))),
 		settle(
 			unwrap(
 				api.social.GET('/api/v1/social/entities/{slug}/reviews', {
-					params: { path, query: { sort, limit: CARD_REVIEWS } }
+					params: { path, query: { sort, limit: PAGE_SIZE, offset: readOffset(url) } }
 				})
 			)
 		)
 	]);
 
-	// slug уникален во всём каталоге: /books/dune-2021 — это фильм, правильный адрес один.
-	const href = entityHref(entity);
+	const href = `${entityHref(entity)}/reviews`;
 	if (url.pathname !== href) redirect(301, href + url.search);
 
 	return { entity, rating: rating.data, reviews, sort };
