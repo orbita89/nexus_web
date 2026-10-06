@@ -15,7 +15,7 @@ export interface paths {
 		put?: never;
 		post?: never;
 		/** Удалить любую коллекцию, в том числе приватную. */
-		delete: operations['delete_collection'];
+		delete: operations['admin_delete_collection'];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -32,7 +32,7 @@ export interface paths {
 		put?: never;
 		post?: never;
 		/** Удалить любое сообщение. Если на него есть ответы, остаётся заглушка «сообщение удалено». */
-		delete: operations['delete_post'];
+		delete: operations['admin_delete_post'];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -49,7 +49,7 @@ export interface paths {
 		put?: never;
 		post?: never;
 		/** Удалить любую рецензию. */
-		delete: operations['delete_review'];
+		delete: operations['admin_delete_review'];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -66,7 +66,7 @@ export interface paths {
 		put?: never;
 		post?: never;
 		/** Удалить любую тему вместе с сообщениями. */
-		delete: operations['delete_thread'];
+		delete: operations['admin_delete_thread'];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -81,10 +81,10 @@ export interface paths {
 		};
 		get?: never;
 		/** Закрыть тему для ответов (повторно — тоже 204). Править и удалять свои сообщения можно. */
-		put: operations['lock_thread'];
+		put: operations['admin_lock_thread'];
 		post?: never;
 		/** Открыть тему для ответов (повторно — тоже 204). */
-		delete: operations['unlock_thread'];
+		delete: operations['admin_unlock_thread'];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -101,7 +101,7 @@ export interface paths {
 		get: operations['list_public'];
 		put?: never;
 		/** Создать коллекцию. */
-		post: operations['post_collections'];
+		post: operations['create_collection'];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -116,15 +116,15 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Коллекция с содержимым по порядку. */
-		get: operations['get_collections_id'];
+		get: operations['get_collection'];
 		put?: never;
 		post?: never;
 		/** Удалить свою коллекцию. */
-		delete: operations['delete_collections_id'];
+		delete: operations['delete_collection'];
 		options?: never;
 		head?: never;
 		/** Изменить название, описание или видимость своей коллекции. */
-		patch: operations['patch_collections_id'];
+		patch: operations['update_collection'];
 		trace?: never;
 	};
 	'/api/v1/social/collections/{id}/items': {
@@ -170,7 +170,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Публичные коллекции, в которых есть сущность. */
-		get: operations['get_entities_slug_collections'];
+		get: operations['list_entity_collections'];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -187,7 +187,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Есть ли сущность в своих интересах: кнопка «Следить» на карточке. */
-		get: operations['get_entities_slug_interest'];
+		get: operations['get_own_interest'];
 		/** Добавить сущность в интересы → 204 (повторно — тоже 204). */
 		put: operations['add'];
 		post?: never;
@@ -223,7 +223,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Своя рецензия на сущность. */
-		get: operations['get_entities_slug_review'];
+		get: operations['get_own_review'];
 		/** Поставить оценку и/или написать рецензию. Повторный вызов заменяет рецензию целиком. */
 		put: operations['put_own'];
 		post?: never;
@@ -242,7 +242,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Рецензии на сущность. По умолчанию только с текстом и новые сверху. */
-		get: operations['get_entities_slug_reviews'];
+		get: operations['list_entity_reviews'];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -259,7 +259,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Темы, к которым привязана сущность (в том числе вместе с другими). */
-		get: operations['get_entities_slug_threads'];
+		get: operations['list_entity_threads'];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -313,11 +313,11 @@ export interface paths {
 		put?: never;
 		post?: never;
 		/** Удалить своё сообщение. Если на него есть ответы, остаётся заглушка «сообщение удалено». */
-		delete: operations['delete_posts_id'];
+		delete: operations['delete_post'];
 		options?: never;
 		head?: never;
 		/** Изменить своё сообщение. Ставит `edited_at`; в закрытой теме тоже можно. */
-		patch: operations['patch_posts_id'];
+		patch: operations['update_post'];
 		trace?: never;
 	};
 	'/api/v1/social/threads': {
@@ -331,7 +331,7 @@ export interface paths {
 		get: operations['list'];
 		put?: never;
 		/** Создать тему. Нужна роль author или admin. */
-		post: operations['post_threads'];
+		post: operations['create_thread'];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -346,15 +346,15 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Тема с текстом и страницей сообщений по времени. */
-		get: operations['get_threads_id'];
+		get: operations['get_thread'];
 		put?: never;
 		post?: never;
 		/** Удалить свою тему вместе со всеми сообщениями. */
-		delete: operations['delete_threads_id'];
+		delete: operations['delete_thread'];
 		options?: never;
 		head?: never;
 		/** Изменить свою тему: заголовок, текст, набор сущностей. Ставит `edited_at`. */
-		patch: operations['patch_threads_id'];
+		patch: operations['update_thread'];
 		trace?: never;
 	};
 	'/api/v1/social/threads/{id}/posts': {
@@ -367,7 +367,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/** Ответить в теме или на сообщение (`parent_id`). */
-		post: operations['post_threads_id_posts'];
+		post: operations['create_post'];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -385,7 +385,7 @@ export interface paths {
 		 * Профиль: сколько подписчиков, подписок, рецензий, коллекций, тем и сообщений форума; вошедшему — подписан ли он
 		 *     и подписан ли пользователь на него. Шапка профиля и кнопка «Подписаться» — одним запросом.
 		 */
-		get: operations['get_users_username'];
+		get: operations['get_profile'];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -402,7 +402,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Коллекции пользователя, новые сверху. Владелец видит и свои приватные. */
-		get: operations['get_users_username_collections'];
+		get: operations['list_user_collections'];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -471,7 +471,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Рецензии и оценки пользователя, новые сверху (включая оценки без текста). */
-		get: operations['get_users_username_reviews'];
+		get: operations['list_user_reviews'];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -488,7 +488,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Темы пользователя, новые сверху. */
-		get: operations['get_users_username_threads'];
+		get: operations['list_user_threads'];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -606,6 +606,12 @@ export interface components {
 			 * @example unauthorized
 			 */
 			error: string;
+			/**
+			 * Format: int64
+			 * @description Только для 429: через сколько секунд можно повторить (то же, что заголовок `Retry-After`).
+			 * @example 80
+			 */
+			retry_after?: number | null;
 		};
 		/** @description Запись ленты: заполнено ровно одно из `review`, `thread`, `collection` — по `type`. */
 		FeedItem: {
@@ -1009,6 +1015,11 @@ export interface components {
 			/** Format: date-time */
 			updated_at: string;
 		};
+		/**
+		 * @description Порядок рецензий сущности.
+		 * @enum {string}
+		 */
+		ReviewSort: 'new' | 'rating_desc' | 'rating_asc';
 		/** @description Социальный профиль пользователя. */
 		SocialProfile: {
 			/**
@@ -1085,6 +1096,11 @@ export interface components {
 			/** @description Сообщения по времени, включая заглушки удалённых, на которые есть ответы. */
 			posts: components['schemas']['Page_Post'];
 		};
+		/**
+		 * @description Порядок тем.
+		 * @enum {string}
+		 */
+		ThreadSort: 'active' | 'new';
 		/** @description Изменение коллекции: переданные поля заменяются, `null` очищает описание. */
 		UpdateCollection: {
 			description?: string | null;
@@ -1153,16 +1169,18 @@ export type SchemaRatingSummary = components['schemas']['RatingSummary'];
 export type SchemaRelation = components['schemas']['Relation'];
 export type SchemaReorderItems = components['schemas']['ReorderItems'];
 export type SchemaReview = components['schemas']['Review'];
+export type SchemaReviewSort = components['schemas']['ReviewSort'];
 export type SchemaSocialProfile = components['schemas']['SocialProfile'];
 export type SchemaThread = components['schemas']['Thread'];
 export type SchemaThreadDetail = components['schemas']['ThreadDetail'];
+export type SchemaThreadSort = components['schemas']['ThreadSort'];
 export type SchemaUpdateCollection = components['schemas']['UpdateCollection'];
 export type SchemaUpdatePost = components['schemas']['UpdatePost'];
 export type SchemaUpdateThread = components['schemas']['UpdateThread'];
 export type SchemaUserRef = components['schemas']['UserRef'];
 export type $defs = Record<string, never>;
 export interface operations {
-	delete_collection: {
+	admin_delete_collection: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -1210,7 +1228,7 @@ export interface operations {
 			};
 		};
 	};
-	delete_post: {
+	admin_delete_post: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -1258,7 +1276,7 @@ export interface operations {
 			};
 		};
 	};
-	delete_review: {
+	admin_delete_review: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -1306,7 +1324,7 @@ export interface operations {
 			};
 		};
 	};
-	delete_thread: {
+	admin_delete_thread: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -1354,7 +1372,7 @@ export interface operations {
 			};
 		};
 	};
-	lock_thread: {
+	admin_lock_thread: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -1402,7 +1420,7 @@ export interface operations {
 			};
 		};
 	};
-	unlock_thread: {
+	admin_unlock_thread: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -1475,7 +1493,7 @@ export interface operations {
 			};
 		};
 	};
-	post_collections: {
+	create_collection: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -1517,7 +1535,7 @@ export interface operations {
 			};
 		};
 	};
-	get_collections_id: {
+	get_collection: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -1558,7 +1576,7 @@ export interface operations {
 			};
 		};
 	};
-	delete_collections_id: {
+	delete_collection: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -1606,7 +1624,7 @@ export interface operations {
 			};
 		};
 	};
-	patch_collections_id: {
+	update_collection: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -1863,7 +1881,7 @@ export interface operations {
 			};
 		};
 	};
-	get_entities_slug_collections: {
+	list_entity_collections: {
 		parameters: {
 			query?: {
 				/** @description 1–100, по умолчанию 20. */
@@ -1903,7 +1921,7 @@ export interface operations {
 			};
 		};
 	};
-	get_entities_slug_interest: {
+	get_own_interest: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -2075,7 +2093,7 @@ export interface operations {
 			};
 		};
 	};
-	get_entities_slug_review: {
+	get_own_review: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -2227,11 +2245,11 @@ export interface operations {
 			};
 		};
 	};
-	get_entities_slug_reviews: {
+	list_entity_reviews: {
 		parameters: {
 			query?: {
 				/** @description По умолчанию `new`. */
-				sort?: string;
+				sort?: components['schemas']['ReviewSort'];
 				/** @description `true` — включая оценки без текста. По умолчанию только рецензии с текстом. */
 				all?: boolean;
 				/** @description 1–100, по умолчанию 20. */
@@ -2280,11 +2298,11 @@ export interface operations {
 			};
 		};
 	};
-	get_entities_slug_threads: {
+	list_entity_threads: {
 		parameters: {
 			query?: {
 				/** @description По умолчанию `active`. */
-				sort?: string;
+				sort?: components['schemas']['ThreadSort'];
 				/** @description 1–100, по умолчанию 20. */
 				limit?: number;
 				/** @description С 0. */
@@ -2410,7 +2428,7 @@ export interface operations {
 			};
 		};
 	};
-	delete_posts_id: {
+	delete_post: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -2458,7 +2476,7 @@ export interface operations {
 			};
 		};
 	};
-	patch_posts_id: {
+	update_post: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -2525,7 +2543,7 @@ export interface operations {
 		parameters: {
 			query?: {
 				/** @description По умолчанию `active`. */
-				sort?: string;
+				sort?: components['schemas']['ThreadSort'];
 				/** @description 1–100, по умолчанию 20. */
 				limit?: number;
 				/** @description С 0. */
@@ -2557,7 +2575,7 @@ export interface operations {
 			};
 		};
 	};
-	post_threads: {
+	create_thread: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -2608,7 +2626,7 @@ export interface operations {
 			};
 		};
 	};
-	get_threads_id: {
+	get_thread: {
 		parameters: {
 			query?: {
 				/** @description Сообщений на странице: 1–100, по умолчанию 50. */
@@ -2654,7 +2672,7 @@ export interface operations {
 			};
 		};
 	};
-	delete_threads_id: {
+	delete_thread: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -2702,7 +2720,7 @@ export interface operations {
 			};
 		};
 	};
-	patch_threads_id: {
+	update_thread: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -2765,7 +2783,7 @@ export interface operations {
 			};
 		};
 	};
-	post_threads_id_posts: {
+	create_post: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -2828,7 +2846,7 @@ export interface operations {
 			};
 		};
 	};
-	get_users_username: {
+	get_profile: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -2872,7 +2890,7 @@ export interface operations {
 			};
 		};
 	};
-	get_users_username_collections: {
+	list_user_collections: {
 		parameters: {
 			query?: {
 				/** @description 1–100, по умолчанию 20. */
@@ -3094,7 +3112,7 @@ export interface operations {
 			};
 		};
 	};
-	get_users_username_reviews: {
+	list_user_reviews: {
 		parameters: {
 			query?: {
 				/** @description 1–100, по умолчанию 20. */
@@ -3134,7 +3152,7 @@ export interface operations {
 			};
 		};
 	};
-	get_users_username_threads: {
+	list_user_threads: {
 		parameters: {
 			query?: {
 				/** @description 1–100, по умолчанию 20. */

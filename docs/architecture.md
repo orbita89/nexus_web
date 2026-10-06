@@ -68,8 +68,8 @@ scripts/api-types.mjs  генерация типов API
 
 - **Типы** генерируются из `../nexus_project/documents/api/{openapi,catalog,social}.json` в
   `src/lib/api/generated/{auth,catalog,social}.ts` (`pnpm api:types`) и коммитятся. CI сверяет их
-  с контрактом (`pnpm api:check`). Скрипт обходит две ошибки контрактов: ссылки на отсутствующие
-  схемы и повторяющиеся `operationId` (см. [backend-questions.md](backend-questions.md)).
+  с контрактом (`pnpm api:check`). Скрипт сначала проверяет контракт: ссылка на отсутствующую
+  схему или повторяющийся `operationId` — падение с перечнем ошибок (чинится в бэкенде).
 - **Клиенты** — по одному на контракт: `api.auth`, `api.catalog`, `api.social`. Пути полные:
   `api.social.GET('/api/v1/social/users/{username}', { params: { path: { username } } })`.
 - Какой клиент брать:
@@ -81,7 +81,8 @@ scripts/api-types.mjs  генерация типов API
 - **Ошибки.** Бэкенд всегда отвечает `{"error": "..."}` — по-английски и без кодов. `unwrap()`
   превращает ответ в данные или `ApiError { status, serverMessage, message }`, где `message` —
   текст для пользователя: известные сообщения переводятся словарём (`errors.ts`), остальные — по
-  статусу. Сбой сети — `ApiError(0)`. В компоненте: `catch (e) { error = errorMessage(e) }`.
+  статусу. Сбой сети — `ApiError(0)`. Для 429 срок берётся из `retry_after` в теле или
+  заголовка `Retry-After`: «Попробуйте через 80 с». В компоненте: `catch (e) { error = errorMessage(e) }`.
 
 ## Прокси и окружение
 

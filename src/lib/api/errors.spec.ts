@@ -15,6 +15,39 @@ describe('translate', () => {
 	});
 });
 
+describe('429', () => {
+	it('со сроком — «попробуйте через …»', () => {
+		expect(translate(429, 'too many requests', 80)).toBe(
+			'Слишком много попыток. Попробуйте через 80 с.'
+		);
+		expect(translate(429, null, 150)).toMatch(/через 3 мин/);
+		expect(translate(429, null, 0)).toMatch(/через 1 с/);
+	});
+
+	it('срок берётся из тела, иначе из Retry-After', async () => {
+		const fromBody = await unwrap(
+			Promise.resolve({
+				error: { error: 'too many requests', retry_after: 42 },
+				response: new Response(null, { status: 429, headers: { 'Retry-After': '7' } })
+			})
+		).catch((e: unknown) => e);
+		expect(fromBody).toMatchObject({ status: 429, retryAfter: 42 });
+
+		const fromHeader = await unwrap(
+			Promise.resolve({
+				error: { error: 'too many requests' },
+				response: new Response(null, { status: 429, headers: { 'Retry-After': '7' } })
+			})
+		).catch((e: unknown) => e);
+		expect(errorMessage(fromHeader)).toMatch(/через 7 с/);
+
+		const none = await unwrap(
+			Promise.resolve({ error: null, response: new Response(null, { status: 429 }) })
+		).catch((e: unknown) => e);
+		expect(errorMessage(none)).toMatch(/Подождите немного/);
+	});
+});
+
 describe('unwrap', () => {
 	const ok = (data: unknown) => Promise.resolve({ data, response: new Response(null) });
 

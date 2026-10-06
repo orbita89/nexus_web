@@ -72,7 +72,7 @@ export interface paths {
 		 * **Только для разработки.** Вход под любым пользователем без пароля и подтверждения email.
 		 * @description Включается `DEV_LOGIN=true` (в dev-окружении включено). Выключенный — 404.
 		 */
-		post: operations['post_dev_login'];
+		post: operations['dev_login'];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -186,7 +186,7 @@ export interface paths {
 		 * @description Неверный логин, неверный пароль и заблокированный аккаунт выглядят одинаково (401),
 		 *     чтобы не подсказывать, какие логины существуют.
 		 */
-		post: operations['post_login'];
+		post: operations['login'];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -277,7 +277,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Привязанные к своему аккаунту провайдеры. */
-		get: operations['get_me_oauth'];
+		get: operations['list_linked_accounts'];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -299,7 +299,7 @@ export interface paths {
 		 * Начать привязку провайдера: ссылка на его страницу входа. Открыть в браузере
 		 *     (`window.location`); вернётся на `{APP_BASE_URL}/settings/accounts?linked=...` или `?error=...`.
 		 */
-		post: operations['post_me_oauth_provider'];
+		post: operations['start_oauth_link'];
 		/** Отвязать провайдера. Войти можно и без него — по ссылке на email. */
 		delete: operations['unlink'];
 		options?: never;
@@ -379,7 +379,7 @@ export interface paths {
 		 * Начать вход через провайдера: редирект на его страницу входа.
 		 * @description Открывать в браузере (не через fetch): дальше браузер сам пройдёт по редиректам.
 		 */
-		get: operations['get_oauth_provider_start'];
+		get: operations['start_oauth_login'];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -492,7 +492,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Мои активные сессии (устройства), новые сверху. */
-		get: operations['get_sessions'];
+		get: operations['list_sessions'];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -573,6 +573,12 @@ export interface components {
 			 * @example unauthorized
 			 */
 			error: string;
+			/**
+			 * Format: int64
+			 * @description Только для 429: через сколько секунд можно повторить (то же, что заголовок `Retry-After`).
+			 * @example 80
+			 */
+			retry_after?: number | null;
 		};
 		ExchangeRequest: {
 			/** @description Параметр `code` из адреса `{APP_BASE_URL}/auth/oauth/callback?code=...`. */
@@ -715,6 +721,11 @@ export interface components {
 			 * @description `null` — email не подтверждён, вход по паролю запрещён.
 			 */
 			email_verified_at?: string | null;
+			/**
+			 * @description Задан ли пароль. `false` — входит по ссылке из письма или через провайдера: пароль не
+			 *     спрашивается при смене email, задать его можно через «забыли пароль».
+			 */
+			has_password: boolean;
 			/** Format: uuid */
 			id: string;
 			/** @description `false` — заблокирован админом. */
@@ -910,7 +921,7 @@ export interface operations {
 			};
 		};
 	};
-	post_dev_login: {
+	dev_login: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -1158,7 +1169,7 @@ export interface operations {
 			};
 		};
 	};
-	post_login: {
+	login: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -1396,7 +1407,7 @@ export interface operations {
 			};
 		};
 	};
-	get_me_oauth: {
+	list_linked_accounts: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -1425,7 +1436,7 @@ export interface operations {
 			};
 		};
 	};
-	post_me_oauth_provider: {
+	start_oauth_link: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -1599,7 +1610,7 @@ export interface operations {
 			};
 		};
 	};
-	get_oauth_provider_start: {
+	start_oauth_login: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -1824,7 +1835,7 @@ export interface operations {
 			};
 		};
 	};
-	get_sessions: {
+	list_sessions: {
 		parameters: {
 			query?: never;
 			header?: never;

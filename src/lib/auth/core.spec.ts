@@ -9,6 +9,7 @@ const user: User = {
 	username: 'user',
 	role: 'user',
 	is_active: true,
+	has_password: true,
 	created_at: '2026-01-01T00:00:00Z'
 };
 

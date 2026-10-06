@@ -6,12 +6,15 @@ export class ApiError extends Error {
 	readonly status: number;
 	/** Сообщение бэкенда как есть (для логики и логов). */
 	readonly serverMessage: string | null;
+	/** Для 429: через сколько секунд можно повторить, если бэкенд сказал. */
+	readonly retryAfter: number | null;
 
-	constructor(status: number, serverMessage: string | null) {
-		super(translate(status, serverMessage));
+	constructor(status: number, serverMessage: string | null, retryAfter: number | null = null) {
+		super(translate(status, serverMessage, retryAfter));
 		this.name = 'ApiError';
 		this.status = status;
 		this.serverMessage = serverMessage;
+		this.retryAfter = retryAfter;
 	}
 }
 
@@ -42,7 +45,19 @@ const BY_STATUS: Record<number, string> = {
 	429: 'Слишком много попыток. Подождите немного и попробуйте снова.'
 };
 
-export function translate(status: number, serverMessage: string | null): string {
+/** До двух минут — секунды (80 → «80 с»), дальше — минуты (150 → «3 мин»). */
+export function formatWait(seconds: number): string {
+	return seconds < 120 ? `${Math.max(1, Math.ceil(seconds))} с` : `${Math.ceil(seconds / 60)} мин`;
+}
+
+export function translate(
+	status: number,
+	serverMessage: string | null,
+	retryAfter: number | null = null
+): string {
+	if (status === 429 && retryAfter !== null) {
+		return `Слишком много попыток. Попробуйте через ${formatWait(retryAfter)}.`;
+	}
 	if (serverMessage) {
 		const known = KNOWN.find(([re]) => re.test(serverMessage));
 		if (known) return known[1];
@@ -64,6 +79,17 @@ function serverMessageOf(body: unknown): string | null {
 	return null;
 }
 
+/** Секунды до повтора: retry_after из тела, иначе заголовок Retry-After (секунды). */
+function retryAfterOf(body: unknown, response: Response): number | null {
+	if (body && typeof body === 'object' && 'retry_after' in body) {
+		const v = body.retry_after;
+		if (typeof v === 'number' && Number.isFinite(v) && v >= 0) return v;
+	}
+	const header = response.headers.get('Retry-After');
+	if (header !== null && /^\d+$/.test(header.trim())) return Number(header.trim());
+	return null;
+}
+
 /**
  * Результат вызова openapi-fetch → данные или ApiError. Сбой сети тоже становится ApiError(0).
  *
@@ -82,7 +108,12 @@ export async function unwrap<T>(
 		throw new ApiError(0, null);
 	}
 	if (!result.response.ok) {
-		throw new ApiError(result.response.status, serverMessageOf(result.error));
+		const { status } = result.response;
+		throw new ApiError(
+			status,
+			serverMessageOf(result.error),
+			status === 429 ? retryAfterOf(result.error, result.response) : null
+		);
 	}
 	return result.data as T;
 }

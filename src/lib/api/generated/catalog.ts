@@ -14,7 +14,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/** Создать сущность. `metadata` проверяется по схеме своего `kind`. */
-		post: operations['post_admin_entities'];
+		post: operations['create_entity'];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -32,14 +32,14 @@ export interface paths {
 		put?: never;
 		post?: never;
 		/** Удалить сущность. Теги, участники, рецензии и элементы коллекций удаляются каскадно. */
-		delete: operations['delete_admin_entities_id'];
+		delete: operations['delete_entity'];
 		options?: never;
 		head?: never;
 		/**
 		 * Изменить сущность. Переданные поля заменяются, `null` очищает необязательное поле;
 		 *     `metadata` заменяется целиком. `kind` не меняется.
 		 */
-		patch: operations['patch_admin_entities_id'];
+		patch: operations['update_entity'];
 		trace?: never;
 	};
 	'/api/v1/catalog/admin/entities/{id}/credits': {
@@ -103,7 +103,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/** Добавить человека. */
-		post: operations['post_admin_people'];
+		post: operations['create_person'];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -121,11 +121,11 @@ export interface paths {
 		put?: never;
 		post?: never;
 		/** Удалить человека вместе с его участием в произведениях. */
-		delete: operations['delete_admin_people_id'];
+		delete: operations['delete_person'];
 		options?: never;
 		head?: never;
 		/** Изменить человека. Переданные поля заменяются, `null` очищает необязательное поле. */
-		patch: operations['patch_admin_people_id'];
+		patch: operations['update_person'];
 		trace?: never;
 	};
 	'/api/v1/catalog/admin/search/reindex': {
@@ -158,7 +158,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/** Создать тег. */
-		post: operations['post_admin_tags'];
+		post: operations['create_tag'];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -176,11 +176,11 @@ export interface paths {
 		put?: never;
 		post?: never;
 		/** Удалить тег (снимается со всех сущностей). */
-		delete: operations['delete_admin_tags_id'];
+		delete: operations['delete_tag'];
 		options?: never;
 		head?: never;
 		/** Переименовать тег или сменить slug. */
-		patch: operations['patch_admin_tags_id'];
+		patch: operations['update_tag'];
 		trace?: never;
 	};
 	'/api/v1/catalog/entities': {
@@ -191,7 +191,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Список сущностей: новинки сверху, без даты — в конце. */
-		get: operations['get_entities'];
+		get: operations['list_entities'];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -208,7 +208,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Карточка сущности: поля, теги и участники в порядке титров. */
-		get: operations['get_entities_slug'];
+		get: operations['get_entity'];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -225,7 +225,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Список людей по алфавиту. */
-		get: operations['get_people'];
+		get: operations['list_people'];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -242,7 +242,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Карточка человека: данные и все его работы любых типов, новые сверху. */
-		get: operations['get_people_slug'];
+		get: operations['get_person'];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -279,7 +279,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Все теги по алфавиту с числом сущностей. Тегов немного, поэтому без пагинации. */
-		get: operations['get_tags'];
+		get: operations['list_tags'];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -434,6 +434,12 @@ export interface components {
 			 * @example unauthorized
 			 */
 			error: string;
+			/**
+			 * Format: int64
+			 * @description Только для 429: через сколько секунд можно повторить (то же, что заголовок `Retry-After`).
+			 * @example 80
+			 */
+			retry_after?: number | null;
 		};
 		/** @description Поля игры. */
 		GameMetadata: {
@@ -724,7 +730,7 @@ export type SchemaUpdatePerson = components['schemas']['UpdatePerson'];
 export type SchemaUpdateTag = components['schemas']['UpdateTag'];
 export type $defs = Record<string, never>;
 export interface operations {
-	post_admin_entities: {
+	create_entity: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -784,7 +790,7 @@ export interface operations {
 			};
 		};
 	};
-	delete_admin_entities_id: {
+	delete_entity: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -832,7 +838,7 @@ export interface operations {
 			};
 		};
 	};
-	patch_admin_entities_id: {
+	update_entity: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -1089,7 +1095,7 @@ export interface operations {
 			};
 		};
 	};
-	post_admin_people: {
+	create_person: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -1149,7 +1155,7 @@ export interface operations {
 			};
 		};
 	};
-	delete_admin_people_id: {
+	delete_person: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -1197,7 +1203,7 @@ export interface operations {
 			};
 		};
 	};
-	patch_admin_people_id: {
+	update_person: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -1316,7 +1322,7 @@ export interface operations {
 			};
 		};
 	};
-	post_admin_tags: {
+	create_tag: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -1376,7 +1382,7 @@ export interface operations {
 			};
 		};
 	};
-	delete_admin_tags_id: {
+	delete_tag: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -1424,7 +1430,7 @@ export interface operations {
 			};
 		};
 	};
-	patch_admin_tags_id: {
+	update_tag: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -1496,7 +1502,7 @@ export interface operations {
 			};
 		};
 	};
-	get_entities: {
+	list_entities: {
 		parameters: {
 			query?: {
 				/** @description Тип сущности. */
@@ -1547,7 +1553,7 @@ export interface operations {
 			};
 		};
 	};
-	get_entities_slug: {
+	get_entity: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -1582,7 +1588,7 @@ export interface operations {
 			};
 		};
 	};
-	get_people: {
+	list_people: {
 		parameters: {
 			query?: {
 				/**
@@ -1612,7 +1618,7 @@ export interface operations {
 			};
 		};
 	};
-	get_people_slug: {
+	get_person: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -1699,7 +1705,7 @@ export interface operations {
 			};
 		};
 	};
-	get_tags: {
+	list_tags: {
 		parameters: {
 			query?: never;
 			header?: never;

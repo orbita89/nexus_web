@@ -8,6 +8,7 @@
 	let error = $state('');
 	let sentTo = $state('');
 	let submitting = $state(false);
+	const hasPassword = $derived(session.user?.has_password ?? false);
 
 	async function submit(event: SubmitEvent) {
 		event.preventDefault();
@@ -16,7 +17,7 @@
 		try {
 			await unwrap(
 				api.auth.POST('/api/v1/auth/me/email', {
-					body: { new_email: newEmail.trim(), password: password || null }
+					body: { new_email: newEmail.trim(), password: hasPassword ? password : null }
 				})
 			);
 			sentTo = newEmail.trim();
@@ -51,19 +52,19 @@
 				bind:value={newEmail}
 			/>
 		</fieldset>
-		<fieldset class="fieldset">
-			<legend class="fieldset-legend">Текущий пароль</legend>
-			<input
-				class="input w-full"
-				type="password"
-				name="password"
-				autocomplete="current-password"
-				bind:value={password}
-			/>
-			<p class="label text-wrap">
-				Если входите только по ссылке или через провайдера и пароль не задавали — оставьте пустым.
-			</p>
-		</fieldset>
+		{#if hasPassword}
+			<fieldset class="fieldset">
+				<legend class="fieldset-legend">Текущий пароль</legend>
+				<input
+					class="input w-full"
+					type="password"
+					name="password"
+					autocomplete="current-password"
+					required
+					bind:value={password}
+				/>
+			</fieldset>
+		{/if}
 		{#if error}<Alert>{error}</Alert>{/if}
 		<div><button class="btn btn-primary" disabled={submitting}>Сменить email</button></div>
 	</form>
