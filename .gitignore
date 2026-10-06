@@ -23,7 +23,5 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 # Playwright
 test-results
-
-# Playwright
 playwright-report
 blob-report
