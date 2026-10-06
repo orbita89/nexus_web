@@ -1,4 +1,43 @@
 @import 'tailwindcss';
 @plugin 'daisyui' {
-	themes: dark --default;
+	themes: false;
+}
+
+/* Тема «Тлеющие угли»: почти чёрный фон, угольные поверхности, янтарно-оранжевый акцент.
+   Цвета меняются только здесь — в разметке лишь семантические классы DaisyUI (docs/design.md). */
+@plugin 'daisyui/theme' {
+	name: 'nexus';
+	default: true;
+	prefersdark: true;
+	color-scheme: dark;
+
+	--color-base-100: #09090b;
+	--color-base-200: #131316;
+	--color-base-300: #1f1f24;
+	--color-base-content: #e7e5e4;
+	--color-primary: #f97316;
+	--color-primary-content: #0c0a09;
+	--color-secondary: #e11d48;
+	--color-secondary-content: #fff1f2;
+	--color-accent: #fbbf24;
+	--color-accent-content: #0c0a09;
+	--color-neutral: #1c1917;
+	--color-neutral-content: #d6d3d1;
+	--color-info: #38bdf8;
+	--color-info-content: #082f49;
+	--color-success: #4ade80;
+	--color-success-content: #052e16;
+	--color-warning: #facc15;
+	--color-warning-content: #422006;
+	--color-error: #f43f5e;
+	--color-error-content: #1c0509;
+
+	--radius-selector: 1rem;
+	--radius-field: 0.5rem;
+	--radius-box: 0.75rem;
+	--size-selector: 0.25rem;
+	--size-field: 0.25rem;
+	--border: 1px;
+	--depth: 1;
+	--noise: 1;
 }

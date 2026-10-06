@@ -7,6 +7,7 @@
 
 	const sections = [
 		...KINDS.map((k) => ({ href: `/${k.slug}`, title: k.title })),
+		{ href: '/people', title: 'Люди' },
 		{ href: '/feed', title: 'Лента' },
 		{ href: '/forum', title: 'Форум' }
 	];
@@ -31,7 +32,7 @@
 	}
 </script>
 
-<header class="border-b border-base-300 bg-base-200">
+<header class="sticky top-0 z-20 border-b border-base-300 bg-base-100/85 backdrop-blur-md">
 	<nav class="navbar mx-auto max-w-6xl gap-2 px-4" aria-label="Основная навигация">
 		<div class="navbar-start w-auto gap-1">
 			<details class="dropdown lg:hidden" bind:open={menuOpen}>
@@ -42,7 +43,9 @@
 					{/each}
 				</ul>
 			</details>
-			<a href="/" class="btn btn-ghost px-2 text-xl font-bold btn-sm">Nexus</a>
+			<a href="/" class="btn btn-ghost px-2 text-lg font-black tracking-[0.2em] uppercase btn-sm"
+				>Nexus<span class="-ml-1 text-primary" aria-hidden="true">.</span></a
+			>
 		</div>
 
 		<ul class="menu menu-horizontal hidden gap-1 menu-sm lg:flex">
