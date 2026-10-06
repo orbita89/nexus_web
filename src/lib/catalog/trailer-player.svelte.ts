@@ -24,13 +24,20 @@ export class TrailerPlayer {
 
 	#sources: () => TrailerSource[];
 	#timeoutMs: () => number;
+	#background: boolean;
 	#tried: number[] = [];
 	#progress: Progress = { ready: false, buffering: false, playing: false };
 	#timer: ReturnType<typeof setTimeout> | undefined;
 
-	constructor(sources: () => TrailerSource[], timeoutMs: () => number) {
+	/** background — фон шапки: зритель не может нажать ▶, правило таймаута строже. */
+	constructor(
+		sources: () => TrailerSource[],
+		timeoutMs: () => number,
+		{ background = false } = {}
+	) {
 		this.#sources = sources;
 		this.#timeoutMs = timeoutMs;
+		this.#background = background;
 	}
 
 	get current(): TrailerSource {
@@ -57,7 +64,7 @@ export class TrailerPlayer {
 
 	/**
 	 * Сообщение от плеера. Возвращает сигнал, если оно от текущего iframe и его провайдера
-	 * (фону нужен ended, чтобы начать сначала).
+	 * (компонентам нужны loaded — дать команды плееру — и ended — начать сначала).
 	 */
 	handle(event: MessageEvent, frame: HTMLIFrameElement | undefined): PlayerSignal | null {
 		if (this.failed || !frame || event.source !== frame.contentWindow) return null;
@@ -84,7 +91,7 @@ export class TrailerPlayer {
 		clearTimeout(this.#timer);
 		this.#progress = { ready: false, buffering: false, playing: false };
 		this.#timer = setTimeout(() => {
-			if (shouldFallback(this.#progress)) this.#fallback();
+			if (shouldFallback(this.#progress, { background: this.#background })) this.#fallback();
 		}, this.#timeoutMs());
 	}
 

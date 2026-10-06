@@ -33,14 +33,16 @@
 
 	const player = new TrailerPlayer(
 		() => sources,
-		() => timeoutMs
+		() => timeoutMs,
+		{ background: true }
 	);
 
 	let root: HTMLElement;
 	let frame = $state<HTMLIFrameElement>();
 	/** Видео можно показывать: браузер, есть источники, нет «уменьшить движение». */
 	let enabled = $state(false);
-	let playing = $state(false);
+	/** Адрес, который заиграл: iframe проявляется, когда это текущий источник. */
+	let playingSrc = $state('');
 	let muted = $state(true);
 	/** На паузе по воле зрителя (или пока открыта модалка «Трейлер»). */
 	let held = $state(false);
@@ -68,23 +70,30 @@
 		document.addEventListener('fullscreenchange', onFullscreen);
 		return () => {
 			player.stop();
+			unsubscribe();
 			observer.disconnect();
 			document.removeEventListener('fullscreenchange', onFullscreen);
 		};
 	});
 
+	let unsubscribe = () => {};
+
 	function onMessage(event: MessageEvent) {
 		const signal = player.handle(event, frame);
-		if (signal === 'playing') playing = true;
+		// Rutube не понимает mute=1 в адресе и со звуком сам не стартует: даём команды явно.
+		if (signal === 'loaded') {
+			command(muted ? 'mute' : 'unmute');
+			if (!held) command('play');
+		}
+		if (signal === 'playing') playingSrc = src;
 		// Rutube по кругу сам не играет — начинаем сначала (YouTube крутит loop=1).
 		if (signal === 'ended') command('restart');
 	}
 
+	// load у Rutube приходит позже начала воспроизведения — здесь только рукопожатие YouTube.
 	function onFrameLoad() {
-		playing = false;
-		subscribe(frame, player.current.provider);
-		// Новый источник стартует без звука; если зритель звук включал — включаем снова.
-		if (!muted) command('unmute');
+		unsubscribe();
+		unsubscribe = subscribe(frame, player.current.provider);
 	}
 
 	function toggleMute() {
@@ -159,7 +168,7 @@
 					tabindex="-1"
 					class={[
 						'pointer-events-none absolute top-1/2 left-0 aspect-video w-full -translate-y-1/2 scale-[1.35] transition-opacity duration-700',
-						playing ? 'opacity-100' : 'opacity-0'
+						playingSrc === src ? 'opacity-100' : 'opacity-0'
 					]}
 					allow="autoplay; encrypted-media; picture-in-picture"
 					referrerpolicy="strict-origin-when-cross-origin"

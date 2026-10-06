@@ -1,4 +1,4 @@
-import { expect, test, type Page, type Route } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 
 // Каталог публичный: без входа, данные — из make seed (nexus_project/seeds/catalog.sql).
 
@@ -125,29 +125,48 @@ const PIXEL = Buffer.from(
 	'base64'
 );
 
+type YoutubeStub = 'silent' | 'blocked' | 'plays' | 'late-handshake' | 'loaded-only';
+type RutubeStub = 'silent' | 'blocked' | 'plays' | 'plays-on-command';
+
+// Заглушки плееров ведут себя как настоящие: шлют события родителю со своего origin.
+const stubPage = (script: string) =>
+	`<!doctype html><title>player</title><script>const send = (m) => parent.postMessage(JSON.stringify(m), '*');${script}</script>`;
+const YOUTUBE_STUB: Record<Exclude<YoutubeStub, 'blocked'>, string> = {
+	silent: '',
+	// Отвечает на рукопожатие: загрузился и играет.
+	plays: `addEventListener('message', (e) => { if (String(e.data).includes('listening')) { send({ event: 'onReady' }); send({ event: 'onStateChange', info: 1 }); } });`,
+	// Медленный плеер: первые два рукопожатия теряются.
+	'late-handshake': `let n = 0; addEventListener('message', (e) => { if (String(e.data).includes('listening') && ++n === 3) { send({ event: 'onReady' }); send({ event: 'onStateChange', info: 1 }); } });`,
+	// Загрузился, но видео не стартует (автозапуск не дали).
+	'loaded-only': `addEventListener('message', (e) => { if (String(e.data).includes('listening')) send({ event: 'onReady' }); });`
+};
+const RUTUBE_STUB: Record<Exclude<RutubeStub, 'blocked'>, string> = {
+	silent: '',
+	plays: `send({ type: 'player:changeState', data: { state: 'playing' } });`,
+	// Как настоящий Rutube: mute=1 в адресе не понимает и сам не стартует — только по команде.
+	'plays-on-command': `send({ type: 'player:ready', data: {} }); addEventListener('message', (e) => { if (String(e.data).includes('player:play')) send({ type: 'player:changeState', data: { state: 'playing' } }); });`
+};
+
 async function stubMedia(
 	page: Page,
-	{ blockYoutube = false, blockRutube = false, rutubePlays = false } = {}
+	{ youtube = 'silent', rutube = 'silent' }: { youtube?: YoutubeStub; rutube?: RutubeStub } = {}
 ) {
 	await page.route(/^https:\/\/(image\.tmdb\.org|covers\.openlibrary\.org)\//, (route) =>
 		route.fulfill({ body: PIXEL, contentType: 'image/png' })
 	);
-	const player = (blocked: boolean) => (route: Route) =>
-		blocked
+	await page.route('https://www.youtube-nocookie.com/**', (route) =>
+		youtube === 'blocked'
 			? route.abort('blockedbyclient')
-			: route.fulfill({ body: '<!doctype html><title>player</title>', contentType: 'text/html' });
-	await page.route('https://www.youtube-nocookie.com/**', player(blockYoutube));
-	// Заглушка Rutube может «заиграть»: присылает событие, как настоящий плеер.
-	const playing = JSON.stringify({ type: 'player:changeState', data: { state: 'playing' } });
+			: route.fulfill({ body: stubPage(YOUTUBE_STUB[youtube]), contentType: 'text/html' })
+	);
 	await page.route('https://rutube.ru/**', (route) =>
-		rutubePlays
-			? route.fulfill({
-					body: `<!doctype html><script>parent.postMessage(${JSON.stringify(playing)}, '*')</script>`,
-					contentType: 'text/html'
-				})
-			: player(blockRutube)(route)
+		rutube === 'blocked'
+			? route.abort('blockedbyclient')
+			: route.fulfill({ body: stubPage(RUTUBE_STUB[rutube]), contentType: 'text/html' })
 	);
 }
+
+const isVisible = (frame: Locator) => frame.evaluate((el) => getComputedStyle(el).opacity === '1');
 
 const playerFrame = (page: Page) =>
 	page.getByRole('dialog', { name: 'Трейлер: Дюна' }).locator('iframe');
@@ -176,11 +195,45 @@ test('карточка как у Okko: трейлер — фон шапки бе
 
 test('фон: YouTube недоступен — сам переходит на Rutube', async ({ page }) => {
 	await page.clock.install();
-	await stubMedia(page, { blockYoutube: true });
+	await stubMedia(page, { youtube: 'blocked' });
 	await page.goto('/films/dune-2021');
 	await expect(heroFrame(page)).toHaveAttribute('src', new RegExp(`^${YOUTUBE}`));
 	await page.clock.runFor(8500);
 	await expect(heroFrame(page)).toHaveAttribute('src', `${RUTUBE}?autoplay=1&mute=1`);
+});
+
+test('фон: Rutube стартует по команде «играть» и проявляется', async ({ page }) => {
+	await page.clock.install();
+	await stubMedia(page, { youtube: 'blocked', rutube: 'plays-on-command' });
+	await page.goto('/films/dune-2021');
+	await expect(heroFrame(page)).toHaveAttribute('src', new RegExp(`^${YOUTUBE}`));
+	await page.clock.runFor(8500);
+	await expect(heroFrame(page)).toHaveAttribute('src', new RegExp(`^${RUTUBE}`));
+	await page.clock.runFor(1000);
+	await expect.poll(() => isVisible(heroFrame(page))).toBe(true);
+	await expect
+		.poll(() => page.evaluate(() => localStorage.getItem('nexus.trailer.provider')))
+		.toBe('rutube');
+});
+
+test('фон: медленный YouTube — рукопожатие повторяется, источник не меняется', async ({ page }) => {
+	await page.clock.install();
+	await stubMedia(page, { youtube: 'late-handshake' });
+	await page.goto('/films/dune-2021');
+	await expect(heroFrame(page)).toHaveAttribute('src', new RegExp(`^${YOUTUBE}`));
+	await page.clock.runFor(1500);
+	await expect.poll(() => isVisible(heroFrame(page))).toBe(true);
+	await page.clock.runFor(8500);
+	await expect(heroFrame(page)).toHaveAttribute('src', new RegExp(`^${YOUTUBE}`));
+});
+
+test('фон: плеер загрузился, но видео не пошло — следующий источник', async ({ page }) => {
+	await page.clock.install();
+	await stubMedia(page, { youtube: 'loaded-only', rutube: 'plays-on-command' });
+	await page.goto('/films/dune-2021');
+	await expect(heroFrame(page)).toHaveAttribute('src', new RegExp(`^${YOUTUBE}`));
+	await page.clock.runFor(8500);
+	await expect(heroFrame(page)).toHaveAttribute('src', new RegExp(`^${RUTUBE}`));
 });
 
 test('фон: при prefers-reduced-motion видео не запускается, кнопка «Трейлер» есть', async ({
@@ -224,7 +277,7 @@ test('трейлер: кнопка открывает плеер YouTube, пер
 
 test('трейлер: YouTube недоступен — плеер сам переходит на Rutube', async ({ page }) => {
 	await page.clock.install();
-	await stubMedia(page, { blockYoutube: true });
+	await stubMedia(page, { youtube: 'blocked' });
 	await page.goto('/films/dune-2021');
 	await page.getByRole('button', { name: 'Трейлер' }).click();
 	await expect(playerFrame(page)).toHaveAttribute('src', new RegExp(`^${YOUTUBE}`));
@@ -236,7 +289,7 @@ test('трейлер: YouTube недоступен — плеер сам пер�
 
 test('трейлер: ни один источник не запустился — сообщение вместо плеера', async ({ page }) => {
 	await page.clock.install();
-	await stubMedia(page, { blockYoutube: true, blockRutube: true });
+	await stubMedia(page, { youtube: 'blocked', rutube: 'blocked' });
 	await page.goto('/films/dune-2021');
 	await page.getByRole('button', { name: 'Трейлер' }).click();
 	await page.clock.runFor(8500);
@@ -254,7 +307,7 @@ test('трейлер: сработавший источник запоминае
 	page
 }) => {
 	await page.clock.install();
-	await stubMedia(page, { blockYoutube: true, rutubePlays: true });
+	await stubMedia(page, { youtube: 'blocked', rutube: 'plays' });
 	await page.goto('/films/dune-2021');
 	await expect(heroFrame(page)).toHaveAttribute('src', new RegExp(`^${YOUTUBE}`));
 	await page.clock.runFor(8500);

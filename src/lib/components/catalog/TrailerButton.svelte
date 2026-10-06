@@ -1,6 +1,12 @@
 <script lang="ts">
 	import { TrailerPlayer } from '#lib/catalog/trailer-player.svelte.ts';
-	import { embedUrl, sourceLabel, subscribe, type TrailerSource } from '#lib/catalog/trailer.ts';
+	import {
+		embedUrl,
+		sendCommand,
+		sourceLabel,
+		subscribe,
+		type TrailerSource
+	} from '#lib/catalog/trailer.ts';
 
 	// Кнопка «Трейлер» и модалка с полноценным плеером (со звуком и управлением). iframe создаётся
 	// при открытии и удаляется при закрытии: заранее ничего не грузится, при закрытии видео
@@ -40,14 +46,25 @@
 		onopen?.();
 	}
 
+	let unsubscribe = () => {};
+
 	function onClose() {
 		isOpen = false;
 		player.stop();
+		unsubscribe();
 		onclose?.();
 	}
 
 	function onMessage(event: MessageEvent) {
-		if (isOpen) player.handle(event, iframe);
+		if (!isOpen) return;
+		// Плеер загрузился — просим играть (Rutube сам может не стартовать).
+		if (player.handle(event, iframe) === 'loaded')
+			sendCommand(iframe, player.current.provider, 'play');
+	}
+
+	function onFrameLoad() {
+		unsubscribe();
+		unsubscribe = subscribe(iframe, player.current.provider);
 	}
 </script>
 
@@ -100,7 +117,7 @@
 						allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
 						allowfullscreen
 						referrerpolicy="strict-origin-when-cross-origin"
-						onload={() => subscribe(iframe, player.current.provider)}
+						onload={onFrameLoad}
 					></iframe>
 				{/key}
 			{:else if player.failed}

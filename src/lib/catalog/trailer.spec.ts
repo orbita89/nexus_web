@@ -124,6 +124,17 @@ describe('выбор источника', () => {
 		expect(shouldFallback({ ready: true, buffering: false, playing: false })).toBe(false);
 		expect(shouldFallback({ ready: true, buffering: true, playing: true })).toBe(false);
 	});
+
+	it('таймаут на фоне: нажать ▶ нельзя — переключаемся, пока не играет', () => {
+		const background = { background: true };
+		expect(shouldFallback({ ready: true, buffering: false, playing: false }, background)).toBe(
+			true
+		);
+		expect(shouldFallback({ ready: false, buffering: false, playing: false }, background)).toBe(
+			true
+		);
+		expect(shouldFallback({ ready: true, buffering: true, playing: true }, background)).toBe(false);
+	});
 });
 
 describe('playerSignal', () => {
@@ -132,7 +143,10 @@ describe('playerSignal', () => {
 
 	it('YouTube: состояния из onStateChange и infoDelivery, ошибка', () => {
 		const ytMsg = (o: object) => JSON.stringify(o);
-		expect(playerSignal('youtube', YT, ytMsg({ event: 'onReady' }))).toBe('ready');
+		expect(playerSignal('youtube', YT, ytMsg({ event: 'onReady' }))).toBe('loaded');
+		expect(playerSignal('youtube', YT, ytMsg({ event: 'initialDelivery', info: {} }))).toBe(
+			'ready'
+		);
 		expect(playerSignal('youtube', YT, ytMsg({ event: 'onStateChange', info: 3 }))).toBe(
 			'buffering'
 		);
@@ -154,7 +168,10 @@ describe('playerSignal', () => {
 		expect(
 			playerSignal('rutube', RU, { type: 'player:changeState', data: { state: 'paused' } })
 		).toBe('ready');
-		expect(playerSignal('rutube', RU, { type: 'player:ready' })).toBe('ready');
+		expect(
+			playerSignal('rutube', RU, { type: 'player:changeState', data: { state: 'buffering' } })
+		).toBe('buffering');
+		expect(playerSignal('rutube', RU, { type: 'player:ready' })).toBe('loaded');
 		expect(playerSignal('rutube', RU, { type: 'player:playComplete' })).toBe('ended');
 		expect(playerSignal('rutube', RU, { type: 'player:error' })).toBe('error');
 	});

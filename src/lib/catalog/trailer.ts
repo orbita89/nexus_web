@@ -118,17 +118,37 @@ export function sendCommand(
 	}
 }
 
-/** YouTube присылает события, только если страница «слушает»: рукопожатие IFrame API. */
-export function subscribe(frame: HTMLIFrameElement | undefined, provider: Provider) {
-	if (provider !== 'youtube') return;
+/**
+ * YouTube присылает события, только если страница «слушает»: рукопожатие IFrame API. Плеер может
+ * быть ещё не готов к моменту load (медленная сеть), поэтому, как и официальная библиотека,
+ * повторяем каждые 250 мс, пока плеер не ответит (не дольше 15 с). Возвращает функцию остановки.
+ */
+export function subscribe(frame: HTMLIFrameElement | undefined, provider: Provider): () => void {
+	const target = frame?.contentWindow;
+	if (provider !== 'youtube' || !target) return () => {};
 	const post = (message: object) =>
-		frame?.contentWindow?.postMessage(
+		target.postMessage(
 			JSON.stringify({ ...message, id: 1, channel: 'widget' }),
 			PLAYER_ORIGIN.youtube
 		);
-	post({ event: 'listening' });
-	post({ event: 'command', func: 'addEventListener', args: ['onStateChange'] });
-	post({ event: 'command', func: 'addEventListener', args: ['onError'] });
+	const handshake = () => {
+		post({ event: 'listening' });
+		post({ event: 'command', func: 'addEventListener', args: ['onStateChange'] });
+		post({ event: 'command', func: 'addEventListener', args: ['onError'] });
+	};
+	const stop = () => {
+		clearInterval(interval);
+		clearTimeout(limit);
+		removeEventListener('message', onMessage);
+	};
+	const onMessage = (event: MessageEvent) => {
+		if (event.source === target && event.origin === PLAYER_ORIGIN.youtube) stop();
+	};
+	addEventListener('message', onMessage);
+	const interval = setInterval(handshake, 250);
+	const limit = setTimeout(stop, 15_000);
+	handshake();
+	return stop;
 }
 
 /** Подпись источника в переключателе: «YouTube», а при двух YouTube — «YouTube 2». */
@@ -153,14 +173,15 @@ export function nextIndex(count: number, tried: readonly number[]): number | nul
 
 /**
  * Что сообщил плеер:
- * - ready — плеер загрузился (сервис отвечает), но видео ещё не идёт;
+ * - loaded — плеер только что загрузился (один раз): пора дать команды «без звука», «играть»;
+ * - ready — плеер отвечает, но видео не идёт (пауза, перемотка и т. п.);
  * - buffering — видео начало грузиться (автозапуск сработал);
  * - playing — идёт воспроизведение;
  * - ended — видео доиграло (фону нужно начать сначала);
  * - error — плеер сказал, что видео недоступно.
  * Сообщения не от плеера этого провайдера — null.
  */
-export type PlayerSignal = 'ready' | 'buffering' | 'playing' | 'ended' | 'error';
+export type PlayerSignal = 'loaded' | 'ready' | 'buffering' | 'playing' | 'ended' | 'error';
 
 export function playerSignal(
 	provider: Provider,
@@ -196,6 +217,7 @@ export function playerSignal(
 					: 'ready';
 			}
 			case 'onReady':
+				return 'loaded';
 			case 'initialDelivery':
 				return 'ready';
 			default:
@@ -213,10 +235,15 @@ export function playerSignal(
 		case 'player:changeState': {
 			const d = m.data as Record<string, unknown> | null;
 			if (!d || typeof d !== 'object') return 'ready';
-			return d.state === 'playing' ? 'playing' : d.state === 'ended' ? 'ended' : 'ready';
+			const states: Record<string, PlayerSignal> = {
+				playing: 'playing',
+				buffering: 'buffering',
+				ended: 'ended'
+			};
+			return typeof d.state === 'string' ? (states[d.state] ?? 'ready') : 'ready';
 		}
 		case 'player:ready':
-			return 'ready';
+			return 'loaded';
 		default:
 			return null;
 	}
@@ -231,12 +258,12 @@ export interface Progress {
 /**
  * Таймаут без воспроизведения: переключаться ли на следующий источник.
  * Плеер не ответил вовсе или видео начало грузиться и зависло — сервис недоступен, переключаемся.
- * Плеер загрузился, но видео не стартовало — скорее браузер не дал автозапуск: зритель нажмёт ▶
- * сам, источник не меняем.
+ * Плеер загрузился, но видео не стартовало — скорее браузер не дал автозапуск. В модалке зритель
+ * нажмёт ▶ сам, источник не меняем; на фоне нажать нельзя (клики проходят мимо) — переключаемся.
  */
-export function shouldFallback(p: Progress): boolean {
+export function shouldFallback(p: Progress, { background = false } = {}): boolean {
 	if (p.playing) return false;
-	return !p.ready || p.buffering;
+	return background || !p.ready || p.buffering;
 }
 
 const STORAGE_KEY = 'nexus.trailer.provider';
