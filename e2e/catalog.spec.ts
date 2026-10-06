@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page, type Route } from '@playwright/test';
 
 // Каталог публичный: без входа, данные — из make seed (nexus_project/seeds/catalog.sql).
 
@@ -29,9 +29,7 @@ test('карточка: участники, переход на человека
 	await expect(page.getByRole('heading', { name: 'Дюна', level: 1 })).toBeVisible();
 	await expect(page.getByRole('link', { name: 'Научная фантастика' })).toBeVisible();
 	await expect(page.getByText('2 ч 35 мин')).toBeVisible();
-	// Трейлера в API пока нет — постер на месте, блока трейлера нет. Оценки временно скрыты.
-	await expect(page.getByRole('img', { name: 'Обложка: Дюна' })).toBeVisible();
-	await expect(page.getByRole('region', { name: 'Трейлер' })).toHaveCount(0);
+	// Оценки на карточке временно не показываются.
 	await expect(page.getByRole('region', { name: 'Оценка Nexus' })).toHaveCount(0);
 
 	const credits = page.getByRole('region', { name: 'Участники' });
@@ -107,58 +105,157 @@ test('поиск: результаты, пустой запрос — подск
 	await expect(page.getByRole('link', { name: /^Дюна\s+1965 · Книга/ })).toBeVisible();
 });
 
-// Поля trailer_url в API пока нет (docs/backend-questions.md): подмешиваем его в ответ при переходе
-// в браузере, видео — маленький webm из e2e/fixtures.
-async function withTrailer(page: Page, video: 'ok' | 'broken') {
-	await page.route('**/api/v1/catalog/entities/dune-2021', async (route) => {
-		const response = await route.fetch();
-		const json = await response.json();
-		await route.fulfill({ response, json: { ...json, trailer_url: '/test-trailer.webm' } });
-	});
-	await page.route('**/test-trailer.webm', (route) =>
-		video === 'ok'
-			? route.fulfill({ path: 'e2e/fixtures/trailer.webm', contentType: 'video/webm' })
-			: route.fulfill({ status: 404 })
+// Трейлеры. Источники берутся из ответа API (metadata.trailers у dune-2021: YouTube, затем
+// Rutube), адрес плеера строит фронтенд по шаблону провайдера — его и проверяем. Видеосервисы
+// и CDN картинок подменены: в CI сети к ним может не быть, поэтому проверяется адрес плеера,
+// а не воспроизведение. Таймаут ожидания (8 с) проматывается часами Playwright.
+let YOUTUBE: string;
+let RUTUBE: string;
+
+test.beforeAll(async ({ request }) => {
+	const entity = await (await request.get('/api/v1/catalog/entities/dune-2021')).json();
+	const trailers: { provider: string; id: string }[] = entity.metadata.trailers;
+	expect(trailers.map((t) => t.provider)).toEqual(['youtube', 'rutube']);
+	YOUTUBE = `https://www.youtube-nocookie.com/embed/${trailers[0].id}`;
+	RUTUBE = `https://rutube.ru/play/embed/${trailers[1].id}`;
+});
+
+const PIXEL = Buffer.from(
+	'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+	'base64'
+);
+
+async function stubMedia(
+	page: Page,
+	{ blockYoutube = false, blockRutube = false, rutubePlays = false } = {}
+) {
+	await page.route(/^https:\/\/(image\.tmdb\.org|covers\.openlibrary\.org)\//, (route) =>
+		route.fulfill({ body: PIXEL, contentType: 'image/png' })
 	);
-	await page.goto('/films');
-	await page.getByRole('link', { name: /^Дюна\s+2021/ }).click();
-	await expect(page.getByRole('heading', { name: 'Дюна', level: 1 })).toBeVisible();
+	const player = (blocked: boolean) => (route: Route) =>
+		blocked
+			? route.abort('blockedbyclient')
+			: route.fulfill({ body: '<!doctype html><title>player</title>', contentType: 'text/html' });
+	await page.route('https://www.youtube-nocookie.com/**', player(blockYoutube));
+	// Заглушка Rutube может «заиграть»: присылает событие, как настоящий плеер.
+	const playing = JSON.stringify({ type: 'player:changeState', data: { state: 'playing' } });
+	await page.route('https://rutube.ru/**', (route) =>
+		rutubePlays
+			? route.fulfill({
+					body: `<!doctype html><script>parent.postMessage(${JSON.stringify(playing)}, '*')</script>`,
+					contentType: 'text/html'
+				})
+			: player(blockRutube)(route)
+	);
 }
 
-const isPlaying = (v: HTMLVideoElement) => !v.paused;
+const playerFrame = (page: Page) =>
+	page.getByRole('dialog', { name: 'Трейлер: Дюна' }).locator('iframe');
 
-test('трейлер: сам запускается без звука, звук и пауза — кнопками, постер остаётся', async ({
+test('трейлер: кнопка открывает плеер YouTube, переключатель — Rutube, Esc закрывает', async ({
 	page
 }) => {
-	await withTrailer(page, 'ok');
-	const hero = page.getByRole('region', { name: 'Трейлер' });
-	const video = hero.locator('video');
-	await expect(video).toHaveAttribute('src', '/test-trailer.webm');
-	await expect.poll(() => video.evaluate(isPlaying)).toBe(true);
-	expect(await video.evaluate((v: HTMLVideoElement) => v.muted && v.loop)).toBe(true);
+	await stubMedia(page);
+	await page.goto('/films/dune-2021');
+	await expect(page.getByRole('img', { name: 'Обложка: Дюна' })).toHaveAttribute(
+		'src',
+		/^https:\/\/image\.tmdb\.org\//
+	);
+	// Плеер не грузится заранее.
+	await expect(page.locator('iframe')).toHaveCount(0);
 
-	await hero.getByRole('button', { name: 'Включить звук' }).click();
-	expect(await video.evaluate((v: HTMLVideoElement) => v.muted)).toBe(false);
-	await expect(hero.getByRole('button', { name: 'Выключить звук' })).toBeVisible();
+	await page.getByRole('button', { name: 'Трейлер' }).click();
+	const dialog = page.getByRole('dialog', { name: 'Трейлер: Дюна' });
+	await expect(dialog).toBeVisible();
+	const frame = playerFrame(page);
+	await expect(frame).toHaveAttribute('src', new RegExp(`^${YOUTUBE}\\?autoplay=1&`));
+	await expect(frame).toHaveAttribute('title', 'Трейлер: Дюна');
+	await expect(frame).toHaveAttribute('allow', /autoplay/);
 
-	await hero.getByRole('button', { name: 'Пауза' }).click();
-	await expect.poll(() => video.evaluate(isPlaying)).toBe(false);
-	await hero.getByRole('button', { name: 'Смотреть трейлер' }).click();
-	await expect.poll(() => video.evaluate(isPlaying)).toBe(true);
+	const switcher = dialog.getByRole('group', { name: 'Источник' });
+	await expect(switcher.getByRole('button', { name: 'YouTube' })).toHaveAttribute(
+		'aria-pressed',
+		'true'
+	);
+	await switcher.getByRole('button', { name: 'Rutube' }).click();
+	await expect(frame).toHaveAttribute('src', `${RUTUBE}?autoplay=1`);
 
-	await expect(page.getByRole('img', { name: 'Обложка: Дюна' })).toBeVisible();
+	await page.keyboard.press('Escape');
+	await expect(dialog).toBeHidden();
+	await expect(page.locator('iframe')).toHaveCount(0);
 });
 
-test('трейлер: при prefers-reduced-motion сам не запускается', async ({ page }) => {
-	await page.emulateMedia({ reducedMotion: 'reduce' });
-	await withTrailer(page, 'ok');
-	const hero = page.getByRole('region', { name: 'Трейлер' });
-	await expect(hero.getByRole('button', { name: 'Смотреть трейлер' })).toBeVisible();
-	expect(await hero.locator('video').evaluate(isPlaying)).toBe(false);
+test('трейлер: YouTube недоступен — плеер сам переходит на Rutube', async ({ page }) => {
+	await page.clock.install();
+	await stubMedia(page, { blockYoutube: true });
+	await page.goto('/films/dune-2021');
+	await page.getByRole('button', { name: 'Трейлер' }).click();
+	await expect(playerFrame(page)).toHaveAttribute('src', new RegExp(`^${YOUTUBE}`));
+
+	await page.clock.runFor(8500);
+	await expect(playerFrame(page)).toHaveAttribute('src', `${RUTUBE}?autoplay=1`);
+	await expect(page.getByText('YouTube недоступен, показываем Rutube')).toBeVisible();
 });
 
-test('трейлер не загрузился — карточка как без него', async ({ page }) => {
-	await withTrailer(page, 'broken');
-	await expect(page.getByRole('region', { name: 'Трейлер' })).toHaveCount(0);
-	await expect(page.getByRole('img', { name: 'Обложка: Дюна' })).toBeVisible();
+test('трейлер: ни один источник не запустился — постер и сообщение', async ({ page }) => {
+	await page.clock.install();
+	await stubMedia(page, { blockYoutube: true, blockRutube: true });
+	await page.goto('/films/dune-2021');
+	await page.getByRole('button', { name: 'Трейлер' }).click();
+	await page.clock.runFor(8500);
+	await expect(playerFrame(page)).toHaveAttribute('src', new RegExp(`^${RUTUBE}`));
+	await page.clock.runFor(8500);
+
+	const dialog = page.getByRole('dialog', { name: 'Трейлер: Дюна' });
+	await expect(dialog.getByText('Трейлер недоступен в вашем регионе')).toBeVisible();
+	await expect(dialog.locator('iframe')).toHaveCount(0);
+	await expect(dialog.locator('img')).toHaveAttribute('src', /^https:\/\/image\.tmdb\.org\//);
+});
+
+test('трейлер: сработавший источник запоминается и в следующий раз идёт первым', async ({
+	page
+}) => {
+	await page.clock.install();
+	await stubMedia(page, { blockYoutube: true, rutubePlays: true });
+	await page.goto('/films/dune-2021');
+	await page.getByRole('button', { name: 'Трейлер' }).click();
+	await page.clock.runFor(8500);
+	await expect(playerFrame(page)).toHaveAttribute('src', new RegExp(`^${RUTUBE}`));
+	await expect
+		.poll(() => page.evaluate(() => localStorage.getItem('nexus.trailer.provider')))
+		.toBe('rutube');
+
+	await page.keyboard.press('Escape');
+	await page.getByRole('button', { name: 'Трейлер' }).click();
+	await expect(playerFrame(page)).toHaveAttribute('src', new RegExp(`^${RUTUBE}`));
+	// Уже играет — по таймауту ничего не меняется.
+	await page.clock.runFor(8500);
+	await expect(playerFrame(page)).toHaveAttribute('src', new RegExp(`^${RUTUBE}`));
+	await expect(page.getByText(/недоступен/)).toHaveCount(0);
+});
+
+test('без трейлера — только постер; у книги — обложка Open Library', async ({ page }) => {
+	await stubMedia(page);
+	await page.goto('/films/dune-1984');
+	await expect(page.getByRole('heading', { name: 'Дюна', level: 1 })).toBeVisible();
+	await expect(page.getByRole('img', { name: 'Обложка: Дюна' })).toHaveAttribute(
+		'src',
+		/^https:\/\/image\.tmdb\.org\//
+	);
+	await expect(page.getByRole('button', { name: 'Трейлер' })).toHaveCount(0);
+
+	await page.goto('/books/dune-novel');
+	await expect(page.getByRole('img', { name: 'Обложка: Дюна' })).toHaveAttribute(
+		'src',
+		/^https:\/\/covers\.openlibrary\.org\//
+	);
+	await expect(page.getByRole('button', { name: 'Трейлер' })).toHaveCount(0);
+});
+
+test('в подвале — атрибуция TMDB', async ({ page }) => {
+	await page.goto('/');
+	await expect(page.getByRole('contentinfo').getByRole('link', { name: 'TMDB' })).toHaveAttribute(
+		'href',
+		'https://www.themoviedb.org/'
+	);
 });

@@ -455,6 +455,20 @@ export interface components {
 			platforms?: string[] | null;
 			/** @example CD Projekt */
 			publisher?: string | null;
+			/**
+			 * @description Трейлер: источники по приоритету, фронтенд показывает первый доступный у зрителя.
+			 * @example [
+			 *       {
+			 *         "id": "n9xhJrPXop4",
+			 *         "provider": "youtube"
+			 *       },
+			 *       {
+			 *         "id": "0ab1fc1e47f2e9b89e9e59d9db36f2b4",
+			 *         "provider": "rutube"
+			 *       }
+			 *     ]
+			 */
+			trailers?: components['schemas']['TrailerSource'][] | null;
 		};
 		/**
 		 * @description Поля, специфичные для типа (`kind`). Все поля необязательны, неизвестные запрещены.
@@ -486,6 +500,20 @@ export interface components {
 			 * @example 155
 			 */
 			runtime_min?: number | null;
+			/**
+			 * @description Трейлер: источники по приоритету, фронтенд показывает первый доступный у зрителя.
+			 * @example [
+			 *       {
+			 *         "id": "n9xhJrPXop4",
+			 *         "provider": "youtube"
+			 *       },
+			 *       {
+			 *         "id": "0ab1fc1e47f2e9b89e9e59d9db36f2b4",
+			 *         "provider": "rutube"
+			 *       }
+			 *     ]
+			 */
+			trailers?: components['schemas']['TrailerSource'][] | null;
 		};
 		/** @description Страница списка. */
 		Page_EntitySummary: {
@@ -629,6 +657,20 @@ export interface components {
 			 */
 			seasons?: number | null;
 			status?: components['schemas']['SeriesStatus'] | null;
+			/**
+			 * @description Трейлер: источники по приоритету, фронтенд показывает первый доступный у зрителя.
+			 * @example [
+			 *       {
+			 *         "id": "n9xhJrPXop4",
+			 *         "provider": "youtube"
+			 *       },
+			 *       {
+			 *         "id": "0ab1fc1e47f2e9b89e9e59d9db36f2b4",
+			 *         "provider": "rutube"
+			 *       }
+			 *     ]
+			 */
+			trailers?: components['schemas']['TrailerSource'][] | null;
 		};
 		/** @enum {string} */
 		SeriesStatus: 'ongoing' | 'ended' | 'canceled';
@@ -663,6 +705,21 @@ export interface components {
 			name: string;
 			/** @example sci-fi */
 			slug: string;
+		};
+		/**
+		 * @description Видеосервис трейлера. Фронтенд сам строит адрес плеера по провайдеру и id, поэтому в БД не
+		 *     попадает произвольный URL (и чужой домен в iframe).
+		 * @enum {string}
+		 */
+		TrailerProvider: 'youtube' | 'rutube';
+		/**
+		 * @description Источник трейлера. На входе можно передать и просто ссылку на видео — провайдер и id
+		 *     определятся сами; в `id` тоже допустима ссылка.
+		 */
+		TrailerSource: {
+			/** @example n9xhJrPXop4 */
+			id: string;
+			provider: components['schemas']['TrailerProvider'];
 		};
 		/**
 		 * @description Изменение сущности: переданные поля заменяются, `null` очищает необязательное поле.
@@ -725,6 +782,8 @@ export type SchemaSeriesStatus = components['schemas']['SeriesStatus'];
 export type SchemaSetTags = components['schemas']['SetTags'];
 export type SchemaTag = components['schemas']['Tag'];
 export type SchemaTagWithCount = components['schemas']['TagWithCount'];
+export type SchemaTrailerProvider = components['schemas']['TrailerProvider'];
+export type SchemaTrailerSource = components['schemas']['TrailerSource'];
 export type SchemaUpdateEntity = components['schemas']['UpdateEntity'];
 export type SchemaUpdatePerson = components['schemas']['UpdatePerson'];
 export type SchemaUpdateTag = components['schemas']['UpdateTag'];

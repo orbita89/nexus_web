@@ -5,8 +5,8 @@
 	import Poster from '#lib/components/catalog/Poster.svelte';
 	import Seo from '#lib/components/catalog/Seo.svelte';
 	import TagChips from '#lib/components/catalog/TagChips.svelte';
-	import TrailerHero from '#lib/components/catalog/TrailerHero.svelte';
-	import { trailerUrl } from '#lib/catalog/trailer.ts';
+	import TrailerButton from '#lib/components/catalog/TrailerButton.svelte';
+	import { trailerSources } from '#lib/catalog/trailer.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -20,12 +20,7 @@
 			: []),
 		...metadataFields(entity.kind, entity.metadata)
 	]);
-	// Трейлер не загрузился — карточка как без него (постер на своём месте).
-	let failedTrailer = $state<string | null>(null);
-	const trailer = $derived.by(() => {
-		const url = trailerUrl(entity);
-		return url && url !== failedTrailer ? url : null;
-	});
+	const trailers = $derived(trailerSources(entity));
 	const description = $derived(
 		summary(entity.description) ||
 			`${kind.one} «${entity.title}»${year ? ` (${year})` : ''}: оценки, рецензии и обсуждения в Nexus.`
@@ -34,33 +29,35 @@
 
 <Seo title="{entity.title}{year ? ` (${year})` : ''}" {description} image={entity.cover_url} />
 
-{#if trailer}
-	{#key trailer}
-		<TrailerHero src={trailer} title={entity.title} onfail={() => (failedTrailer = trailer)} />
-	{/key}
-{:else}
-	<!-- Фон-отсвет за постером: цвет раздела, уходящий в чёрный. -->
-	<div
-		class={[
-			'pointer-events-none absolute inset-x-0 top-16 -z-10 h-96 bg-linear-to-b to-transparent',
-			{
-				'from-primary/15': entity.kind === 'movie',
-				'from-secondary/15': entity.kind === 'series',
-				'from-accent/10': entity.kind === 'book',
-				'from-info/10': entity.kind === 'game'
-			}
-		]}
-		aria-hidden="true"
-	></div>
-{/if}
-
-<!-- С трейлером постер и заголовок заходят на нижний край видео. -->
-<article
-	class={[
-		'relative grid gap-8 md:grid-cols-[minmax(0,15rem)_1fr] lg:gap-12',
-		{ '-mt-16 md:-mt-40': trailer }
-	]}
+<!-- Фон под шапкой карточки, как у Okko: размытый постер, уходящий в чёрный; без постера —
+     отсвет цвета раздела. -->
+<div
+	class="pointer-events-none absolute inset-x-0 top-16 -z-10 h-[34rem] overflow-hidden"
+	aria-hidden="true"
 >
+	{#if entity.cover_url}
+		<img
+			src={entity.cover_url}
+			alt=""
+			class="h-full w-full scale-125 object-cover opacity-45 blur-3xl"
+		/>
+		<div class="absolute inset-0 bg-linear-to-b from-base-100/20 via-base-100/70 to-base-100"></div>
+	{:else}
+		<div
+			class={[
+				'h-full bg-linear-to-b to-transparent',
+				{
+					'from-primary/15': entity.kind === 'movie',
+					'from-secondary/15': entity.kind === 'series',
+					'from-accent/10': entity.kind === 'book',
+					'from-info/10': entity.kind === 'game'
+				}
+			]}
+		></div>
+	{/if}
+</div>
+
+<article class="relative grid gap-8 md:grid-cols-[minmax(0,15rem)_1fr] lg:gap-12">
 	<div class="mx-auto w-48 sm:w-56 md:w-full">
 		<Poster
 			title={entity.title}
@@ -81,8 +78,19 @@
 			<p class="mt-1 text-lg text-base-content/50">{entity.original_title}</p>
 		{/if}
 
+		{#if trailers.length}
+			<div class="mt-5">
+				<TrailerButton
+					sources={trailers}
+					title={entity.title}
+					kind={entity.kind}
+					coverUrl={entity.cover_url}
+				/>
+			</div>
+		{/if}
+
 		{#if entity.tags.length}
-			<div class="mt-4"><TagChips tags={entity.tags} /></div>
+			<div class="mt-5"><TagChips tags={entity.tags} /></div>
 		{/if}
 
 		<div class="mt-6">

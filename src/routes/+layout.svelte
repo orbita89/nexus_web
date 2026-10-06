@@ -13,7 +13,7 @@
 	<title>Nexus</title>
 </svelte:head>
 
-<div class="relative isolate flex min-h-screen flex-col overflow-x-clip">
+<div class="relative isolate flex min-h-screen flex-col">
 	<Navbar />
 	<main class="mx-auto w-full max-w-6xl flex-1 px-4 py-6">
 		{@render children()}
@@ -33,6 +33,12 @@
 				<a href="/people" class="link link-hover">Люди</a>
 				<a href="/tags" class="link link-hover">Теги</a>
 			</nav>
+			<p class="text-xs">
+				Постеры:
+				<a href="https://www.themoviedb.org/" class="link link-hover" rel="noopener external"
+					>TMDB</a
+				>
+			</p>
 		</div>
 	</footer>
 </div>

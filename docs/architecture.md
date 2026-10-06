@@ -32,7 +32,7 @@ src/
     catalog/           разделы (kinds), подписи (labels), состояние списков в URL (url), load-хелперы
     components/        Navbar, Avatar, Alert, AuthCard, ProviderButtons, Stub
       catalog/         Poster, EntityCard, EntityGrid, PosterStrip, Pagination, KindTabs, TagChips,
-                       PersonAvatar, RatingSummary, TrailerHero, EmptyState, LoadError, Seo
+                       PersonAvatar, RatingSummary, TrailerButton, EmptyState, LoadError, Seo
     utils/             safeNext, loginUrl
   routes/
     +layout.svelte     шапка, контейнер, подвал
@@ -59,7 +59,7 @@ scripts/api-types.mjs  генерация типов API
 | -------------------------------------- | ------------------------------------------------------------- |
 | `/`                                    | новинки по разделам (пустой раздел скрыт), популярные теги    |
 | `/films?tag=&year=&q=&offset=`         | раздел (`films`, `series`, `books`, `games`) с фильтрами      |
-| `/films/dune-2021`                     | карточка: трейлер (если есть), постер, metadata, участники    |
+| `/films/dune-2021`                     | карточка: постер, «Трейлер» (модалка), metadata, участники    |
 | `/people?q=&offset=`, `/people/{slug}` | люди; человек и его работы (одна карточка — все роли)         |
 | `/tags`, `/tags/{slug}?kind=&offset=`  | теги; сущности с тегом, фильтр по разделу (`kind` — `films`…) |
 | `/search?q=&kind=&offset=`             | поиск (Meilisearch); пустой `q` — подсказка, 503 — сообщение  |
@@ -97,13 +97,20 @@ scripts/api-types.mjs  генерация типов API
 `transfer-encoding`, `retry-after` (`filterSerializedResponseHeaders`): openapi-fetch смотрит
 `Content-Length`, без этого любой SSR-запрос падает с `load_response_header_not_serialized`.
 
-**Трейлер.** У фильмов, сериалов и игр карточка открывается трейлером (`TrailerHero`): видео
-на всю ширину над карточкой, постер и заголовок заходят на его нижний край. Запускается само без
-звука (со звуком браузеры не дают), по кругу; кнопки паузы и звука; вне экрана — пауза; при
-`prefers-reduced-motion` само не запускается. Видео не загрузилось — карточка как без трейлера.
-Поля `trailer_url` в API пока нет (backend-questions): `trailerUrl()` читает его, если оно есть,
-поэтому блок включится сам. В e2e поле подмешивается в ответ API (`page.route`), видео —
-`e2e/fixtures/trailer.webm`.
+**Трейлер** (`#lib/catalog/trailer.ts`, `TrailerButton`). У фильмов, сериалов и игр в
+`metadata.trailers` — до 5 источников по приоритету (`youtube`, `rutube`: YouTube заблокирован в
+части стран СНГ и в Китае). Фронтенд ещё раз проверяет id шаблоном провайдера и сам строит адрес
+плеера (`youtube-nocookie.com/embed/{id}`, `rutube.ru/play/embed/{id}`). На карточке — постер и
+кнопка «Трейлер» (есть хотя бы один источник); плеер — в модалке `<dialog>`, iframe создаётся при
+открытии и удаляется при закрытии. Источник выбирается в самом плеере: старт с `autoplay=1`,
+события плеера по `postMessage` (YouTube IFrame API — рукопожатие `listening` после загрузки;
+Rutube — `player:changeState`), `origin` проверяется. Нет воспроизведения за 8 с (плеер молчит или
+завис на загрузке) или ошибка плеера — следующий источник и строка «YouTube недоступен,
+показываем Rutube». Плеер загрузился, но автозапуск не дали — не переключаемся: зритель нажмёт ▶.
+Сработавший провайдер запоминается (`localStorage` `nexus.trailer.provider`) и в следующий раз идёт
+первым. Не сработал ни один — постер и «Трейлер недоступен в вашем регионе». Переключатель
+источников над плеером — всегда, если источников больше одного. В e2e видеосервисы и CDN
+подменены (`page.route`), таймаут проматывается `page.clock`.
 
 **Сводка оценок временно не показывается** на карточке (решение продукта): компонент
 `RatingSummary` есть, вернуть — запросить сводку в `+page.ts` карточки через `settle()`.

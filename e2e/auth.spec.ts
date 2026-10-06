@@ -11,7 +11,11 @@ const userMenu = (page: Page) => page.getByRole('button', { name: 'Меню по
 async function logout(page: Page) {
 	await userMenu(page).click();
 	await page.getByRole('button', { name: 'Выйти', exact: true }).click();
-	await expect(page.getByRole('link', { name: 'Войти' })).toBeVisible();
+	await expect(
+		page
+			.getByRole('navigation', { name: 'Основная навигация' })
+			.getByRole('link', { name: 'Войти', exact: true })
+	).toBeVisible();
 }
 
 async function login(page: Page, loginName: string, password: string) {
