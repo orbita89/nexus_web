@@ -17,7 +17,7 @@
 		"test:unit": "vitest",
 		"test:e2e": "playwright test",
 		"test": "vitest --run && playwright test",
-		"ci": "pnpm lint && pnpm check && vitest --run && pnpm build && playwright test"
+		"verify": "pnpm lint && pnpm check && vitest --run && pnpm build && playwright test"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",

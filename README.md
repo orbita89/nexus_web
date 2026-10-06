@@ -1,54 +1,62 @@
-# sv
+# Nexus Web
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+Веб-фронтенд [Nexus](../nexus_project): каталог фильмов, сериалов, книг и игр и социальная сеть
+вокруг них. SvelteKit 3 (Svelte 5), TypeScript, Tailwind CSS + DaisyUI.
 
-## Creating a project
+Бэкенд — отдельный репозиторий `nexus_project` (Rust, REST + JSON). Документы «что и зачем» — в
+[docs/](docs/README.md).
 
-If you're seeing this, you've probably already done this step. Congrats!
+## Запуск
 
-```sh
-# create a new project
-npx sv create my-app
-```
-
-To recreate this project with the same configuration:
+Нужны Node.js 22+, pnpm и поднятый бэкенд.
 
 ```sh
-# recreate this project
-pnpm dlx sv@1.1.0 create --template minimal --types ts --add prettier eslint vitest="usages:unit,component" playwright="demo:no" tailwindcss="plugins:none" sveltekit-adapter="adapter:node" --install pnpm nexus_web
+# бэкенд (соседний каталог)
+cd ../nexus_project && make up && make seed
+
+# фронтенд
+pnpm install
+pnpm dev            # http://localhost:5173
 ```
 
-## Adding features
+Vite проксирует `/api` и `/ws` на бэкенд (`http://localhost`, переопределяется `BACKEND_URL`):
+у бэкенда нет CORS, и в проде фронтенд и API будут на одном домене за nginx.
 
-Add features to your project with `sv add`:
+**Ссылки из писем в dev.** Бэкенд строит ссылки от `APP_BASE_URL` (по умолчанию `http://localhost`,
+а это сам бэкенд). Чтобы ссылки из Mailpit открывали фронтенд, добавьте в `../nexus_project/infra/.env`:
 
 ```sh
-npx sv add
+APP_BASE_URL=http://localhost:5173
 ```
 
-For example, to add Tailwind CSS:
+и перезапустите `make up`. Письма — в Mailpit: http://localhost:8025.
 
-```sh
-npx sv add tailwindcss
-```
+Тестовые пользователи: `admin`, `author`, `user`, пароль `password123`.
 
-## Developing
+## Команды
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+| Команда                       | Что делает                                                                          |
+| ----------------------------- | ----------------------------------------------------------------------------------- |
+| `pnpm dev`                    | Dev-сервер с прокси на бэкенд                                                       |
+| `pnpm build` / `pnpm preview` | Сборка (adapter-node) / запуск сборки с тем же прокси                               |
+| `pnpm verify`                 | **Всё, что проверяет CI:** prettier + eslint, svelte-check, unit-тесты, сборка, e2e |
+| `pnpm lint` / `pnpm format`   | Проверить / исправить форматирование и eslint                                       |
+| `pnpm check`                  | svelte-check (типы; предупреждения считаются ошибками)                              |
+| `pnpm test:unit`              | Vitest: логика (Node) и компоненты (Chromium)                                       |
+| `pnpm test:e2e`               | Playwright против поднятого бэкенда и Mailpit                                       |
+| `pnpm api:types`              | Перегенерировать типы API из `../nexus_project/documents/api/*.json`                |
+| `pnpm api:check`              | Проверить, что типы совпадают с контрактом (в CI)                                   |
 
-```sh
-npm run dev
+Путь к бэкенду для `api:*` — `NEXUS_BACKEND_DIR` (по умолчанию `../nexus_project`).
 
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
+Первый запуск тестов: `pnpm exec playwright install chromium`.
 
-## Building
+**E2E и лимиты входа.** Бэкенд ограничивает вход: 10 попыток на аккаунт, 30 запросов входа и писем
+в минуту с IP. Тесты идут в один поток, адреса уникальны на каждый прогон, в сценарии не больше
+одного входа. Не добавляйте вход в цикле или в `beforeEach`.
 
-To create a production version of your app:
+## CI
 
-```sh
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
+GitHub Actions (`.github/workflows/ci.yml`): проверки, unit, сборка и сверка типов с контрактом;
+отдельной задачей — бэкенд из `docker compose` и e2e. Бэкенд берётся из `orbita89/nexus_project`;
+если репозиторий приватный, нужен секрет `BACKEND_REPO_TOKEN` (fine-grained token, Contents: read).

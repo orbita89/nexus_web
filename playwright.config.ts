@@ -19,6 +19,8 @@ export default defineConfig({
 	webServer: {
 		command: 'pnpm build && pnpm preview --port 4173 --strictPort',
 		port: 4173,
+		// На SIGTERM vite preview не завершается, и Playwright ждёт его до глобального таймаута.
+		gracefulShutdown: { signal: 'SIGINT', timeout: 3000 },
 		reuseExistingServer: !process.env.CI,
 		timeout: 180_000
 	}
