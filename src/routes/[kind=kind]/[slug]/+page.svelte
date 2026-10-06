@@ -3,9 +3,10 @@
 	import { formatDate, metadataFields, roleLabel, summary, yearOf } from '#lib/catalog/labels.ts';
 	import PersonAvatar from '#lib/components/catalog/PersonAvatar.svelte';
 	import Poster from '#lib/components/catalog/Poster.svelte';
-	import RatingSummary from '#lib/components/catalog/RatingSummary.svelte';
 	import Seo from '#lib/components/catalog/Seo.svelte';
 	import TagChips from '#lib/components/catalog/TagChips.svelte';
+	import TrailerHero from '#lib/components/catalog/TrailerHero.svelte';
+	import { trailerUrl } from '#lib/catalog/trailer.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -19,6 +20,12 @@
 			: []),
 		...metadataFields(entity.kind, entity.metadata)
 	]);
+	// Трейлер не загрузился — карточка как без него (постер на своём месте).
+	let failedTrailer = $state<string | null>(null);
+	const trailer = $derived.by(() => {
+		const url = trailerUrl(entity);
+		return url && url !== failedTrailer ? url : null;
+	});
 	const description = $derived(
 		summary(entity.description) ||
 			`${kind.one} «${entity.title}»${year ? ` (${year})` : ''}: оценки, рецензии и обсуждения в Nexus.`
@@ -27,21 +34,33 @@
 
 <Seo title="{entity.title}{year ? ` (${year})` : ''}" {description} image={entity.cover_url} />
 
-<!-- Фон-отсвет за постером: цвет раздела, уходящий в чёрный. -->
-<div
-	class={[
-		'pointer-events-none absolute inset-x-0 top-16 -z-10 h-96 bg-linear-to-b to-transparent',
-		{
-			'from-primary/15': entity.kind === 'movie',
-			'from-secondary/15': entity.kind === 'series',
-			'from-accent/10': entity.kind === 'book',
-			'from-info/10': entity.kind === 'game'
-		}
-	]}
-	aria-hidden="true"
-></div>
+{#if trailer}
+	{#key trailer}
+		<TrailerHero src={trailer} title={entity.title} onfail={() => (failedTrailer = trailer)} />
+	{/key}
+{:else}
+	<!-- Фон-отсвет за постером: цвет раздела, уходящий в чёрный. -->
+	<div
+		class={[
+			'pointer-events-none absolute inset-x-0 top-16 -z-10 h-96 bg-linear-to-b to-transparent',
+			{
+				'from-primary/15': entity.kind === 'movie',
+				'from-secondary/15': entity.kind === 'series',
+				'from-accent/10': entity.kind === 'book',
+				'from-info/10': entity.kind === 'game'
+			}
+		]}
+		aria-hidden="true"
+	></div>
+{/if}
 
-<article class="grid gap-8 md:grid-cols-[minmax(0,15rem)_1fr] lg:gap-12">
+<!-- С трейлером постер и заголовок заходят на нижний край видео. -->
+<article
+	class={[
+		'relative grid gap-8 md:grid-cols-[minmax(0,15rem)_1fr] lg:gap-12',
+		{ '-mt-16 md:-mt-40': trailer }
+	]}
+>
 	<div class="mx-auto w-48 sm:w-56 md:w-full">
 		<Poster
 			title={entity.title}
@@ -66,7 +85,7 @@
 			<div class="mt-4"><TagChips tags={entity.tags} /></div>
 		{/if}
 
-		<div class="mt-6 grid gap-6 lg:grid-cols-[1fr_18rem]">
+		<div class="mt-6">
 			<div class="min-w-0">
 				{#if entity.description}
 					<p class="leading-relaxed whitespace-pre-line text-base-content/80">
@@ -83,10 +102,6 @@
 					</dl>
 				{/if}
 			</div>
-
-			{#if data.rating}
-				<div><RatingSummary rating={data.rating} /></div>
-			{/if}
 		</div>
 
 		{#if entity.credits.length}

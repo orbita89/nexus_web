@@ -32,7 +32,7 @@ src/
     catalog/           разделы (kinds), подписи (labels), состояние списков в URL (url), load-хелперы
     components/        Navbar, Avatar, Alert, AuthCard, ProviderButtons, Stub
       catalog/         Poster, EntityCard, EntityGrid, PosterStrip, Pagination, KindTabs, TagChips,
-                       PersonAvatar, RatingSummary, EmptyState, LoadError, Seo
+                       PersonAvatar, RatingSummary, TrailerHero, EmptyState, LoadError, Seo
     utils/             safeNext, loginUrl
   routes/
     +layout.svelte     шапка, контейнер, подвал
@@ -59,7 +59,7 @@ scripts/api-types.mjs  генерация типов API
 | -------------------------------------- | ------------------------------------------------------------- |
 | `/`                                    | новинки по разделам (пустой раздел скрыт), популярные теги    |
 | `/films?tag=&year=&q=&offset=`         | раздел (`films`, `series`, `books`, `games`) с фильтрами      |
-| `/films/dune-2021`                     | карточка: metadata, теги, участники, сводка оценок (social)   |
+| `/films/dune-2021`                     | карточка: трейлер (если есть), постер, metadata, участники    |
 | `/people?q=&offset=`, `/people/{slug}` | люди; человек и его работы (одна карточка — все роли)         |
 | `/tags`, `/tags/{slug}?kind=&offset=`  | теги; сущности с тегом, фильтр по разделу (`kind` — `films`…) |
 | `/search?q=&kind=&offset=`             | поиск (Meilisearch); пустой `q` — подсказка, 503 — сообщение  |
@@ -90,13 +90,23 @@ scripts/api-types.mjs  генерация типов API
 (`#lib/catalog/load.ts`):
 
 - `orError()` — для карточек: 404 → страница 404, остальное → `+error.svelte`;
-- `settle()` — для списков: ошибка → `{ error }`, страница показывает `LoadError` с «Повторить»
-  (`invalidateAll`), фильтры остаются на месте. Сводка оценок на карточке тоже через `settle`:
-  не загрузилась — карточка показывается без неё.
+- `settle()` — для списков и необязательных частей: ошибка → `{ error }`, страница показывает
+  `LoadError` с «Повторить» (`invalidateAll`), фильтры остаются на месте.
 
 `hooks.server.ts` разрешает читать на сервере заголовки ответов API `content-length`,
 `transfer-encoding`, `retry-after` (`filterSerializedResponseHeaders`): openapi-fetch смотрит
 `Content-Length`, без этого любой SSR-запрос падает с `load_response_header_not_serialized`.
+
+**Трейлер.** У фильмов, сериалов и игр карточка открывается трейлером (`TrailerHero`): видео
+на всю ширину над карточкой, постер и заголовок заходят на его нижний край. Запускается само без
+звука (со звуком браузеры не дают), по кругу; кнопки паузы и звука; вне экрана — пауза; при
+`prefers-reduced-motion` само не запускается. Видео не загрузилось — карточка как без трейлера.
+Поля `trailer_url` в API пока нет (backend-questions): `trailerUrl()` читает его, если оно есть,
+поэтому блок включится сам. В e2e поле подмешивается в ответ API (`page.route`), видео —
+`e2e/fixtures/trailer.webm`.
+
+**Сводка оценок временно не показывается** на карточке (решение продукта): компонент
+`RatingSummary` есть, вернуть — запросить сводку в `+page.ts` карточки через `settle()`.
 
 SEO: `Seo.svelte` — `<title>`, `meta description` (обрезанное по слову описание), `og:*`.
 

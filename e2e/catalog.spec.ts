@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 // Каталог публичный: без входа, данные — из make seed (nexus_project/seeds/catalog.sql).
 
@@ -24,25 +24,15 @@ test('раздел: фильтр по тегу меняет адрес и выд
 	await expect(page.getByRole('link', { name: /^Сияние\s+1980/ })).toBeVisible();
 });
 
-test('карточка: участники и оценка, переход на человека и обратно к работе', async ({
-	page,
-	request
-}) => {
-	const rating = await (await request.get('/api/v1/social/entities/dune-2021/rating')).json();
-	expect(rating.count).toBeGreaterThan(0);
-
+test('карточка: участники, переход на человека и обратно к работе', async ({ page }) => {
 	await page.goto('/films/dune-2021');
 	await expect(page.getByRole('heading', { name: 'Дюна', level: 1 })).toBeVisible();
 	await expect(page.getByRole('link', { name: 'Научная фантастика' })).toBeVisible();
 	await expect(page.getByText('2 ч 35 мин')).toBeVisible();
-
-	const summary = page.getByRole('region', { name: 'Оценка Nexus' });
-	await expect(summary).toContainText(
-		rating.average.toLocaleString('ru-RU', { minimumFractionDigits: 1 })
-	);
-	await expect(
-		summary.getByRole('list', { name: 'Распределение оценок' }).getByRole('listitem')
-	).toHaveCount(10);
+	// Трейлера в API пока нет — постер на месте, блока трейлера нет. Оценки временно скрыты.
+	await expect(page.getByRole('img', { name: 'Обложка: Дюна' })).toBeVisible();
+	await expect(page.getByRole('region', { name: 'Трейлер' })).toHaveCount(0);
+	await expect(page.getByRole('region', { name: 'Оценка Nexus' })).toHaveCount(0);
 
 	const credits = page.getByRole('region', { name: 'Участники' });
 	await expect(credits).toContainText('Актёр · Пол Атрейдес');
@@ -115,4 +105,60 @@ test('поиск: результаты, пустой запрос — подск
 	await expect(page).toHaveURL('/search?q=%D0%94%D1%8E%D0%BD%D0%B0');
 	await expect(page.getByRole('link', { name: /^Дюна\s+2021 · Фильм/ })).toBeVisible();
 	await expect(page.getByRole('link', { name: /^Дюна\s+1965 · Книга/ })).toBeVisible();
+});
+
+// Поля trailer_url в API пока нет (docs/backend-questions.md): подмешиваем его в ответ при переходе
+// в браузере, видео — маленький webm из e2e/fixtures.
+async function withTrailer(page: Page, video: 'ok' | 'broken') {
+	await page.route('**/api/v1/catalog/entities/dune-2021', async (route) => {
+		const response = await route.fetch();
+		const json = await response.json();
+		await route.fulfill({ response, json: { ...json, trailer_url: '/test-trailer.webm' } });
+	});
+	await page.route('**/test-trailer.webm', (route) =>
+		video === 'ok'
+			? route.fulfill({ path: 'e2e/fixtures/trailer.webm', contentType: 'video/webm' })
+			: route.fulfill({ status: 404 })
+	);
+	await page.goto('/films');
+	await page.getByRole('link', { name: /^Дюна\s+2021/ }).click();
+	await expect(page.getByRole('heading', { name: 'Дюна', level: 1 })).toBeVisible();
+}
+
+const isPlaying = (v: HTMLVideoElement) => !v.paused;
+
+test('трейлер: сам запускается без звука, звук и пауза — кнопками, постер остаётся', async ({
+	page
+}) => {
+	await withTrailer(page, 'ok');
+	const hero = page.getByRole('region', { name: 'Трейлер' });
+	const video = hero.locator('video');
+	await expect(video).toHaveAttribute('src', '/test-trailer.webm');
+	await expect.poll(() => video.evaluate(isPlaying)).toBe(true);
+	expect(await video.evaluate((v: HTMLVideoElement) => v.muted && v.loop)).toBe(true);
+
+	await hero.getByRole('button', { name: 'Включить звук' }).click();
+	expect(await video.evaluate((v: HTMLVideoElement) => v.muted)).toBe(false);
+	await expect(hero.getByRole('button', { name: 'Выключить звук' })).toBeVisible();
+
+	await hero.getByRole('button', { name: 'Пауза' }).click();
+	await expect.poll(() => video.evaluate(isPlaying)).toBe(false);
+	await hero.getByRole('button', { name: 'Смотреть трейлер' }).click();
+	await expect.poll(() => video.evaluate(isPlaying)).toBe(true);
+
+	await expect(page.getByRole('img', { name: 'Обложка: Дюна' })).toBeVisible();
+});
+
+test('трейлер: при prefers-reduced-motion сам не запускается', async ({ page }) => {
+	await page.emulateMedia({ reducedMotion: 'reduce' });
+	await withTrailer(page, 'ok');
+	const hero = page.getByRole('region', { name: 'Трейлер' });
+	await expect(hero.getByRole('button', { name: 'Смотреть трейлер' })).toBeVisible();
+	expect(await hero.locator('video').evaluate(isPlaying)).toBe(false);
+});
+
+test('трейлер не загрузился — карточка как без него', async ({ page }) => {
+	await withTrailer(page, 'broken');
+	await expect(page.getByRole('region', { name: 'Трейлер' })).toHaveCount(0);
+	await expect(page.getByRole('img', { name: 'Обложка: Дюна' })).toBeVisible();
 });

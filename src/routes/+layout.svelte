@@ -13,7 +13,7 @@
 	<title>Nexus</title>
 </svelte:head>
 
-<div class="relative isolate flex min-h-screen flex-col">
+<div class="relative isolate flex min-h-screen flex-col overflow-x-clip">
 	<Navbar />
 	<main class="mx-auto w-full max-w-6xl flex-1 px-4 py-6">
 		{@render children()}
