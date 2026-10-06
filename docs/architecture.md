@@ -2,14 +2,14 @@
 
 ## Стек
 
-|           |                                                                         |
-| --------- | ----------------------------------------------------------------------- |
-| Фреймворк | SvelteKit 3, Svelte 5 (runes), `adapter-node`                           |
-| Язык      | TypeScript strict                                                       |
-| Стили     | Tailwind CSS 4 + DaisyUI 5, тема `dark`. Своего CSS нет — только классы |
-| API       | `openapi-typescript` (типы) + `openapi-fetch` (клиент)                  |
-| Проверки  | prettier, eslint, svelte-check, vitest (Node + браузер), Playwright     |
-| Пакеты    | pnpm                                                                    |
+|           |                                                                      |
+| --------- | -------------------------------------------------------------------- |
+| Фреймворк | SvelteKit 3, Svelte 5 (runes), `adapter-node`                        |
+| Язык      | TypeScript strict                                                    |
+| Стили     | Tailwind CSS 4 + DaisyUI 5, своя тёмная тема `nexus`. Своего CSS нет |
+| API       | `openapi-typescript` (типы) + `openapi-fetch` (клиент)               |
+| Проверки  | prettier, eslint, svelte-check, vitest (Node + браузер), Playwright  |
+| Пакеты    | pnpm                                                                 |
 
 Особенности SvelteKit 3, на которые легко наткнуться:
 
@@ -29,8 +29,10 @@ src/
   lib/
     api/               клиенты, ошибки, generated/ — типы из OpenAPI (не править руками)
     auth/              токены и сессия (core.ts — без Svelte, session.svelte.ts — для компонентов)
-    catalog/           разделы каталога (адрес ↔ тип сущности)
+    catalog/           разделы (kinds), подписи (labels), состояние списков в URL (url), load-хелперы
     components/        Navbar, Avatar, Alert, AuthCard, ProviderButtons, Stub
+      catalog/         Poster, EntityCard, EntityGrid, PosterStrip, Pagination, KindTabs, TagChips,
+                       PersonAvatar, RatingSummary, EmptyState, LoadError, Seo
     utils/             safeNext, loginUrl
   routes/
     +layout.svelte     шапка, контейнер, подвал
@@ -44,12 +46,29 @@ e2e/                   Playwright: сценарии против живого б
 scripts/api-types.mjs  генерация типов API
 ```
 
-Всё, кроме auth и настроек, пока заглушки (`Stub`).
+Готовы auth, настройки и каталог (главная, разделы, карточки, люди, теги, поиск); социальная
+часть (профили, коллекции, форум, лента) — пока заглушки (`Stub`).
 
 ## Адреса
 
 Карточка сущности — `/{раздел}/{slug}`: `/films/dune-2021`, `/books/dune`. slug уникален во всём
-каталоге, раздел в адресе — для читаемости и SEO. Профиль — `/u/{username}` (как в API social:
+каталоге, раздел в адресе — для читаемости и SEO. Раздел не совпал с типом сущности — 301 на
+правильный адрес (query сохраняется), неизвестный slug — 404.
+
+| Адрес                                  | Что                                                           |
+| -------------------------------------- | ------------------------------------------------------------- |
+| `/`                                    | новинки по разделам (пустой раздел скрыт), популярные теги    |
+| `/films?tag=&year=&q=&offset=`         | раздел (`films`, `series`, `books`, `games`) с фильтрами      |
+| `/films/dune-2021`                     | карточка: metadata, теги, участники, сводка оценок (social)   |
+| `/people?q=&offset=`, `/people/{slug}` | люди; человек и его работы (одна карточка — все роли)         |
+| `/tags`, `/tags/{slug}?kind=&offset=`  | теги; сущности с тегом, фильтр по разделу (`kind` — `films`…) |
+| `/search?q=&kind=&offset=`             | поиск (Meilisearch); пустой `q` — подсказка, 503 — сообщение  |
+
+**Состояние списков — в адресе** (`#lib/catalog/url.ts`): фильтры и страница — query-параметры,
+пустые значения и `offset=0` не пишутся, смена фильтра сбрасывает страницу. Формы фильтров —
+обычные `<form method="GET">`: без JS работают как есть, с JS отправка перехватывается и делается
+`goto()` без пустых полей. Пагинация — ссылки `?offset=24`, страница всегда 24 элемента
+(делится на 2/3/4/6 колонок). Назад/вперёд и «поделиться ссылкой» работают без доп. кода. Профиль — `/u/{username}` (как в API social:
 пользователи адресуются по username).
 
 ## SSR и что где рендерится
@@ -63,6 +82,23 @@ scripts/api-types.mjs  генерация типов API
 | Личное на этих страницах: моя оценка, «Подписаться», «Следить»   | догружается в браузере         |
 | Лента, настройки, создание темы — группа `(protected)`           | только браузер (`ssr = false`) |
 | Вход, регистрация, ссылки из писем — `auth/`                     | только браузер                 |
+
+### Загрузка каталога
+
+Данные каталога грузятся в `+page.ts` через `publicApi` — на сервере при первом заходе, в
+браузере при переходах. Независимые запросы идут параллельно (`Promise.all`). Хелперы
+(`#lib/catalog/load.ts`):
+
+- `orError()` — для карточек: 404 → страница 404, остальное → `+error.svelte`;
+- `settle()` — для списков: ошибка → `{ error }`, страница показывает `LoadError` с «Повторить»
+  (`invalidateAll`), фильтры остаются на месте. Сводка оценок на карточке тоже через `settle`:
+  не загрузилась — карточка показывается без неё.
+
+`hooks.server.ts` разрешает читать на сервере заголовки ответов API `content-length`,
+`transfer-encoding`, `retry-after` (`filterSerializedResponseHeaders`): openapi-fetch смотрит
+`Content-Length`, без этого любой SSR-запрос падает с `load_response_header_not_serialized`.
+
+SEO: `Seo.svelte` — `<title>`, `meta description` (обрезанное по слову описание), `og:*`.
 
 ## API-клиент
 
