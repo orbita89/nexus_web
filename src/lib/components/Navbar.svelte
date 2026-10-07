@@ -8,6 +8,7 @@
 	const sections = [
 		...KINDS.map((k) => ({ href: `/${k.slug}`, title: k.title })),
 		{ href: '/people', title: 'Люди' },
+		{ href: '/collections', title: 'Коллекции' },
 		{ href: '/feed', title: 'Лента' },
 		{ href: '/forum', title: 'Форум' }
 	];

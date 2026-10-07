@@ -32,6 +32,11 @@ export function entityHref(entity: { kind: SchemaEntityKind; slug: string }) {
 
 /** Адрес карточки по ссылке из social (EntityRef.kind там — строка); неизвестный тип — null. */
 export function refHref(ref: { kind: string; slug: string }): string | null {
-	const kind = KINDS.find((k) => k.kind === ref.kind)?.kind;
+	const kind = asKind(ref.kind);
 	return kind ? entityHref({ kind, slug: ref.slug }) : null;
+}
+
+/** Тип из ссылки social (строка) → тип каталога; неизвестный — null. */
+export function asKind(kind: string): SchemaEntityKind | null {
+	return KINDS.find((k) => k.kind === kind)?.kind ?? null;
 }

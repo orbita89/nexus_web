@@ -66,7 +66,14 @@
 		<a href="/settings" class="btn btn-outline">Редактировать профиль</a>
 	{:else if relation}
 		{#if relation.following}
-			<button class="group btn btn-outline" onclick={toggle} disabled={busy} aria-pressed="true">
+			<!-- Имя не зависит от наведения: видимый текст меняется на «Отписаться», а имя — нет. -->
+			<button
+				class="group btn btn-outline"
+				onclick={toggle}
+				disabled={busy}
+				aria-pressed="true"
+				aria-label="Вы подписаны — нажмите, чтобы отписаться"
+			>
 				<span class="group-hover:hidden">Вы подписаны</span>
 				<span class="hidden group-hover:inline">Отписаться</span>
 			</button>

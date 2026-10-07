@@ -7,7 +7,8 @@
 		kind,
 		coverUrl,
 		alt = '',
-		eager = false
+		eager = false,
+		small = false
 	}: {
 		title: string;
 		kind: SchemaEntityKind;
@@ -16,6 +17,8 @@
 		alt?: string;
 		/** Постер над сгибом (карточка сущности) — грузить сразу. */
 		eager?: boolean;
+		/** Миниатюра (списки): в заглушке вместо названия — первая буква. */
+		small?: boolean;
 	} = $props();
 
 	let failed = $state(false);
@@ -50,12 +53,16 @@
 			aria-label={alt || undefined}
 			aria-hidden={alt ? undefined : 'true'}
 		>
-			<span class="text-[0.65rem] font-semibold tracking-widest text-base-content/50 uppercase">
-				{kindByApi(kind).one}
-			</span>
-			<span class="line-clamp-5 text-base leading-tight font-bold text-base-content/90">
-				{title}
-			</span>
+			{#if small}
+				<span class="m-auto text-xl font-black text-base-content/70">{title.slice(0, 1)}</span>
+			{:else}
+				<span class="text-[0.65rem] font-semibold tracking-widest text-base-content/50 uppercase">
+					{kindByApi(kind).one}
+				</span>
+				<span class="line-clamp-5 text-base leading-tight font-bold text-base-content/90">
+					{title}
+				</span>
+			{/if}
 		</div>
 	{/if}
 </div>

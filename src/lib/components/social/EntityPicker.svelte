@@ -17,7 +17,13 @@
 
 	// Произведения темы: поиск по каталогу (Meilisearch; недоступен — подстрока в названии),
 	// до 10 штук, первое — главное, порядок меняется стрелками.
-	let { selected = $bindable([]) }: { selected: PickedEntity[] } = $props();
+	let {
+		selected = $bindable([]),
+		hint = true
+	}: {
+		selected: PickedEntity[];
+		/** Подсказка «до 10, первое — главное» (для тем). */ hint?: boolean;
+	} = $props();
 
 	let query = $state('');
 	let results = $state<PickedEntity[]>([]);
@@ -136,7 +142,9 @@
 			{/if}
 		</div>
 	{/if}
-	<p class="text-xs text-base-content/50">
-		До 10 произведений, первое — главное. Например, книга и её экранизации.
-	</p>
+	{#if hint}
+		<p class="text-xs text-base-content/50">
+			До 10 произведений, первое — главное. Например, книга и её экранизации.
+		</p>
+	{/if}
 </div>
