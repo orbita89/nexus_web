@@ -4,7 +4,7 @@
 	import { errorMessage, unwrap } from '#lib/api/errors.ts';
 	import type { SchemaPost } from '#lib/api/generated/social.ts';
 	import { api, session } from '#lib/auth/session.svelte.ts';
-	import { refHref } from '#lib/catalog/kinds.ts';
+	import { asKind, refHref } from '#lib/catalog/kinds.ts';
 	import { count, summary } from '#lib/catalog/labels.ts';
 	import { withQuery } from '#lib/catalog/url.ts';
 	import { lastPageOffset, quoteFor } from '#lib/social/forum.ts';
@@ -49,10 +49,6 @@
 			deleteError = errorMessage(e);
 		}
 	}
-
-	// EntityRef.kind — строка; обложка рисуется по известному типу, иначе — фильм-заглушка.
-	const kindOf = (kind: string) =>
-		(['movie', 'series', 'book', 'game'] as const).find((k) => k === kind) ?? 'movie';
 </script>
 
 <Seo title={thread.title} description={summary(thread.body)} />
@@ -90,7 +86,7 @@
 							<div class="rounded-box transition group-hover:ring-2 group-hover:ring-primary">
 								<Poster
 									title={entity.title}
-									kind={kindOf(entity.kind)}
+									kind={asKind(entity.kind) ?? 'movie'}
 									coverUrl={entity.cover_url}
 								/>
 							</div>

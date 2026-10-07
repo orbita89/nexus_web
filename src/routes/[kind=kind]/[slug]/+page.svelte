@@ -29,6 +29,8 @@
 	import ReviewSortTabs from '#lib/components/social/ReviewSortTabs.svelte';
 	import NewThreadButton from '#lib/components/social/NewThreadButton.svelte';
 	import ThreadItem from '#lib/components/social/ThreadItem.svelte';
+	import AddToCollection from '#lib/components/social/AddToCollection.svelte';
+	import CollectionCard from '#lib/components/social/CollectionCard.svelte';
 	import type { PageProps } from './$types';
 
 	// Карточка как у Okko: трейлер — фон шапки, поверх — название, факты, описание и кнопки.
@@ -106,8 +108,8 @@
 			</p>
 		{/if}
 
-		{#if trailers.length}
-			<div class="mt-6 flex flex-wrap gap-3">
+		<div class="mt-6 flex flex-wrap gap-3">
+			{#if trailers.length}
 				<TrailerButton
 					sources={trailers}
 					title={entity.title}
@@ -115,8 +117,9 @@
 					onopen={() => hero?.pause()}
 					onclose={() => hero?.resume()}
 				/>
-			</div>
-		{/if}
+			{/if}
+			<AddToCollection slug={entity.slug} title={entity.title} onchange={() => invalidateAll()} />
+		</div>
 	</CardHero>
 {/key}
 
@@ -190,6 +193,22 @@
 		</p>
 	{/if}
 </section>
+
+{#if data.collections.data?.items.length}
+	<section aria-labelledby="collections-title" class="mb-12">
+		<h2 id="collections-title" class="mb-4 text-2xl font-bold">
+			В коллекциях
+			<span class="ml-1 text-sm font-normal text-base-content/40"
+				>{data.collections.data.total}</span
+			>
+		</h2>
+		<ul class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label="В коллекциях">
+			{#each data.collections.data.items as collection (collection.id)}
+				<li><CollectionCard {collection} /></li>
+			{/each}
+		</ul>
+	</section>
+{/if}
 
 <div class="grid gap-10 lg:grid-cols-[1fr_20rem]">
 	<div class="min-w-0">

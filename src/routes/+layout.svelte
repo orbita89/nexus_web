@@ -31,6 +31,8 @@
 					<a href="/{k.slug}" class="link link-hover">{k.title}</a>
 				{/each}
 				<a href="/people" class="link link-hover">Люди</a>
+				<a href="/collections" class="link link-hover">Коллекции</a>
+				<a href="/forum" class="link link-hover">Форум</a>
 				<a href="/tags" class="link link-hover">Теги</a>
 			</nav>
 			<p class="text-xs">

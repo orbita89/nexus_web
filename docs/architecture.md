@@ -30,13 +30,15 @@ src/
     api/               клиенты, ошибки, generated/ — типы из OpenAPI (не править руками)
     auth/              токены и сессия (core.ts — без Svelte, session.svelte.ts — для компонентов)
     catalog/           разделы (kinds), подписи (labels), состояние списков в URL (url), load-хелперы
-    social/            рецензии (reviews), форум (forum): сортировки, ветки, ссылки, время
+    social/            рецензии (reviews), форум (forum), коллекции (collections)
     components/        Navbar, Avatar, Alert, AuthCard, ProviderButtons, Stub
       catalog/         Poster, EntityCard, EntityGrid, PosterStrip, Pagination, KindTabs, TagChips,
                        PersonAvatar, RatingSummary, CardHero, TrailerButton, EmptyState, LoadError, Seo
       social/          RatingBadge, MyReview, ReviewItem, ReviewSortTabs, FollowButton,
                        FollowList, UserCard, ThreadItem, PostItem, ReplyForm, ThreadForm,
-                       EntityPicker, NewThreadButton, RichText, TimeAgo, SortTabs
+                       EntityPicker, NewThreadButton, RichText, TimeAgo, SortTabs,
+                       CollectionCard, CollectionForm, CollectionEditor, AddToCollection,
+                       NewCollection
     utils/             safeNext, loginUrl
   routes/
     +layout.svelte     шапка, контейнер, подвал
@@ -51,7 +53,7 @@ scripts/api-types.mjs  генерация типов API
 ```
 
 Готовы auth, настройки, каталог (главная, разделы, карточки, люди, теги, поиск) и рецензии с
-оценками, профили с подписками, форум; коллекции и лента — пока заглушки (`Stub`).
+оценками, профили с подписками, форум, коллекции; лента — пока заглушка (`Stub`).
 
 ## Адреса
 
@@ -164,6 +166,18 @@ rating_asc`, «новые» в адрес не пишутся). Сводка и 
 `/search`, при 503 — `/entities?q=`). На карточке — «Обсуждения» (5 тем, `GET
 /entities/{slug}/threads`) и «Начать обсуждение» (`/forum/new?entity=slug`). Модерация (закрыть,
 удалить чужое) — в админке.
+
+**Коллекции** (`#lib/social/collections.ts`, `routes/collections/`). Публичная коллекция
+рендерится на сервере; на чужую или свою личную сервер получает 404 и отдаёт заготовку
+(`noindex`), а в браузере `+page.ts` перечитывает коллекцию с токеном (`ensureSession` + `api`):
+владелец видит свою личную, остальным — 404. Вкладка «Коллекции» в профиле: сервер — публичные,
+владельцу в браузере — вместе с личными. Владелец правит название, описание и видимость,
+удаляет коллекцию, а в режиме «Изменить содержимое» (`CollectionEditor`) добавляет произведения
+поиском, пишет заметки, убирает и переставляет: перетаскиванием (HTML5 drag and drop) и
+стрелками (телефон, клавиатура); порядок сразу сохраняется целиком (`PUT …/items`). На карточке —
+«＋ В коллекцию» (`AddToCollection`: свои коллекции с отметками и быстрое создание; отметки —
+чтением каждой своей коллекции, см. backend-questions) и «В коллекциях» (публичные, `GET
+/entities/{slug}/collections`).
 
 SEO: `Seo.svelte` — `<title>`, `meta description` (обрезанное по слову описание), `og:*`.
 
