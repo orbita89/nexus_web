@@ -19,6 +19,7 @@
 	import ReplyForm from '#lib/components/social/ReplyForm.svelte';
 	import RichText from '#lib/components/social/RichText.svelte';
 	import TimeAgo from '#lib/components/social/TimeAgo.svelte';
+	import ModerateButton from '#lib/components/social/ModerateButton.svelte';
 	import { useRealtime } from '#lib/realtime/realtime.svelte.ts';
 	import type { PageProps } from './$types';
 
@@ -27,7 +28,9 @@
 	const thread = $derived(data.thread);
 	const posts = $derived(thread.posts);
 	const authed = $derived(session.status === 'authed');
-	const canReply = $derived(authed && !thread.is_locked);
+	const isAdmin = $derived(session.user?.role === 'admin');
+	// В закрытой теме отвечать может только админ (так в API).
+	const canReply = $derived(authed && (!thread.is_locked || isAdmin));
 	const isAuthor = $derived(authed && session.user?.id === thread.author.id);
 
 	// Реалтайм: новые сообщения других — плашкой «N новых» (страница не прыгает под рукой);
@@ -69,6 +72,16 @@
 	async function onPosted(post: SchemaPost) {
 		const offset = lastPageOffset(posts.total + 1, posts.limit);
 		await goto(`${withQuery(page.url.pathname, { offset })}#post-${post.id}`, { refreshAll: true });
+	}
+
+	async function setLocked(locked: boolean) {
+		const params = { params: { path: { id: thread.id } } };
+		await unwrap(
+			locked
+				? api.social.PUT('/api/v1/social/admin/threads/{id}/lock', params)
+				: api.social.DELETE('/api/v1/social/admin/threads/{id}/lock', params)
+		);
+		await invalidateAll();
 	}
 
 	async function deleteThread() {
@@ -171,6 +184,31 @@
 		{#if deleteError}<div class="mt-2"><Alert>{deleteError}</Alert></div>{/if}
 	{/if}
 
+	{#if isAdmin}
+		<div class="mt-4 flex flex-wrap items-center gap-2" role="group" aria-label="Модерация темы">
+			<button
+				class="btn btn-ghost text-warning btn-xs"
+				onclick={() => setLocked(!thread.is_locked)}
+			>
+				🛡 {thread.is_locked ? 'Открыть тему' : 'Закрыть тему'}
+			</button>
+			{#if !isAuthor}
+				<ModerateButton
+					label="Удалить тему"
+					question="Удалить тему со всеми сообщениями?"
+					action={async () => {
+						await unwrap(
+							api.social.DELETE('/api/v1/social/admin/threads/{id}', {
+								params: { path: { id: thread.id } }
+							})
+						);
+						await goto('/forum');
+					}}
+				/>
+			{/if}
+		</div>
+	{/if}
+
 	<section aria-labelledby="posts-title" class="mt-10">
 		<h2 id="posts-title" class="mb-4 text-xl font-bold">
 			{posts.total
@@ -195,7 +233,7 @@
 		{/if}
 
 		<div class="mt-8">
-			{#if thread.is_locked}
+			{#if thread.is_locked && !isAdmin}
 				<Alert kind="info">Тема закрыта для ответов.</Alert>
 			{:else if session.status === 'guest'}
 				<p class="text-base-content/70">

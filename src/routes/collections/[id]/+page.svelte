@@ -14,6 +14,7 @@
 	import Seo from '#lib/components/catalog/Seo.svelte';
 	import CollectionEditor from '#lib/components/social/CollectionEditor.svelte';
 	import CollectionForm from '#lib/components/social/CollectionForm.svelte';
+	import ModerateButton from '#lib/components/social/ModerateButton.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -119,6 +120,22 @@
 			<span>обновлена {reviewDate(collection.updated_at)}</span>
 		</div>
 
+		{#if !own && session.user?.role === 'admin'}
+			<div class="mt-4">
+				<ModerateButton
+					label="Удалить коллекцию"
+					question="Удалить чужую коллекцию?"
+					action={async () => {
+						await unwrap(
+							api.social.DELETE('/api/v1/social/admin/collections/{id}', {
+								params: { path: { id: collection.id } }
+							})
+						);
+						await goto('/collections');
+					}}
+				/>
+			</div>
+		{/if}
 		{#if own && mode !== 'edit'}
 			<div class="mt-4 flex flex-wrap items-center gap-2">
 				<button

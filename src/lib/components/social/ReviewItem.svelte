@@ -4,6 +4,10 @@
 	import { displayName, isEdited, LONG_REVIEW, reviewDate } from '#lib/social/reviews.ts';
 	import Avatar from '#lib/components/Avatar.svelte';
 	import RatingBadge from './RatingBadge.svelte';
+	import ModerateButton from './ModerateButton.svelte';
+	import { invalidateAll } from '$app/navigation';
+	import { unwrap } from '#lib/api/errors.ts';
+	import { api, session } from '#lib/auth/session.svelte.ts';
 
 	let {
 		review,
@@ -20,6 +24,8 @@
 	let expanded = $state(false);
 	const long = $derived((review.body?.length ?? 0) > LONG_REVIEW);
 	const entityLink = $derived(refHref(review.entity));
+	// Админ удаляет чужие рецензии (свою — через «Ваша оценка»).
+	const moderate = $derived(session.user?.role === 'admin' && session.user.id !== review.author.id);
 </script>
 
 <article class="rounded-box bg-base-200 p-4 ring-1 ring-base-300">
@@ -83,5 +89,21 @@
 		{/if}
 	{:else if showEntity}
 		<p class="mt-2 text-sm text-base-content/50">Оценка без рецензии</p>
+	{/if}
+	{#if moderate}
+		<div class="mt-2">
+			<ModerateButton
+				label="Удалить рецензию"
+				question="Удалить рецензию и оценку?"
+				action={async () => {
+					await unwrap(
+						api.social.DELETE('/api/v1/social/admin/reviews/{id}', {
+							params: { path: { id: review.id } }
+						})
+					);
+					await invalidateAll();
+				}}
+			/>
+		</div>
 	{/if}
 </article>

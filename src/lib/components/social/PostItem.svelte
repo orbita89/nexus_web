@@ -9,6 +9,7 @@
 	import ReplyForm from './ReplyForm.svelte';
 	import RichText from './RichText.svelte';
 	import TimeAgo from './TimeAgo.svelte';
+	import ModerateButton from './ModerateButton.svelte';
 
 	let {
 		post,
@@ -34,6 +35,7 @@
 	const own = $derived(
 		!post.deleted && session.status === 'authed' && session.user?.id === post.author?.id
 	);
+	const moderate = $derived(!post.deleted && !own && session.user?.role === 'admin');
 
 	async function run(action: () => Promise<unknown>) {
 		busy = true;
@@ -130,6 +132,20 @@
 					}}>Изменить</button
 				>
 				<button class="btn btn-ghost btn-xs" onclick={() => (mode = 'delete')}>Удалить</button>
+			{/if}
+			{#if moderate && mode === 'view'}
+				<ModerateButton
+					label="Удалить"
+					question="Удалить сообщение? С ответами останется заглушка."
+					action={async () => {
+						await unwrap(
+							api.social.DELETE('/api/v1/social/admin/posts/{id}', {
+								params: { path: { id: post.id } }
+							})
+						);
+						onchanged();
+					}}
+				/>
 			{/if}
 			{#if mode === 'delete'}
 				<span class="flex items-center gap-2 text-sm">

@@ -160,3 +160,75 @@ test('произведения: создать фильм с полями, тр�
 	await expect(admin).toHaveURL('/admin/entities');
 	expect((await admin.request.get(`/films/${slug}`)).status()).toBe(404);
 });
+
+test('модерация: чужие рецензия, сообщение, коллекция, тема; закрыть и открыть тему', async () => {
+	const token = async (login: string) =>
+		(
+			await (
+				await admin.request.post('/api/v1/auth/login', { data: { login, password: 'password123' } })
+			).json()
+		).access_token as string;
+	const user = { authorization: `Bearer ${await token('user')}` };
+	const author = { authorization: `Bearer ${await token('author')}` };
+	const id = stamp();
+	const moderate = (scope: Page | ReturnType<Page['locator']>, label: RegExp | string) =>
+		scope.getByRole('button', { name: label });
+
+	// Рецензия user на «Прибытие» — админ удаляет на карточке.
+	await admin.request.put('/api/v1/social/entities/arrival-2016/review', {
+		headers: user,
+		data: { rating: 3, body: `E2E модерация ${id}` }
+	});
+	await admin.goto('/films/arrival-2016');
+	const review = admin
+		.getByRole('list', { name: 'Рецензии' })
+		.getByRole('article')
+		.filter({ hasText: `E2E модерация ${id}` });
+	await moderate(review, '🛡 Удалить рецензию').click();
+	await review.getByRole('button', { name: 'Да' }).click();
+	await expect(admin.getByText(`E2E модерация ${id}`)).toHaveCount(0);
+
+	// Тема author — закрыть, ответить (админ может), удалить сообщение user, удалить тему.
+	const created = await admin.request.post('/api/v1/social/threads', {
+		headers: author,
+		data: { title: `E2E тема ${id}`, body: 'Для модерации.', entities: ['arrival-2016'] }
+	});
+	const threadId = (await created.json()).id as string;
+	await admin.request.post(`/api/v1/social/threads/${threadId}/posts`, {
+		headers: user,
+		data: { body: `E2E сообщение ${id}` }
+	});
+	await admin.goto(`/forum/${threadId}`);
+	await moderate(admin, '🛡 Закрыть тему').click();
+	await expect(admin.getByRole('heading', { level: 1 })).toContainText('закрыта');
+	await expect(admin.getByLabel('Ваш ответ в теме')).toBeVisible();
+	await moderate(admin, '🛡 Открыть тему').click();
+	await expect(admin.getByRole('heading', { level: 1 })).not.toContainText('закрыта');
+
+	const post = admin
+		.getByRole('list', { name: 'Сообщения' })
+		.getByRole('article')
+		.filter({ hasText: `E2E сообщение ${id}` });
+	await moderate(post, '🛡 Удалить').click();
+	await post.getByRole('button', { name: 'Да' }).click();
+	await expect(admin.getByText(`E2E сообщение ${id}`)).toHaveCount(0);
+
+	await moderate(admin, '🛡 Удалить тему').click();
+	await admin.getByRole('button', { name: 'Да' }).click();
+	await expect(admin).toHaveURL('/forum');
+	expect((await admin.request.get(`/forum/${threadId}`)).status()).toBe(404);
+
+	// Коллекция user — удалить.
+	const collection = await admin.request.post('/api/v1/social/collections', {
+		headers: user,
+		data: { title: `E2E коллекция ${id}` }
+	});
+	const collectionId = (await collection.json()).id as string;
+	await admin.goto(`/collections/${collectionId}`);
+	await moderate(admin, '🛡 Удалить коллекцию').click();
+	await admin.getByRole('button', { name: 'Да' }).click();
+	await expect(admin).toHaveURL('/collections');
+	expect((await admin.request.get(`/api/v1/social/collections/${collectionId}`)).status()).toBe(
+		404
+	);
+});
