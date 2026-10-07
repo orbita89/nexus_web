@@ -22,7 +22,7 @@
 	onMount(async () => {
 		providers = await loadProviders();
 		await ensureSession();
-		if (session.user) goto(next, { replaceState: true });
+		if (session.user) goto(next, { replace: true });
 	});
 
 	async function submit(event: SubmitEvent) {
@@ -35,7 +35,7 @@
 				guestApi.auth.POST('/api/v1/auth/login', { body: { login: login.trim(), password } })
 			);
 			signIn(tokens);
-			await goto(next, { replaceState: true });
+			await goto(next, { replace: true });
 		} catch (e) {
 			if (e instanceof ApiError && e.status === 401) {
 				error = 'Неверный логин или пароль.';

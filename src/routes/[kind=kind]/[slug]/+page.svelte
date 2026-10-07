@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { session } from '#lib/auth/session.svelte.ts';
 	import { kindByApi } from '#lib/catalog/kinds.ts';
 	import {
 		ageRating,
@@ -30,6 +31,8 @@
 	import NewThreadButton from '#lib/components/social/NewThreadButton.svelte';
 	import ThreadItem from '#lib/components/social/ThreadItem.svelte';
 	import AddToCollection from '#lib/components/social/AddToCollection.svelte';
+	import WatchButton from '#lib/components/social/WatchButton.svelte';
+	import { useRealtime } from '#lib/realtime/realtime.svelte.ts';
 	import CollectionCard from '#lib/components/social/CollectionCard.svelte';
 	import type { PageProps } from './$types';
 
@@ -57,6 +60,22 @@
 			: []),
 		...metadataFields(entity.kind, entity.metadata)
 	]);
+	// Чужие рецензии и новые темы о произведении — тихо перечитываем сводку, рецензии и
+	// обсуждения (пачку событий — одним запросом).
+	let refreshTimer: ReturnType<typeof setTimeout> | undefined;
+	function refreshSoon() {
+		clearTimeout(refreshTimer);
+		refreshTimer = setTimeout(() => void invalidateAll(), 800);
+	}
+	useRealtime(
+		() => [`entity:${entity.slug}`],
+		(event) => {
+			if (event.data.author_id === session.user?.id) return;
+			if (event.event.startsWith('review.') || event.event.startsWith('thread.')) refreshSoon();
+		},
+		refreshSoon
+	);
+
 	const description = $derived(
 		summary(entity.description) ||
 			`${kind.one} «${entity.title}»${year ? ` (${year})` : ''}: оценки, рецензии и обсуждения в Nexus.`
@@ -118,6 +137,7 @@
 					onclose={() => hero?.resume()}
 				/>
 			{/if}
+			<WatchButton slug={entity.slug} entityId={entity.id} />
 			<AddToCollection slug={entity.slug} title={entity.title} onchange={() => invalidateAll()} />
 		</div>
 	</CardHero>

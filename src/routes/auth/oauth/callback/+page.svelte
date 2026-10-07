@@ -23,7 +23,7 @@
 		try {
 			// Одноразовый код на 2 минуты меняем на токены: в адресной строке токенов нет.
 			signIn(await unwrap(guestApi.auth.POST('/api/v1/auth/oauth/exchange', { body: { code } })));
-			await goto(next, { replaceState: true });
+			await goto(next, { replace: true });
 		} catch (e) {
 			error = errorMessage(e);
 		}

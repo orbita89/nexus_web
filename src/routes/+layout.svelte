@@ -2,10 +2,15 @@
 	import './layout.css';
 	import favicon from '#lib/assets/favicon.svg';
 	import Navbar from '#lib/components/Navbar.svelte';
+	import ReplyToasts from '#lib/components/social/ReplyToasts.svelte';
+	import { syncRealtimeAuth } from '#lib/realtime/realtime.svelte.ts';
 	import { KINDS } from '#lib/catalog/kinds.ts';
 	import type { LayoutProps } from './$types';
 
 	let { children }: LayoutProps = $props();
+
+	// Реалтайм-соединение входит и выходит вместе с сессией.
+	syncRealtimeAuth();
 </script>
 
 <svelte:head>
@@ -43,4 +48,5 @@
 			</p>
 		</div>
 	</footer>
+	<ReplyToasts />
 </div>

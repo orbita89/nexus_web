@@ -31,6 +31,7 @@ src/
     auth/              токены и сессия (core.ts — без Svelte, session.svelte.ts — для компонентов)
     catalog/           разделы (kinds), подписи (labels), состояние списков в URL (url), load-хелперы
     social/            рецензии (reviews), форум (forum), коллекции (collections)
+    realtime/          WebSocket-клиент (client.ts) и обёртка для компонентов (realtime.svelte.ts)
     components/        Navbar, Avatar, Alert, AuthCard, ProviderButtons, Stub
       catalog/         Poster, EntityCard, EntityGrid, PosterStrip, Pagination, KindTabs, TagChips,
                        PersonAvatar, RatingSummary, CardHero, TrailerButton, EmptyState, LoadError, Seo
@@ -38,7 +39,7 @@ src/
                        FollowList, UserCard, ThreadItem, PostItem, ReplyForm, ThreadForm,
                        EntityPicker, NewThreadButton, RichText, TimeAgo, SortTabs,
                        CollectionCard, CollectionForm, CollectionEditor, AddToCollection,
-                       NewCollection
+                       NewCollection, WatchButton, FeedItem, ReplyToasts
     utils/             safeNext, loginUrl
   routes/
     +layout.svelte     шапка, контейнер, подвал
@@ -53,7 +54,8 @@ scripts/api-types.mjs  генерация типов API
 ```
 
 Готовы auth, настройки, каталог (главная, разделы, карточки, люди, теги, поиск) и рецензии с
-оценками, профили с подписками, форум, коллекции; лента — пока заглушка (`Stub`).
+оценками, профили с подписками, форум, коллекции, интересы, лента и реалтайм. Не сделана
+только админка.
 
 ## Адреса
 
@@ -178,6 +180,39 @@ rating_asc`, «новые» в адрес не пишутся). Сводка и 
 «＋ В коллекцию» (`AddToCollection`: свои коллекции с отметками и быстрое создание; отметки —
 чтением каждой своей коллекции, см. backend-questions) и «В коллекциях» (публичные, `GET
 /entities/{slug}/collections`).
+
+**Интересы и лента.** «🔔 Следить» на карточке (`WatchButton`, `GET/PUT/DELETE
+/entities/{slug}/interest`) — темы и рецензии сущности идут в ленту и приходят вживую. `/feed`
+(группа `(protected)`, без SSR): записи с причиной («вы подписаны», «вы следите за …»,
+«популярное», `FeedItem`), фильтр `?type=`, пагинация курсором — «Показать ещё»; справа — список
+интересов с отпиской.
+
+## Реалтайм
+
+`#lib/realtime/client.ts` — WebSocket-клиент без Svelte (сокет, таймеры и токен — снаружи, unit-
+тесты на фейковом сокете); `realtime.svelte.ts` — одно соединение на вкладку и
+`useRealtime(channels, onEvent, onResync)` для компонентов. Протокол —
+`../nexus_project/documents/modules/realtime.md`; `/ws` проксируется так же, как `/api`.
+
+- Соединение открывается при первой подписке или входе; вход — по сессии (`syncRealtimeAuth` в
+  корневом layout): `auth` с access-токеном, выход — новое гостевое соединение.
+- Токен живёт 15 минут: за 25 с до `expires_at` клиент снова шлёт `auth` (`accessToken()` к этому
+  моменту обновляет токен сам). Не успел (вкладка спала) — на `auth_expired` входит заново.
+- Подписки со счётчиком: несколько компонентов на одном канале — одна подписка на сервере.
+  `user:me` и каналы интересов сервер подписывает сам — клиент их не шлёт.
+- Обрыв — переподключение через 1, 2, 4, … 30 с, затем `auth` и `subscribe` заново; подписчикам —
+  `onResync` (и на `lagged`): пропущенное не повторяется, экран перечитывает данные.
+- В событиях только id — данные перечитываются по API.
+
+| Где                | Каналы          | Что делает                                                                                                                                |
+| ------------------ | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Тема `/forum/{id}` | `thread:<id>`   | чужие новые сообщения — плашка «N новых — показать»; правка, удаление, закрытие — тихо перечитать; тема удалена — сообщение               |
+| Карточка           | `entity:<slug>` | чужие рецензии и темы — перечитать сводку, рецензии, обсуждения (пачкой, через 0,8 с)                                                     |
+| Везде (вошедший)   | `user:me`       | `reply.created` — уведомление «Вам ответили» (`ReplyToasts`) со ссылкой `/forum/{id}?post=…`; `interest.*` — «Следить» на других вкладках |
+| Лента              | все события     | новое по интересам — плашка «Есть новое — обновить»                                                                                       |
+
+`/forum/{id}?post=<id>` — если сообщения нет на первой странице, открывается последняя: «на какой
+странице сообщение» API не говорит, а ответ из уведомления свежий.
 
 SEO: `Seo.svelte` — `<title>`, `meta description` (обрезанное по слову описание), `og:*`.
 

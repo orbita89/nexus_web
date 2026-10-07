@@ -7,11 +7,14 @@
 
 	let {
 		review,
-		showEntity = false
+		showEntity = false,
+		showAuthor = !showEntity
 	}: {
 		review: SchemaReview;
-		/** В профиле: вместо автора — о каком произведении рецензия. */
+		/** О каком произведении рецензия (профиль, лента). */
 		showEntity?: boolean;
+		/** Автор (на карточке и в ленте — да, в профиле — и так известен). */
+		showAuthor?: boolean;
 	} = $props();
 
 	let expanded = $state(false);
@@ -20,7 +23,7 @@
 </script>
 
 <article class="rounded-box bg-base-200 p-4 ring-1 ring-base-300">
-	{#if showEntity}
+	{#if !showAuthor}
 		<!-- В профиле автор и так известен: рецензия начинается с произведения. -->
 		<header class="flex items-start gap-3">
 			<div class="min-w-0 flex-1">
@@ -55,6 +58,13 @@
 			</div>
 			{#if review.rating != null}<RatingBadge value={review.rating} />{/if}
 		</header>
+		{#if showEntity && entityLink}
+			<p class="mt-3 text-sm">
+				<a href={entityLink} class="link font-semibold text-primary link-hover"
+					>{review.entity.title}</a
+				>
+			</p>
+		{/if}
 	{/if}
 
 	{#if review.body}

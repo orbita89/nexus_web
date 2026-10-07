@@ -21,7 +21,7 @@
 			signIn(
 				await unwrap(guestApi.auth.POST('/api/v1/auth/email/login/confirm', { body: { token } }))
 			);
-			await goto('/', { replaceState: true });
+			await goto('/', { replace: true });
 		} catch (e) {
 			error = errorMessage(e);
 		}

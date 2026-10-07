@@ -19,6 +19,7 @@
 	import ReplyForm from '#lib/components/social/ReplyForm.svelte';
 	import RichText from '#lib/components/social/RichText.svelte';
 	import TimeAgo from '#lib/components/social/TimeAgo.svelte';
+	import { useRealtime } from '#lib/realtime/realtime.svelte.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -28,6 +29,38 @@
 	const authed = $derived(session.status === 'authed');
 	const canReply = $derived(authed && !thread.is_locked);
 	const isAuthor = $derived(authed && session.user?.id === thread.author.id);
+
+	// Реалтайм: новые сообщения других — плашкой «N новых» (страница не прыгает под рукой);
+	// правка и удаление — тихо перечитываем; тему удалили — сообщаем.
+	let fresh = $state(0);
+	let gone = $state(false);
+	useRealtime(
+		() => [`thread:${thread.id}`],
+		(event) => {
+			const mine = event.data.author_id === session.user?.id;
+			switch (event.event) {
+				case 'post.created':
+					if (!mine) fresh++;
+					break;
+				case 'post.updated':
+				case 'post.deleted':
+				case 'thread.updated':
+					void invalidateAll();
+					break;
+				case 'thread.deleted':
+					gone = true;
+					break;
+			}
+		},
+		() => void invalidateAll()
+	);
+
+	async function showFresh() {
+		fresh = 0;
+		const offset = lastPageOffset(posts.total + 1, posts.limit);
+		await goto(withQuery(page.url.pathname, { offset }), { refreshAll: true, reset: false });
+		document.getElementById('posts-title')?.scrollIntoView({ block: 'start' });
+	}
 
 	let confirmDelete = $state(false);
 	let deleteError = $state('');
@@ -52,6 +85,19 @@
 </script>
 
 <Seo title={thread.title} description={summary(thread.body)} />
+
+{#if gone}
+	<div class="mb-6">
+		<Alert kind="warning">Тема удалена. <a href="/forum" class="link">К форуму</a></Alert>
+	</div>
+{/if}
+{#if fresh}
+	<div class="sticky top-20 z-10 mb-4 flex justify-center">
+		<button class="btn shadow-lg btn-primary btn-sm" onclick={showFresh}>
+			{count(fresh, ['новое сообщение', 'новых сообщения', 'новых сообщений'])} — показать
+		</button>
+	</div>
+{/if}
 
 <article class="max-w-4xl">
 	<header>

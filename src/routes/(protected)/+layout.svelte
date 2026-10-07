@@ -9,7 +9,7 @@
 
 	// Вышли здесь или в другой вкладке, сессия истекла — уходим на вход.
 	$effect(() => {
-		if (session.status === 'guest') goto(loginUrl(page.url), { replaceState: true });
+		if (session.status === 'guest') goto(loginUrl(page.url), { replace: true });
 	});
 </script>
 
