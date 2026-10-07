@@ -27,6 +27,8 @@
 	import RatingBadge from '#lib/components/social/RatingBadge.svelte';
 	import ReviewItem from '#lib/components/social/ReviewItem.svelte';
 	import ReviewSortTabs from '#lib/components/social/ReviewSortTabs.svelte';
+	import NewThreadButton from '#lib/components/social/NewThreadButton.svelte';
+	import ThreadItem from '#lib/components/social/ThreadItem.svelte';
 	import type { PageProps } from './$types';
 
 	// Карточка как у Okko: трейлер — фон шапки, поверх — название, факты, описание и кнопки.
@@ -157,6 +159,36 @@
 			{/if}
 		</div>
 	</div>
+</section>
+
+<section aria-labelledby="threads-title" class="mb-12">
+	<div class="mb-4 flex flex-wrap items-baseline justify-between gap-3">
+		<h2 id="threads-title" class="text-2xl font-bold">Обсуждения</h2>
+		<div class="flex flex-wrap items-center gap-3">
+			{#if data.threads.data?.total}
+				<a href="{page.url.pathname}/threads" class="link text-sm link-primary link-hover"
+					>Все обсуждения ({data.threads.data.total}) →</a
+				>
+			{/if}
+			<NewThreadButton entity={entity.slug} label="Начать обсуждение" />
+		</div>
+	</div>
+	{#if data.threads.error}
+		<LoadError message={data.threads.error} />
+	{:else if data.threads.data?.items.length}
+		<ul class="grid gap-3 md:grid-cols-2" aria-label="Обсуждения">
+			{#each data.threads.data.items as thread (thread.id)}
+				<li class="min-w-0"><ThreadItem {thread} /></li>
+			{/each}
+		</ul>
+	{:else}
+		<p
+			class="rounded-box border border-dashed border-base-300 p-6 text-center text-base-content/60"
+		>
+			Обсуждений пока нет. Тему можно привязать сразу к нескольким произведениям — например, к книге
+			и её экранизациям.
+		</p>
+	{/if}
 </section>
 
 <div class="grid gap-10 lg:grid-cols-[1fr_20rem]">

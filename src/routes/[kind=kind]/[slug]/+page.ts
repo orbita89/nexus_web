@@ -8,12 +8,13 @@ import type { PageLoad } from './$types';
 
 /** Рецензий на карточке; остальные — на /{раздел}/{slug}/reviews. */
 const CARD_REVIEWS = 6;
+const CARD_THREADS = 5;
 
 export const load: PageLoad = async ({ fetch, url, params }) => {
 	const api = publicApi(fetch, url);
 	const path = { slug: params.slug };
 	const sort = readSort(url);
-	const [entity, rating, reviews] = await Promise.all([
+	const [entity, rating, reviews, threads] = await Promise.all([
 		orError(
 			unwrap(api.catalog.GET('/api/v1/catalog/entities/{slug}', { params: { path } })),
 			'Такого произведения в каталоге нет.'
@@ -26,6 +27,14 @@ export const load: PageLoad = async ({ fetch, url, params }) => {
 					params: { path, query: { sort, limit: CARD_REVIEWS } }
 				})
 			)
+		),
+		// Обсуждения: темы, где есть это произведение (в том числе вместе с другими).
+		settle(
+			unwrap(
+				api.social.GET('/api/v1/social/entities/{slug}/threads', {
+					params: { path, query: { limit: CARD_THREADS } }
+				})
+			)
 		)
 	]);
 
@@ -33,5 +42,5 @@ export const load: PageLoad = async ({ fetch, url, params }) => {
 	const href = entityHref(entity);
 	if (url.pathname !== href) redirect(301, href + url.search);
 
-	return { entity, rating: rating.data, reviews, sort };
+	return { entity, rating: rating.data, reviews, threads, sort };
 };

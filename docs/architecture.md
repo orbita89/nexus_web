@@ -30,12 +30,13 @@ src/
     api/               клиенты, ошибки, generated/ — типы из OpenAPI (не править руками)
     auth/              токены и сессия (core.ts — без Svelte, session.svelte.ts — для компонентов)
     catalog/           разделы (kinds), подписи (labels), состояние списков в URL (url), load-хелперы
-    social/            рецензии: сортировка, цвета оценок, даты
+    social/            рецензии (reviews), форум (forum): сортировки, ветки, ссылки, время
     components/        Navbar, Avatar, Alert, AuthCard, ProviderButtons, Stub
       catalog/         Poster, EntityCard, EntityGrid, PosterStrip, Pagination, KindTabs, TagChips,
                        PersonAvatar, RatingSummary, CardHero, TrailerButton, EmptyState, LoadError, Seo
       social/          RatingBadge, MyReview, ReviewItem, ReviewSortTabs, FollowButton,
-                       FollowList, UserCard, ThreadItem
+                       FollowList, UserCard, ThreadItem, PostItem, ReplyForm, ThreadForm,
+                       EntityPicker, NewThreadButton, RichText, TimeAgo, SortTabs
     utils/             safeNext, loginUrl
   routes/
     +layout.svelte     шапка, контейнер, подвал
@@ -50,7 +51,7 @@ scripts/api-types.mjs  генерация типов API
 ```
 
 Готовы auth, настройки, каталог (главная, разделы, карточки, люди, теги, поиск) и рецензии с
-оценками, профили с подписками; коллекции, форум и лента — пока заглушки (`Stub`).
+оценками, профили с подписками, форум; коллекции и лента — пока заглушки (`Stub`).
 
 ## Адреса
 
@@ -149,6 +150,20 @@ rating_asc`, «новые» в адрес не пишутся). Сводка и 
 профиле — «Редактировать профиль», гостю — вход с возвратом. Подписка меняет счётчик
 подписчиков сразу, без перезагрузки шапки. «Коллекции» — пока заглушка до блока коллекций; темы
 ведут на `/forum/{id}` (блок форума).
+
+**Форум** (`#lib/social/forum.ts`, `routes/forum/`, `(protected)/forum/`). Тема привязана к 1–10
+произведениям, первое — главное. Сообщения приходят плоским списком по времени (`parent_id`):
+ветка показывается цитатой «↳ в ответ @user: «начало текста»» со ссылкой к исходному, если оно на
+этой странице (`quoteFor`); исходное удалено — «в ответ на удалённое сообщение». Удалённые с
+ответами — заглушка «Сообщение удалено». Текст — простой, адреса http(s) становятся ссылками
+(`RichText` + `linkify`, без `{@html}`, `rel="nofollow noopener ugc"`). Время — «5 минут назад»
+в браузере, на сервере — дата (`TimeAgo`, без расхождений при гидрации). После ответа —
+переход на последнюю страницу к новому сообщению (`goto(…#post-id, { refreshAll: true })`).
+Темы создают `author` и `admin` (`NewThreadButton`; остальным — подсказка); править тему и
+сообщение может только автор. Произведения в форме выбираются поиском (`EntityPicker`:
+`/search`, при 503 — `/entities?q=`). На карточке — «Обсуждения» (5 тем, `GET
+/entities/{slug}/threads`) и «Начать обсуждение» (`/forum/new?entity=slug`). Модерация (закрыть,
+удалить чужое) — в админке.
 
 SEO: `Seo.svelte` — `<title>`, `meta description` (обрезанное по слову описание), `og:*`.
 
