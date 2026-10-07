@@ -86,6 +86,7 @@
 						</li>
 						<li><a href="/u/{session.user.username}">Профиль</a></li>
 						<li><a href="/settings">Настройки</a></li>
+						{#if session.user.role === 'admin'}<li><a href="/admin">Админка</a></li>{/if}
 						<li><button type="button" onclick={signOut}>Выйти</button></li>
 					</ul>
 				</div>
