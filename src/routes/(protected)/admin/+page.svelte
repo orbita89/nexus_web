@@ -14,6 +14,22 @@
 		job?.steps.some((s) => s.step === 'check' && s.status === 'failed') ?? false
 	);
 	const result = $derived(job?.done?.reindex);
+	/** Почему проверка не пропустила: «Новый индекс: 12 документов, текущий: 100 (12%)…». */
+	const checkMessage = $derived(job?.steps.find((s) => s.step === 'check')?.message ?? '');
+
+	// Подтверждение перед запуском: обычный реиндекс или без проверки 80% (force).
+	let confirmDialog: HTMLDialogElement;
+	let confirmForce = $state(false);
+
+	function askReindex(force: boolean) {
+		confirmForce = force;
+		confirmDialog.showModal();
+	}
+
+	function confirmReindex() {
+		confirmDialog.close();
+		reindex(confirmForce);
+	}
 
 	// Перестроить поисковый индекс из PostgreSQL без простоя и пересобрать статику; ход — в лог.
 	async function reindex(force = false) {
@@ -74,12 +90,12 @@
 		переключается на новый индекс без простоя, затем пересобирается вся статика сайта (в фоне).
 	</p>
 	<div class="mt-3 flex flex-wrap items-center gap-3">
-		<button class="btn btn-sm" onclick={() => reindex()} disabled={reindexing}>
+		<button class="btn btn-sm" onclick={() => askReindex(false)} disabled={reindexing}>
 			{#if reindexing}<span class="loading loading-xs loading-spinner"></span>{/if}
-			Перестроить индекс
+			Глобальный реиндекс
 		</button>
 		{#if checkFailed && !reindexing}
-			<button class="btn btn-outline btn-sm btn-warning" onclick={() => reindex(true)}>
+			<button class="btn btn-outline btn-sm btn-warning" onclick={() => askReindex(true)}>
 				Перестроить без проверки
 			</button>
 		{/if}
@@ -94,3 +110,52 @@
 	{#if job}<div class="mt-3"><JobLog {job} label="Перестройка поиска" /></div>{/if}
 	{#if error}<div class="mt-3"><Alert>{error}</Alert></div>{/if}
 </section>
+
+<dialog
+	bind:this={confirmDialog}
+	class="modal"
+	aria-labelledby="reindex-confirm-title"
+	aria-describedby="reindex-confirm-text"
+>
+	<div class="modal-box">
+		{#if confirmForce}
+			<h3 id="reindex-confirm-title" class="text-lg font-bold text-warning">
+				Переключить поиск без проверки?
+			</h3>
+			<div id="reindex-confirm-text" class="mt-3 flex flex-col gap-2 text-sm">
+				<p>
+					Прошлая перестройка остановилась: новый индекс оказался меньше 80% текущего. Обычно это
+					значит, что выборка из базы сломана или неполная.
+				</p>
+				{#if checkMessage}<p class="text-base-content/60">{checkMessage}</p>{/if}
+				<p>
+					Продолжайте, только если сущности удалены <strong>намеренно</strong>: поиск для всех
+					пользователей переключится на меньший индекс, затем пересоберётся вся статика сайта.
+					Предыдущая версия индекса сохранится.
+				</p>
+			</div>
+		{:else}
+			<h3 id="reindex-confirm-title" class="text-lg font-bold">Запустить глобальный реиндекс?</h3>
+			<div id="reindex-confirm-text" class="mt-3 flex flex-col gap-2 text-sm">
+				<p>
+					Все произведения из базы будут заново загружены в новый поисковый индекс, затем поиск
+					переключится на него без простоя, а вся статика сайта пересоберётся в фоне.
+				</p>
+				<p class="text-base-content/60">
+					На большом каталоге это занимает минуты и нагружает базу и Meilisearch. Если новый индекс
+					окажется меньше 80% текущего, поиск не переключится.
+				</p>
+			</div>
+		{/if}
+		<div class="modal-action">
+			<form method="dialog"><button class="btn btn-ghost btn-sm">Отмена</button></form>
+			<button
+				class={['btn btn-sm', confirmForce ? 'btn-warning' : 'btn-primary']}
+				onclick={confirmReindex}
+			>
+				{confirmForce ? 'Переключить без проверки' : 'Запустить реиндекс'}
+			</button>
+		</div>
+	</div>
+	<form method="dialog" class="modal-backdrop"><button tabindex="-1">Закрыть</button></form>
+</dialog>

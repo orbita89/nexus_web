@@ -167,13 +167,25 @@ test('произведения: создать фильм с полями, тр�
 
 test('поиск: перестройка потоком — шаги из плана, прогресс, итог', async () => {
 	await admin.goto('/admin');
-	await admin.getByRole('button', { name: 'Перестроить индекс' }).click();
+	const start = admin.getByRole('button', { name: 'Глобальный реиндекс' });
+	const confirm = admin.getByRole('dialog', { name: 'Запустить глобальный реиндекс?' });
 	const log = admin.getByRole('region', { name: 'Перестройка поиска' });
+
+	// Отмена — ничего не запускается.
+	await start.click();
+	await expect(confirm).toBeVisible();
+	await confirm.getByRole('button', { name: 'Отмена' }).click();
+	await expect(confirm).toBeHidden();
+	await expect(log).toHaveCount(0);
+
+	await start.click();
+	await confirm.getByRole('button', { name: 'Запустить реиндекс' }).click();
+	await expect(confirm).toBeHidden();
 	for (const step of ['Индексация сущностей', 'Проверка размера', 'Переключение поиска'])
 		await expect(log).toContainText(step);
 	await expect(log.getByRole('status')).toHaveText('Готово', { timeout: 30_000 });
 	await expect(admin.getByText(/^В индексе \d+, было \d+/)).toBeVisible();
-	await expect(admin.getByRole('button', { name: 'Перестроить индекс' })).toBeEnabled();
+	await expect(start).toBeEnabled();
 });
 
 test('модерация: чужие рецензия, сообщение, коллекция, тема; закрыть и открыть тему', async () => {
