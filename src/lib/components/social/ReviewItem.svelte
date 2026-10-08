@@ -12,13 +12,16 @@
 	let {
 		review,
 		showEntity = false,
-		showAuthor = !showEntity
+		showAuthor = !showEntity,
+		onremoved = invalidateAll
 	}: {
 		review: SchemaReview;
 		/** О каком произведении рецензия (профиль, лента). */
 		showEntity?: boolean;
 		/** Автор (на карточке и в ленте — да, в профиле — и так известен). */
 		showAuthor?: boolean;
+		/** После удаления модератором: перечитать список (по умолчанию — load страницы). */
+		onremoved?: () => unknown;
 	} = $props();
 
 	let expanded = $state(false);
@@ -101,7 +104,7 @@
 							params: { path: { id: review.id } }
 						})
 					);
-					await invalidateAll();
+					await onremoved();
 				}}
 			/>
 		</div>

@@ -1,13 +1,14 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
 
-	let { message }: { message: string } = $props();
+	// onretry — повторить свой запрос (блоки, которые грузят данные сами); по умолчанию — load страницы.
+	let { message, onretry }: { message: string; onretry?: () => unknown } = $props();
 
 	let retrying = $state(false);
 	async function retry() {
 		retrying = true;
 		try {
-			await invalidateAll();
+			await (onretry ?? invalidateAll)();
 		} finally {
 			retrying = false;
 		}

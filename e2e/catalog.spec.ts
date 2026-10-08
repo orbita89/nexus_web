@@ -29,6 +29,7 @@ test('карточка: участники, переход на человека
 	await expect(page.getByRole('heading', { name: 'Дюна', level: 1 })).toBeVisible();
 	await expect(page.getByRole('link', { name: 'Научная фантастика' })).toBeVisible();
 	await expect(page.getByRole('region', { name: 'Шапка: Дюна' })).toContainText('2 ч 35 мин');
+	await expect(page.getByRole('region', { name: 'Оценка Nexus' })).toBeVisible();
 
 	const credits = page.getByRole('region', { name: 'Участники' });
 	await expect(credits).toContainText('Актёр · Пол Атрейдес');
@@ -66,6 +67,36 @@ test('карточка рендерится на сервере: заголов�
 	await page.goto('/films/dune-2021');
 	await expect(page.getByRole('heading', { name: 'Дюна', level: 1 })).toBeVisible();
 	await context.close();
+});
+
+test('карточка — статика: живого в HTML нет, блоки грузятся в браузере, нижние — по прокрутке', async ({
+	page,
+	request
+}) => {
+	// В HTML — каталог и заголовки разделов, но не рецензии: они устарели бы в статике.
+	const html = await (await request.get('/films/dune-2021')).text();
+	expect(html).toContain('Оценки и рецензии');
+	expect(html).not.toContain('Вильнёв сделал невозможное');
+
+	// Низкое окно: «В коллекциях» заведомо ниже экрана, что бы ни грузилось выше.
+	await page.setViewportSize({ width: 1280, height: 500 });
+	const asked: string[] = [];
+	page.on('request', (r) => {
+		const match = /\/social\/entities\/dune-2021\/(\w+)/.exec(r.url());
+		if (match) asked.push(match[1]);
+	});
+	await page.goto('/films/dune-2021');
+	await expect(page.getByRole('list', { name: 'Рецензии' })).toContainText(
+		'Вильнёв сделал невозможное'
+	);
+	expect(asked).toContain('rating');
+	expect(asked).not.toContain('collections');
+
+	await page.getByRole('heading', { name: 'В коллекциях' }).scrollIntoViewIfNeeded();
+	await expect(page.getByRole('list', { name: 'В коллекциях' })).toContainText(
+		'Дюна во всех видах'
+	);
+	expect(asked).toContain('collections');
 });
 
 test('теги: список и сущности с тегом, фильтр по разделу', async ({ page }) => {
