@@ -165,11 +165,21 @@ test('произведения: создать фильм с полями, тр�
 	expect((await admin.request.get(`/films/${slug}`)).status()).toBe(404);
 });
 
-test('поиск: перестройка потоком — шаги из плана, прогресс, итог', async () => {
+test('индексация: раздел в меню, произведения — поиск и статика потоком, люди — скоро', async () => {
 	await admin.goto('/admin');
-	const start = admin.getByRole('button', { name: 'Глобальный реиндекс' });
-	const confirm = admin.getByRole('dialog', { name: 'Запустить глобальный реиндекс?' });
-	const log = admin.getByRole('region', { name: 'Перестройка поиска' });
+	await admin
+		.getByRole('navigation', { name: 'Разделы админки' })
+		.getByRole('link', { name: 'Индексация' })
+		.click();
+	await expect(admin).toHaveURL('/admin/index');
+
+	const entities = admin.getByRole('region', { name: 'Произведения' });
+	const start = entities.getByRole('button', { name: 'Переиндексировать' });
+	const confirm = admin.getByRole('dialog', { name: 'Переиндексировать «Произведения»?' });
+	const log = admin.getByRole('region', { name: 'Индексация: Произведения' });
+	await expect(entities).toContainText('Статические страницы карточек');
+	await expect(admin.getByRole('region', { name: 'Люди' })).toContainText('скоро');
+	await expect(admin.getByRole('region', { name: 'Люди' }).getByRole('button')).toHaveCount(0);
 
 	// Отмена — ничего не запускается.
 	await start.click();
@@ -179,12 +189,12 @@ test('поиск: перестройка потоком — шаги из пла
 	await expect(log).toHaveCount(0);
 
 	await start.click();
-	await confirm.getByRole('button', { name: 'Запустить реиндекс' }).click();
+	await confirm.getByRole('button', { name: 'Запустить' }).click();
 	await expect(confirm).toBeHidden();
 	for (const step of ['Индексация сущностей', 'Проверка размера', 'Переключение поиска'])
 		await expect(log).toContainText(step);
 	await expect(log.getByRole('status')).toHaveText('Готово', { timeout: 30_000 });
-	await expect(admin.getByText(/^В индексе \d+, было \d+/)).toBeVisible();
+	await expect(entities.getByText(/^В индексе \d+, было \d+/)).toBeVisible();
 	await expect(start).toBeEnabled();
 });
 

@@ -12,7 +12,8 @@
 		{ href: '/admin/entities', title: 'Произведения' },
 		{ href: '/admin/people', title: 'Люди' },
 		{ href: '/admin/tags', title: 'Теги' },
-		{ href: '/admin/users', title: 'Пользователи' }
+		{ href: '/admin/users', title: 'Пользователи' },
+		{ href: '/admin/index', title: 'Индексация' }
 	];
 	const isActive = (href: string) =>
 		href === '/admin' ? page.url.pathname === href : page.url.pathname.startsWith(href);
