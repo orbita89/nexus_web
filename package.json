@@ -6,7 +6,6 @@
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build",
-		"build:static": "PRERENDER_ENTITIES=1 vite build",
 		"start": "node server/index.js",
 		"revalidate": "node scripts/revalidate.mjs",
 		"preview": "vite preview",

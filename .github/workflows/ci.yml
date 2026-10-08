@@ -50,8 +50,11 @@ jobs:
           NEXUS_BACKEND_DIR: ../backend
       - run: pnpm vitest --run
         working-directory: web
+      # Бэкенда в этой джобе нет: сборка без статики карточек (e2e ниже собирает с ней).
       - run: pnpm build
         working-directory: web
+        env:
+          PRERENDER_ENTITIES: '0'
 
   e2e:
     name: e2e against backend

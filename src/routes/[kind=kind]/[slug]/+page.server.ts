@@ -22,7 +22,12 @@ export const entries: EntryGenerator = async () => {
 	for (let offset = 0, total = Infinity; offset < total; offset += PAGE) {
 		const page = await unwrap(
 			api.catalog.GET('/api/v1/catalog/entities', { params: { query: { limit: PAGE, offset } } })
-		);
+		).catch((e) => {
+			throw new Error(
+				`Пререндер карточек: каталог недоступен по BACKEND_URL=${BACKEND_URL} (${e}). ` +
+					'Поднимите бэкенд или соберите без статики: PRERENDER_ENTITIES=0 pnpm build.'
+			);
+		});
 		total = page.total;
 		for (const entity of page.items)
 			params.push({ kind: kindByApi(entity.kind).slug, slug: entity.slug });

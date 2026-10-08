@@ -8,8 +8,8 @@ export const variables = defineEnvVars({
 	},
 	PRERENDER_ENTITIES: {
 		description:
-			'Сборка: 1 — пререндерить карточки всего каталога (нужен живой BACKEND_URL). Пусто — карточки рендерятся при первом запросе (dev, CI, e2e).',
+			'Сборка: пререндерить карточки всего каталога (по умолчанию да, нужен живой BACKEND_URL). 0 — не пререндерить: карточки рендерятся при первом запросе (CI без бэкенда).',
 		static: true,
-		schema: (value) => value === '1'
+		schema: (value) => value !== '0'
 	}
 });

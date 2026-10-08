@@ -103,10 +103,11 @@ scripts/api-types.mjs  генерация типов API
 браузер берёт при переходах вместо запросов к API. `'auto'`, а не `true`: с `true` маршрут
 выпадает из серверной сборки — ни перерисовать одну карточку, ни показать новую до сборки.
 
-- **Сборка.** `pnpm build:static` (`PRERENDER_ENTITIES=1`, нужны `BACKEND_URL` и `ORIGIN`):
+- **Сборка.** Любой `pnpm build` (и `verify`, и e2e) — со статикой; нужен живой `BACKEND_URL`,
+  для прода — `ORIGIN` (попадает в `og:url`). Без бэкенда — `PRERENDER_ENTITIES=0` (так в CI):
   `entries()` листает `GET /catalog/entities`, на каждую карточку — `films/x.html`,
-  `films/x/__data.json` и их `.br`/`.gz` в `build/prerendered`. Обычный `pnpm build` (dev, CI,
-  e2e) карточки не пререндерит — они рендерятся по запросу, как раньше.
+  `films/x/__data.json` и их `.br`/`.gz` в `build/prerendered`. Каждая сборка стирает `build/`
+  и собирает статику заново; `pnpm dev` статики не использует — там карточка рендерится на запрос.
 - **Раздача.** nginx (`deploy/nginx.conf`) отдаёт карточки с диска; query не важен. Файла нет —
   запрос идёт в Node (`server/index.js`), он рисует, сохраняет и отдаёт; дальше снова с диска.
 - **ISR.** `POST /_isr/revalidate` (`Authorization: Bearer $ISR_SECRET`) — его зовёт бэкенд
@@ -123,7 +124,7 @@ scripts/api-types.mjs  генерация типов API
   Вручную: `pnpm revalidate /films/dune-2021` или `pnpm revalidate --all` (`scripts/revalidate.mjs`).
 
 - **Деплой.** Пререндер и ISR пишут в каталог релиза: HTML ссылается на хэшированные чанки своей
-  сборки, поэтому новый релиз собирается с нуля (`build:static`), старые файлы не переносятся.
+  сборки, поэтому новый релиз собирается с нуля (`pnpm build`), старые файлы не переносятся.
 
 Почему свой сервер, а не `node build`: `event.fetch` к пререндеренному адресу уходит настоящим
 HTTP-запросом (получил бы старый файл), а встроенная раздача adapter-node держит таблицу файлов

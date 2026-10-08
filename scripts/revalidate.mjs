@@ -5,7 +5,7 @@
 //   pnpm revalidate --all                                — вся статика, в фоне на сервере
 //
 // ISR_SECRET — токен сервера (обязателен), ISR_URL — сервер (http://127.0.0.1:3000).
-// После изменений в коде нужна полная сборка (pnpm build:static): HTML ссылается на чанки сборки.
+// После изменений в коде нужна полная сборка (pnpm build): HTML ссылается на чанки сборки.
 import process from 'node:process';
 
 const isrUrl = process.env.ISR_URL ?? 'http://127.0.0.1:3000';
