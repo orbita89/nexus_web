@@ -26,10 +26,8 @@ test('гость: список, коллекция с заметками, «В �
 	await expect(page.getByText('С чего всё началось')).toBeVisible();
 	await expect(page.getByRole('button', { name: 'Изменить содержимое' })).toHaveCount(0);
 
+	// «В коллекциях» на карточке вернётся клиентским блоком: карточка статическая.
 	await page.goto('/films/dune-2021');
-	await expect(page.getByRole('list', { name: 'В коллекциях' })).toContainText(
-		'Дюна во всех видах'
-	);
 	await expect(page.getByRole('link', { name: '＋ В коллекцию' })).toHaveAttribute(
 		'href',
 		'/auth/login?next=%2Ffilms%2Fdune-2021'
@@ -62,7 +60,6 @@ test('пользователь: коллекция с карточки, соде
 	await dialog.getByRole('button', { name: 'Создать и добавить' }).click();
 	await expect(dialog.getByRole('checkbox', { name: new RegExp(title) })).toBeChecked();
 	await page.keyboard.press('Escape');
-	await expect(page.getByRole('list', { name: 'В коллекциях' })).toContainText(title);
 
 	// В профиле — новая коллекция; открываем и добавляем книгу поиском.
 	await page.goto(`/u/${username}/collections`);

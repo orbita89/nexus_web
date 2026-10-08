@@ -21,7 +21,25 @@ export default defineConfig({
 				runes: ({ filename }) =>
 					filename.split(/[/\\]/).includes('node_modules') ? undefined : true
 			},
-			adapter: adapter()
+			// Сжатые .br/.gz рядом с ассетами и пререндером — nginx отдаёт их сам (gzip_static,
+			// brotli_static). Карточки ISR пересжимает при перерисовке (server/isr.js).
+			adapter: adapter({ precompress: true }),
+			paths: {
+				// Публичный адрес сайта: при пререндере и ISR это url.origin, он попадает в og:url
+				// статических карточек. Пусто (dev, CI) — origin берётся из запроса.
+				origin: process.env.ORIGIN || undefined
+			},
+			prerender: {
+				// Пререндерим только карточки — их список даёт entries() маршрута, обходить ссылки не нужно.
+				crawl: false,
+				// Карточка — один запрос к API; запросы ждут сеть, а не CPU.
+				concurrency: 16,
+				handleHttpError: ({ status, path, message }) => {
+					// Произведение удалили во время сборки — его просто не будет в статике.
+					if (status === 404) return console.warn(`prerender: ${path} — 404, пропускаем`);
+					throw new Error(message);
+				}
+			}
 		})
 	],
 	server: { proxy },

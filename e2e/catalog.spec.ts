@@ -29,7 +29,6 @@ test('карточка: участники, переход на человека
 	await expect(page.getByRole('heading', { name: 'Дюна', level: 1 })).toBeVisible();
 	await expect(page.getByRole('link', { name: 'Научная фантастика' })).toBeVisible();
 	await expect(page.getByRole('region', { name: 'Шапка: Дюна' })).toContainText('2 ч 35 мин');
-	await expect(page.getByRole('region', { name: 'Оценка Nexus' })).toBeVisible();
 
 	const credits = page.getByRole('region', { name: 'Участники' });
 	await expect(credits).toContainText('Актёр · Пол Атрейдес');

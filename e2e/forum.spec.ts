@@ -130,8 +130,9 @@ test('автор: тема с карточки на два произведен�
 	await expect(entities.getByRole('link').first()).toHaveAttribute('href', '/films/dune-2021');
 	const threadUrl = page.url();
 
-	// Тема видна в «Обсуждениях» книги — она привязана к обоим произведениям.
-	await open(page, '/books/dune-novel');
+	// Тема видна в обсуждениях книги — она привязана к обоим произведениям. (На карточке
+	// обсуждения вернутся клиентским блоком; пока — страница «Все обсуждения».)
+	await open(page, '/books/dune-novel/threads');
 	await expect(page.getByRole('list', { name: 'Обсуждения' })).toContainText(title);
 
 	await open(page, threadUrl);

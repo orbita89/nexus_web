@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { session } from '#lib/auth/session.svelte.ts';
 	import { kindByApi } from '#lib/catalog/kinds.ts';
 	import {
 		ageRating,
@@ -14,30 +13,22 @@
 	} from '#lib/catalog/labels.ts';
 	import { trailerSources } from '#lib/catalog/trailer.ts';
 	import CardHero from '#lib/components/catalog/CardHero.svelte';
+	import ClientSection from '#lib/components/catalog/ClientSection.svelte';
 	import PersonAvatar from '#lib/components/catalog/PersonAvatar.svelte';
 	import Seo from '#lib/components/catalog/Seo.svelte';
 	import TagChips from '#lib/components/catalog/TagChips.svelte';
 	import TrailerButton from '#lib/components/catalog/TrailerButton.svelte';
-	import { invalidateAll } from '$app/navigation';
-	import { count } from '#lib/catalog/labels.ts';
-	import LoadError from '#lib/components/catalog/LoadError.svelte';
-	import RatingSummary from '#lib/components/catalog/RatingSummary.svelte';
-	import MyReview from '#lib/components/social/MyReview.svelte';
-	import { withQuery } from '#lib/catalog/url.ts';
-	import { sortParam } from '#lib/social/reviews.ts';
-	import RatingBadge from '#lib/components/social/RatingBadge.svelte';
-	import ReviewItem from '#lib/components/social/ReviewItem.svelte';
-	import ReviewSortTabs from '#lib/components/social/ReviewSortTabs.svelte';
-	import NewThreadButton from '#lib/components/social/NewThreadButton.svelte';
-	import ThreadItem from '#lib/components/social/ThreadItem.svelte';
 	import AddToCollection from '#lib/components/social/AddToCollection.svelte';
+	import MyReview from '#lib/components/social/MyReview.svelte';
+	import NewThreadButton from '#lib/components/social/NewThreadButton.svelte';
 	import WatchButton from '#lib/components/social/WatchButton.svelte';
-	import { useRealtime } from '#lib/realtime/realtime.svelte.ts';
-	import CollectionCard from '#lib/components/social/CollectionCard.svelte';
 	import type { PageProps } from './$types';
 
 	// Карточка как у Okko: трейлер — фон шапки, поверх — название, факты, описание и кнопки.
 	// Постера на карточке нет: он — в сетках разделов.
+	// Страница статическая (+page.server.ts): в data только каталог. Личное (оценка, «Следить»,
+	// «В коллекцию») и живое (рецензии, обсуждения, коллекции) — компоненты, которые сами
+	// грузят данные в браузере.
 	let { data }: PageProps = $props();
 
 	let hero = $state<CardHero>();
@@ -52,7 +43,6 @@
 		...keyFacts(entity.kind, entity.metadata, entity.release_date).slice(1)
 	]);
 	const age = $derived(ageRating(entity.kind, entity.metadata));
-	const average = $derived(data.rating?.count ? data.rating.average : null);
 	const lead = $derived(leadCredits(entity.kind, entity.credits));
 	const fields = $derived([
 		...(entity.release_date
@@ -60,21 +50,6 @@
 			: []),
 		...metadataFields(entity.kind, entity.metadata)
 	]);
-	// Чужие рецензии и новые темы о произведении — тихо перечитываем сводку, рецензии и
-	// обсуждения (пачку событий — одним запросом).
-	let refreshTimer: ReturnType<typeof setTimeout> | undefined;
-	function refreshSoon() {
-		clearTimeout(refreshTimer);
-		refreshTimer = setTimeout(() => void invalidateAll(), 800);
-	}
-	useRealtime(
-		() => [`entity:${entity.slug}`],
-		(event) => {
-			if (event.data.author_id === session.user?.id) return;
-			if (event.event.startsWith('review.') || event.event.startsWith('thread.')) refreshSoon();
-		},
-		refreshSoon
-	);
 
 	const description = $derived(
 		summary(entity.description) ||
@@ -102,9 +77,8 @@
 			<p class="mt-2 text-lg text-base-content/60">{entity.original_title}</p>
 		{/if}
 
-		{#if facts.length || age || average != null}
+		{#if facts.length || age}
 			<p class="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 font-medium text-base-content/70">
-				{#if average != null}<RatingBadge value={average} average />{/if}
 				{#each facts as fact, i (i)}<span>{fact}</span>{/each}
 				{#if age}<span class="badge badge-outline badge-sm font-semibold">{age}</span>{/if}
 			</p>
@@ -138,97 +112,30 @@
 				/>
 			{/if}
 			<WatchButton slug={entity.slug} entityId={entity.id} />
-			<AddToCollection slug={entity.slug} title={entity.title} onchange={() => invalidateAll()} />
+			<AddToCollection slug={entity.slug} title={entity.title} />
 		</div>
 	</CardHero>
 {/key}
 
-<section aria-labelledby="reviews-title" class="mb-12">
-	<div class="mb-4 flex flex-wrap items-baseline justify-between gap-3">
-		<h2 id="reviews-title" class="text-2xl font-bold">Оценки и рецензии</h2>
-		{#if data.reviews.data?.total}
-			<a
-				href={withQuery(`${page.url.pathname}/reviews`, { sort: sortParam(data.sort) })}
-				class="link text-sm link-primary link-hover">Все рецензии ({data.reviews.data.total}) →</a
-			>
-		{/if}
-	</div>
-	<div class="grid gap-6 lg:grid-cols-[20rem_1fr]">
-		<div class="flex flex-col gap-4">
-			{#if data.rating}<RatingSummary rating={data.rating} />{/if}
-			<!-- Своё изменили — сводка и список перечитываются (load в браузере). -->
-			<MyReview slug={entity.slug} onchange={() => invalidateAll()} />
-		</div>
-		<div class="min-w-0">
-			{#if data.reviews.error}
-				<LoadError message={data.reviews.error} />
-			{:else if data.reviews.data?.items.length}
-				{#if data.reviews.data.total > 1}
-					<div class="mb-4 overflow-x-auto"><ReviewSortTabs current={data.sort} /></div>
-				{/if}
-				<ul class="flex flex-col gap-3" aria-label="Рецензии">
-					{#each data.reviews.data.items as review (review.id)}
-						<li><ReviewItem {review} /></li>
-					{/each}
-				</ul>
-			{:else}
-				<p
-					class="rounded-box border border-dashed border-base-300 p-6 text-center text-base-content/60"
-				>
-					Рецензий пока нет{data.rating?.count
-						? `, но уже ${count(data.rating.count, ['оценка', 'оценки', 'оценок'])}`
-						: ''}. Напишите первую!
-				</p>
-			{/if}
-		</div>
-	</div>
-</section>
-
-<section aria-labelledby="threads-title" class="mb-12">
-	<div class="mb-4 flex flex-wrap items-baseline justify-between gap-3">
-		<h2 id="threads-title" class="text-2xl font-bold">Обсуждения</h2>
-		<div class="flex flex-wrap items-center gap-3">
-			{#if data.threads.data?.total}
-				<a href="{page.url.pathname}/threads" class="link text-sm link-primary link-hover"
-					>Все обсуждения ({data.threads.data.total}) →</a
-				>
-			{/if}
-			<NewThreadButton entity={entity.slug} label="Начать обсуждение" />
-		</div>
-	</div>
-	{#if data.threads.error}
-		<LoadError message={data.threads.error} />
-	{:else if data.threads.data?.items.length}
-		<ul class="grid gap-3 md:grid-cols-2" aria-label="Обсуждения">
-			{#each data.threads.data.items as thread (thread.id)}
-				<li class="min-w-0"><ThreadItem {thread} /></li>
-			{/each}
-		</ul>
-	{:else}
-		<p
-			class="rounded-box border border-dashed border-base-300 p-6 text-center text-base-content/60"
+<!-- Живое: в статический HTML не входит. Содержимое — клиентские компоненты, которые грузят
+     данные из API, когда раздел показался на экране. -->
+<ClientSection id="reviews" title="Оценки и рецензии">
+	{#snippet actions()}
+		<a href="{page.url.pathname}/reviews" class="link text-sm link-primary link-hover"
+			>Все рецензии →</a
 		>
-			Обсуждений пока нет. Тему можно привязать сразу к нескольким произведениям — например, к книге
-			и её экранизациям.
-		</p>
-	{/if}
-</section>
+	{/snippet}
+	<div class="max-w-xs"><MyReview slug={entity.slug} /></div>
+</ClientSection>
 
-{#if data.collections.data?.items.length}
-	<section aria-labelledby="collections-title" class="mb-12">
-		<h2 id="collections-title" class="mb-4 text-2xl font-bold">
-			В коллекциях
-			<span class="ml-1 text-sm font-normal text-base-content/40"
-				>{data.collections.data.total}</span
-			>
-		</h2>
-		<ul class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label="В коллекциях">
-			{#each data.collections.data.items as collection (collection.id)}
-				<li><CollectionCard {collection} /></li>
-			{/each}
-		</ul>
-	</section>
-{/if}
+<ClientSection id="threads" title="Обсуждения">
+	{#snippet actions()}
+		<a href="{page.url.pathname}/threads" class="link text-sm link-primary link-hover"
+			>Все обсуждения →</a
+		>
+		<NewThreadButton entity={entity.slug} label="Начать обсуждение" />
+	{/snippet}
+</ClientSection>
 
 <div class="grid gap-10 lg:grid-cols-[1fr_20rem]">
 	<div class="min-w-0">
