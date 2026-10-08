@@ -151,7 +151,11 @@ test('произведения: создать фильм с полями, тр�
 	// Правка названия.
 	await form.locator('input[name=title]').fill(`E2E Фильм ${id} (правка)`);
 	await form.getByRole('button', { name: 'Сохранить' }).click();
-	await expect(admin.getByText('Сохранено.')).toBeVisible();
+	// Публикация потоком: лог шагов из plan, итог — после done.
+	const log = admin.getByRole('region', { name: 'Публикация правки' });
+	await expect(log).toContainText('Сохранение в БД');
+	await expect(log.getByRole('status')).toHaveText('Готово');
+	await expect(admin.getByText('Сохранено и опубликовано.')).toBeVisible();
 	html = await (await admin.request.get(`/films/${slug}`)).text();
 	expect(html).toContain(`E2E Фильм ${id} (правка)`);
 
@@ -159,6 +163,17 @@ test('произведения: создать фильм с полями, тр�
 	await admin.getByRole('button', { name: 'Удалить', exact: true }).click();
 	await expect(admin).toHaveURL('/admin/entities');
 	expect((await admin.request.get(`/films/${slug}`)).status()).toBe(404);
+});
+
+test('поиск: перестройка потоком — шаги из плана, прогресс, итог', async () => {
+	await admin.goto('/admin');
+	await admin.getByRole('button', { name: 'Перестроить индекс' }).click();
+	const log = admin.getByRole('region', { name: 'Перестройка поиска' });
+	for (const step of ['Индексация сущностей', 'Проверка размера', 'Переключение поиска'])
+		await expect(log).toContainText(step);
+	await expect(log.getByRole('status')).toHaveText('Готово', { timeout: 30_000 });
+	await expect(admin.getByText(/^В индексе \d+, было \d+/)).toBeVisible();
+	await expect(admin.getByRole('button', { name: 'Перестроить индекс' })).toBeEnabled();
 });
 
 test('модерация: чужие рецензия, сообщение, коллекция, тема; закрыть и открыть тему', async () => {
@@ -174,12 +189,13 @@ test('модерация: чужие рецензия, сообщение, ко�
 	const moderate = (scope: Page | ReturnType<Page['locator']>, label: RegExp | string) =>
 		scope.getByRole('button', { name: label });
 
-	// Рецензия user на «Прибытие» — админ удаляет на карточке.
+	// Рецензия user на «Прибытие» — админ удаляет в списке рецензий (карточка статическая,
+	// рецензии на ней вернутся клиентским блоком).
 	await admin.request.put('/api/v1/social/entities/arrival-2016/review', {
 		headers: user,
 		data: { rating: 3, body: `E2E модерация ${id}` }
 	});
-	await admin.goto('/films/arrival-2016');
+	await admin.goto('/films/arrival-2016/reviews');
 	const review = admin
 		.getByRole('list', { name: 'Рецензии' })
 		.getByRole('article')

@@ -76,6 +76,33 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/catalog/admin/entities/{id}/stream': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		/**
+		 * То же, что `PATCH /admin/entities/{id}`, но ход публикации приходит потоком
+		 *     `text/event-stream` — для лога в админке.
+		 * @description Неверные поля, чужой slug и отсутствующая сущность — обычные `400`/`409`/`404` с JSON, до
+		 *     потока. Если запись в БД прошла — `200` и поток событий [`JobEvent`]: `plan` (все шаги),
+		 *     `step` (`running`, затем `done`/`skipped`/`failed` для `db`, `search`, `isr`), последним
+		 *     `done` с карточкой. Тип события — и в поле `event:`, и в `type` внутри `data:`.
+		 *
+		 *     Публикация доводится до конца, даже если клиент закрыл соединение. `EventSource` не умеет
+		 *     PATCH и заголовки: читать через `fetch` и `response.body`.
+		 */
+		patch: operations['update_entity_stream'];
+		trace?: never;
+	};
 	'/api/v1/catalog/admin/entities/{id}/tags': {
 		parameters: {
 			query?: never;
@@ -138,10 +165,35 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/**
-		 * Перестроить поисковый индекс из PostgreSQL. Нужно после загрузки данных в БД в обход API
-		 *     (`make seed`) или если индекс отстал. Ждёт завершения.
+		 * Перестроить поисковый индекс из PostgreSQL без простоя: теневой индекс, проверка размера,
+		 *     swap, ротация версий, пересборка статики. Ждёт завершения. Лог шагов — `.../reindex/stream`.
+		 * @description Нужно после загрузки данных в БД в обход API (`make seed`) или если индекс отстал.
 		 */
 		post: operations['reindex_handler'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/admin/search/reindex/stream': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * То же, ход перестройки потоком `text/event-stream`: `plan`, `step` по шагам `create_index`,
+		 *     `fill` (с `progress`: `done`/`total`), `check`, `swap`, `rotate`, `isr`, затем `done`
+		 *     (`reindex` — итог, если поиск переключён).
+		 * @description Перестройка уже идёт — `409` JSON до потока. Новый индекс меньше 80% текущего — шаг `check`
+		 *     `failed`, поиск не переключается; `?force=true` — переключить всё равно. Перестройка
+		 *     доводится до конца, даже если клиент закрыл соединение.
+		 */
+		post: operations['reindex_stream'];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -207,7 +259,11 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** Карточка сущности: поля, теги и участники в порядке титров. */
+		/**
+		 * Карточка сущности: поля, теги и участники в порядке титров.
+		 * @description Читается из PostgreSQL, без кэша и Meilisearch: публичные страницы отдаёт статика
+		 *     фронтенда (SSG/ISR), сюда приходят её пересборка и админка.
+		 */
 		get: operations['get_entity'];
 		put?: never;
 		post?: never;
@@ -241,7 +297,11 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** Карточка человека: данные и все его работы любых типов, новые сверху. */
+		/**
+		 * Карточка человека: данные и все его работы любых типов, новые сверху.
+		 * @description Читается из PostgreSQL, без кэша и Meilisearch: публичные страницы отдаёт статика
+		 *     фронтенда (SSG/ISR), сюда приходят её пересборка и админка.
+		 */
 		get: operations['get_person'];
 		put?: never;
 		post?: never;
@@ -365,6 +425,13 @@ export interface components {
 			/** @example sci-fi */
 			slug: string;
 		};
+		/** @description Итог операции. */
+		DoneEvent: {
+			entity?: components['schemas']['EntityDetail'] | null;
+			/** @description Ни один шаг не упал (пропущенные не считаются). */
+			ok: boolean;
+			reindex?: components['schemas']['ReindexResult'] | null;
+		};
 		/** @description Сущность целиком (строка `entities`). */
 		Entity: {
 			cover_url?: string | null;
@@ -470,6 +537,25 @@ export interface components {
 			 */
 			trailers?: components['schemas']['TrailerSource'][] | null;
 		};
+		/** @description Событие потока. */
+		JobEvent:
+			| {
+					steps: components['schemas']['PlannedStep'][];
+					/** @enum {string} */
+					type: 'plan';
+			  }
+			| (components['schemas']['StepEvent'] & {
+					/** @enum {string} */
+					type: 'step';
+			  })
+			| (components['schemas']['ProgressEvent'] & {
+					/** @enum {string} */
+					type: 'progress';
+			  })
+			| (components['schemas']['DoneEvent'] & {
+					/** @enum {string} */
+					type: 'done';
+			  });
 		/**
 		 * @description Поля, специфичные для типа (`kind`). Все поля необязательны, неизвестные запрещены.
 		 *     Только для документации: разбирается по `kind` функцией [`validate`].
@@ -630,12 +716,50 @@ export interface components {
 			/** @example denis-villeneuve */
 			slug: string;
 		};
+		/** @description Шаг в событии `plan`. */
+		PlannedStep: {
+			step: components['schemas']['Step'];
+			/** @example Индексация сущностей */
+			title: string;
+		};
+		/** @description Счётчик длинного шага: «Проиндексировано 500/100000». */
+		ProgressEvent: {
+			/**
+			 * Format: int64
+			 * @example 500
+			 */
+			done: number;
+			step: components['schemas']['Step'];
+			/**
+			 * Format: int64
+			 * @example 100000
+			 */
+			total: number;
+		};
 		ReindexResult: {
 			/**
+			 * @description Удалённые устаревшие версии.
+			 * @example [
+			 *       "entities_v1759800000000"
+			 *     ]
+			 */
+			deleted: string[];
+			/**
 			 * @description Сколько сущностей в новом индексе.
-			 * @example 45
+			 * @example 100000
 			 */
 			indexed: number;
+			/**
+			 * Format: int64
+			 * @description Сколько документов было в индексе до перестройки.
+			 * @example 99870
+			 */
+			previous_count: number;
+			/**
+			 * @description Где сохранена предыдущая версия (откат — swap обратно).
+			 * @example entities_v1759912345123
+			 */
+			previous_version: string;
 		};
 		/** @description Поля сериала. */
 		SeriesMetadata: {
@@ -684,6 +808,28 @@ export interface components {
 			 */
 			tags: string[];
 		};
+		/**
+		 * @description Шаг операции.
+		 * @enum {string}
+		 */
+		Step: 'db' | 'search' | 'create_index' | 'fill' | 'check' | 'swap' | 'rotate' | 'isr';
+		/** @description Состояние шага. На каждый шаг приходит `running`, затем итог (у `db` — сразу итог). */
+		StepEvent: {
+			/**
+			 * Format: int64
+			 * @description Сколько шёл шаг; только у итога.
+			 */
+			duration_ms?: number | null;
+			/**
+			 * @description Строка для лога в админке.
+			 * @example Meilisearch обновлён
+			 */
+			message: string;
+			status: components['schemas']['StepStatus'];
+			step: components['schemas']['Step'];
+		};
+		/** @enum {string} */
+		StepStatus: 'running' | 'done' | 'skipped' | 'failed';
 		Tag: {
 			/** Format: uuid */
 			id: string;
@@ -760,6 +906,7 @@ export type SchemaBookMetadata = components['schemas']['BookMetadata'];
 export type SchemaCreateEntity = components['schemas']['CreateEntity'];
 export type SchemaCreatePerson = components['schemas']['CreatePerson'];
 export type SchemaCreateTag = components['schemas']['CreateTag'];
+export type SchemaDoneEvent = components['schemas']['DoneEvent'];
 export type SchemaEntity = components['schemas']['Entity'];
 export type SchemaEntityCredit = components['schemas']['EntityCredit'];
 export type SchemaEntityDetail = components['schemas']['EntityDetail'];
@@ -767,6 +914,7 @@ export type SchemaEntityKind = components['schemas']['EntityKind'];
 export type SchemaEntitySummary = components['schemas']['EntitySummary'];
 export type SchemaErrorBody = components['schemas']['ErrorBody'];
 export type SchemaGameMetadata = components['schemas']['GameMetadata'];
+export type SchemaJobEvent = components['schemas']['JobEvent'];
 export type SchemaMetadata = components['schemas']['Metadata'];
 export type SchemaMovieMetadata = components['schemas']['MovieMetadata'];
 export type SchemaPageEntitySummary = components['schemas']['Page_EntitySummary'];
@@ -776,10 +924,15 @@ export type SchemaPersonCredit = components['schemas']['PersonCredit'];
 export type SchemaPersonDetail = components['schemas']['PersonDetail'];
 export type SchemaPersonRef = components['schemas']['PersonRef'];
 export type SchemaPersonSummary = components['schemas']['PersonSummary'];
+export type SchemaPlannedStep = components['schemas']['PlannedStep'];
+export type SchemaProgressEvent = components['schemas']['ProgressEvent'];
 export type SchemaReindexResult = components['schemas']['ReindexResult'];
 export type SchemaSeriesMetadata = components['schemas']['SeriesMetadata'];
 export type SchemaSeriesStatus = components['schemas']['SeriesStatus'];
 export type SchemaSetTags = components['schemas']['SetTags'];
+export type SchemaStep = components['schemas']['Step'];
+export type SchemaStepEvent = components['schemas']['StepEvent'];
+export type SchemaStepStatus = components['schemas']['StepStatus'];
 export type SchemaTag = components['schemas']['Tag'];
 export type SchemaTagWithCount = components['schemas']['TagWithCount'];
 export type SchemaTrailerProvider = components['schemas']['TrailerProvider'];
@@ -1091,6 +1244,78 @@ export interface operations {
 			};
 		};
 	};
+	update_entity_stream: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description id сущности */
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['UpdateEntity'];
+			};
+		};
+		responses: {
+			/** @description Записано в БД; дальше поток событий публикации */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'text/event-stream': components['schemas']['JobEvent'];
+				};
+			};
+			/** @description Неверные поля или metadata */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Не найдена */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description slug занят */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
 	set_tags: {
 		parameters: {
 			query?: never;
@@ -1336,14 +1561,17 @@ export interface operations {
 	};
 	reindex_handler: {
 		parameters: {
-			query?: never;
+			query?: {
+				/** @description Переключить поиск, даже если новый индекс меньше 80% текущего (сущности удалены намеренно). */
+				force?: boolean;
+			};
 			header?: never;
 			path?: never;
 			cookie?: never;
 		};
 		requestBody?: never;
 		responses: {
-			/** @description Индекс перестроен */
+			/** @description Индекс перестроен, поиск переключён */
 			200: {
 				headers: {
 					[name: string]: unknown;
@@ -1363,6 +1591,74 @@ export interface operations {
 			};
 			/** @description Нужна роль admin */
 			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Перестройка уже идёт или новый индекс меньше 80% текущего (поиск не переключён) */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Meilisearch недоступен */
+			503: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	reindex_stream: {
+		parameters: {
+			query?: {
+				/** @description Переключить поиск, даже если новый индекс меньше 80% текущего (сущности удалены намеренно). */
+				force?: boolean;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Поток событий перестройки */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'text/event-stream': components['schemas']['JobEvent'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Перестройка уже идёт */
+			409: {
 				headers: {
 					[name: string]: unknown;
 				};

@@ -6,14 +6,18 @@
 	import type { SchemaEntityDetail } from '#lib/api/generated/catalog.ts';
 	import { api } from '#lib/auth/session.svelte.ts';
 	import { fromMetadata } from '#lib/admin/entity-form.ts';
+	import { JobInterrupted, emptyJob, runJob, type JobState } from '#lib/admin/job.ts';
 	import { entityHref } from '#lib/catalog/kinds.ts';
 	import Alert from '#lib/components/Alert.svelte';
 	import CreditsEditor from '#lib/components/admin/CreditsEditor.svelte';
 	import EntityForm from '#lib/components/admin/EntityForm.svelte';
+	import JobLog from '#lib/components/admin/JobLog.svelte';
 
 	let entity = $state<SchemaEntityDetail | null>(null);
 	let error = $state('');
 	let saved = $state(false);
+	/** Ход последней публикации (БД → поиск → статика); null — ещё не сохраняли. */
+	let job = $state<JobState | null>(null);
 	let confirmDelete = $state(false);
 
 	async function load(slug: string) {
@@ -34,18 +38,13 @@
 
 	async function save(body: Body) {
 		saved = false;
+		job = null;
 		const current = entity!;
 		// kind не меняется (в UpdateEntity его нет), теги — отдельным запросом.
 		const { tags, ...rest } = body;
 		const fields = { ...rest, kind: undefined };
 		try {
-			// Поля — PATCH (kind не меняется), теги — отдельным PUT, если изменились.
-			const updated = await unwrap(
-				api.catalog.PATCH('/api/v1/catalog/admin/entities/{id}', {
-					params: { path: { id: current.id } },
-					body: fields
-				})
-			);
+			// Теги — первыми: публикация полей ниже пересоберёт статику уже с ними.
 			const before = current.tags
 				.map((t) => t.slug)
 				.toSorted()
@@ -58,13 +57,27 @@
 					})
 				);
 			}
-			saved = true;
-			if (updated.slug !== current.slug)
+			// Поля — потоком: ошибки ввода приходят до него обычным JSON (unwrap), дальше — шаги
+			// публикации в лог.
+			const stream = await unwrap(
+				api.catalog.PATCH('/api/v1/catalog/admin/entities/{id}/stream', {
+					params: { path: { id: current.id } },
+					body: fields,
+					parseAs: 'stream'
+				})
+			);
+			job = emptyJob();
+			const done = await runJob(stream!, (state) => (job = state));
+			saved = done.ok;
+			const updated = done.entity;
+			if (!updated) await goto('/admin/entities');
+			else if (updated.slug !== current.slug)
 				await goto(`/admin/entities/${updated.slug}`, { replace: true });
-			else await load(updated.slug);
+			else entity = updated;
 			return null;
 		} catch (e) {
-			return errorMessage(e);
+			// Обрыв потока: запись на бэкенде доводится до конца, лог показывает, докуда дошли.
+			return e instanceof JobInterrupted ? e.message : errorMessage(e);
 		}
 	}
 
@@ -91,7 +104,8 @@
 		<h1 class="text-3xl font-black">{entity.title}</h1>
 		<a href={entityHref(entity)} class="link text-sm link-primary">Открыть на сайте →</a>
 	</div>
-	{#if saved}<div class="mb-4"><Alert kind="success">Сохранено.</Alert></div>{/if}
+	{#if saved}<div class="mb-4"><Alert kind="success">Сохранено и опубликовано.</Alert></div>{/if}
+	{#if job}<div class="mb-6 max-w-3xl"><JobLog {job} label="Публикация правки" /></div>{/if}
 	{#key entity.id}
 		<EntityForm
 			initial={{

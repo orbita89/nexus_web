@@ -27,3 +27,6 @@ vite.config.ts.timestamp-*
 test-results
 playwright-report
 blob-report
+
+# Claude Code: личные настройки разрешений
+.claude/settings.local.json

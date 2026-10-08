@@ -5,6 +5,8 @@
 //   PORT, HOST     где слушать (127.0.0.1:3000)
 //   ORIGIN         публичный адрес сайта, если не задан при сборке (https://nexus.example)
 //   ISR_SECRET     токен для POST /_isr/revalidate
+//   BACKEND_URL    API для списка каталога при {"all": true} (http://localhost)
+//   ISR_CONCURRENCY  сколько карточек рисовать одновременно при {"all": true} (8)
 import http from 'node:http';
 import { timingSafeEqual } from 'node:crypto';
 import { handler } from '../build/handler.js';
@@ -19,9 +21,14 @@ if (!origin) throw new Error('ORIGIN не задан: он нужен для og:
 if (!secret) throw new Error('ISR_SECRET не задан');
 
 // handler.js при импорте уже выполнил server.init — перерисовка идёт тем же экземпляром.
-const isr = createIsr({ server, root: `${dir}/prerendered${base}`, origin });
+const isr = createIsr({
+	server,
+	root: `${dir}/prerendered${base}`,
+	origin,
+	backend: process.env.BACKEND_URL || 'http://localhost'
+});
 
-/** Не больше 100 адресов за запрос: на всё сразу есть полная сборка. */
+/** Не больше 100 адресов за запрос (бэкенд шлёт пачками по 100); на всё сразу — {"all": true}. */
 const MAX_PATHS = 100;
 
 const httpServer = http.createServer(async (req, res) => {
@@ -57,8 +64,17 @@ const httpServer = http.createServer(async (req, res) => {
 });
 
 /**
- * POST /_isr/revalidate  Authorization: Bearer <ISR_SECRET>  {"paths": ["/films/dune-2021"]}
- * → 200 {"results": [{"path": "/films/dune-2021", "status": 200}]}
+ * POST /_isr/revalidate, Authorization: Bearer <ISR_SECRET>. Бэкенд ждёт ответ не дольше 30 с и
+ * считает успехом любой 2xx (libs/shared/src/isr.rs в nexus_project).
+ *
+ *   {"paths": ["/films/dune-2021", "/people/denis-villeneuve"]}
+ *   → 200 {"results": [{"path": "/films/dune-2021", "status": 200},
+ *                      {"path": "/people/denis-villeneuve", "skipped": true}]}
+ *   Карточки перерисовываются до ответа; адреса без статики (люди, разделы) пропускаются.
+ *   502 — какая-то карточка не нарисовалась (бэкенд лежит): старые файлы на месте, можно повторить.
+ *
+ *   {"all": true} → 202 {"started": true}: вся статика пересобирается в фоне (ход — в логе
+ *   сервера). Уже идёт — 202 {"started": false}.
  * @param {http.IncomingMessage} req
  * @param {http.ServerResponse} res
  */
@@ -66,33 +82,41 @@ async function revalidate(req, res) {
 	/** @param {number} status @param {unknown} body */
 	const reply = (status, body) =>
 		res.writeHead(status, { 'content-type': 'application/json' }).end(JSON.stringify(body));
+	const usage = 'body: {"paths": ["/films/slug", …]} или {"all": true}';
 
 	if (req.method !== 'POST') return reply(405, { error: 'POST only' });
 	if (!authorized(req.headers.authorization)) return reply(401, { error: 'unauthorized' });
 
-	/** @type {unknown} */
-	let paths;
+	/** @type {{ paths?: unknown, all?: unknown }} */
+	let body;
 	try {
-		paths = JSON.parse(await readBody(req)).paths;
+		body = JSON.parse(await readBody(req)) ?? {};
 	} catch {
-		return reply(400, { error: 'body: {"paths": ["/films/slug"]}' });
+		return reply(400, { error: usage });
 	}
+
+	if (body.all === true) return reply(202, { started: isr.regenerateAll() });
+
+	const { paths } = body;
 	if (!Array.isArray(paths) || !paths.length || paths.length > MAX_PATHS) {
-		return reply(400, { error: `paths: 1–${MAX_PATHS} адресов карточек` });
+		return reply(400, { error: `${usage}; paths — 1–${MAX_PATHS} адресов` });
 	}
-	const cards = paths.map((path) => (typeof path === 'string' ? CARD.exec(path)?.[1] : undefined));
-	const invalid = paths.filter((_, i) => !cards[i]);
-	if (invalid.length) return reply(400, { error: 'не карточки', paths: invalid });
+	if (!paths.every((path) => typeof path === 'string' && path.startsWith('/'))) {
+		return reply(400, { error: 'paths: адреса страниц, начинаются с /' });
+	}
 
 	const results = await Promise.all(
-		/** @type {string[]} */ (cards).map((path) =>
-			isr.regenerate(path).then(
+		/** @type {string[]} */ (paths).map((path) => {
+			const card = CARD.exec(path)?.[1];
+			if (!card) return { path, skipped: true };
+			return isr.regenerate(card).then(
 				({ status }) => ({ path, status }),
 				(error) => ({ path, status: 500, error: String(error) })
-			)
-		)
+			);
+		})
 	);
-	reply(results.every((r) => r.status < 500) ? 200 : 502, { results });
+	const failed = results.some((r) => 'status' in r && r.status >= 500);
+	reply(failed ? 502 : 200, { results });
 }
 
 /** @param {string | undefined} header */
