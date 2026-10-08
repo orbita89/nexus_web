@@ -108,6 +108,24 @@ function update(state: JobState, step: SchemaStep, change: (s: StepState) => Ste
 	return { ...state, steps: steps.map((s) => (s.step === step ? change(s) : s)) };
 }
 
+/**
+ * Пересборка статики пропущена: у бэкенда нет ISR_URL/ISR_SECRET. В разработке так и должно
+ * быть — страницы сайта рендерятся на каждый запрос; в проде это значит, что статические
+ * страницы не обновятся, и админу надо это увидеть. null — к шагу это не относится.
+ */
+export function skippedIsr(s: StepState, dev: boolean): { message: string; warn: boolean } | null {
+	if (s.step !== 'isr' || s.status !== 'skipped') return null;
+	return dev
+		? {
+				message: 'Не нужна в режиме разработки: страницы сайта рендерятся на каждый запрос',
+				warn: false
+			}
+		: {
+				message: `${s.message ?? 'Пропущена'} — статические страницы сайта не обновятся`,
+				warn: true
+			};
+}
+
 /** Поток оборвался до done: итог неизвестен (запись на бэкенде доводится до конца сама). */
 export class JobInterrupted extends Error {
 	constructor() {

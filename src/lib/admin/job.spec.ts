@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { SchemaJobEvent } from '#lib/api/generated/catalog.ts';
-import { JobInterrupted, applyEvent, emptyJob, readEvents, runJob } from './job';
+import { JobInterrupted, applyEvent, emptyJob, readEvents, runJob, skippedIsr } from './job';
 
 /** Поток из кусков текста — как приходит из сети, с разрывами где угодно. */
 function stream(...chunks: string[]) {
@@ -108,5 +108,24 @@ describe('runJob', () => {
 
 	it('поток оборвался до done — JobInterrupted', async () => {
 		await expect(runJob(stream(sse(plan)), () => {})).rejects.toBeInstanceOf(JobInterrupted);
+	});
+});
+
+describe('skippedIsr', () => {
+	const isr = applyEvent(applyEvent(emptyJob(), plan), {
+		type: 'step',
+		step: 'isr',
+		status: 'skipped',
+		message: 'ISR не настроен (ISR_URL, ISR_SECRET)'
+	}).steps[2];
+
+	it('в разработке — спокойное пояснение, в проде — предупреждение', () => {
+		expect(skippedIsr(isr, true)).toMatchObject({ warn: false, message: /режиме разработки/ });
+		expect(skippedIsr(isr, false)).toMatchObject({ warn: true, message: /не обновятся/ });
+	});
+
+	it('прочие шаги и выполненный ISR не трогает', () => {
+		expect(skippedIsr({ ...isr, status: 'done' }, false)).toBeNull();
+		expect(skippedIsr({ ...isr, step: 'search' }, false)).toBeNull();
 	});
 });
