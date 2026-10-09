@@ -106,6 +106,8 @@ test('автор: тема с карточки на два произведен�
 	await page.getByRole('button', { name: 'Войти', exact: true }).click();
 	await expect(page).toHaveURL('/films/dune-2021');
 
+	// Лента на карточке ленивая: пилюля «Обсуждение» появляется, когда до неё долистали.
+	await page.locator('#activity').scrollIntoViewIfNeeded();
 	await page.getByRole('link', { name: 'Начать обсуждение' }).click();
 	await expect(page).toHaveURL('/forum/new?entity=dune-2021');
 	const picked = page.getByRole('list', { name: 'Выбранные произведения' });
@@ -130,10 +132,10 @@ test('автор: тема с карточки на два произведен�
 	await expect(entities.getByRole('link').first()).toHaveAttribute('href', '/films/dune-2021');
 	const threadUrl = page.url();
 
-	// Тема видна в «Обсуждениях» книги — она привязана к обоим произведениям.
+	// Тема видна в ленте «Рецензии и обсуждения» книги — она привязана к обоим произведениям.
 	await open(page, '/books/dune-novel');
-	await page.getByRole('heading', { name: 'Обсуждения' }).scrollIntoViewIfNeeded();
-	await expect(page.getByRole('list', { name: 'Обсуждения' })).toContainText(title);
+	await page.locator('#activity').scrollIntoViewIfNeeded();
+	await expect(page.getByRole('list', { name: 'Рецензии и обсуждения' })).toContainText(title);
 
 	await open(page, threadUrl);
 	await page.getByRole('link', { name: 'Изменить тему' }).click();

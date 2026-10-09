@@ -24,16 +24,44 @@ test('раздел: фильтр по тегу меняет адрес и выд
 	await expect(page.getByRole('link', { name: /^Сияние\s+1980/ })).toBeVisible();
 });
 
-test('карточка: участники, переход на человека и обратно к работе', async ({ page }) => {
+test('карточка: «О фильме», переход на человека и обратно к работе', async ({ page }) => {
 	await page.goto('/films/dune-2021');
 	await expect(page.getByRole('heading', { name: 'Дюна', level: 1 })).toBeVisible();
-	await expect(page.getByRole('link', { name: 'Научная фантастика' })).toBeVisible();
-	await expect(page.getByRole('region', { name: 'Шапка: Дюна' })).toContainText('2 ч 35 мин');
-	await expect(page.getByRole('region', { name: 'Оценка Nexus' })).toBeVisible();
+	const hero = page.getByRole('region', { name: 'Шапка: Дюна' });
+	await expect(hero).not.toContainText('2 ч 35 мин');
+	await expect(hero.getByLabel(/^Средняя оценка/)).toBeVisible();
 
-	const credits = page.getByRole('region', { name: 'Участники' });
-	await expect(credits).toContainText('Актёр · Пол Атрейдес');
-	await credits.getByRole('link', { name: /Дени Вильнёв/ }).click();
+	// Теги — над «О фильме». Подробности — только в «О фильме», в шапке их нет.
+	await expect(
+		page.getByRole('list', { name: 'Теги' }).getByRole('link', { name: 'Научная фантастика' })
+	).toBeVisible();
+	const about = page.getByRole('region', { name: 'О фильме' });
+	await expect(about.getByRole('list', { name: 'В главных ролях' })).toContainText('Пол Атрейдес');
+	await expect(about).not.toContainText(/дубл/i);
+	// В шапке только русское название, без типа, оригинала и режиссёра — это в «О фильме».
+	await expect(hero).not.toContainText('Dune');
+	await expect(hero).not.toContainText('Режиссёр');
+	// Оригинальное название и описание — первые строки таблицы, с подписями.
+	const terms = await about.getByRole('term').allTextContents();
+	expect(terms.slice(0, 2)).toEqual(['Оригинальное название', 'Описание']);
+	await expect(about).toContainText(/Оригинальное название\s*Dune\s*Описание\s*Первая часть/);
+	// Факты и описание — тоже здесь: в шапке только название.
+	await expect(about).toContainText('2 ч 35 мин');
+	await expect(about).toContainText('Первая часть экранизации');
+	await expect(hero).not.toContainText('Первая часть экранизации');
+	// Режиссёр — в одной плашке с актёрами под таблицей, не строкой таблицы.
+	await expect(about.getByRole('term').filter({ hasText: /^Режиссёр$/ })).toHaveCount(0);
+	await expect(about.getByRole('list', { name: 'Режиссёр' })).toContainText('Дени Вильнёв');
+
+	// Приквелов, сиквелов и ремейков в сидах нет — раздела нет вовсе. Рекомендации — заглушкой.
+	await expect(page.getByRole('heading', { name: /Приквелы|Сиквелы|Ремейки/ })).toHaveCount(0);
+	const recommendations = page.getByRole('region', { name: 'Рекомендации' });
+	await expect(recommendations).toContainText('Подборка похожих появится позже');
+	await expect(recommendations.getByRole('link')).toHaveCount(0);
+	await about
+		.getByRole('list', { name: 'Режиссёр' })
+		.getByRole('link', { name: /Дени Вильнёв/ })
+		.click();
 
 	await expect(page).toHaveURL('/people/denis-villeneuve');
 	await expect(page.getByRole('heading', { name: 'Дени Вильнёв', level: 1 })).toBeVisible();
@@ -75,7 +103,8 @@ test('карточка — статика: живого в HTML нет, блок
 }) => {
 	// В HTML — каталог и заголовки разделов, но не рецензии: они устарели бы в статике.
 	const html = await (await request.get('/films/dune-2021')).text();
-	expect(html).toContain('Оценки и рецензии');
+	expect(html).toContain('Рецензии и обсуждения');
+	expect(html).toContain('О фильме');
 	expect(html).not.toContain('Вильнёв сделал невозможное');
 
 	// Низкое окно: «В коллекциях» заведомо ниже экрана, что бы ни грузилось выше.
@@ -86,10 +115,24 @@ test('карточка — статика: живого в HTML нет, блок
 		if (match) asked.push(match[1]);
 	});
 	await page.goto('/films/dune-2021');
-	await expect(page.getByRole('list', { name: 'Рецензии' })).toContainText(
+	// Сводка оценок — сразу (бейдж в шапке), лента — по прокрутке.
+	await expect.poll(() => asked).toContain('rating');
+	expect(asked).not.toContain('reviews');
+
+	await page.locator('#activity').scrollIntoViewIfNeeded();
+	await expect(page.getByRole('list', { name: 'Рецензии и обсуждения' })).toContainText(
 		'Вильнёв сделал невозможное'
 	);
-	expect(asked).toContain('rating');
+	// Лента компактная: не больше 4 записей во вкладке; ссылка на все — только в своей вкладке.
+	const activity = page.getByRole('region', { name: 'Рецензии и обсуждения' });
+	expect(
+		await activity
+			.getByRole('list', { name: 'Рецензии и обсуждения' })
+			.locator(':scope > li')
+			.count()
+	).toBeLessThanOrEqual(4);
+	await activity.getByRole('tab', { name: /^Обсуждения/ }).click();
+	await expect(activity.getByRole('link', { name: /^Все рецензии/ })).toHaveCount(0);
 	expect(asked).not.toContain('collections');
 
 	await page.getByRole('heading', { name: 'В коллекциях' }).scrollIntoViewIfNeeded();
@@ -197,8 +240,6 @@ async function stubMedia(
 
 const isVisible = (frame: Locator) => frame.evaluate((el) => getComputedStyle(el).opacity === '1');
 
-const playerFrame = (page: Page) =>
-	page.getByRole('dialog', { name: 'Трейлер: Дюна' }).locator('iframe');
 const heroFrame = (page: Page) =>
 	page.getByRole('region', { name: 'Шапка: Дюна' }).locator('iframe');
 
@@ -207,14 +248,13 @@ test('карточка как у Okko: трейлер — фон шапки бе
 	await page.goto('/films/dune-2021');
 	const hero = page.getByRole('region', { name: 'Шапка: Дюна' });
 	await expect(hero.getByRole('heading', { name: 'Дюна', level: 1 })).toBeVisible();
-	await expect(hero).toContainText('2 ч 35 мин');
-	await expect(hero.getByRole('link', { name: 'Дени Вильнёв' })).toBeVisible();
+	await expect(hero).not.toContainText('2 ч 35 мин');
 
 	const frame = heroFrame(page);
 	await expect(frame).toHaveAttribute('src', new RegExp(`^${YOUTUBE}\\?`));
 	const params = new URL((await frame.getAttribute('src'))!).searchParams;
 	expect(Object.fromEntries(params)).toMatchObject({ autoplay: '1', mute: '1', controls: '0' });
-	await expect(page.getByRole('img', { name: 'Обложка: Дюна' })).toHaveCount(0);
+	await expect(page.getByRole('img', { name: /^(Обложка|Постер): Дюна/ })).toHaveCount(0);
 
 	await hero.getByRole('button', { name: 'Включить звук' }).click();
 	await expect(hero.getByRole('button', { name: 'Выключить звук' })).toBeVisible();
@@ -254,6 +294,13 @@ test('фон: медленный YouTube — рукопожатие повтор
 	await expect.poll(() => isVisible(heroFrame(page))).toBe(true);
 	await page.clock.runFor(8500);
 	await expect(heroFrame(page)).toHaveAttribute('src', new RegExp(`^${YOUTUBE}`));
+
+	// Пауза — видео гаснет до обложки (иначе посреди кадра элементы плеера), «Продолжить» — снова видно.
+	const hero = page.getByRole('region', { name: 'Шапка: Дюна' });
+	await hero.getByRole('button', { name: 'Пауза' }).click();
+	await expect.poll(() => isVisible(heroFrame(page))).toBe(false);
+	await hero.getByRole('button', { name: 'Продолжить фон' }).click();
+	await expect.poll(() => isVisible(heroFrame(page))).toBe(true);
 });
 
 test('фон: плеер загрузился, но видео не пошло — следующий источник', async ({ page }) => {
@@ -265,76 +312,29 @@ test('фон: плеер загрузился, но видео не пошло �
 	await expect(heroFrame(page)).toHaveAttribute('src', new RegExp(`^${RUTUBE}`));
 });
 
-test('фон: при prefers-reduced-motion видео не запускается, кнопка «Трейлер» есть', async ({
-	page
-}) => {
+test('фон: при prefers-reduced-motion видео не запускается', async ({ page }) => {
 	await page.emulateMedia({ reducedMotion: 'reduce' });
 	await stubMedia(page);
 	await page.goto('/films/dune-2021');
-	await expect(page.getByRole('button', { name: 'Трейлер' })).toBeVisible();
+	await expect(page.getByRole('heading', { name: 'Дюна', level: 1 })).toBeVisible();
 	await expect(heroFrame(page)).toHaveCount(0);
 });
 
-test('трейлер: кнопка открывает плеер YouTube, переключатель — Rutube, Esc закрывает', async ({
+// Кнопки «Трейлер» с модалкой на карточке пока нет: трейлер идёт фоном.
+test('без кнопки «Трейлер»: ни один источник не запустился — остаётся размытая обложка', async ({
 	page
 }) => {
-	await stubMedia(page);
-	await page.goto('/films/dune-2021');
-	// Плеер модалки не грузится заранее.
-	await expect(playerFrame(page)).toHaveCount(0);
-
-	await page.getByRole('button', { name: 'Трейлер' }).click();
-	const dialog = page.getByRole('dialog', { name: 'Трейлер: Дюна' });
-	await expect(dialog).toBeVisible();
-	const frame = playerFrame(page);
-	await expect(frame).toHaveAttribute('src', new RegExp(`^${YOUTUBE}\\?autoplay=1&`));
-	await expect(frame).toHaveAttribute('title', 'Трейлер: Дюна');
-	await expect(frame).toHaveAttribute('allow', /autoplay/);
-
-	const switcher = dialog.getByRole('group', { name: 'Источник' });
-	await expect(switcher.getByRole('button', { name: 'YouTube' })).toHaveAttribute(
-		'aria-pressed',
-		'true'
-	);
-	await switcher.getByRole('button', { name: 'Rutube' }).click();
-	await expect(frame).toHaveAttribute('src', `${RUTUBE}?autoplay=1`);
-
-	await page.keyboard.press('Escape');
-	await expect(dialog).toBeHidden();
-	await expect(playerFrame(page)).toHaveCount(0);
-});
-
-test('трейлер: YouTube недоступен — плеер сам переходит на Rutube', async ({ page }) => {
-	await page.clock.install();
-	await stubMedia(page, { youtube: 'blocked' });
-	await page.goto('/films/dune-2021');
-	await page.getByRole('button', { name: 'Трейлер' }).click();
-	await expect(playerFrame(page)).toHaveAttribute('src', new RegExp(`^${YOUTUBE}`));
-
-	await page.clock.runFor(8500);
-	await expect(playerFrame(page)).toHaveAttribute('src', `${RUTUBE}?autoplay=1`);
-	await expect(page.getByText('YouTube недоступен, показываем Rutube')).toBeVisible();
-});
-
-test('трейлер: ни один источник не запустился — сообщение вместо плеера', async ({ page }) => {
 	await page.clock.install();
 	await stubMedia(page, { youtube: 'blocked', rutube: 'blocked' });
 	await page.goto('/films/dune-2021');
-	await page.getByRole('button', { name: 'Трейлер' }).click();
+	await expect(page.getByRole('button', { name: 'Трейлер' })).toHaveCount(0);
 	await page.clock.runFor(8500);
-	await expect(playerFrame(page)).toHaveAttribute('src', new RegExp(`^${RUTUBE}`));
+	await expect(heroFrame(page)).toHaveAttribute('src', new RegExp(`^${RUTUBE}`));
 	await page.clock.runFor(8500);
-
-	const dialog = page.getByRole('dialog', { name: 'Трейлер: Дюна' });
-	await expect(dialog.getByText('Трейлер недоступен в вашем регионе')).toBeVisible();
-	await expect(dialog.locator('iframe')).toHaveCount(0);
-	// Фон шапки тоже не запустился — остаётся размытая обложка, без пустого плеера.
 	await expect(heroFrame(page)).toHaveCount(0);
 });
 
-test('трейлер: сработавший источник запоминается и в следующий раз идёт первым', async ({
-	page
-}) => {
+test('фон: сработавший источник запоминается и в следующий раз идёт первым', async ({ page }) => {
 	await page.clock.install();
 	await stubMedia(page, { youtube: 'blocked', rutube: 'plays' });
 	await page.goto('/films/dune-2021');
@@ -348,27 +348,28 @@ test('трейлер: сработавший источник запоминае
 	// Следующий показ сразу с Rutube и уже играет — по таймауту ничего не меняется.
 	await page.reload();
 	await expect(heroFrame(page)).toHaveAttribute('src', new RegExp(`^${RUTUBE}`));
-	await page.getByRole('button', { name: 'Трейлер' }).click();
-	await expect(playerFrame(page)).toHaveAttribute('src', new RegExp(`^${RUTUBE}`));
 	await page.clock.runFor(8500);
-	await expect(playerFrame(page)).toHaveAttribute('src', new RegExp(`^${RUTUBE}`));
-	await expect(page.getByText(/недоступен/)).toHaveCount(0);
+	await expect(heroFrame(page)).toHaveAttribute('src', new RegExp(`^${RUTUBE}`));
 });
 
-test('без трейлера — ни видео, ни кнопки, ни постера; постеры — в сетках разделов', async ({
-	page
-}) => {
+test('без трейлера — ни видео, ни кнопки, зато постер рядом с текстом', async ({ page }) => {
 	// У книг трейлеров не бывает по контракту; фильмы dev-база дополняет инструментом медиа
 	// бэкенда, так что «фильм без трейлера» из сидов может трейлер получить.
 	await stubMedia(page);
 	await page.goto('/books/dune-novel');
 	await expect(page.getByRole('heading', { name: 'Дюна', level: 1 })).toBeVisible();
-	await expect(page.getByRole('region', { name: 'Шапка: Дюна' })).toContainText(
-		'Автор: Фрэнк Херберт'
-	);
+	await expect(
+		page.getByRole('region', { name: 'О книге' }).getByRole('link', { name: 'Фрэнк Херберт' })
+	).toBeVisible();
 	await expect(page.locator('iframe')).toHaveCount(0);
 	await expect(page.getByRole('button', { name: 'Трейлер' })).toHaveCount(0);
-	await expect(page.getByRole('img', { name: /^Обложка/ })).toHaveCount(0);
+	await expect(
+		page.getByRole('region', { name: 'Шапка: Дюна' }).getByRole('img', { name: 'Постер: Дюна' })
+	).toHaveAttribute('src', /^https:\/\/covers\.openlibrary\.org\//);
+	// У книги главный — автор: в плашке вместо режиссёра.
+	await expect(
+		page.getByRole('region', { name: 'О книге' }).getByRole('list', { name: 'Автор' })
+	).toContainText('Фрэнк Херберт');
 
 	await page.goto('/books');
 	await expect(page.locator('a[href="/books/dune-novel"] img')).toHaveAttribute(
@@ -380,6 +381,24 @@ test('без трейлера — ни видео, ни кнопки, ни по�
 		'src',
 		/^https:\/\/image\.tmdb\.org\//
 	);
+});
+
+test('телефон: липкая мини-шапка появляется, когда первый экран ушёл вверх', async ({ page }) => {
+	await stubMedia(page);
+	await page.setViewportSize({ width: 390, height: 800 });
+	await page.goto('/books/dune-novel');
+	const sticky = page.getByTestId('sticky-header');
+	await expect(sticky).toHaveAttribute('aria-hidden', 'true');
+
+	await page.getByRole('region', { name: 'О книге' }).scrollIntoViewIfNeeded();
+	await page.mouse.wheel(0, 600);
+	await expect(sticky).not.toHaveAttribute('aria-hidden');
+	await expect(sticky).toContainText('Дюна');
+	await expect(sticky.getByRole('link', { name: 'Следить' })).toBeVisible();
+
+	// На десктопе её нет.
+	await page.setViewportSize({ width: 1280, height: 800 });
+	await expect(sticky).toBeHidden();
 });
 
 test('в подвале — атрибуция TMDB', async ({ page }) => {

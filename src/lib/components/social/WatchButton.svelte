@@ -1,78 +1,75 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { ApiError, errorMessage, unwrap } from '#lib/api/errors.ts';
-	import { api, session } from '#lib/auth/session.svelte.ts';
-	import { useRealtime } from '#lib/realtime/realtime.svelte.ts';
+	import { session } from '#lib/auth/session.svelte.ts';
+	import type { Watch } from '#lib/social/watch.svelte.ts';
+	import { HERO_ICON, HERO_ICON_ON } from '#lib/components/card/buttons.ts';
 	import { loginUrl } from '#lib/utils/redirect.ts';
 
-	// «Следить» — сущность в интересах: её темы и рецензии попадают в ленту и приходят вживую.
-	// Изменили на другом устройстве или вкладке — interest.added / interest.removed в user:me.
-	let { slug, entityId }: { slug: string; entityId: string } = $props();
+	// Колокольчик «Следить». Состояние — общее на карточку (Watch). Круглая иконка: в шапке — в
+	// стиле её кнопок с тултипом, compact — маленькая для липкой мобильной шапки.
+	let { watch, compact = false }: { watch: Watch; compact?: boolean } = $props();
 
-	let watching = $state<boolean | null>(null);
-	let busy = $state(false);
-	let error = $state('');
-	const path = $derived({ slug });
-
-	$effect(() => {
-		watching = null;
-		error = '';
-		if (session.status !== 'authed') return;
-		const current = slug;
-		unwrap(
-			api.social.GET('/api/v1/social/entities/{slug}/interest', {
-				params: { path: { slug: current } }
-			})
-		)
-			.then(() => current === slug && (watching = true))
-			.catch((e) => {
-				if (current !== slug) return;
-				if (e instanceof ApiError && e.status === 404) watching = false;
-				else error = errorMessage(e);
-			});
-	});
-
-	useRealtime(
-		() => (session.status === 'authed' ? ['user:me'] : []),
-		(event) => {
-			if (event.data.entity_id !== entityId) return;
-			if (event.event === 'interest.added') watching = true;
-			if (event.event === 'interest.removed') watching = false;
-		}
+	const hintId = $props.id();
+	const hint = $derived(
+		watch.watching
+			? 'Вы следите — новости и релизы придут в ленту. Нажмите, чтобы отписаться'
+			: 'Получать уведомления о новостях и релизах'
 	);
-
-	async function toggle() {
-		const next = !watching;
-		busy = true;
-		error = '';
-		try {
-			await unwrap(
-				next
-					? api.social.PUT('/api/v1/social/entities/{slug}/interest', { params: { path } })
-					: api.social.DELETE('/api/v1/social/entities/{slug}/interest', { params: { path } })
-			);
-			watching = next;
-		} catch (e) {
-			error = errorMessage(e);
-		} finally {
-			busy = false;
-		}
-	}
 </script>
 
-{#if session.status === 'guest'}
-	<a href={loginUrl(page.url)} class="btn btn-lg">🔔 Следить</a>
-{:else if session.status === 'authed' && watching !== null}
-	<button
-		class={['btn btn-lg', { 'btn-outline btn-primary': watching }]}
-		aria-pressed={watching}
-		disabled={busy}
-		onclick={toggle}
-		title={watching
-			? 'Темы и рецензии приходят в ленту'
-			: 'Темы и рецензии будут приходить в ленту'}
+{#snippet bell(on: boolean)}
+	<svg
+		class="size-4.5"
+		viewBox="0 0 24 24"
+		fill={on ? 'currentColor' : 'none'}
+		stroke="currentColor"
+		stroke-width="2"
+		stroke-linecap="round"
+		stroke-linejoin="round"
+		aria-hidden="true"
+		><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path
+			d="M10.3 21a1.94 1.94 0 0 0 3.4 0"
+		/></svg
 	>
-		{watching ? '🔔 Вы следите' : '🔔 Следить'}
-	</button>
+{/snippet}
+
+{#if compact}
+	{#if session.status === 'guest'}
+		<a href={loginUrl(page.url)} class="btn btn-circle btn-ghost btn-sm" aria-label="Следить"
+			>{@render bell(false)}</a
+		>
+	{:else if session.status === 'authed' && watch.watching !== null}
+		<button
+			class={['btn btn-circle btn-ghost btn-sm', { 'text-primary': watch.watching }]}
+			aria-label={watch.watching ? 'Вы следите' : 'Следить'}
+			aria-pressed={watch.watching}
+			disabled={watch.busy}
+			onclick={() => watch.toggle()}>{@render bell(watch.watching)}</button
+		>
+	{/if}
+{:else}
+	<!-- Круглая иконка в стиле кнопок шапки; подпись — в тултипе. Тултип DaisyUI — только для глаз,
+	     скринридеру та же подсказка через aria-describedby, название — aria-label. -->
+	<div class="tooltip tooltip-bottom" data-tip={hint}>
+		<span id={hintId} class="sr-only">{hint}</span>
+		{#if session.status === 'guest'}
+			<a href={loginUrl(page.url)} class={HERO_ICON} aria-label="Следить" aria-describedby={hintId}
+				>{@render bell(false)}</a
+			>
+		{:else if session.status === 'authed' && watch.watching !== null}
+			<button
+				class={[watch.watching ? HERO_ICON_ON : HERO_ICON, 'transition active:scale-90']}
+				aria-label={watch.watching ? 'Вы следите' : 'Следить'}
+				aria-pressed={watch.watching}
+				aria-describedby={hintId}
+				disabled={watch.busy}
+				onclick={() => watch.toggle()}>{@render bell(watch.watching)}</button
+			>
+		{:else}
+			<!-- Пока сессия и состояние грузятся — место под кнопку, без прыжка. -->
+			<span class="size-10 skeleton rounded-full" aria-hidden="true"></span>
+		{/if}
+	</div>
+	{#if watch.error}<span role="alert" class="self-center text-sm text-error">{watch.error}</span
+		>{/if}
 {/if}
-{#if error}<span role="alert" class="self-center text-sm text-error">{error}</span>{/if}

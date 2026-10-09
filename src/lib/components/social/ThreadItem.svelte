@@ -4,11 +4,30 @@
 	import { count } from '#lib/catalog/labels.ts';
 	import { displayName, reviewDate } from '#lib/social/reviews.ts';
 
-	let { thread, showAuthor = true }: { thread: SchemaThread; showAuthor?: boolean } = $props();
+	let {
+		thread,
+		showAuthor = true,
+		flat = false
+	}: {
+		thread: SchemaThread;
+		showAuthor?: boolean;
+		/** Без своей карточки — строкой в общей плашке (лента на карточке произведения). */
+		flat?: boolean;
+	} = $props();
 </script>
 
-<article class="rounded-box bg-base-200 p-4 ring-1 ring-base-300 transition hover:ring-primary/50">
-	<h3 class="flex flex-wrap items-center gap-2 text-lg leading-snug font-semibold">
+<article
+	class={flat
+		? 'py-4'
+		: 'rounded-box bg-base-200 p-4 ring-1 ring-base-300 transition hover:ring-primary/50'}
+>
+	<h3
+		class={[
+			'flex flex-wrap items-center gap-2 leading-snug font-semibold',
+			flat ? 'text-base' : 'text-lg'
+		]}
+	>
+		{#if flat}<span class="badge badge-ghost badge-sm font-normal">обсуждение</span>{/if}
 		<a href="/forum/{thread.id}" class="hover:text-primary">{thread.title}</a>
 		{#if thread.is_locked}<span class="badge badge-ghost badge-sm">закрыта</span>{/if}
 	</h3>

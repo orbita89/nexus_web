@@ -3,7 +3,7 @@
 	import { refHref } from '#lib/catalog/kinds.ts';
 	import { displayName } from '#lib/social/reviews.ts';
 	import CollectionCard from './CollectionCard.svelte';
-	import ReviewItem from './ReviewItem.svelte';
+	import ReviewCard from './ReviewCard.svelte';
 	import ThreadItem from './ThreadItem.svelte';
 	import TimeAgo from './TimeAgo.svelte';
 
@@ -43,7 +43,7 @@
 		<span>{what}, <TimeAgo iso={item.created_at} /></span>
 	</p>
 	{#if item.review}
-		<ReviewItem review={item.review} showEntity showAuthor />
+		<ReviewCard review={item.review} showEntity showAuthor />
 	{:else if item.thread}
 		<ThreadItem thread={item.thread} />
 	{:else if item.collection}

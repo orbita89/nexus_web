@@ -5,6 +5,7 @@
 	import { api, session } from '#lib/auth/session.svelte.ts';
 	import { count } from '#lib/catalog/labels.ts';
 	import { loginUrl } from '#lib/utils/redirect.ts';
+	import { HERO_GLASS } from '#lib/components/card/buttons.ts';
 	import Alert from '#lib/components/Alert.svelte';
 	import CollectionForm from './CollectionForm.svelte';
 
@@ -92,10 +93,22 @@
 	}
 </script>
 
+{#snippet plus()}
+	<svg
+		class="size-4"
+		viewBox="0 0 24 24"
+		fill="none"
+		stroke="currentColor"
+		stroke-width="2"
+		stroke-linecap="round"
+		aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg
+	>
+{/snippet}
+
 {#if session.status === 'guest'}
-	<a href={loginUrl(page.url)} class="btn btn-lg">＋ В коллекцию</a>
+	<a href={loginUrl(page.url)} class={HERO_GLASS}>{@render plus()} В коллекцию</a>
 {:else if session.status === 'authed'}
-	<button class="btn btn-lg" onclick={open}>＋ В коллекцию</button>
+	<button class={HERO_GLASS} onclick={open}>{@render plus()} В коллекцию</button>
 {/if}
 
 <dialog bind:this={dialog} class="modal" aria-label="Добавить в коллекцию: {title}">

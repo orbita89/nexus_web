@@ -31,7 +31,7 @@ test('гость: список, коллекция с заметками, «В �
 	await expect(page.getByRole('list', { name: 'В коллекциях' })).toContainText(
 		'Дюна во всех видах'
 	);
-	await expect(page.getByRole('link', { name: '＋ В коллекцию' })).toHaveAttribute(
+	await expect(page.getByRole('link', { name: 'В коллекцию' })).toHaveAttribute(
 		'href',
 		'/auth/login?next=%2Ffilms%2Fdune-2021'
 	);
@@ -55,7 +55,7 @@ test('пользователь: коллекция с карточки, соде
 	// С карточки: новой коллекции ещё нет — создаём и сразу добавляем «Дюну».
 	await page.goto('/films/dune-2021');
 	await expect(userMenu(page)).toBeVisible();
-	await page.getByRole('button', { name: '＋ В коллекцию' }).click();
+	await page.getByRole('button', { name: 'В коллекцию' }).click();
 	const dialog = page.getByRole('dialog', { name: 'Добавить в коллекцию: Дюна' });
 	await expect(dialog).toContainText('Коллекций пока нет');
 	await dialog.getByRole('button', { name: '＋ Новая коллекция' }).click();

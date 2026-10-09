@@ -94,6 +94,12 @@ describe('фоновый плеер', () => {
 			{ type: 'player:setCurrentTime', data: { time: 0 } },
 			{ type: 'player:play', data: {} }
 		]);
+		// Фон без интерфейса: Rutube — «голый» режим, у YouTube интерфейса и так нет (controls=0).
+		expect(playerCommand('rutube', 'bare').map((m) => JSON.parse(m).type)).toEqual([
+			'player:enterNakedMode',
+			'player:hideControls'
+		]);
+		expect(playerCommand('youtube', 'bare')).toEqual([]);
 	});
 });
 

@@ -253,14 +253,20 @@ const LEAD_ROLES: Record<SchemaEntityKind, string[]> = {
 	game: ['director', 'developer', 'creator']
 };
 
+/** Главная роль, которая есть у произведения: director, у книг author и т. д.; нет — null. */
+export function leadRole(kind: SchemaEntityKind, credits: { role: string }[]): string | null {
+	return LEAD_ROLES[kind].find((role) => credits.some((c) => c.role === role)) ?? null;
+}
+
 /** Главные люди произведения: «Режиссёр» и люди с этой ролью в порядке титров. */
 export function leadCredits<P>(
 	kind: SchemaEntityKind,
 	credits: { role: string; person: P }[]
 ): { label: string; people: P[] } | null {
-	for (const role of LEAD_ROLES[kind]) {
-		const people = credits.filter((c) => c.role === role).map((c) => c.person);
-		if (people.length) return { label: roleLabel(role), people };
-	}
-	return null;
+	const role = leadRole(kind, credits);
+	if (!role) return null;
+	return {
+		label: roleLabel(role),
+		people: credits.filter((c) => c.role === role).map((c) => c.person)
+	};
 }

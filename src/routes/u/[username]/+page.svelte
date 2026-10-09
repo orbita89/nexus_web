@@ -2,7 +2,7 @@
 	import { displayName } from '#lib/social/reviews.ts';
 	import LoadError from '#lib/components/catalog/LoadError.svelte';
 	import Seo from '#lib/components/catalog/Seo.svelte';
-	import ReviewItem from '#lib/components/social/ReviewItem.svelte';
+	import ReviewCard from '#lib/components/social/ReviewCard.svelte';
 	import ThreadItem from '#lib/components/social/ThreadItem.svelte';
 	import type { PageProps } from './$types';
 
@@ -30,7 +30,7 @@
 		{:else if data.reviews.data?.items.length}
 			<ul class="flex flex-col gap-3">
 				{#each data.reviews.data.items as review (review.id)}
-					<li><ReviewItem {review} showEntity /></li>
+					<li><ReviewCard {review} showEntity /></li>
 				{/each}
 			</ul>
 		{:else}

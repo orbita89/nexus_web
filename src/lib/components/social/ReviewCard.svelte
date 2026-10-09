@@ -1,18 +1,26 @@
 <script lang="ts">
 	import type { SchemaReview } from '#lib/api/generated/social.ts';
 	import { refHref } from '#lib/catalog/kinds.ts';
-	import { displayName, isEdited, LONG_REVIEW, reviewDate } from '#lib/social/reviews.ts';
+	import { displayName, isEdited, isSpoiler, reviewDate } from '#lib/social/reviews.ts';
 	import Avatar from '#lib/components/Avatar.svelte';
+	import Clamp from '#lib/components/catalog/Clamp.svelte';
 	import RatingBadge from './RatingBadge.svelte';
+	import ReviewActions from './ReviewActions.svelte';
 	import ModerateButton from './ModerateButton.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { unwrap } from '#lib/api/errors.ts';
 	import { api, session } from '#lib/auth/session.svelte.ts';
 
+	// Рецензия: автор (или произведение — в профиле), оценка, текст. Длинный текст свёрнут до 6
+	// строк с «Читать полностью». Рецензия со спойлерами — текст размыт, поверх кнопка «Спойлер.
+	// Нажмите, чтобы открыть»; пока размыт, его нет ни для мыши, ни для скринридера, ни для Tab.
+	// Под текстом — 👍 / 👎 и комментарии (ReviewActions).
 	let {
 		review,
 		showEntity = false,
 		showAuthor = !showEntity,
+		flat = false,
+		lines = 6,
 		onremoved = invalidateAll
 	}: {
 		review: SchemaReview;
@@ -20,18 +28,22 @@
 		showEntity?: boolean;
 		/** Автор (на карточке и в ленте — да, в профиле — и так известен). */
 		showAuthor?: boolean;
+		/** Без своей карточки — строкой в общей плашке (лента на карточке произведения). */
+		flat?: boolean;
+		/** До скольких строк свёрнут текст. */
+		lines?: 3 | 6;
 		/** После удаления модератором: перечитать список (по умолчанию — load страницы). */
 		onremoved?: () => unknown;
 	} = $props();
 
-	let expanded = $state(false);
-	const long = $derived((review.body?.length ?? 0) > LONG_REVIEW);
+	let revealed = $state(false);
+	const hidden = $derived(isSpoiler(review) && !revealed);
 	const entityLink = $derived(refHref(review.entity));
 	// Админ удаляет чужие рецензии (свою — через «Ваша оценка»).
 	const moderate = $derived(session.user?.role === 'admin' && session.user.id !== review.author.id);
 </script>
 
-<article class="rounded-box bg-base-200 p-4 ring-1 ring-base-300">
+<article class={flat ? 'py-4' : 'rounded-box bg-base-200 p-4 ring-1 ring-base-300'}>
 	{#if !showAuthor}
 		<!-- В профиле автор и так известен: рецензия начинается с произведения. -->
 		<header class="flex items-start gap-3">
@@ -65,6 +77,9 @@
 					{#if isEdited(review)}· изменено{/if}
 				</p>
 			</div>
+			{#if isSpoiler(review)}
+				<span class="badge badge-outline badge-sm badge-warning">спойлер</span>
+			{/if}
 			{#if review.rating != null}<RatingBadge value={review.rating} />{/if}
 		</header>
 		{#if showEntity && entityLink}
@@ -77,19 +92,33 @@
 	{/if}
 
 	{#if review.body}
-		<p
-			class={[
-				'mt-3 leading-relaxed whitespace-pre-line text-base-content/85',
-				{ 'line-clamp-6': long && !expanded }
-			]}
-		>
-			{review.body}
-		</p>
-		{#if long}
-			<button class="btn mt-1 btn-link px-0 btn-sm" onclick={() => (expanded = !expanded)}>
-				{expanded ? 'Свернуть' : 'Читать полностью'}
-			</button>
-		{/if}
+		<div class="relative mt-3">
+			<!-- inert и aria-hidden: размытый текст не читается и не фокусируется, пока не открыли. -->
+			<div
+				class={[
+					'transition-[filter] duration-300',
+					{ 'pointer-events-none blur-md select-none': hidden }
+				]}
+				inert={hidden}
+				aria-hidden={hidden || undefined}
+				data-testid="review-body"
+			>
+				<Clamp {lines} more="Читать полностью" class="leading-relaxed text-base-content/85">
+					<p class="whitespace-pre-line">{review.body}</p>
+				</Clamp>
+			</div>
+			{#if hidden}
+				<button
+					class="absolute inset-0 flex cursor-pointer items-center justify-center rounded-box bg-base-200/30 p-4 text-center"
+					onclick={() => (revealed = true)}
+				>
+					<span class="badge gap-2 border-base-300 bg-base-100 py-3 badge-lg shadow-md">
+						<span aria-hidden="true">👁</span> Спойлер. Нажмите, чтобы открыть
+					</span>
+				</button>
+			{/if}
+		</div>
+		<ReviewActions {review} />
 	{:else if showEntity}
 		<p class="mt-2 text-sm text-base-content/50">Оценка без рецензии</p>
 	{/if}

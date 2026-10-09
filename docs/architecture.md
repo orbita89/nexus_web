@@ -35,9 +35,12 @@ src/
     admin/             slug (транслит), форма произведения (metadata по типам)
     components/        Navbar, Avatar, Alert, AuthCard, ProviderButtons, Stub
       catalog/         Poster, EntityCard, EntityGrid, PosterStrip, Pagination, KindTabs, TagChips,
-                       PersonAvatar, RatingSummary, CardHero, TrailerButton, EmptyState, LoadError, Seo
+                       PersonAvatar, RatingSummary, CardHero, TrailerButton, Clamp, ClientSection,
+                       EmptyState, LoadError, Seo
+      card/            карточка: StickyHeader, Hero, AverageRating, RateButton, Reactions, About,
+                       Related, Recommendations, Production, ActivityFeed, ReviewComposer
       admin/           EntityForm, CreditsEditor, PersonForm
-      social/          RatingBadge, MyReview, ReviewItem, ReviewSortTabs, FollowButton,
+      social/          RatingBadge, MyReview, ReviewCard, ReviewSortTabs, FollowButton,
                        FollowList, UserCard, ThreadItem, PostItem, ReplyForm, ThreadForm,
                        EntityPicker, NewThreadButton, RichText, TimeAgo, SortTabs,
                        CollectionCard, CollectionForm, CollectionEditor, AddToCollection,
@@ -68,7 +71,7 @@ scripts/api-types.mjs  генерация типов API
 | ---------------------------------------- | ------------------------------------------------------------- |
 | `/`                                      | новинки по разделам (пустой раздел скрыт), популярные теги    |
 | `/films?tag=&year=&q=&offset=`           | раздел (`films`, `series`, `books`, `games`) с фильтрами      |
-| `/films/dune-2021`                       | карточка: трейлер-фон шапки, «Трейлер», metadata, участники   |
+| `/films/dune-2021`                       | карточка: шапка Okko или постер, «О фильме», лента            |
 | `/films/dune-2021/reviews?sort=&offset=` | все рецензии на произведение                                  |
 | `/u/{username}/reviews?offset=`          | рецензии и оценки пользователя                                |
 | `/people?q=&offset=`, `/people/{slug}`   | люди; человек и его работы (одна карточка — все роли)         |
@@ -145,14 +148,47 @@ HTTP-запросом (получил бы старый файл), а встро
 `transfer-encoding`, `retry-after` (`filterSerializedResponseHeaders`): openapi-fetch смотрит
 `Content-Length`, без этого любой SSR-запрос падает с `load_response_header_not_serialized`.
 
-**Карточка как у Okko** (`CardHero`, `TrailerButton`, `#lib/catalog/trailer.ts`,
-`trailer-player.svelte.ts`). Постера на карточке нет — он только в сетках разделов. Шапка — фон
+**Карточка** (`routes/[kind=kind]/[slug]/+page.svelte`, `components/card/`, `#lib/catalog/card.ts`).
+Сверху вниз:
+
+1. `StickyHeader` — только на телефоне: мини-постер, название, колокольчик. Выезжает под шапкой
+   сайта, когда первый экран ушёл вверх (IntersectionObserver).
+2. `Hero`: есть трейлер — шапка Okko (`CardHero`, ниже), постера нет; нет трейлера — постер слева,
+   тот же текст справа. В шапке только русское название, кнопки, под ними отметки
+   «Посмотреть позже» / «Просмотрено» (`MarkButtons`, `Marks` — пока `localStorage`). Кнопки (стиль —
+   `components/card/buttons.ts`; «Трейлера» пока нет — он идёт фоном, `TrailerButton` не
+   используется): средняя (`AverageRating`, ссылка на `/reviews`), «Оценить» (`RateButton`: панель 1–10 и реакции
+   🔥😢🤔😴, до премьеры — неактивна), «В коллекцию», колокольчик «Следить» с тултипом.
+3. Теги (`TagChips`), под ними `About` — «О фильме», две плашки. Первая — одна таблица с подписями: оригинальное название
+   (`originalTitle`), описание (`Clamp`: «Читать далее…», только если правда не влезло), таблица
+   как у Кинопоиска (`aboutRows`): год, страна, съёмочная группа по ролям, премьера, metadata;
+   вторая, отдельно — главная роль (`peopleCard`, `leadRole`: режиссёр, у книг автор) и «В главных
+   ролях» с фото (9 + «Ещё N»). Подробности — только здесь.
+4. `Related` — приквелы, сиквелы, ремейки (`relatedGroups` читает `related` из карточки), только
+   непустые группы; связей нет — раздела нет. `Recommendations` — подборка бэкенда; пока
+   `RECOMMENDATIONS_API = false` — заглушка без запросов, потом пустая подборка — раздела нет.
+5. `Production` — справа от таблицы «О фильме» (`About` aside): студии, награды, факты — заглушки,
+   кроме разработчика/издателя игр и книг.
+6. Ленивая зона (`ClientSection`): `ActivityFeed` — одна плашка: вкладки, строка «Что думаете о
+   фильме?» с пилюлями «Рецензия» / «Обсуждение» (на её месте — `ReviewComposer`), до 4 записей по
+   дате (`ReviewCard`/`ThreadItem` с `flat`), ссылки на полные списки — только в своей вкладке и
+   если записей больше; «В коллекциях».
+
+Общие состояния на страницу: `Watch` (`#lib/social/watch.svelte.ts`) — «Следить» в шапке и
+липкой шапке; `MyReviewState` (`#lib/social/my-review.svelte.ts`) — «Оценить» в шапке и форма
+рецензии в ленте пишут одну рецензию. Вышло ли (`isReleased`) — по часам зрителя, не сборки.
+Реакции пока хранятся в `localStorage` (API нет).
+
+**Шапка Okko** (`CardHero`, `TrailerButton`, `#lib/catalog/trailer.ts`,
+`trailer-player.svelte.ts`). Шапка — фон
 на всю ширину: трейлер сам запускается без звука, без элементов управления, по кругу (iframe
 `pointer-events-none`, чуть увеличен, чтобы срезать подписи плеера); звук, пауза, полный экран —
-нашими кнопками через `postMessage`-команды плееру. Вне экрана — пауза; `prefers-reduced-motion` —
+нашими кнопками через `postMessage`-команды плееру. Свой интерфейс плеера спрятан: у YouTube `controls=0`, Rutube
+получает `player:enterNakedMode` и `player:hideControls` (команда `bare`) при загрузке, старте и
+после каждого «играть». На паузе и вне экрана iframe гаснет до размытой обложки — значок паузы и
+«Другие видео» плеера посреди кадра не видны. Вне экрана — пауза; `prefers-reduced-motion` —
 не запускается. Поверх (на телефоне — под видео): тип, название, факты (`keyFacts`: год, теги,
-длительность / сезоны, возрастной рейтинг), описание, «Режиссёр: …» (`leadCredits`), кнопка
-«Трейлер». Нет трейлеров — невысокая полоса из размытой обложки.
+длительность / сезоны, возрастной рейтинг), описание, «Режиссёр: …» (`leadCredits`), кнопки.
 
 Источники — `metadata.trailers` у фильмов, сериалов и игр (`youtube`, `rutube` по приоритету:
 YouTube заблокирован в части стран СНГ и в Китае). id ещё раз проверяется шаблоном провайдера,
@@ -181,18 +217,20 @@ YouTube заблокирован в части стран СНГ и в Кита�
   ответа, устаревший ответ отбрасывается, `retry()` для `LoadError` (`onretry`);
 - `CardLive` — один на страницу: `refresh()` перечитывает все живые блоки. Его зовут реалтайм
   (`entity:<slug>`, пачка за 0,8 с), «Ваша оценка», «В коллекцию», удаление модератором
-  (`ReviewItem` `onremoved`). `invalidateAll` здесь не помог бы — перечитал бы статику;
+  (`ReviewCard` `onremoved`). `invalidateAll` здесь не помог бы — перечитал бы статику;
 - сводка оценок грузится сразу (бейдж в шапке и раздел рецензий), остальное — блоками
-  `CardReviews`, `CardThreads`, `CardCollections` внутри `ClientSection`: блок монтируется, когда
+  `ActivityFeed`, `CardCollections` внутри `ClientSection`: блок монтируется, когда
   раздел подходит к экрану (IntersectionObserver, за 200px), до этого — заглушка высотой примерно с
   содержимое (`placeholder`). Нижние разделы не запрашиваются, пока до них не долистали; в e2e к
   ним надо прокрутить (`scrollIntoViewIfNeeded`).
 
-**Оценки и рецензии** (`#lib/social/reviews.ts`, `components/social/`). На карточке: бейдж
-средней в шапке (7+ зелёный, 5+ жёлтый, ниже красный), раздел «Оценки и рецензии» — сводка
-(`RatingSummary`), «Ваша оценка» (`MyReview`) и 6 рецензий с сортировкой (`?sort=new|rating_desc|
-rating_asc`, «новые» в адрес не пишутся; сортировка читается только в браузере — в пререндере
-query недоступен). Сводка и рецензии — живые блоки (см. выше): не загрузились — `LoadError` с
+**Оценки и рецензии** (`#lib/social/reviews.ts`, `components/social/`). На карточке: средняя в
+шапке (7+ зелёная, 5+ жёлтая, ниже красная) — ссылка на `/reviews`, где сводка (`RatingSummary`),
+«Ваша оценка» (`MyReview`) и все рецензии с сортировкой (`?sort=new|rating_desc|rating_asc`).
+«Оценить» — в шапке, рецензии — в ленте вместе с темами. `ReviewCard`: длинный текст свёрнут до 6
+строк («Читать полностью»), рецензия со спойлером (`is_spoiler`, пока не в контракте —
+`isSpoiler()`) размыта `blur-md` с кнопкой «Спойлер. Нажмите, чтобы открыть»; пока размыта —
+`inert` и `aria-hidden`. Сводка и рецензии — живые блоки (см. выше): не загрузились — `LoadError` с
 «Повторить», карточка остаётся. «Ваша оценка» — только в браузере: своя
 рецензия `GET …/review` (404 — нет), клик по 1–10 сразу сохраняет (`PUT`, текст не теряется),
 повторный клик снимает оценку, «Написать рецензию» — форма до 10 000 символов, «Удалить» — с

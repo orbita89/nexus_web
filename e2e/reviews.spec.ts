@@ -9,83 +9,151 @@ test.beforeEach(async ({ page }) => {
 	);
 });
 
-const reviewsList = (page: Page) => page.getByRole('list', { name: 'Рецензии' });
-const summary = (page: Page) => page.getByRole('region', { name: 'Оценка Nexus' });
-const mine = (page: Page) => page.getByRole('region', { name: 'Ваша оценка' });
+const reviewsList = (page: Page) => page.getByRole('list', { name: /^Рецензии/ });
+const hero = (page: Page) => page.getByRole('region', { name: 'Шапка: Дюна' });
+const average = (page: Page) => hero(page).getByLabel(/^Средняя оценка/);
+/** «Оценить» в шапке — <details>: панель с 1–10 и реакциями. */
+const rateToggle = (page: Page) => hero(page).locator('summary');
+const ratePanel = (page: Page) => page.getByRole('region', { name: 'Ваша оценка' });
+/** Лента на карточке — ленивая: монтируется, когда до неё долистали. */
+const toFeed = (page: Page) => page.locator('#activity').scrollIntoViewIfNeeded();
+const feed = (page: Page) => page.getByRole('region', { name: 'Рецензии и обсуждения' });
 
-test('гость: сводка, рецензии, сортировка и «Все рецензии»', async ({ page, request }) => {
+test('гость: средняя в шапке ведёт ко всем рецензиям, «Оценить» — ко входу', async ({
+	page,
+	request
+}) => {
 	const rating = await (await request.get('/api/v1/social/entities/dune-2021/rating')).json();
+	const text = rating.average.toLocaleString('ru-RU', { minimumFractionDigits: 1 });
 
 	await page.goto('/films/dune-2021');
-	const hero = page.getByRole('region', { name: 'Шапка: Дюна' });
-	const average = rating.average.toLocaleString('ru-RU', { minimumFractionDigits: 1 });
-	await expect(hero.getByLabel(`Средняя оценка ${average} из 10`)).toBeVisible();
-	await expect(summary(page)).toContainText(average);
-	await expect(reviewsList(page)).toContainText('Вильнёв сделал невозможное');
-	await expect(mine(page).getByRole('link', { name: 'Войдите' })).toHaveAttribute(
+	await expect(hero(page).getByLabel(`Средняя оценка ${text} из 10`)).toBeVisible();
+	await expect(hero(page).getByRole('link', { name: 'Оценить' })).toHaveAttribute(
 		'href',
 		'/auth/login?next=%2Ffilms%2Fdune-2021'
 	);
 
+	await toFeed(page);
+	await expect(reviewsList(page)).toContainText('Вильнёв сделал невозможное');
+	// Под рецензией — 👍 / 👎 и комментарии; гостю голос ведёт ко входу.
+	const seeded = reviewsList(page)
+		.getByRole('article')
+		.filter({ hasText: 'Вильнёв сделал невозможное' });
+	await expect(seeded.getByRole('link', { name: 'Нравится', exact: true })).toHaveAttribute(
+		'href',
+		'/auth/login?next=%2Ffilms%2Fdune-2021'
+	);
+	await seeded.getByRole('button', { name: /Комментарии/ }).click();
+	await expect(seeded).toContainText('Войдите, чтобы комментировать');
+
+	await average(page).click();
+	await expect(page).toHaveURL('/films/dune-2021/reviews');
+	await expect(page.getByRole('heading', { name: 'Рецензии: Дюна', level: 1 })).toBeVisible();
+	await expect(page.getByRole('region', { name: 'Оценка Nexus' })).toContainText(text);
+
 	await page.getByRole('link', { name: 'Сначала высокие' }).click();
-	await expect(page).toHaveURL('/films/dune-2021?sort=rating_desc');
+	await expect(page).toHaveURL('/films/dune-2021/reviews?sort=rating_desc');
 	const ratings = await reviewsList(page)
 		.getByLabel(/^Оценка \d+ из 10$/)
 		.allTextContents();
 	expect(ratings.map(Number)).toEqual([...ratings.map(Number)].sort((a, b) => b - a));
-
-	await page.getByRole('link', { name: /^Все рецензии/ }).click();
-	await expect(page).toHaveURL('/films/dune-2021/reviews?sort=rating_desc');
-	await expect(page.getByRole('heading', { name: 'Рецензии: Дюна', level: 1 })).toBeVisible();
-	await expect(reviewsList(page)).toContainText('Вильнёв сделал невозможное');
 });
 
-test('вошедший: оценка, рецензия, правка, удаление; сводка и профиль обновляются', async ({
+test('вошедший: «Оценить» в шапке, рецензия в ленте, правка, удаление', async ({
 	page,
 	request
 }) => {
 	const { username } = await registerAndSignIn(page, request, 'rev');
 	const before = (await (await request.get('/api/v1/social/entities/dune-2021/rating')).json())
 		.count as number;
-	const counted = (n: number) => new RegExp(`${n} оцен(ка|ки|ок)`);
+	const counted = (n: number) => new RegExp(`, ${n} оцен(ка|ки|ок)$`);
 
 	await page.goto('/films/dune-2021');
-	await expect(summary(page)).toContainText(counted(before));
+	await expect(average(page)).toHaveAttribute('aria-label', counted(before));
 
-	// Оценка сохраняется по клику.
-	await mine(page).getByRole('button', { name: 'Оценка 8' }).click();
-	await expect(mine(page).getByRole('button', { name: 'Оценка 8' })).toHaveAttribute(
+	// Оценка сохраняется по клику, панель закрывается, кнопка показывает оценку.
+	await rateToggle(page).click();
+	await ratePanel(page).getByRole('button', { name: 'Оценка 8' }).click();
+	await expect(rateToggle(page)).toHaveText(/Ваша: 8/);
+	await expect(ratePanel(page)).toBeHidden();
+	await expect(average(page)).toHaveAttribute('aria-label', counted(before + 1));
+
+	// Реакция — переключатель.
+	await rateToggle(page).click();
+	const fire = page.getByRole('group', { name: 'Реакции' }).getByRole('button', { name: 'Огонь' });
+	await fire.click();
+	await expect(fire).toHaveAttribute('aria-pressed', 'true');
+
+	// «Написать рецензию» из панели открывает форму в ленте; оценка остаётся.
+	const text = `E2E: атмосфера и звук, ${Date.now()}`;
+	await ratePanel(page).getByRole('button', { name: 'Написать рецензию' }).click();
+	const body = feed(page).getByRole('textbox', { name: 'Ваша рецензия' });
+	await expect(body).toBeInViewport();
+	// Оценка из шапки уже выбрана в форме.
+	const formRating = feed(page).getByRole('group', { name: 'Оценка от 1 до 10' });
+	await expect(formRating.getByRole('button', { name: 'Оценка 8' })).toHaveAttribute(
 		'aria-pressed',
 		'true'
 	);
-	await expect(summary(page)).toContainText(counted(before + 1));
-
-	// Рецензия: оценка остаётся, текст появляется в списке.
-	const text = `E2E: атмосфера и звук, ${Date.now()}`;
-	await mine(page).getByRole('button', { name: 'Написать рецензию' }).click();
-	await mine(page).getByLabel('Текст рецензии').fill(text);
-	await mine(page).getByRole('button', { name: 'Сохранить' }).click();
+	await body.fill(text);
+	await feed(page).getByRole('button', { name: 'Сохранить' }).click();
 	const item = reviewsList(page).getByRole('article').filter({ hasText: text });
 	await expect(item).toBeVisible();
 	await expect(item.getByLabel('Оценка 8 из 10')).toBeVisible();
 
-	// Правка заменяет текст.
-	await mine(page).getByRole('button', { name: 'Изменить рецензию' }).click();
-	await mine(page).getByLabel('Текст рецензии').fill(`${text} (дополнено)`);
-	await mine(page).getByRole('button', { name: 'Сохранить' }).click();
+	// Правка — кнопкой в ленте; оценку меняем прямо в форме, сохраняется вместе с текстом.
+	await feed(page).getByRole('button', { name: 'Изменить рецензию' }).click();
+	await body.fill(`${text} (дополнено)`);
+	await formRating.getByRole('button', { name: 'Оценка 6' }).click();
+	await feed(page).getByRole('button', { name: 'Сохранить' }).click();
 	await expect(reviewsList(page)).toContainText(`${text} (дополнено)`);
+	await expect(
+		reviewsList(page)
+			.getByRole('article')
+			.filter({ hasText: 'дополнено' })
+			.getByLabel('Оценка 6 из 10')
+	).toBeVisible();
+	await expect(rateToggle(page)).toHaveText(/Ваша\s*6/);
 
 	// В профиле — тоже.
 	await page.goto(`/u/${username}/reviews`);
 	await expect(page.getByRole('article').filter({ hasText: 'дополнено' })).toContainText('Дюна');
 
-	// Удаление: рецензии нет, сводка вернулась.
+	// Удаление: рецензии и оценки нет, средняя вернулась.
 	await page.goto('/films/dune-2021');
-	await mine(page).getByRole('button', { name: 'Удалить', exact: true }).click();
-	await mine(page).getByRole('button', { name: 'Удалить', exact: true }).click();
-	await expect(mine(page).getByRole('button', { name: 'Написать рецензию' })).toBeVisible();
+	await toFeed(page);
+	await feed(page).getByRole('button', { name: 'Изменить рецензию' }).click();
+	await feed(page).getByRole('button', { name: 'Удалить', exact: true }).click();
+	await feed(page).getByRole('button', { name: 'Удалить', exact: true }).click();
+	await expect(feed(page).getByRole('button', { name: 'Написать рецензию' })).toBeVisible();
 	await expect(reviewsList(page)).not.toContainText(text);
-	await expect(summary(page)).toContainText(counted(before));
+	await expect(rateToggle(page)).toHaveText(/Оценить/);
+	await expect(average(page)).toHaveAttribute('aria-label', counted(before));
+});
+
+test('отметки «Посмотреть позже» и «Просмотрено»: гостю — вход, вошедшему — переключатели', async ({
+	page,
+	request
+}) => {
+	await page.goto('/films/dune-2021');
+	const marks = hero(page).getByRole('group', { name: 'Мои отметки' });
+	await expect(marks.getByRole('link', { name: 'Посмотреть позже' })).toHaveAttribute(
+		'href',
+		'/auth/login?next=%2Ffilms%2Fdune-2021'
+	);
+
+	await registerAndSignIn(page, request, 'mrk');
+	await page.goto('/films/dune-2021');
+	const later = marks.getByRole('button', { name: 'Посмотреть позже' });
+	const done = marks.getByRole('button', { name: 'Просмотрено' });
+	await later.click();
+	await expect(later).toHaveAttribute('aria-pressed', 'true');
+	// Взаимоисключающие: просмотрел — из «позже» уходит. Отметка переживает перезагрузку.
+	await done.click();
+	await expect(done).toHaveAttribute('aria-pressed', 'true');
+	await expect(later).toHaveAttribute('aria-pressed', 'false');
+	await page.reload();
+	await expect(done).toHaveAttribute('aria-pressed', 'true');
 });
 
 test('рецензии неизвестного пользователя и произведения — 404', async ({ request }) => {

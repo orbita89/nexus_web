@@ -8,7 +8,7 @@
 	import RatingSummary from '#lib/components/catalog/RatingSummary.svelte';
 	import Seo from '#lib/components/catalog/Seo.svelte';
 	import MyReview from '#lib/components/social/MyReview.svelte';
-	import ReviewItem from '#lib/components/social/ReviewItem.svelte';
+	import ReviewCard from '#lib/components/social/ReviewCard.svelte';
 	import ReviewSortTabs from '#lib/components/social/ReviewSortTabs.svelte';
 	import type { PageProps } from './$types';
 
@@ -48,7 +48,7 @@
 			<div class="mb-4 overflow-x-auto"><ReviewSortTabs current={data.sort} /></div>
 			<ul class="flex flex-col gap-3" aria-label="Рецензии">
 				{#each data.reviews.data.items as review (review.id)}
-					<li><ReviewItem {review} /></li>
+					<li><ReviewCard {review} /></li>
 				{/each}
 			</ul>
 			<Pagination

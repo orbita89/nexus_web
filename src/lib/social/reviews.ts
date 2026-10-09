@@ -62,7 +62,12 @@ export function displayName(user: { username: string; display_name?: string | nu
 	return user.display_name?.trim() || user.username;
 }
 
-/** Длинную рецензию в списке сворачиваем до «Читать полностью». */
-export const LONG_REVIEW = 600;
+/**
+ * Рецензия со спойлерами: текст размыт, пока читатель не откроет. Поля `is_spoiler` в контракте
+ * ещё нет (docs/backend-questions.md) — читаем его, если бэкенд уже присылает.
+ */
+export function isSpoiler(review: object): boolean {
+	return 'is_spoiler' in review && review.is_spoiler === true;
+}
 
 export const BODY_LIMIT = 10_000;

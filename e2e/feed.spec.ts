@@ -26,8 +26,8 @@ test('интересы: «Следить» на карточке, список �
 	await registerAndSignIn(page, request, 'wat');
 	await page.goto('/films/dune-2021');
 	await expect(userMenu(page)).toBeVisible();
-	await page.getByRole('button', { name: '🔔 Следить' }).click();
-	await expect(page.getByRole('button', { name: '🔔 Вы следите' })).toHaveAttribute(
+	await page.getByRole('button', { name: 'Следить', exact: true }).click();
+	await expect(page.getByRole('button', { name: 'Вы следите', exact: true })).toHaveAttribute(
 		'aria-pressed',
 		'true'
 	);
@@ -47,7 +47,7 @@ test('интересы: «Следить» на карточке, список �
 	await expect(interests).toHaveCount(0);
 	await page.goto('/films/dune-2021');
 	await expect(userMenu(page)).toBeVisible();
-	await expect(page.getByRole('button', { name: '🔔 Следить' })).toBeVisible();
+	await expect(page.getByRole('button', { name: 'Следить', exact: true })).toBeVisible();
 });
 
 test('лента: новичку — популярное; после подписки — записи автора с причиной, фильтр', async ({

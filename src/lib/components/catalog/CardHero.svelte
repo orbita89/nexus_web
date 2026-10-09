@@ -44,14 +44,22 @@
 	/** Адрес, который заиграл: iframe проявляется, когда это текущий источник. */
 	let playingSrc = $state('');
 	let muted = $state(true);
-	/** На паузе по воле зрителя (или пока открыта модалка «Трейлер»). */
+	/** На паузе по воле зрителя (или пока открыта модалка «Трейлер»). На паузе видео гаснет до
+	 *  размытой обложки: иначе посреди кадра — значок паузы и «Другие видео» плеера, которые на фоне
+	 *  не нажать (клики проходят мимо) и которые убрать параметрами плеера нельзя. */
 	let held = $state(false);
 	let fullscreen = $state(false);
+	/** Шапка ушла с экрана — видео на паузе. */
+	let away = $state(false);
 
 	const showVideo = $derived(enabled && !player.failed);
 	const src = $derived(showVideo ? backgroundUrl(player.current, location.origin) : '');
 
-	const command = (c: PlayerCommand) => sendCommand(frame, player.current.provider, c);
+	// После «играть» Rutube снова показывает свои кнопки — каждый раз прячем интерфейс.
+	const command = (c: PlayerCommand) => {
+		sendCommand(frame, player.current.provider, c);
+		if (c === 'play' || c === 'restart') sendCommand(frame, player.current.provider, 'bare');
+	};
 
 	onMount(() => {
 		if (!sources.length || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -60,7 +68,8 @@
 		// Ушёл с экрана — пауза: видео не крутится зря.
 		const observer = new IntersectionObserver(
 			([entry]) => {
-				if (!entry.isIntersecting) command('pause');
+				away = !entry.isIntersecting;
+				if (away) command('pause');
 				else if (!held) command('play');
 			},
 			{ threshold: 0.25 }
@@ -82,10 +91,14 @@
 		const signal = player.handle(event, frame);
 		// Rutube не понимает mute=1 в адресе и со звуком сам не стартует: даём команды явно.
 		if (signal === 'loaded') {
+			command('bare');
 			command(muted ? 'mute' : 'unmute');
 			if (!held) command('play');
 		}
-		if (signal === 'playing') playingSrc = src;
+		if (signal === 'playing') {
+			command('bare');
+			playingSrc = src;
+		}
 		// Rutube по кругу сам не играет — начинаем сначала (YouTube крутит loop=1).
 		if (signal === 'ended') command('restart');
 	}
@@ -124,18 +137,25 @@
 
 <section
 	bind:this={root}
-	class="relative left-1/2 -mt-6 mb-8 w-screen -translate-x-1/2 bg-base-100"
+	class={[
+		'relative w-screen bg-base-100',
+		// Во всю ширину окна из контейнера страницы — сдвигом на половину. В полном экране сдвиг
+		// снимаем: иначе браузер ставит элемент в 0,0, а translate уводит половину плеера за край.
+		fullscreen ? 'h-screen' : 'left-1/2 -mt-6 mb-8 -translate-x-1/2'
+	]}
 	aria-label="Шапка: {title}"
 >
 	<!-- Фон: видео или размытая обложка. На телефоне — полоса 16:9, на десктопе — под текстом. -->
 	<div
 		class={[
-			'relative w-full overflow-hidden bg-black md:aspect-auto',
-			// С трейлером — кадр 16:9 (на десктопе до 82vh), без него — невысокая полоса фона.
-			sources.length
-				? 'aspect-video md:h-[min(56.25vw,82vh)] md:min-h-[30rem]'
-				: 'h-40 md:h-[26rem]',
-			{ 'md:h-screen': fullscreen }
+			'relative w-full overflow-hidden bg-black',
+			// В полном экране — весь экран и на телефоне. С трейлером — кадр 16:9 (на десктопе до
+			// 82vh), без него — невысокая полоса фона.
+			fullscreen
+				? 'h-screen'
+				: sources.length
+					? 'aspect-video md:aspect-auto md:h-[min(56.25vw,82vh)] md:min-h-[30rem]'
+					: 'h-40 md:h-[26rem]'
 		]}
 	>
 		{#if coverUrl}
@@ -168,7 +188,7 @@
 					tabindex="-1"
 					class={[
 						'pointer-events-none absolute top-1/2 left-0 aspect-video w-full -translate-y-1/2 scale-[1.35] transition-opacity duration-700',
-						playingSrc === src ? 'opacity-100' : 'opacity-0'
+						playingSrc === src && !held && !away ? 'opacity-100' : 'opacity-0'
 					]}
 					allow="autoplay; encrypted-media; picture-in-picture"
 					referrerpolicy="strict-origin-when-cross-origin"
@@ -177,15 +197,17 @@
 			{/key}
 		{/if}
 
-		<!-- Затемнение к фону страницы: снизу и слева — под текст. -->
-		<div
-			class="pointer-events-none absolute inset-0 bg-linear-to-t from-base-100 via-base-100/0 via-35% to-transparent"
-			aria-hidden="true"
-		></div>
-		<div
-			class="pointer-events-none absolute inset-0 hidden bg-linear-to-r from-base-100/95 via-base-100/50 via-35% to-transparent to-70% md:block"
-			aria-hidden="true"
-		></div>
+		<!-- Затемнение к фону страницы: снизу и слева — под текст. В полном экране — только видео. -->
+		{#if !fullscreen}
+			<div
+				class="pointer-events-none absolute inset-0 bg-linear-to-t from-base-100 via-base-100/0 via-35% to-transparent"
+				aria-hidden="true"
+			></div>
+			<div
+				class="pointer-events-none absolute inset-0 hidden bg-linear-to-r from-base-100/95 via-base-100/50 via-35% to-transparent to-70% md:block"
+				aria-hidden="true"
+			></div>
+		{/if}
 
 		{#if showVideo}
 			<div class="absolute right-4 bottom-4 z-20 flex gap-2 md:right-8 md:bottom-10">
@@ -227,9 +249,11 @@
 		{/if}
 	</div>
 
-	<!-- Информация: на десктопе поверх фона слева снизу, на телефоне — под видео. -->
+	<!-- Информация: на десктопе поверх фона слева снизу, на телефоне — под видео. В полном экране
+	     скрыта (hidden — не {#if}: кнопки внутри живут своей жизнью, не перемонтируем). -->
 	<div
 		class="relative z-10 mx-auto -mt-10 max-w-6xl px-4 md:absolute md:inset-x-0 md:bottom-10 md:mt-0"
+		hidden={fullscreen}
 	>
 		<div class="max-w-2xl">{@render children()}</div>
 	</div>

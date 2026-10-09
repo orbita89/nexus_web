@@ -80,7 +80,11 @@ export function backgroundUrl(source: TrailerSource, origin: string): string {
 	return `${PLAYER_ORIGIN.rutube}/play/embed/${source.id}?autoplay=1&mute=1`;
 }
 
-export type PlayerCommand = 'mute' | 'unmute' | 'play' | 'pause' | 'restart';
+/**
+ * bare — спрятать весь интерфейс плеера (фон): у Rutube иначе посреди кадра кнопки «назад / пауза /
+ * вперёд», заголовок и шкала; у YouTube его и так нет (controls=0 в адресе).
+ */
+export type PlayerCommand = 'mute' | 'unmute' | 'play' | 'pause' | 'restart' | 'bare';
 
 /** Сообщения плееру (postMessage) для команды: YouTube IFrame API или Rutube player API. */
 export function playerCommand(provider: Provider, command: PlayerCommand): string[] {
@@ -92,7 +96,8 @@ export function playerCommand(provider: Provider, command: PlayerCommand): strin
 			unmute: [yt('unMute')],
 			play: [yt('playVideo')],
 			pause: [yt('pauseVideo')],
-			restart: [yt('seekTo', [0, true]), yt('playVideo')]
+			restart: [yt('seekTo', [0, true]), yt('playVideo')],
+			bare: []
 		};
 		return map[command];
 	}
@@ -102,7 +107,10 @@ export function playerCommand(provider: Provider, command: PlayerCommand): strin
 		unmute: [ru('player:unMute')],
 		play: [ru('player:play')],
 		pause: [ru('player:pause')],
-		restart: [ru('player:setCurrentTime', { time: 0 }), ru('player:play')]
+		restart: [ru('player:setCurrentTime', { time: 0 }), ru('player:play')],
+		// enterNakedMode — без заголовка, кнопок, панели и шкалы; hideControls — на случай, если
+		// версия плеера «голого» режима не знает.
+		bare: [ru('player:enterNakedMode'), ru('player:hideControls')]
 	};
 	return map[command];
 }

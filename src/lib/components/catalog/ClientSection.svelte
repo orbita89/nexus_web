@@ -41,7 +41,12 @@
 	});
 </script>
 
-<section bind:this={section} {id} aria-labelledby="{id}-title" class="mb-12 scroll-mt-20">
+<section
+	bind:this={section}
+	{id}
+	aria-labelledby="{id}-title"
+	class="mb-12 scroll-mt-32 md:scroll-mt-20"
+>
 	<div class="mb-4 flex flex-wrap items-baseline justify-between gap-3">
 		<h2 id="{id}-title" class="text-2xl font-bold">{title}</h2>
 		{#if actions}<div class="flex flex-wrap items-center gap-3">{@render actions()}</div>{/if}
