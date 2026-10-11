@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { JobInterrupted, emptyJob, runJob, type JobState } from '#lib/admin/job.ts';
-	import { errorMessage } from '#lib/api/errors.ts';
+	import { ApiError, errorMessage } from '#lib/api/errors.ts';
 	import Alert from '#lib/components/Alert.svelte';
 	import JobLog from './JobLog.svelte';
 
@@ -57,7 +57,11 @@
 			job = emptyJob();
 			await runJob(stream, (state) => (job = state));
 		} catch (e) {
-			error = e instanceof JobInterrupted ? e.message : errorMessage(e);
+			// 409 до потока — перестройка уже идёт (в другой вкладке или после рестарта бэкенда).
+			if (e instanceof JobInterrupted) error = e.message;
+			else if (e instanceof ApiError && e.status === 409)
+				error = 'Перестройка уже идёт — дождитесь, пока она закончится.';
+			else error = errorMessage(e);
 		} finally {
 			running = false;
 		}
