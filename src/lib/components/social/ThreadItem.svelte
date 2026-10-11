@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { SchemaThread } from '#lib/api/generated/social.ts';
 	import { refHref } from '#lib/catalog/kinds.ts';
-	import { count } from '#lib/catalog/labels.ts';
+	import { count, titleWithYear } from '#lib/catalog/labels.ts';
 	import { displayName, reviewDate } from '#lib/social/reviews.ts';
 
 	let {
@@ -40,10 +40,10 @@
 						<a
 							{href}
 							class="badge border-base-300 bg-base-100 badge-sm hover:border-primary hover:text-primary"
-							>{entity.title}</a
+							>{titleWithYear(entity)}</a
 						>
 					{:else}
-						<span class="badge badge-sm">{entity.title}</span>
+						<span class="badge badge-sm">{titleWithYear(entity)}</span>
 					{/if}
 				</li>
 			{/each}

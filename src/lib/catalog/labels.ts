@@ -161,6 +161,12 @@ export function yearOf(date: string | null | undefined): string | null {
 	return date ? date.slice(0, 4) : null;
 }
 
+/** Название с годом, чтобы различать одноимённые: «Дюна (2021)»; без даты — просто название. */
+export function titleWithYear(entity: { title: string; release_date?: string | null }): string {
+	const year = yearOf(entity.release_date);
+	return year ? `${entity.title} (${year})` : entity.title;
+}
+
 /** '1965-08-01' → «1 августа 1965 г.» (дата без времени, без сдвига часовых поясов). */
 export function formatDate(date: string): string {
 	const [y, m, d] = date.split('-').map(Number);

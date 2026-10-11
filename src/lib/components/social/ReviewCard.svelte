@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { titleWithYear } from '#lib/catalog/labels.ts';
 	import type { SchemaReview } from '#lib/api/generated/social.ts';
 	import { refHref } from '#lib/catalog/kinds.ts';
 	import { displayName, isEdited, isSpoiler, reviewDate } from '#lib/social/reviews.ts';
@@ -50,10 +51,10 @@
 			<div class="min-w-0 flex-1">
 				{#if entityLink}
 					<a href={entityLink} class="block truncate font-semibold hover:text-primary"
-						>{review.entity.title}</a
+						>{titleWithYear(review.entity)}</a
 					>
 				{:else}
-					<span class="block truncate font-semibold">{review.entity.title}</span>
+					<span class="block truncate font-semibold">{titleWithYear(review.entity)}</span>
 				{/if}
 				<p class="text-xs text-base-content/50">
 					<time datetime={review.created_at}>{reviewDate(review.created_at)}</time>
@@ -85,7 +86,7 @@
 		{#if showEntity && entityLink}
 			<p class="mt-3 text-sm">
 				<a href={entityLink} class="link font-semibold text-primary link-hover"
-					>{review.entity.title}</a
+					>{titleWithYear(review.entity)}</a
 				>
 			</p>
 		{/if}

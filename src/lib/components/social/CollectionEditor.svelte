@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { titleWithYear } from '#lib/catalog/labels.ts';
 	import { errorMessage, unwrap } from '#lib/api/errors.ts';
 	import type { SchemaCollectionItem } from '#lib/api/generated/social.ts';
 	import { api } from '#lib/auth/session.svelte.ts';
@@ -149,7 +150,7 @@
 				</div>
 				<div class="min-w-0 flex-1">
 					<p class="truncate font-semibold">
-						{item.entity.title}
+						{titleWithYear(item.entity)}
 						<span class="text-xs font-normal text-base-content/40"
 							>{kindName(item.entity.kind)}</span
 						>

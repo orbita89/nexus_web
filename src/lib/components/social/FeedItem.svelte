@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { titleWithYear } from '#lib/catalog/labels.ts';
 	import type { SchemaFeedItem } from '#lib/api/generated/social.ts';
 	import { refHref } from '#lib/catalog/kinds.ts';
 	import { displayName } from '#lib/social/reviews.ts';
@@ -32,8 +33,9 @@
 				<span
 					>🔔 вы следите за {#if href}<a
 							{href}
-							class="font-semibold text-base-content/80 hover:text-primary">{reason.entity.title}</a
-						>{:else}{reason.entity.title}{/if}</span
+							class="font-semibold text-base-content/80 hover:text-primary"
+							>{titleWithYear(reason.entity)}</a
+						>{:else}{titleWithYear(reason.entity)}{/if}</span
 				>
 			{:else}
 				<span>🔥 популярное</span>

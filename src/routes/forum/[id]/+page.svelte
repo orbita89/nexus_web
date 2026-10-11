@@ -5,7 +5,7 @@
 	import type { SchemaPost } from '#lib/api/generated/social.ts';
 	import { api, session } from '#lib/auth/session.svelte.ts';
 	import { asKind, refHref } from '#lib/catalog/kinds.ts';
-	import { count, summary } from '#lib/catalog/labels.ts';
+	import { count, summary, titleWithYear } from '#lib/catalog/labels.ts';
 	import { withQuery } from '#lib/catalog/url.ts';
 	import { lastPageOffset, quoteFor } from '#lib/social/forum.ts';
 	import { displayName } from '#lib/social/reviews.ts';
@@ -150,7 +150,7 @@
 								/>
 							</div>
 							<p class="mt-1 line-clamp-2 text-xs font-medium group-hover:text-primary">
-								{entity.title}
+								{titleWithYear(entity)}
 							</p>
 							{#if i === 0 && thread.entities.length > 1}
 								<p class="text-[0.65rem] text-primary uppercase">главное</p>

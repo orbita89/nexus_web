@@ -13,7 +13,8 @@ import {
 	plural,
 	roleLabel,
 	summary,
-	yearOf
+	yearOf,
+	titleWithYear
 } from './labels';
 import { entityHref, refHref } from './kinds';
 
@@ -55,6 +56,8 @@ describe('метки', () => {
 	it('год и дата', () => {
 		expect(yearOf('2021-10-22')).toBe('2021');
 		expect(yearOf(null)).toBeNull();
+		expect(titleWithYear({ title: 'Дюна', release_date: '2021-09-03' })).toBe('Дюна (2021)');
+		expect(titleWithYear({ title: 'Дюна', release_date: null })).toBe('Дюна');
 		expect(formatDate('1965-08-01')).toMatch(/^1 августа 1965/);
 	});
 

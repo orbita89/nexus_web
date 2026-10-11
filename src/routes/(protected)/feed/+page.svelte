@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { titleWithYear } from '#lib/catalog/labels.ts';
 	import { page } from '$app/state';
 	import { errorMessage, unwrap } from '#lib/api/errors.ts';
 	import type {
@@ -166,7 +167,7 @@
 					{@const href = refHref(interest.entity)}
 					<li class="flex items-center gap-2 rounded-box px-2 py-1 hover:bg-base-200">
 						<a href={href ?? '#'} class="min-w-0 flex-1 truncate text-sm hover:text-primary"
-							>{interest.entity.title}</a
+							>{titleWithYear(interest.entity)}</a
 						>
 						<button
 							class="btn btn-square btn-ghost btn-xs"
