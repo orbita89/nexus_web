@@ -133,8 +133,10 @@ test('автор: тема с карточки на два произведен�
 	const threadUrl = page.url();
 
 	// Тема видна в ленте «Рецензии и обсуждения» книги — она привязана к обоим произведениям.
+	// По умолчанию открыты рецензии, обсуждения — во вкладке.
 	await open(page, '/books/dune-novel');
 	await page.locator('#activity').scrollIntoViewIfNeeded();
+	await page.getByRole('tab', { name: /^Обсуждения/ }).click();
 	await expect(page.getByRole('list', { name: 'Рецензии и обсуждения' })).toContainText(title);
 
 	await open(page, threadUrl);

@@ -15,13 +15,13 @@
 	import ReviewComposer from './ReviewComposer.svelte';
 
 	// Рецензии и обсуждения — одна компактная плашка:
-	// - вкладки «Все / Рецензии N / Обсуждения N»;
+	// - две вкладки «Рецензии N / Обсуждения N», по умолчанию открыты рецензии;
 	// - строка «Что думаете о фильме?» с пилюлями «Рецензия» и «Обсуждение» — вместо больших
 	//   кнопок; рецензия пишется прямо здесь (ReviewComposer на месте строки);
 	// - до SHOWN записей через тонкие линии, свежее сверху (рецензия — по дате, тема — по последнему
 	//   сообщению), текст рецензии — 3 строки;
 	// - «Все рецензии (N) →» / «Все обсуждения (N) →» — только в своей вкладке и только если записей
-	//   больше, чем видно.
+	//   больше, чем видно. В каждой вкладке — только свои записи, вперемешку их нет.
 	// Только в браузере (ClientSection).
 	let {
 		slug,
@@ -38,7 +38,7 @@
 	type Entry =
 		| { kind: 'review'; at: string; review: SchemaReview }
 		| { kind: 'thread'; at: string; thread: SchemaThread };
-	type Filter = 'all' | Entry['kind'];
+	type Filter = Entry['kind'];
 
 	const feed = liveQuery(
 		() => ({ slug, version: live.version }),
@@ -60,7 +60,8 @@
 		}
 	);
 
-	let filter = $state<Filter>('all');
+	// По умолчанию — рецензии.
+	let filter = $state<Filter>('review');
 
 	const data = $derived(feed.current?.data);
 	const reviewsTotal = $derived(data?.[0].total ?? 0);
@@ -80,17 +81,16 @@
 			}))
 		];
 		return all
-			.filter((e) => filter === 'all' || e.kind === filter)
+			.filter((e) => e.kind === filter)
 			.sort((a, b) => b.at.localeCompare(a.at))
 			.slice(0, SHOWN);
 	});
 	const shownOf = (kind: Entry['kind']) => entries.filter((e) => e.kind === kind).length;
-	// Ссылка на полный список — если в нём больше, чем видно здесь.
-	const moreReviews = $derived(filter !== 'thread' && reviewsTotal > shownOf('review'));
-	const moreThreads = $derived(filter !== 'review' && threadsTotal > shownOf('thread'));
+	// Ссылка на полный список — если в нём больше, чем видно здесь (в своей вкладке).
+	const moreReviews = $derived(filter === 'review' && reviewsTotal > shownOf('review'));
+	const moreThreads = $derived(filter === 'thread' && threadsTotal > shownOf('thread'));
 
 	const tabs = $derived<{ value: Filter; title: string; total?: number }[]>([
-		{ value: 'all', title: 'Все' },
 		{ value: 'review', title: 'Рецензии', total: reviewsTotal },
 		{ value: 'thread', title: 'Обсуждения', total: threadsTotal }
 	]);
@@ -239,11 +239,7 @@
 		</ul>
 	{:else}
 		<p class="py-6 text-center text-sm text-base-content/45">
-			{filter === 'thread'
-				? 'Обсуждений пока нет.'
-				: filter === 'review'
-					? 'Рецензий пока нет — напишите первую.'
-					: 'Здесь пока тихо — напишите рецензию или начните обсуждение.'}
+			{filter === 'thread' ? 'Обсуждений пока нет.' : 'Рецензий пока нет — напишите первую.'}
 		</p>
 	{/if}
 
