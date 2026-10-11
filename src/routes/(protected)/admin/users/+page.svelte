@@ -2,11 +2,13 @@
 	import { errorMessage, unwrap } from '#lib/api/errors.ts';
 	import type { SchemaRole, SchemaUserView } from '#lib/api/generated/auth.ts';
 	import { api, session } from '#lib/auth/session.svelte.ts';
+	import { count } from '#lib/catalog/labels.ts';
 	import { reviewDate } from '#lib/social/reviews.ts';
 	import Alert from '#lib/components/Alert.svelte';
 	import Avatar from '#lib/components/Avatar.svelte';
 
-	// Пользователи: роль и блокировка. Себя не понизить и не заблокировать (бэкенд тоже не даст).
+	// Пользователи: поиск по username и email, роль и блокировка. Себя не понизить и не
+	// заблокировать (бэкенд тоже не даст). Страницы — по total: «Показать ещё», пока не все.
 	const PAGE = 50;
 	const ROLES: { value: SchemaRole; title: string }[] = [
 		{ value: 'user', title: 'Пользователь' },
@@ -15,31 +17,41 @@
 	];
 
 	let users = $state<SchemaUserView[]>([]);
-	let more = $state(false);
+	let total = $state<number | null>(null);
+	let query = $state('');
 	let loading = $state(false);
 	let error = $state('');
 	let busy = $state<string | null>(null);
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	/** Номер запроса: ответ на устаревший поиск отбрасываем. */
+	let request = 0;
 
 	async function load(offset: number) {
+		const id = ++request;
+		const q = query.trim();
 		loading = true;
 		error = '';
 		try {
-			// Контракт ошибочно описывает limit/offset как параметры пути (backend-questions):
-			// передаём их запросом в обход типов. total в ответе нет — «ещё», пока страница полная.
-			const page = await unwrap<SchemaUserView[]>(
-				api.auth.GET('/api/v1/auth/admin/users', {
-					params: { query: { limit: PAGE, offset } }
-				} as never)
+			const page = await unwrap(
+				api.auth.GET('/api/v1/auth/admin/users/page', {
+					params: { query: { q: q || undefined, limit: PAGE, offset } }
+				})
 			);
-			users = offset ? [...users, ...page] : page;
-			more = page.length === PAGE;
+			if (id !== request) return;
+			users = offset ? [...users, ...page.items] : page.items;
+			total = page.total;
 		} catch (e) {
-			error = errorMessage(e);
+			if (id === request) error = errorMessage(e);
 		} finally {
-			loading = false;
+			if (id === request) loading = false;
 		}
 	}
 	void load(0);
+
+	function onSearch() {
+		clearTimeout(timer);
+		timer = setTimeout(() => load(0), 300);
+	}
 
 	async function update(user: SchemaUserView, change: { role?: SchemaRole; is_active?: boolean }) {
 		busy = user.id;
@@ -73,6 +85,25 @@
 	Автор может создавать темы на форуме, админ — всё, включая эту страницу. Блокировка завершает все
 	сессии пользователя; его рецензии и сообщения остаются.
 </p>
+
+<div class="mb-4 flex flex-wrap items-center gap-3">
+	<label class="input w-full max-w-sm input-sm">
+		<span class="sr-only">Поиск по имени или email</span>
+		<input
+			type="search"
+			placeholder="Имя пользователя или email"
+			autocomplete="off"
+			bind:value={query}
+			oninput={onSearch}
+		/>
+		{#if loading}<span class="loading loading-xs loading-spinner"></span>{/if}
+	</label>
+	{#if total !== null}
+		<span class="text-sm text-base-content/50"
+			>{count(total, ['пользователь', 'пользователя', 'пользователей'])}</span
+		>
+	{/if}
+</div>
 
 {#if error}<div class="mb-4"><Alert>{error}</Alert></div>{/if}
 
@@ -126,11 +157,15 @@
 						>{reviewDate(user.created_at)}</td
 					>
 				</tr>
+			{:else}
+				{#if total === 0}
+					<tr><td colspan="5" class="text-center text-base-content/50">Никого не нашлось.</td></tr>
+				{/if}
 			{/each}
 		</tbody>
 	</table>
 </div>
-{#if more}
+{#if total !== null && users.length < total}
 	<div class="mt-4 flex justify-center">
 		<button class="btn btn-sm" onclick={() => load(users.length)} disabled={loading}
 			>Показать ещё</button

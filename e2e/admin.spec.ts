@@ -49,6 +49,15 @@ test('пользователи: роль и блокировка, себя не 
 	await admin.getByRole('button', { name: 'Разблокировать @blocked' }).click();
 	await admin.getByRole('button', { name: 'Заблокировать @blocked' }).click();
 	await expect(admin.getByRole('button', { name: 'Разблокировать @blocked' })).toBeVisible();
+	// Поиск по username и email, число найденных.
+	const search = admin.getByLabel('Поиск по имени или email');
+	await search.fill('blocked@nexus');
+	await expect(admin.getByText(/^1 пользователь$/)).toBeVisible();
+	await expect(admin.getByRole('row')).toHaveCount(2);
+	await search.fill('нет-такого-e2e');
+	await expect(admin.getByText('Никого не нашлось.')).toBeVisible();
+	await search.fill('');
+	await expect(admin.getByLabel('Роль @admin')).toBeVisible();
 });
 
 test('теги: создать (slug из названия), переименовать, удалить', async () => {
