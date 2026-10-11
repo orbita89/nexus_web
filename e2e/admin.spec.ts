@@ -135,6 +135,29 @@ test('произведения: создать фильм с полями, тр�
 		'Дени Вильнёв · Режиссёр'
 	);
 
+	// Связанные: с собой нельзя (409 self_relation), сиквел — поиском; убрать.
+	const relations = admin.getByRole('region', { name: 'Связанные' });
+	const link = relations.getByRole('form', { name: 'Добавить связь' });
+	const pick = async (q: string, name: RegExp) => {
+		await link.getByLabel('Найти произведение').fill(q);
+		await link
+			.getByRole('list', { name: 'Найденные произведения' })
+			.getByRole('button', { name })
+			.click();
+	};
+	await pick(`E2E Фильм ${id}`, new RegExp(`E2E Фильм ${id}`));
+	await link.getByRole('button', { name: 'Связать' }).click();
+	await expect(link.getByRole('alert')).toHaveText('Нельзя связать произведение с самим собой.');
+	await link.getByRole('button', { name: /^Убрать:/ }).click();
+	await link.getByLabel('Вид связи').selectOption('sequel');
+	await pick('Мессия', /Мессия Дюны/);
+	await link.getByRole('button', { name: 'Связать' }).click();
+	const table = relations.getByRole('table', { name: 'Связанные произведения' });
+	await expect(table).toContainText('Сиквел');
+	await expect(table).toContainText('Мессия Дюны (1969)');
+	await table.getByRole('button', { name: 'Убрать связь: Мессия Дюны' }).click();
+	await expect(relations).toContainText('Связей нет.');
+
 	// На сайте — всё, что ввели (SSR).
 	let html = await (await admin.request.get(`/films/${slug}`)).text();
 	for (const text of [

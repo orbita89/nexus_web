@@ -1,5 +1,7 @@
 <script lang="ts" module>
 	export interface PickedEntity {
+		/** Есть у найденных поиском (EntitySummary); нужен, где API ждёт id (связи в админке). */
+		id?: string;
 		slug: string;
 		title: string;
 		kind: string;
@@ -19,10 +21,13 @@
 	// до 10 штук, первое — главное, порядок меняется стрелками.
 	let {
 		selected = $bindable([]),
-		hint = true
+		hint = true,
+		max = LIMITS.entities
 	}: {
 		selected: PickedEntity[];
 		/** Подсказка «до 10, первое — главное» (для тем). */ hint?: boolean;
+		/** Сколько можно выбрать (темы — до 10, связь в админке — одно). */
+		max?: number;
 	} = $props();
 
 	let query = $state('');
@@ -65,7 +70,7 @@
 	}
 
 	function add(entity: PickedEntity) {
-		if (selected.length >= LIMITS.entities || selected.some((e) => e.slug === entity.slug)) return;
+		if (selected.length >= max || selected.some((e) => e.slug === entity.slug)) return;
 		selected = [...selected, entity];
 		query = '';
 		results = [];
@@ -85,7 +90,7 @@
 				<li class="flex items-center gap-2 rounded-box bg-base-300/60 px-3 py-2">
 					<span class="min-w-0 flex-1 truncate text-sm">
 						{label(entity)}
-						{#if i === 0}<span class="ml-1 badge badge-sm badge-primary">главное</span>{/if}
+						{#if hint && i === 0}<span class="ml-1 badge badge-sm badge-primary">главное</span>{/if}
 					</span>
 					<button
 						type="button"
@@ -112,7 +117,7 @@
 		</ol>
 	{/if}
 
-	{#if selected.length < LIMITS.entities}
+	{#if selected.length < max}
 		<div class="relative">
 			<label class="input w-full">
 				<span class="sr-only">Найти произведение</span>

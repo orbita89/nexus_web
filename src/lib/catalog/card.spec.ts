@@ -90,15 +90,14 @@ describe('originalTitle', () => {
 describe('relatedGroups', () => {
 	const summary = (slug: string) => ({ id: slug, slug, kind: 'movie' as const, title: slug });
 
-	it('нет поля related или все группы пустые — ничего', () => {
+	it('все группы пустые — ничего', () => {
 		expect(relatedGroups(dune)).toEqual([]);
-		expect(relatedGroups({ ...dune, related: { prequels: [], sequels: null } })).toEqual([]);
 	});
 
 	it('только непустые группы, в порядке приквелы → сиквелы → ремейки', () => {
 		const groups = relatedGroups({
 			...dune,
-			related: { remakes: [summary('dune-1984')], sequels: [summary('dune-2')] }
+			related: { prequels: [], remakes: [summary('dune-1984')], sequels: [summary('dune-2')] }
 		});
 		expect(groups.map((g) => g.title)).toEqual(['Сиквелы', 'Ремейки']);
 		expect(groups[0].items.map((e) => e.slug)).toEqual(['dune-2']);

@@ -9,6 +9,7 @@ import type {
 	SchemaEntitySummary,
 	SchemaMovieMetadata,
 	SchemaPersonRef,
+	SchemaRelatedWorks,
 	SchemaSeriesMetadata
 } from '#lib/api/generated/catalog.ts';
 import { countryName, formatDate, leadRole, metadataFields, roleLabel, yearOf } from './labels.ts';
@@ -137,32 +138,20 @@ export function aboutRows(entity: SchemaEntityDetail): FactRow[] {
 export const RECOMMENDATIONS_API = false;
 
 /** Связанные произведения: приквелы, сиквелы, ремейки — по порядку выхода. */
-export interface RelatedWorks {
-	prequels?: SchemaEntitySummary[] | null;
-	sequels?: SchemaEntitySummary[] | null;
-	remakes?: SchemaEntitySummary[] | null;
-}
-
 const RELATED_GROUPS = [
 	{ key: 'prequels', title: 'Приквелы' },
 	{ key: 'sequels', title: 'Сиквелы' },
 	{ key: 'remakes', title: 'Ремейки' }
 ] as const;
 
-/**
- * Непустые группы связанных: [{ title: 'Сиквелы', items }]. Нет связей — []: раздел не рисуется.
- * Поля `related` в контракте ещё нет (docs/backend-questions.md) — читаем его, если бэкенд уже
- * присылает: появится в EntityDetail — раздел на карточке появится сам.
- */
-export function relatedGroups(
-	entity: object
-): { key: keyof RelatedWorks; title: string; items: SchemaEntitySummary[] }[] {
-	const related =
-		'related' in entity && entity.related && typeof entity.related === 'object'
-			? (entity.related as RelatedWorks)
-			: {};
-	return RELATED_GROUPS.map((g) => ({ ...g, items: related[g.key] ?? [] })).filter(
-		(g) => Array.isArray(g.items) && g.items.length > 0
+/** Непустые группы связанных: [{ title: 'Сиквелы', items }]. Нет связей — []: раздел не рисуется. */
+export function relatedGroups(entity: Pick<SchemaEntityDetail, 'related'>): {
+	key: keyof SchemaRelatedWorks;
+	title: string;
+	items: SchemaEntitySummary[];
+}[] {
+	return RELATED_GROUPS.map((g) => ({ ...g, items: entity.related[g.key] })).filter(
+		(g) => g.items.length > 0
 	);
 }
 

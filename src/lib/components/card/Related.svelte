@@ -1,11 +1,12 @@
 <script lang="ts">
+	import type { SchemaEntityDetail } from '#lib/api/generated/catalog.ts';
 	import { relatedGroups } from '#lib/catalog/card.ts';
 	import PosterStrip from '#lib/components/catalog/PosterStrip.svelte';
 
 	// Приквелы, сиквелы и ремейки — полосами постеров. Только непустые группы; нет ни одной — раздела
-	// нет вовсе (у большинства произведений связей нет). Данные — из каталога (поле related в
-	// карточке, см. relatedGroups), то есть в статическом HTML.
-	let { entity }: { entity: object } = $props();
+	// нет вовсе (у большинства произведений связей нет). Данные — из каталога (EntityDetail.related),
+	// то есть в статическом HTML.
+	let { entity }: { entity: SchemaEntityDetail } = $props();
 
 	const groups = $derived(relatedGroups(entity));
 	// «Сиквелы», «Приквелы и сиквелы», «Приквелы, сиквелы и ремейки».

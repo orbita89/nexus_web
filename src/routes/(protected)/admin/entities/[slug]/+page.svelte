@@ -12,6 +12,7 @@
 	import CreditsEditor from '#lib/components/admin/CreditsEditor.svelte';
 	import EntityForm from '#lib/components/admin/EntityForm.svelte';
 	import JobLog from '#lib/components/admin/JobLog.svelte';
+	import RelationsEditor from '#lib/components/admin/RelationsEditor.svelte';
 
 	let entity = $state<SchemaEntityDetail | null>(null);
 	let error = $state('');
@@ -130,6 +131,10 @@
 			credits={entity.credits}
 			onchange={() => load(entity!.slug)}
 		/>
+	</div>
+
+	<div class="mt-10 max-w-3xl">
+		<RelationsEditor {entity} onchange={(related) => (entity = { ...entity!, related })} />
 	</div>
 
 	<section class="mt-10 max-w-3xl border-t border-base-300 pt-6">
