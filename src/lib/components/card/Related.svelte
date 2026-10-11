@@ -1,37 +1,20 @@
 <script lang="ts">
 	import type { SchemaEntityDetail } from '#lib/api/generated/catalog.ts';
-	import { relatedGroups } from '#lib/catalog/card.ts';
+	import { relatedWorks } from '#lib/catalog/card.ts';
 	import PosterStrip from '#lib/components/catalog/PosterStrip.svelte';
 
-	// Приквелы, сиквелы и ремейки — полосами постеров. Только непустые группы; нет ни одной — раздела
-	// нет вовсе (у большинства произведений связей нет). Данные — из каталога (EntityDetail.related),
-	// то есть в статическом HTML.
+	// Приквелы, сиквелы и ремейки — одной каруселью по хронологии франшизы, у каждого постера —
+	// подпись связи. Нет связей — раздела нет (у большинства произведений их нет). Данные — из
+	// каталога (EntityDetail.related), то есть в статическом HTML.
 	let { entity }: { entity: SchemaEntityDetail } = $props();
 
-	const groups = $derived(relatedGroups(entity));
-	// «Сиквелы», «Приквелы и сиквелы», «Приквелы, сиквелы и ремейки».
-	const title = $derived.by(() => {
-		const words = groups.map((g, i) => (i ? g.title.toLowerCase() : g.title));
-		return words.length > 1 ? `${words.slice(0, -1).join(', ')} и ${words.at(-1)}` : words[0];
-	});
+	const works = $derived(relatedWorks(entity));
+	const badges = $derived(Object.fromEntries(works.map((w) => [w.item.id, w.label])));
 </script>
 
-{#if groups.length}
+{#if works.length}
 	<section aria-labelledby="related-title" class="mb-14">
-		<h2 id="related-title" class="mb-4 text-2xl font-bold">
-			{title}
-		</h2>
-		<div class="flex flex-col gap-6">
-			{#each groups as group (group.key)}
-				<div>
-					{#if groups.length > 1}
-						<h3 class="mb-2 text-xs font-semibold tracking-widest text-base-content/50 uppercase">
-							{group.title}
-						</h3>
-					{/if}
-					<PosterStrip entities={group.items} label={group.title} />
-				</div>
-			{/each}
-		</div>
+		<h2 id="related-title" class="mb-4 text-2xl font-bold">Связанные</h2>
+		<PosterStrip entities={works.map((w) => w.item)} label="Связанные" {badges} />
 	</section>
 {/if}

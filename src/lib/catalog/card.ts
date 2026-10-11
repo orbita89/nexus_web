@@ -6,11 +6,10 @@ import type {
 	SchemaEntityCredit,
 	SchemaEntityDetail,
 	SchemaEntityKind,
-	SchemaEntitySummary,
 	SchemaGameMetadata,
 	SchemaMovieMetadata,
 	SchemaPersonRef,
-	SchemaRelatedWorks,
+	SchemaRelatedWork,
 	SchemaSeriesMetadata
 } from '#lib/api/generated/catalog.ts';
 import { countryName, formatDate, leadRole, metadataFields, roleLabel, yearOf } from './labels.ts';
@@ -183,21 +182,31 @@ export function productionOf(
 	};
 }
 
-const RELATED_GROUPS = [
-	{ key: 'prequels', title: 'Приквелы' },
-	{ key: 'sequels', title: 'Сиквелы' },
-	{ key: 'remakes', title: 'Ремейки' }
-] as const;
+/** Подпись связи у постера в карусели «Связанные». */
+export type RelatedLabel = 'Приквел' | 'Сиквел' | 'Ремейк' | 'Оригинал';
 
-/** Непустые группы связанных: [{ title: 'Сиквелы', items }]. Нет связей — []: раздел не рисуется. */
-export function relatedGroups(entity: Pick<SchemaEntityDetail, 'related'>): {
-	key: keyof SchemaRelatedWorks;
-	title: string;
-	items: SchemaEntitySummary[];
-}[] {
-	return RELATED_GROUPS.map((g) => ({ ...g, items: entity.related[g.key] })).filter(
-		(g) => g.items.length > 0
-	);
+/**
+ * Карусель «Связанные»: приквелы, сиквелы и ремейки одной полосой, как прислал бэкенд
+ * (хронологически, без даты — в конце). У каждого — подпись связи; ремейк, вышедший раньше
+ * текущего произведения, — «Оригинал». Нет связей — []: раздел не рисуется.
+ */
+export function relatedWorks(
+	entity: Pick<SchemaEntityDetail, 'related' | 'release_date'>
+): { item: SchemaRelatedWork; label: RelatedLabel }[] {
+	return entity.related.map((item) => ({ item, label: relatedLabel(item, entity.release_date) }));
+}
+
+function relatedLabel(item: SchemaRelatedWork, releaseDate?: string | null): RelatedLabel {
+	switch (item.relation) {
+		case 'prequel':
+			return 'Приквел';
+		case 'sequel':
+			return 'Сиквел';
+		case 'remake':
+			return item.release_date && releaseDate && item.release_date < releaseDate
+				? 'Оригинал'
+				: 'Ремейк';
+	}
 }
 
 /**

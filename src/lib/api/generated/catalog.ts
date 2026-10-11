@@ -580,7 +580,7 @@ export interface components {
 		/** @description Карточка: сущность, теги, участники в порядке титров и связанные произведения. */
 		EntityDetail: components['schemas']['Entity'] & {
 			credits: components['schemas']['EntityCredit'][];
-			related: components['schemas']['RelatedWorks'];
+			related: components['schemas']['RelatedWork'][];
 			tags: components['schemas']['Tag'][];
 		};
 		/**
@@ -917,17 +917,15 @@ export interface components {
 			 */
 			previous_version: string;
 		};
-		/** @description Связанные произведения, каждая группа — по дате выхода (без даты — в конце). Пустые — `[]`. */
-		RelatedWorks: {
-			/** @description Это сиквел для них. */
-			prequels: components['schemas']['EntitySummary'][];
-			/** @description Ремейки в обе стороны: оригинал видит ремейки, ремейк — оригинал. */
-			remakes: components['schemas']['EntitySummary'][];
-			/** @description Сиквелы этого. */
-			sequels: components['schemas']['EntitySummary'][];
+		/**
+		 * @description Связанное произведение в общей ленте карусели: сиквелы, ремейки и приквелы идут одним
+		 *     списком хронологически (по `release_date`, без даты — в конце), у каждой карточки — тип связи.
+		 */
+		RelatedWork: components['schemas']['EntitySummary'] & {
+			relation: components['schemas']['RelationKind'];
 		};
 		/**
-		 * @description Вид связи в админке. `prequel` — то же, что `sequel` в обратную сторону.
+		 * @description Вид связи в админке и в `related` карточки. `prequel` — то же, что `sequel` в обратную сторону.
 		 * @enum {string}
 		 */
 		RelationKind: 'sequel' | 'prequel' | 'remake';
@@ -1126,7 +1124,7 @@ export type SchemaPlannedStep = components['schemas']['PlannedStep'];
 export type SchemaProgressEvent = components['schemas']['ProgressEvent'];
 export type SchemaPutRelation = components['schemas']['PutRelation'];
 export type SchemaReindexResult = components['schemas']['ReindexResult'];
-export type SchemaRelatedWorks = components['schemas']['RelatedWorks'];
+export type SchemaRelatedWork = components['schemas']['RelatedWork'];
 export type SchemaRelationKind = components['schemas']['RelationKind'];
 export type SchemaSeriesMetadata = components['schemas']['SeriesMetadata'];
 export type SchemaSeriesStatus = components['schemas']['SeriesStatus'];
@@ -1462,13 +1460,13 @@ export interface operations {
 			};
 		};
 		responses: {
-			/** @description Связанные произведения сущности после правки */
+			/** @description Связанные произведения сущности после правки (общая лента для карусели) */
 			200: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
-					'application/json': components['schemas']['RelatedWorks'];
+					'application/json': components['schemas']['RelatedWork'][];
 				};
 			};
 			/** @description Неверные поля или `to_id` не найдена */

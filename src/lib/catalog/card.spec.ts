@@ -7,7 +7,7 @@ import {
 	originalTitle,
 	peopleCard,
 	productionOf,
-	relatedGroups
+	relatedWorks
 } from './card';
 
 let n = 0;
@@ -32,7 +32,7 @@ const dune: SchemaEntityDetail = {
 		{ id: 't1', slug: 'sci-fi', name: 'Научная фантастика', kind: 'genre' },
 		{ id: 't2', slug: 'drama', name: 'Драма', kind: 'genre' }
 	],
-	related: { prequels: [], sequels: [], remakes: [] },
+	related: [],
 	credits: [
 		credit('director', 'Вильнёв'),
 		credit('actor', 'Шаламе', 'Пол Атрейдес'),
@@ -88,20 +88,35 @@ describe('originalTitle', () => {
 	});
 });
 
-describe('relatedGroups', () => {
-	const summary = (slug: string) => ({ id: slug, slug, kind: 'movie' as const, title: slug });
+describe('relatedWorks', () => {
+	const work = (
+		slug: string,
+		relation: 'prequel' | 'sequel' | 'remake',
+		release_date: string | null
+	) => ({ id: slug, slug, kind: 'movie' as const, title: slug, relation, release_date });
 
-	it('все группы пустые — ничего', () => {
-		expect(relatedGroups(dune)).toEqual([]);
+	it('связей нет — ничего', () => {
+		expect(relatedWorks(dune)).toEqual([]);
 	});
 
-	it('только непустые группы, в порядке приквелы → сиквелы → ремейки', () => {
-		const groups = relatedGroups({
-			...dune,
-			related: { prequels: [], remakes: [summary('dune-1984')], sequels: [summary('dune-2')] }
+	it('одна лента в порядке бэкенда, у каждой — подпись; старший ремейк — «Оригинал»', () => {
+		const works = relatedWorks({
+			release_date: '2021-10-22',
+			related: [
+				work('dune-1984', 'remake', '1984-12-14'),
+				work('prequel', 'prequel', '2019-01-01'),
+				work('dune-2', 'sequel', '2024-03-01'),
+				work('dune-2030', 'remake', '2030-01-01'),
+				work('undated', 'sequel', null)
+			]
 		});
-		expect(groups.map((g) => g.title)).toEqual(['Сиквелы', 'Ремейки']);
-		expect(groups[0].items.map((e) => e.slug)).toEqual(['dune-2']);
+		expect(works.map((w) => [w.item.slug, w.label])).toEqual([
+			['dune-1984', 'Оригинал'],
+			['prequel', 'Приквел'],
+			['dune-2', 'Сиквел'],
+			['dune-2030', 'Ремейк'],
+			['undated', 'Сиквел']
+		]);
 	});
 });
 

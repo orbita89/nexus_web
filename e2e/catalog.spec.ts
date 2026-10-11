@@ -68,13 +68,14 @@ test('карточка: «О фильме», переход на человек�
 	await expect(about.getByRole('term').filter({ hasText: /^Режиссёр$/ })).toHaveCount(0);
 	await expect(about.getByRole('list', { name: 'Режиссёр' })).toContainText('Дени Вильнёв');
 
-	// Связанные — из карточки (статика): у «Дюны» 2021 сиквел и ремейк, приквелов нет.
-	await expect(page.getByRole('heading', { name: 'Сиквелы и ремейки', level: 2 })).toBeVisible();
-	await expect(page.getByRole('list', { name: 'Сиквелы' })).toContainText('Дюна: Часть вторая');
-	await expect(page.getByRole('list', { name: 'Ремейки' }).getByRole('link')).toHaveAttribute(
-		'href',
-		'/films/dune-1984'
-	);
+	// Связанные — из карточки (статика), одной каруселью по хронологии: оригинал 1984, затем сиквел.
+	await expect(page.getByRole('heading', { name: 'Связанные', level: 2 })).toBeVisible();
+	const related = page.getByRole('list', { name: 'Связанные' }).getByRole('listitem');
+	await expect(related).toHaveCount(2);
+	await expect(related.nth(0)).toContainText('Оригинал');
+	await expect(related.nth(0).getByRole('link')).toHaveAttribute('href', '/films/dune-1984');
+	await expect(related.nth(1)).toContainText('Сиквел');
+	await expect(related.nth(1)).toContainText('Дюна: Часть вторая');
 	// Рекомендации — подборка бэкенда, грузится в браузере.
 	const recommendations = page.getByRole('list', { name: 'Рекомендации' });
 	await expect(recommendations.getByRole('link').first()).toBeVisible();

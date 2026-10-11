@@ -2,7 +2,7 @@
 	import { errorMessage, unwrap } from '#lib/api/errors.ts';
 	import type {
 		SchemaEntityDetail,
-		SchemaRelatedWorks,
+		SchemaRelatedWork,
 		SchemaRelationKind
 	} from '#lib/api/generated/catalog.ts';
 	import { api } from '#lib/auth/session.svelte.ts';
@@ -18,23 +18,23 @@
 		onchange
 	}: {
 		entity: Pick<SchemaEntityDetail, 'id' | 'related'>;
-		onchange: (related: SchemaRelatedWorks) => void;
+		onchange: (related: SchemaRelatedWork[]) => void;
 	} = $props();
 
-	const GROUPS: { key: keyof SchemaRelatedWorks; kind: SchemaRelationKind; title: string }[] = [
-		{ key: 'prequels', kind: 'prequel', title: 'Приквел' },
-		{ key: 'sequels', kind: 'sequel', title: 'Сиквел' },
-		{ key: 'remakes', kind: 'remake', title: 'Ремейк' }
+	const KINDS: { kind: SchemaRelationKind; title: string }[] = [
+		{ kind: 'prequel', title: 'Приквел' },
+		{ kind: 'sequel', title: 'Сиквел' },
+		{ kind: 'remake', title: 'Ремейк' }
 	];
+	const TITLE = Object.fromEntries(KINDS.map((k) => [k.kind, k.title])) as Record<
+		SchemaRelationKind,
+		string
+	>;
 
 	let kind = $state<SchemaRelationKind>('sequel');
 	let picked = $state<PickedEntity[]>([]);
 	let busy = $state(false);
 	let error = $state('');
-
-	const rows = $derived(
-		GROUPS.flatMap((g) => entity.related[g.key].map((item) => ({ ...g, item })))
-	);
 
 	async function add(event: SubmitEvent) {
 		event.preventDefault();
@@ -58,7 +58,7 @@
 		}
 	}
 
-	async function remove(toId: string, relation: SchemaRelationKind, key: keyof SchemaRelatedWorks) {
+	async function remove(toId: string, relation: SchemaRelationKind) {
 		busy = true;
 		error = '';
 		try {
@@ -67,7 +67,7 @@
 					params: { path: { id: entity.id, to_id: toId }, query: { kind: relation } }
 				})
 			);
-			onchange({ ...entity.related, [key]: entity.related[key].filter((e) => e.id !== toId) });
+			onchange(entity.related.filter((e) => !(e.id === toId && e.relation === relation)));
 		} catch (e) {
 			error = errorMessage(e);
 		} finally {
@@ -78,22 +78,22 @@
 
 <section aria-labelledby="relations-title">
 	<h2 id="relations-title" class="mb-3 text-xl font-bold">Связанные</h2>
-	{#if rows.length}
+	{#if entity.related.length}
 		<div class="overflow-x-auto rounded-box border border-base-300">
 			<table class="table table-sm" aria-label="Связанные произведения">
 				<tbody>
-					{#each rows as row (row.kind + row.item.id)}
+					{#each entity.related as item (item.relation + item.id)}
 						<tr>
-							<td class="w-28 text-base-content/60">{row.title}</td>
+							<td class="w-28 text-base-content/60">{TITLE[item.relation]}</td>
 							<td>
-								<a href={entityHref(row.item)} class="link link-hover">{titleWithYear(row.item)}</a>
+								<a href={entityHref(item)} class="link link-hover">{titleWithYear(item)}</a>
 							</td>
 							<td class="text-right">
 								<button
 									class="btn btn-ghost btn-xs"
-									aria-label="Убрать связь: {row.item.title}"
+									aria-label="Убрать связь: {item.title}"
 									disabled={busy}
-									onclick={() => remove(row.item.id, row.kind, row.key)}>Убрать</button
+									onclick={() => remove(item.id, item.relation)}>Убрать</button
 								>
 							</td>
 						</tr>
@@ -109,7 +109,7 @@
 		<fieldset class="fieldset">
 			<legend class="fieldset-legend">Вид связи</legend>
 			<select class="select w-48" bind:value={kind} aria-label="Вид связи">
-				{#each GROUPS as g (g.kind)}<option value={g.kind}>{g.title}</option>{/each}
+				{#each KINDS as k (k.kind)}<option value={k.kind}>{k.title}</option>{/each}
 			</select>
 		</fieldset>
 		<EntityPicker bind:selected={picked} hint={false} max={1} />
