@@ -60,9 +60,10 @@ test('карточка: «О фильме», переход на человек�
 		'href',
 		'/films/dune-1984'
 	);
-	const recommendations = page.getByRole('region', { name: 'Рекомендации' });
-	await expect(recommendations).toContainText('Подборка похожих появится позже');
-	await expect(recommendations.getByRole('link')).toHaveCount(0);
+	// Рекомендации — подборка бэкенда, грузится в браузере.
+	const recommendations = page.getByRole('list', { name: 'Рекомендации' });
+	await expect(recommendations.getByRole('link').first()).toBeVisible();
+	await expect(recommendations.locator('a[href="/films/dune-2021"]')).toHaveCount(0);
 	await about
 		.getByRole('list', { name: 'Режиссёр' })
 		.getByRole('link', { name: /Дени Вильнёв/ })

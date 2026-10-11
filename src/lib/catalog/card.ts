@@ -1,7 +1,6 @@
 // Данные карточки в том виде, в каком их показывает страница: таблица «О фильме» как у
-// Кинопоиска, плашка «Режиссёр и актёры», связанные произведения. Всё — из EntityDetail; чего в
-// API ещё нет (студии, награды, факты, рекомендации), карточка показывает заглушками, а связей
-// нет — раздела нет.
+// Кинопоиска, плашка «Режиссёр и актёры», связанные произведения. Всё — из EntityDetail; нет
+// данных (связей, студий, наград) — нет и блока.
 import type {
 	SchemaEntityCredit,
 	SchemaEntityDetail,
@@ -130,12 +129,6 @@ export function aboutRows(entity: SchemaEntityDetail): FactRow[] {
 	];
 	return rows.filter((r): r is FactRow => !!r);
 }
-
-/**
- * «Рекомендации» подбирает бэкенд: GET /catalog/entities/{slug}/similar. Пока эндпоинта нет — на
- * карточке заглушка и запросов нет (docs/backend-questions.md). Появится — true.
- */
-export const RECOMMENDATIONS_API = false;
 
 /** Связанные произведения: приквелы, сиквелы, ремейки — по порядку выхода. */
 const RELATED_GROUPS = [
