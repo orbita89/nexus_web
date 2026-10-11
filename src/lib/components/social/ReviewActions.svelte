@@ -1,23 +1,50 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { errorMessage } from '#lib/api/errors.ts';
 	import type { SchemaReview } from '#lib/api/generated/social.ts';
 	import { session } from '#lib/auth/session.svelte.ts';
-	import { ReviewVote, reviewCount, type Vote } from '#lib/social/review-votes.svelte.ts';
+	import { useMyVotes } from '#lib/social/review-votes.svelte.ts';
+	import { applyVote, type Vote } from '#lib/social/reviews.ts';
 	import { loginUrl } from '#lib/utils/redirect.ts';
 	import ReviewComments from './ReviewComments.svelte';
 
 	// Под рецензией: 👍 / 👎 (взаимоисключающие, повторный клик снимает) и «Комментарии» —
 	// раскрывает ReviewComments. За свою рецензию голосовать нельзя (числа видно). Гостю — вход.
-	// Счётчики — из рецензии, если бэкенд их присылает; свой голос (пока в браузере) прибавляется.
+	// Свой голос — из общих голосов страницы (MyVotes); нажатие меняет числа сразу, после ответа —
+	// числа сервера, ошибка — откат.
 	let { review }: { review: SchemaReview } = $props();
 
-	const vote = new ReviewVote(() => review.id);
+	const votes = useMyVotes();
 	let open = $state(false);
+	let busy = $state(false);
+	let error = $state('');
+
+	// Числа — из рецензии; после голоса — из ответа, пока рецензию не перечитали.
+	let likes = $derived(review.likes_count);
+	let dislikes = $derived(review.dislikes_count);
+	const myVote = $derived(votes.votes[review.id] ?? null);
 
 	const own = $derived(session.user?.id === review.author.id);
-	const likes = $derived(reviewCount(review, 'likes_count') + (vote.vote === 1 ? 1 : 0));
-	const dislikes = $derived(reviewCount(review, 'dislikes_count') + (vote.vote === -1 ? 1 : 0));
-	const comments = $derived(reviewCount(review, 'comments_count'));
+	const comments = $derived(review.comments_count);
+
+	async function toggle(value: Vote) {
+		if (busy) return;
+		const before = { likes, dislikes, vote: myVote };
+		const next = applyVote(before, value);
+		({ likes, dislikes } = next);
+		votes.set(review.id, next.vote);
+		busy = true;
+		error = '';
+		try {
+			({ likes, dislikes } = await votes.send(review.id, next.vote));
+		} catch (e) {
+			({ likes, dislikes } = before);
+			votes.set(review.id, before.vote);
+			error = errorMessage(e);
+		} finally {
+			busy = false;
+		}
+	}
 
 	const action =
 		'inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-sm text-base-content/55 transition-colors hover:bg-base-content/5 hover:text-base-content disabled:pointer-events-none';
@@ -40,7 +67,7 @@
 {/snippet}
 
 {#snippet voteButton(value: Vote, label: string, count: number)}
-	{@const on = vote.vote === value}
+	{@const on = myVote === value}
 	{#if session.status === 'guest'}
 		<a href={loginUrl(page.url)} class={action} aria-label={label}
 			>{@render thumb(value === -1, false)}{#if count}<span class="tabular-nums">{count}</span
@@ -53,7 +80,7 @@
 			aria-pressed={on}
 			disabled={own || session.status !== 'authed'}
 			title={own ? 'Своя рецензия' : undefined}
-			onclick={() => vote.toggle(value)}
+			onclick={() => toggle(value)}
 			>{@render thumb(value === -1, on)}{#if count}<span class="tabular-nums">{count}</span
 				>{/if}</button
 		>
@@ -85,4 +112,5 @@
 		Комментарии{#if comments}<span class="tabular-nums">{comments}</span>{/if}
 	</button>
 </div>
+{#if error}<p role="alert" class="mt-1 text-xs text-error">{error}</p>{/if}
 {#if open}<ReviewComments reviewId={review.id} />{/if}

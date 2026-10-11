@@ -59,6 +59,41 @@ test('гость: средняя в шапке ведёт ко всем реце
 	expect(ratings.map(Number)).toEqual([...ratings.map(Number)].sort((a, b) => b - a));
 });
 
+test('голоса за рецензию: лайк, перенос, свой голос после перезагрузки, снять', async ({
+	page,
+	request
+}) => {
+	await registerAndSignIn(page, request, 'vote');
+	await page.goto('/films/dune-2021');
+	await toFeed(page);
+	const seeded = reviewsList(page)
+		.getByRole('article')
+		.filter({ hasText: 'Вильнёв сделал невозможное' });
+	const like = seeded.getByRole('button', { name: 'Нравится', exact: true });
+	const dislike = seeded.getByRole('button', { name: 'Не нравится', exact: true });
+	await expect(like).toHaveAttribute('aria-pressed', 'false');
+	const likes = Number((await like.textContent())?.trim() || 0);
+	const dislikes = Number((await dislike.textContent())?.trim() || 0);
+
+	await like.click();
+	await expect(like).toHaveAttribute('aria-pressed', 'true');
+	await expect(like).toHaveText(String(likes + 1));
+
+	// Свой голос приходит одним запросом votes/mine.
+	await page.reload();
+	await toFeed(page);
+	await expect(like).toHaveAttribute('aria-pressed', 'true');
+
+	await dislike.click();
+	await expect(dislike).toHaveAttribute('aria-pressed', 'true');
+	await expect(like).toHaveAttribute('aria-pressed', 'false');
+	await expect(dislike).toHaveText(String(dislikes + 1));
+
+	await dislike.click();
+	await expect(dislike).toHaveAttribute('aria-pressed', 'false');
+	await expect(like).toHaveText(likes ? String(likes) : '');
+});
+
 test('вошедший: «Оценить» в шапке, рецензия в ленте, правка, удаление', async ({
 	page,
 	request

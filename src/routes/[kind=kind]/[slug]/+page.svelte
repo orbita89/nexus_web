@@ -26,6 +26,7 @@
 	import { browserApi, CardLive, liveQuery } from '#lib/social/card-live.svelte.ts';
 	import { Marks } from '#lib/social/marks.svelte.ts';
 	import { MyReviewState } from '#lib/social/my-review.svelte.ts';
+	import { provideMyVotes } from '#lib/social/review-votes.svelte.ts';
 	import { Watch } from '#lib/social/watch.svelte.ts';
 	import type { PageProps } from './$types';
 
@@ -84,6 +85,8 @@
 	);
 	// «Посмотреть позже» / «Просмотрено» — пока в браузере, API нет.
 	const viewing = new Marks(() => entity.slug);
+	// Свои голоса за рецензии — одним запросом на карточку, для всех рецензий ленты.
+	provideMyVotes(() => entity.slug);
 	const my = new MyReviewState(
 		() => entity.slug,
 		() => live.refresh()

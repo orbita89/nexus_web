@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+	applyVote,
 	displayName,
 	formatRating,
 	isEdited,
@@ -68,5 +69,22 @@ describe('isSpoiler', () => {
 		expect(isSpoiler({ is_spoiler: true, body: 'Пол выживает' })).toBe(true);
 		expect(isSpoiler({ is_spoiler: false, body: 'Пол выживает' })).toBe(false);
 		expect(isSpoiler({ is_spoiler: true, body: null })).toBe(false);
+	});
+});
+
+describe('applyVote', () => {
+	const base = { likes: 2, dislikes: 1, vote: null };
+	it('ставит, переносит и снимает голос', () => {
+		expect(applyVote(base, 1)).toEqual({ likes: 3, dislikes: 1, vote: 1 });
+		expect(applyVote({ likes: 3, dislikes: 1, vote: 1 }, -1)).toEqual({
+			likes: 2,
+			dislikes: 2,
+			vote: -1
+		});
+		expect(applyVote({ likes: 3, dislikes: 1, vote: 1 }, 1)).toEqual({
+			likes: 2,
+			dislikes: 1,
+			vote: null
+		});
 	});
 });

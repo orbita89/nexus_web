@@ -10,6 +10,7 @@
 	import MyReview from '#lib/components/social/MyReview.svelte';
 	import ReviewCard from '#lib/components/social/ReviewCard.svelte';
 	import ReviewSortTabs from '#lib/components/social/ReviewSortTabs.svelte';
+	import { provideMyVotes } from '#lib/social/review-votes.svelte.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -17,6 +18,7 @@
 	const entity = $derived(data.entity);
 	const year = $derived(yearOf(entity.release_date));
 	const name = $derived(`${entity.title}${year ? ` (${year})` : ''}`);
+	provideMyVotes(() => entity.slug);
 </script>
 
 <Seo

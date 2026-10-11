@@ -68,3 +68,22 @@ export function isSpoiler(review: { is_spoiler: boolean; body?: string | null })
 }
 
 export const BODY_LIMIT = 10_000;
+
+export type Vote = 1 | -1;
+
+export interface VoteState {
+	likes: number;
+	dislikes: number;
+	vote: Vote | null;
+}
+
+/** Голос → что станет со счётчиками (до ответа сервера). Тот же голос ещё раз — снять. */
+export function applyVote(state: VoteState, value: Vote): VoteState {
+	const next = state.vote === value ? null : value;
+	let { likes, dislikes } = state;
+	if (state.vote === 1) likes--;
+	if (state.vote === -1) dislikes--;
+	if (next === 1) likes++;
+	if (next === -1) dislikes++;
+	return { likes: Math.max(0, likes), dislikes: Math.max(0, dislikes), vote: next };
+}
