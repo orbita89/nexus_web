@@ -1,7 +1,7 @@
 import { publicApi } from '#lib/api/client.ts';
 import { unwrap } from '#lib/api/errors.ts';
 import { KINDS } from '#lib/catalog/kinds.ts';
-import { settle } from '#lib/catalog/load.ts';
+import { ratingsFor, settle } from '#lib/catalog/load.ts';
 import type { PageLoad } from './$types';
 
 const STRIP_SIZE = 12;
@@ -24,8 +24,14 @@ export const load: PageLoad = async ({ fetch, url }) => {
 		),
 		settle(unwrap(api.catalog.GET('/api/v1/catalog/tags')))
 	]);
+	// Оценки всех полос — одним запросом.
+	const ratings = await ratingsFor(
+		api,
+		sections.flatMap((s) => s.result.data?.items ?? [])
+	);
 	return {
 		sections,
+		ratings,
 		// Популярные — с наибольшим числом сущностей; пустые теги не показываем.
 		tags: (tags.data ?? [])
 			.filter((t) => t.entities_count > 0)

@@ -51,6 +51,7 @@
 			entities={works.map((w) => w.entity)}
 			caption={(e) => captions.get(e.id)}
 			showKind
+			ratings={data.ratings}
 		/>
 	{:else}
 		<EmptyState title="Работ пока нет" />

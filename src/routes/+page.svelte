@@ -54,7 +54,11 @@
 			</h2>
 			<a href="/{section.slug}" class="link text-sm link-primary link-hover">Все →</a>
 		</div>
-		<PosterStrip entities={section.result.data!.items} label="Новинки: {section.title}" />
+		<PosterStrip
+			entities={section.result.data!.items}
+			label="Новинки: {section.title}"
+			ratings={data.ratings}
+		/>
 	</section>
 {/each}
 

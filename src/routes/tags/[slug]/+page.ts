@@ -1,7 +1,7 @@
 import { publicApi } from '#lib/api/client.ts';
 import { unwrap } from '#lib/api/errors.ts';
 import { kindBySlug } from '#lib/catalog/kinds.ts';
-import { orError, settle } from '#lib/catalog/load.ts';
+import { orError, ratingsFor, settle } from '#lib/catalog/load.ts';
 import { PAGE_SIZE, readOffset, readText } from '#lib/catalog/url.ts';
 import type { PageLoad } from './$types';
 
@@ -26,5 +26,6 @@ export const load: PageLoad = async ({ fetch, url, params }) => {
 			)
 		)
 	]);
-	return { tag, kind, list };
+	const ratings = await ratingsFor(api, list.data?.items ?? []);
+	return { tag, kind, list, ratings };
 };

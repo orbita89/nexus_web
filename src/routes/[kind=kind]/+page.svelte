@@ -3,6 +3,8 @@
 	import { page } from '$app/state';
 	import { formUrl } from '#lib/catalog/url.ts';
 	import { count } from '#lib/catalog/labels.ts';
+	import { DEFAULT_SORT, ENTITY_SORTS } from '#lib/catalog/sort.ts';
+	import SortTabs from '#lib/components/social/SortTabs.svelte';
 	import EmptyState from '#lib/components/catalog/EmptyState.svelte';
 	import EntityGrid from '#lib/components/catalog/EntityGrid.svelte';
 	import LoadError from '#lib/components/catalog/LoadError.svelte';
@@ -85,16 +87,22 @@
 			inputmode="numeric"
 		/>
 	</label>
+	<!-- Порядок не сбрасывается фильтрами: форма отправляет его вместе с ними. -->
+	{#if data.sort !== DEFAULT_SORT}<input type="hidden" name="sort" value={data.sort} />{/if}
 	<button class="btn btn-primary">Показать</button>
 	{#if filtered}
 		<a href="/{data.kind.slug}" class="btn btn-ghost">Сбросить</a>
 	{/if}
 </form>
 
+<div class="mb-6 overflow-x-auto">
+	<SortTabs options={ENTITY_SORTS} current={data.sort} fallback={DEFAULT_SORT} label="Порядок" />
+</div>
+
 {#if data.list.error}
 	<LoadError message={data.list.error} />
 {:else if data.list.data && data.list.data.items.length}
-	<EntityGrid entities={data.list.data.items} />
+	<EntityGrid entities={data.list.data.items} ratings={data.ratings} />
 	<Pagination
 		total={data.list.data.total}
 		limit={data.list.data.limit}

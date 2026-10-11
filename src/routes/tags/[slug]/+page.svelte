@@ -33,7 +33,7 @@
 {#if data.list.error}
 	<LoadError message={data.list.error} />
 {:else if data.list.data?.items.length}
-	<EntityGrid entities={data.list.data.items} showKind={!data.kind} />
+	<EntityGrid entities={data.list.data.items} showKind={!data.kind} ratings={data.ratings} />
 	<Pagination
 		total={data.list.data.total}
 		limit={data.list.data.limit}

@@ -87,7 +87,7 @@
 			'произведений'
 		])}
 	</p>
-	<EntityGrid entities={data.result.items} showKind={!data.kind} />
+	<EntityGrid entities={data.result.items} showKind={!data.kind} ratings={data.ratings} />
 	<Pagination total={data.result.total} limit={data.result.limit} offset={data.result.offset} />
 {:else}
 	<EmptyState title="Ничего не нашлось">

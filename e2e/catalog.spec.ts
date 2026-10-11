@@ -437,3 +437,30 @@ test('в подвале — атрибуция TMDB', async ({ page }) => {
 		'https://www.themoviedb.org/'
 	);
 });
+
+test('раздел: порядок в адресе, оценки на постерах одним запросом', async ({ page }) => {
+	let ratingRequests = 0;
+	page.on('request', (r) => {
+		if (r.url().includes('/api/v1/social/ratings')) ratingRequests++;
+	});
+	await page.goto('/films');
+	const order = page.getByRole('navigation', { name: 'Порядок' });
+	await expect(order.getByRole('link', { name: 'Новые' })).toHaveAttribute('aria-current', 'page');
+
+	await order.getByRole('link', { name: 'По оценке' }).click();
+	await expect(page).toHaveURL('/films?sort=rating');
+	const grid = page.getByRole('main').getByRole('list').last();
+	const badges = grid.getByLabel(/^Средняя оценка/);
+	await expect(badges.first()).toBeVisible();
+	const values = (await badges.allTextContents()).map((t) => Number(t.replace(',', '.')));
+	expect(values).toEqual(values.toSorted((a, b) => b - a));
+	// Сетка пришла с сервера или клиентской навигацией — оценки одним запросом на страницу.
+	expect(ratingRequests).toBeLessThanOrEqual(1);
+
+	// Фильтр не сбрасывает порядок; «Новые» в адрес не пишется.
+	await page.getByRole('searchbox', { name: 'Название' }).fill('Дюна');
+	await page.getByRole('button', { name: 'Показать' }).click();
+	await expect(page).toHaveURL(/[?&]sort=rating/);
+	await order.getByRole('link', { name: 'Новые' }).click();
+	await expect(page).not.toHaveURL(/sort=/);
+});
