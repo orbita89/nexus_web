@@ -69,6 +69,3 @@ export function provideMyVotes(slug: () => string | null): MyVotes {
 export function useMyVotes(): MyVotes {
 	return getContext<MyVotes | undefined>(KEY) ?? new MyVotes(() => null);
 }
-
-/** Комментарии к рецензиям: появится API — true (ReviewComments перестанет быть заглушкой). */
-export const REVIEW_COMMENTS_API = false;

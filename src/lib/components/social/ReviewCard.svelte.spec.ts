@@ -1,5 +1,5 @@
 import { page } from 'vitest/browser';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import type { SchemaReview } from '#lib/api/generated/social.ts';
 import '../../../routes/layout.css';
@@ -14,10 +14,18 @@ const review = (extra: object = {}): SchemaReview =>
 		updated_at: '2026-10-01T10:00:00Z',
 		author: { id: 'u1', username: 'paul' },
 		entity: { id: 'e1', kind: 'movie', slug: 'dune-2021', title: 'Дюна' },
+		is_spoiler: false,
+		likes_count: 2,
+		dislikes_count: 1,
+		comments_count: 1,
 		...extra
 	}) as SchemaReview;
 
 describe('ReviewCard', () => {
+	afterEach(() => {
+		vi.restoreAllMocks();
+	});
+
 	it('без спойлера — текст виден сразу', async () => {
 		render(ReviewCard, { review: review() });
 		await expect.element(page.getByText('Пол выживает в пустыне.')).toBeVisible();
@@ -47,15 +55,41 @@ describe('ReviewCard', () => {
 			.toHaveAttribute('aria-expanded', 'true');
 	});
 
-	it('под текстом — лайк, дизлайк и комментарии; комментарии раскрываются', async () => {
+	it('под текстом — лайк, дизлайк с числами и комментарии; комментарии грузятся по клику', async () => {
+		const comments = {
+			items: [
+				{
+					id: 'c1',
+					review_id: 'r1',
+					author: { id: 'u2', username: 'chani' },
+					body: 'Согласна про звук.',
+					created_at: '2026-10-02T10:00:00Z',
+					updated_at: '2026-10-02T10:00:00Z'
+				}
+			],
+			total: 1,
+			limit: 20,
+			offset: 0
+		};
+		const fetch = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+			new Response(JSON.stringify(comments), {
+				headers: { 'content-type': 'application/json' }
+			})
+		);
 		render(ReviewCard, { review: review() });
 		const actions = page.getByRole('group', { name: 'Реакции на рецензию' });
-		await expect.element(actions.getByLabelText('Нравится', { exact: true })).toBeInTheDocument();
-		await expect.element(actions.getByLabelText('Не нравится')).toBeInTheDocument();
+		await expect
+			.element(actions.getByLabelText('Нравится', { exact: true }))
+			.toHaveTextContent('2');
+		await expect.element(actions.getByLabelText('Не нравится')).toHaveTextContent('1');
 		const toggle = actions.getByRole('button', { name: /Комментарии/ });
 		await expect.element(toggle).toHaveAttribute('aria-expanded', 'false');
+		expect(fetch).not.toHaveBeenCalled();
 		await toggle.click();
 		await expect.element(toggle).toHaveAttribute('aria-expanded', 'true');
-		await expect.element(page.getByText('Комментарии к рецензиям появятся позже.')).toBeVisible();
+		await expect.element(page.getByText('Согласна про звук.')).toBeVisible();
+		expect(String((fetch.mock.calls[0][0] as Request).url)).toMatch(
+			/\/api\/v1\/social\/reviews\/r1\/comments\?limit=20&offset=0$/
+		);
 	});
 });

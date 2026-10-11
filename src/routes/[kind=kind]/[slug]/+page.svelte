@@ -57,8 +57,9 @@
 	onMount(() => (today = new Date().toISOString().slice(0, 10)));
 	const released = $derived(today === null || isReleased(entity.release_date, today));
 
-	// Чужие рецензии и темы о произведении — тихо перечитываем всё живое (пачку событий — одним
-	// разом); свои действия — тоже через live.refresh().
+	// Чужие рецензии, комментарии к ним (review.commented / review.comment_deleted — у рецензии
+	// меняется comments_count, открытый список перечитывается сам) и темы — тихо перечитываем всё
+	// живое (пачку событий — одним разом); свои действия — тоже через live.refresh().
 	const live = new CardLive();
 	const rating = liveQuery(
 		() => ({ slug: entity.slug, version: live.version }),

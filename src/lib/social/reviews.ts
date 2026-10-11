@@ -68,6 +68,7 @@ export function isSpoiler(review: { is_spoiler: boolean; body?: string | null })
 }
 
 export const BODY_LIMIT = 10_000;
+export const COMMENT_LIMIT = 2000;
 
 export type Vote = 1 | -1;
 

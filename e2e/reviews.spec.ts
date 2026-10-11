@@ -44,6 +44,9 @@ test('гость: средняя в шапке ведёт ко всем реце
 		'/auth/login?next=%2Ffilms%2Fdune-2021'
 	);
 	await seeded.getByRole('button', { name: /Комментарии/ }).click();
+	await expect(seeded.getByRole('list', { name: 'Комментарии' })).toContainText(
+		'Про звук согласен'
+	);
 	await expect(seeded).toContainText('Войдите, чтобы комментировать');
 
 	await average(page).click();
@@ -92,6 +95,34 @@ test('голоса за рецензию: лайк, перенос, свой г�
 	await dislike.click();
 	await expect(dislike).toHaveAttribute('aria-pressed', 'false');
 	await expect(like).toHaveText(likes ? String(likes) : '');
+});
+
+test('комментарии к рецензии: написать, счётчик, удалить своё', async ({ page, request }) => {
+	await registerAndSignIn(page, request, 'cmt');
+	await page.goto('/films/dune-2021');
+	await toFeed(page);
+	const seeded = reviewsList(page)
+		.getByRole('article')
+		.filter({ hasText: 'Вильнёв сделал невозможное' });
+	const toggle = seeded.getByRole('button', { name: /Комментарии/ });
+	const before = Number((await toggle.textContent())?.replace(/\D/g, '') || 0);
+	await toggle.click();
+	const list = seeded.getByRole('list', { name: 'Комментарии' });
+	await expect(list.getByRole('listitem')).toHaveCount(before);
+
+	const text = `e2e комментарий ${Date.now()}`;
+	await seeded.getByLabel('Ваш комментарий').fill(text);
+	await seeded.getByRole('button', { name: 'Отправить' }).click();
+	await expect(list).toContainText(text);
+	await expect(toggle).toHaveText(new RegExp(`Комментарии\\s*${before + 1}`));
+
+	await list
+		.getByRole('listitem')
+		.filter({ hasText: text })
+		.getByRole('button', { name: 'Удалить' })
+		.click();
+	await expect(list).not.toContainText(text);
+	await expect(toggle).toHaveText(new RegExp(`Комментарии\\s*${before}`));
 });
 
 test('вошедший: «Оценить» в шапке, рецензия в ленте, правка, удаление', async ({

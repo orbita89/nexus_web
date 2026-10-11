@@ -25,7 +25,8 @@
 	const myVote = $derived(votes.votes[review.id] ?? null);
 
 	const own = $derived(session.user?.id === review.author.id);
-	const comments = $derived(review.comments_count);
+	// Число комментариев: из рецензии, после своего комментария — из списка.
+	let comments = $derived(review.comments_count);
 
 	async function toggle(value: Vote) {
 		if (busy) return;
@@ -113,4 +114,8 @@
 	</button>
 </div>
 {#if error}<p role="alert" class="mt-1 text-xs text-error">{error}</p>{/if}
-{#if open}<ReviewComments reviewId={review.id} />{/if}
+{#if open}<ReviewComments
+		reviewId={review.id}
+		count={comments}
+		oncount={(n) => (comments = n)}
+	/>{/if}
