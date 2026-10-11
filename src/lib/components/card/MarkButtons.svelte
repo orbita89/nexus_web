@@ -2,7 +2,8 @@
 	import { page } from '$app/state';
 	import type { SchemaEntityKind } from '#lib/api/generated/catalog.ts';
 	import { session } from '#lib/auth/session.svelte.ts';
-	import { markLabels, type Mark, type Marks } from '#lib/social/marks.svelte.ts';
+	import { markLabels, type Mark } from '#lib/social/marks.ts';
+	import type { Marks } from '#lib/social/marks.svelte.ts';
 	import { loginUrl } from '#lib/utils/redirect.ts';
 
 	// «Посмотреть позже» (закладка) и «Просмотрено» (глаз) в шапке, под кнопками. Маленькие
@@ -58,3 +59,4 @@
 		{/if}
 	{/each}
 </div>
+{#if marks.error}<p role="alert" class="mt-2 text-sm text-error">{marks.error}</p>{/if}

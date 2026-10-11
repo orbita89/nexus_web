@@ -1,25 +1,15 @@
-// Личные отметки на карточке: «Посмотреть позже» и «Просмотрено» (у книг — прочитать, у игр —
-// пройти). Взаимоисключающие: просмотрел — из «позже» уходит. Потом — списки в личном кабинете.
-// API ещё нет (docs/backend-questions.md): пока отметки хранятся в браузере, у каждого
-// пользователя свои (ключ с id). Появится API — меняется только этот файл.
-import type { SchemaEntityKind } from '#lib/api/generated/catalog.ts';
-import { session } from '#lib/auth/session.svelte.ts';
-
-export type Mark = 'later' | 'done';
-
-const key = (userId: string) => `nexus.marks.${userId}`;
-
-function readAll(userId: string): Record<string, Mark> {
-	try {
-		return JSON.parse(localStorage.getItem(key(userId)) ?? '{}');
-	} catch {
-		return {};
-	}
-}
+// Отметка «Посмотреть позже» / «Просмотрено» на карточке: GET …/mark (404 — нет), PUT {kind},
+// DELETE. Личное — только у вошедшего, отдельным запросом с токеном. Нажатие меняет отметку
+// сразу, ошибка — откат и сообщение.
+import { ApiError, errorMessage, unwrap } from '#lib/api/errors.ts';
+import { api, session } from '#lib/auth/session.svelte.ts';
+import type { Mark } from './marks.ts';
 
 export class Marks {
 	/** null — нет отметки или ещё не знаем (гость, сессия грузится). */
 	mark = $state<Mark | null>(null);
+	busy = $state(false);
+	error = $state('');
 
 	#slug: () => string;
 
@@ -27,35 +17,49 @@ export class Marks {
 	constructor(slug: () => string) {
 		this.#slug = slug;
 		$effect(() => {
-			const id = session.user?.id;
-			this.mark = id ? (readAll(id)[slug()] ?? null) : null;
+			// Новая карточка или вход/выход — перечитать.
+			const current = slug();
+			this.mark = null;
+			this.error = '';
+			if (session.status !== 'authed') return;
+			let stale = false;
+			unwrap(
+				api.social.GET('/api/v1/social/entities/{slug}/mark', {
+					params: { path: { slug: current } }
+				})
+			)
+				.then((m) => !stale && (this.mark = m.kind))
+				.catch((e) => {
+					if (!stale && !(e instanceof ApiError && e.status === 404)) this.error = errorMessage(e);
+				});
+			return () => {
+				stale = true;
+			};
 		});
 	}
 
 	/** Поставить отметку; повторно ту же — снять. */
-	toggle(mark: Mark) {
-		const id = session.user?.id;
-		if (!id) return;
-		this.mark = this.mark === mark ? null : mark;
-		const all = readAll(id);
-		if (this.mark) all[this.#slug()] = this.mark;
-		else delete all[this.#slug()];
+	async toggle(mark: Mark) {
+		if (this.busy || session.status !== 'authed') return;
+		const before = this.mark;
+		const next = before === mark ? null : mark;
+		this.mark = next;
+		this.busy = true;
+		this.error = '';
+		const params = { path: { slug: this.#slug() } };
 		try {
-			localStorage.setItem(key(id), JSON.stringify(all));
-		} catch {
-			// приватный режим или квота — отметка живёт до перезагрузки
+			if (next) {
+				await unwrap(
+					api.social.PUT('/api/v1/social/entities/{slug}/mark', { params, body: { kind: next } })
+				);
+			} else {
+				await unwrap(api.social.DELETE('/api/v1/social/entities/{slug}/mark', { params }));
+			}
+		} catch (e) {
+			this.mark = before;
+			this.error = errorMessage(e);
+		} finally {
+			this.busy = false;
 		}
-	}
-}
-
-/** Подписи по типу: «Посмотреть позже» / «Просмотрено», «Прочитать позже» / «Прочитано»… */
-export function markLabels(kind: SchemaEntityKind): Record<Mark, string> {
-	switch (kind) {
-		case 'book':
-			return { later: 'Прочитать позже', done: 'Прочитано' };
-		case 'game':
-			return { later: 'Пройти позже', done: 'Пройдено' };
-		default:
-			return { later: 'Посмотреть позже', done: 'Просмотрено' };
 	}
 }

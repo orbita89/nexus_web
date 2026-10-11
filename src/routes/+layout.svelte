@@ -4,6 +4,8 @@
 	import Navbar from '#lib/components/Navbar.svelte';
 	import ReplyToasts from '#lib/components/social/ReplyToasts.svelte';
 	import { syncRealtimeAuth } from '#lib/realtime/realtime.svelte.ts';
+	import { dropLegacyStorage } from '#lib/utils/legacy-storage.ts';
+	import { onMount } from 'svelte';
 	import { KINDS } from '#lib/catalog/kinds.ts';
 	import type { LayoutProps } from './$types';
 
@@ -11,6 +13,13 @@
 
 	// Реалтайм-соединение входит и выходит вместе с сессией.
 	syncRealtimeAuth();
+	onMount(() => {
+		try {
+			dropLegacyStorage(localStorage);
+		} catch {
+			// localStorage недоступен (приватный режим) — чистить нечего
+		}
+	});
 </script>
 
 <svelte:head>
