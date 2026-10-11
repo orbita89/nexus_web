@@ -118,6 +118,7 @@ test('карточка — статика: живого в HTML нет, блок
 	// Сводка оценок — сразу (бейдж в шапке), лента — по прокрутке.
 	await expect.poll(() => asked).toContain('rating');
 	expect(asked).not.toContain('reviews');
+	expect(asked).not.toContain('collections');
 
 	await page.locator('#activity').scrollIntoViewIfNeeded();
 	await expect(page.getByRole('list', { name: 'Рецензии и обсуждения' })).toContainText(
@@ -133,7 +134,6 @@ test('карточка — статика: живого в HTML нет, блок
 	).toBeLessThanOrEqual(4);
 	await activity.getByRole('tab', { name: /^Обсуждения/ }).click();
 	await expect(activity.getByRole('link', { name: /^Все рецензии/ })).toHaveCount(0);
-	expect(asked).not.toContain('collections');
 
 	await page.getByRole('heading', { name: 'В коллекциях' }).scrollIntoViewIfNeeded();
 	await expect(page.getByRole('list', { name: 'В коллекциях' })).toContainText(

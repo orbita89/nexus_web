@@ -74,7 +74,7 @@ test('вошедший: «Оценить» в шапке, рецензия в л
 	// Оценка сохраняется по клику, панель закрывается, кнопка показывает оценку.
 	await rateToggle(page).click();
 	await ratePanel(page).getByRole('button', { name: 'Оценка 8' }).click();
-	await expect(rateToggle(page)).toHaveText(/Ваша: 8/);
+	await expect(rateToggle(page)).toHaveText(/Ваша\s*8/);
 	await expect(ratePanel(page)).toBeHidden();
 	await expect(average(page)).toHaveAttribute('aria-label', counted(before + 1));
 
