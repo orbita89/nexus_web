@@ -6,6 +6,7 @@ import {
 	isReleased,
 	originalTitle,
 	peopleCard,
+	productionOf,
 	relatedGroups
 } from './card';
 
@@ -119,5 +120,37 @@ describe('isReleased', () => {
 		expect(isReleased('2026-10-09', '2026-10-09')).toBe(true);
 		expect(isReleased('2021-09-03', '2026-10-09')).toBe(true);
 		expect(isReleased(null, '2026-10-09')).toBe(true);
+	});
+});
+
+describe('productionOf', () => {
+	it('нет студий, наград и фактов — null (блока нет)', () => {
+		expect(productionOf(dune)).toBeNull();
+	});
+
+	it('фильм: студии, сначала победы, факты', () => {
+		const p = productionOf({
+			...dune,
+			metadata: {
+				studios: ['Legendary'],
+				awards: [
+					{ title: 'Оскар — фильм', year: 2022, won: false },
+					{ title: 'Оскар — звук', year: 2022, won: true }
+				],
+				trivia: ['Иордания']
+			}
+		});
+		expect(p?.studiosTitle).toBe('Студии');
+		expect(p?.awards.map((a) => a.won)).toEqual([true, false]);
+		expect(p?.triviaTitle).toBe('Факты о съёмках');
+	});
+
+	it('игра — разработчик и издатель, книга — издательство', () => {
+		expect(
+			productionOf({ kind: 'game', metadata: { developer: 'CDPR', publisher: 'CDPR' } })?.studios
+		).toEqual(['CDPR']);
+		expect(productionOf({ kind: 'book', metadata: { publisher: 'Chilton' } })?.studiosTitle).toBe(
+			'Издательство'
+		);
 	});
 });

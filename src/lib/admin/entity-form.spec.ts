@@ -70,6 +70,29 @@ describe('toMetadata', () => {
 		});
 	});
 
+	it('студии (фильмы и сериалы), награды и факты (все типы)', () => {
+		const lists = {
+			studios: 'Legendary\n\n Warner Bros. \nLegendary',
+			awards: [
+				{ title: ' Оскар — звук ', year: '2022', won: true },
+				{ title: 'Оскар — фильм', year: '', won: false },
+				{ title: ' ', year: '2022', won: true }
+			],
+			trivia: [' Пустыню снимали в Иордании. ', '']
+		};
+		expect(toMetadata('movie', form(lists))).toEqual({
+			studios: ['Legendary', 'Warner Bros.'],
+			awards: [
+				{ title: 'Оскар — звук', year: 2022, won: true },
+				{ title: 'Оскар — фильм', year: null, won: false }
+			],
+			trivia: ['Пустыню снимали в Иордании.']
+		});
+		// У книг и игр студий нет — свои поля издателя и разработчика.
+		expect(toMetadata('book', form(lists))).not.toHaveProperty('studios');
+		expect(toMetadata('game', form(lists)).trivia).toEqual(['Пустыню снимали в Иордании.']);
+	});
+
 	it('пустая форма — пустая metadata', () => {
 		expect(toMetadata('movie', emptyMetadataForm())).toEqual({});
 	});
@@ -89,6 +112,18 @@ describe('fromMetadata', () => {
 		expect(toMetadata('movie', f)).toEqual(metadata);
 	});
 
+	it('списки туда и обратно', () => {
+		const metadata = {
+			studios: ['Legendary', 'Warner Bros.'],
+			awards: [{ title: 'Оскар', year: 2022, won: true }],
+			trivia: ['Факт']
+		};
+		const f = fromMetadata('series', metadata);
+		expect(f.studios).toBe('Legendary\nWarner Bros.');
+		expect(f.awards).toEqual([{ title: 'Оскар', year: '2022', won: true }]);
+		expect(toMetadata('series', f)).toEqual(metadata);
+	});
+
 	it('у книги трейлеров нет', () => {
 		expect(fromMetadata('book', { pages: 10 }).trailers).toEqual([]);
 	});
@@ -104,5 +139,22 @@ describe('metadataError', () => {
 		expect(metadataError('book', form({ pages: 'много' }))).toMatch(/Страниц/);
 		const trailers = Array.from({ length: 6 }, () => ({ provider: 'youtube' as const, id: 'x' }));
 		expect(metadataError('game', form({ trailers }))).toMatch(/5/);
+	});
+
+	it('лимиты студий, наград и фактов', () => {
+		const many = (n: number, text = 'x') => Array.from({ length: n }, (_, i) => `${text}${i}`);
+		expect(metadataError('movie', form({ studios: many(21).join('\n') }))).toMatch(/20 студий/);
+		expect(metadataError('movie', form({ studios: 'x'.repeat(121) }))).toMatch(/120/);
+		const award = (year: string) => ({ title: 'Оскар', year, won: true });
+		expect(metadataError('book', form({ awards: [award('1879')] }))).toMatch(/1880/);
+		expect(metadataError('book', form({ awards: [award('2022')] }))).toBeNull();
+		expect(
+			metadataError(
+				'game',
+				form({ awards: many(51).map((t) => ({ title: t, year: '', won: false })) })
+			)
+		).toMatch(/50 наград/);
+		expect(metadataError('game', form({ trivia: many(31) }))).toMatch(/30 фактов/);
+		expect(metadataError('game', form({ trivia: ['x'.repeat(1001)] }))).toMatch(/1000/);
 	});
 });

@@ -23,9 +23,11 @@
 	import {
 		detectProvider,
 		emptyMetadataForm,
+		LIMITS,
 		metadataError,
 		toMetadata,
 		TRAILER_LIMIT,
+		WITH_STUDIOS,
 		WITH_TRAILERS
 	} from '#lib/admin/entity-form.ts';
 	import { slugError, slugify } from '#lib/admin/slug.ts';
@@ -341,6 +343,87 @@
 						>＋ Трейлер</button
 					>
 				{/if}
+			{/if}
+		</fieldset>
+
+		<fieldset class="fieldset gap-3 rounded-box bg-base-200 p-4 ring-1 ring-base-300">
+			<legend class="fieldset-legend">Производство и факты</legend>
+			{#if WITH_STUDIOS.includes(form.kind)}
+				<label class="flex flex-col gap-1">
+					<span class="text-sm font-semibold">Студии — по одной в строке</span>
+					<textarea
+						class="textarea w-full"
+						rows="3"
+						placeholder="Legendary Pictures"
+						bind:value={form.metadata.studios}></textarea>
+				</label>
+			{/if}
+
+			<p class="text-sm font-semibold">Награды и номинации</p>
+			<ol class="flex flex-col gap-2" aria-label="Награды">
+				{#each form.metadata.awards as award, i (i)}
+					<li class="flex flex-wrap items-center gap-2">
+						<label class="input min-w-48 flex-1 input-sm">
+							<span class="sr-only">Награда {i + 1}</span>
+							<input
+								placeholder="Оскар — лучший звук"
+								maxlength={LIMITS.awardTitle}
+								bind:value={award.title}
+							/>
+						</label>
+						<label class="input w-24 input-sm">
+							<span class="sr-only">Год награды {i + 1}</span>
+							<input inputmode="numeric" placeholder="Год" bind:value={award.year} />
+						</label>
+						<label class="flex items-center gap-1.5 text-sm">
+							<input type="checkbox" class="checkbox checkbox-sm" bind:checked={award.won} />
+							Победа
+						</label>
+						<button
+							type="button"
+							class="btn btn-square btn-ghost btn-sm"
+							aria-label="Убрать награду {i + 1}"
+							onclick={() => form.metadata.awards.splice(i, 1)}>✕</button
+						>
+					</li>
+				{/each}
+			</ol>
+			{#if form.metadata.awards.length < LIMITS.awards}
+				<button
+					type="button"
+					class="btn w-fit btn-ghost btn-sm"
+					onclick={() => form.metadata.awards.push({ title: '', year: '', won: true })}
+					>＋ Награда</button
+				>
+			{/if}
+
+			<p class="text-sm font-semibold">Факты</p>
+			<ol class="flex flex-col gap-2" aria-label="Факты">
+				{#each { length: form.metadata.trivia.length }, i (i)}
+					<li class="flex items-start gap-2">
+						<label class="w-full">
+							<span class="sr-only">Факт {i + 1}</span>
+							<textarea
+								class="textarea w-full textarea-sm"
+								rows="2"
+								maxlength={LIMITS.fact}
+								bind:value={form.metadata.trivia[i]}></textarea>
+						</label>
+						<button
+							type="button"
+							class="btn btn-square btn-ghost btn-sm"
+							aria-label="Убрать факт {i + 1}"
+							onclick={() => form.metadata.trivia.splice(i, 1)}>✕</button
+						>
+					</li>
+				{/each}
+			</ol>
+			{#if form.metadata.trivia.length < LIMITS.trivia}
+				<button
+					type="button"
+					class="btn w-fit btn-ghost btn-sm"
+					onclick={() => form.metadata.trivia.push('')}>＋ Факт</button
+				>
 			{/if}
 		</fieldset>
 

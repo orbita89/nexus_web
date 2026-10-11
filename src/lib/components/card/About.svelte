@@ -56,7 +56,7 @@
 
 	<div class="flex flex-col gap-4">
 		<!-- Плашка 1 и справа от неё (с lg) боковая колонка aside — «Производство и факты». -->
-		<div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
+		<div class={['grid gap-4', aside && 'lg:grid-cols-[minmax(0,1fr)_20rem]']}>
 			<!-- Плашка 1: одна таблица — оригинальное название, описание и факты, все строки с подписью. -->
 			{#if original || entity.description || rows.length}
 				<dl

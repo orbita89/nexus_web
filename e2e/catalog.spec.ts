@@ -53,6 +53,17 @@ test('карточка: «О фильме», переход на человек�
 	await expect(about).toContainText('2 ч 35 мин');
 	await expect(about).toContainText('Первая часть экранизации');
 	await expect(hero).not.toContainText('Первая часть экранизации');
+	// «Производство и факты» — из metadata (make seed): студии, 6 побед и номинация, 2 факта.
+	const production = page.getByRole('complementary', { name: 'Производство и факты' });
+	await expect(production).toContainText('Legendary Pictures');
+	await expect(production.getByRole('list', { name: 'Награды' }).getByRole('listitem')).toHaveCount(
+		6
+	);
+	await expect(production.getByRole('list', { name: 'Номинации' })).toContainText(
+		'«Оскар»: лучший фильм'
+	);
+	await expect(production).toContainText('Вади-Рам');
+	await expect(production).not.toContainText('появятся позже');
 	// Режиссёр — в одной плашке с актёрами под таблицей, не строкой таблицы.
 	await expect(about.getByRole('term').filter({ hasText: /^Режиссёр$/ })).toHaveCount(0);
 	await expect(about.getByRole('list', { name: 'Режиссёр' })).toContainText('Дени Вильнёв');

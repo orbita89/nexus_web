@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { unwrap } from '#lib/api/errors.ts';
 	import { session } from '#lib/auth/session.svelte.ts';
-	import { isReleased } from '#lib/catalog/card.ts';
+	import { isReleased, productionOf } from '#lib/catalog/card.ts';
 	import { kindByApi } from '#lib/catalog/kinds.ts';
 	import { summary, yearOf } from '#lib/catalog/labels.ts';
 	import { trailerSources } from '#lib/catalog/trailer.ts';
@@ -51,6 +51,7 @@
 	const year = $derived(yearOf(entity.release_date));
 	const trailers = $derived(trailerSources(entity));
 	const plainTags = $derived(entity.tags.filter((t) => t.kind === 'tag'));
+	const production = $derived(productionOf(entity));
 
 	// Вышло ли — по часам зрителя, не сборки: статика живёт дольше дня премьеры. До гидрации
 	// считаем вышедшим — зависящее от этого и так рисуется только в браузере.
@@ -153,9 +154,13 @@
 		<div class="mb-10"><TagChips tags={plainTags} /></div>
 	{/if}
 
-	<About {entity}>
-		{#snippet aside()}<Production {entity} />{/snippet}
-	</About>
+	{#if production}
+		<About {entity}>
+			{#snippet aside()}<Production {production} />{/snippet}
+		</About>
+	{:else}
+		<About {entity} />
+	{/if}
 
 	<!-- Приквелы, сиквелы, ремейки — только если есть; рекомендации — заглушкой, пока нет API. -->
 	<Related {entity} />

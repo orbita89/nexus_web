@@ -118,6 +118,12 @@ test('произведения: создать фильм с полями, тр�
 		.getByLabel('Трейлер 1: id или ссылка')
 		.fill('https://rutube.ru/video/0ab1fc1e47f2e9b89e9e59d9db36f2b4/');
 	await expect(form.getByLabel('Провайдер трейлера 1')).toHaveValue('rutube');
+	await form.getByLabel('Студии — по одной в строке').fill('E2E Studio\nВторая студия');
+	await form.getByRole('button', { name: '＋ Награда' }).click();
+	await form.getByLabel('Награда 1', { exact: true }).fill('E2E премия');
+	await form.getByLabel('Год награды 1').fill('2025');
+	await form.getByRole('button', { name: '＋ Факт' }).click();
+	await form.getByLabel('Факт 1', { exact: true }).fill('Снимали за один день.');
 	await form.getByRole('group', { name: 'Теги' }).getByText('Драма', { exact: true }).click();
 	await form.getByRole('button', { name: 'Создать' }).click();
 
@@ -169,6 +175,9 @@ test('произведения: создать фильм с полями, тр�
 		'США, Великобритания',
 		'Драма',
 		'Дени Вильнёв',
+		'E2E Studio',
+		'E2E премия',
+		'Снимали за один день.',
 		// Кнопки «Трейлер» нет (трейлер — фон шапки), источник приходит в данных страницы.
 		'0ab1fc1e47f2e9b89e9e59d9db36f2b4'
 	]) {

@@ -2,10 +2,12 @@
 // Кинопоиска, плашка «Режиссёр и актёры», связанные произведения. Всё — из EntityDetail; нет
 // данных (связей, студий, наград) — нет и блока.
 import type {
+	SchemaBookMetadata,
 	SchemaEntityCredit,
 	SchemaEntityDetail,
 	SchemaEntityKind,
 	SchemaEntitySummary,
+	SchemaGameMetadata,
 	SchemaMovieMetadata,
 	SchemaPersonRef,
 	SchemaRelatedWorks,
@@ -131,6 +133,56 @@ export function aboutRows(entity: SchemaEntityDetail): FactRow[] {
 }
 
 /** Связанные произведения: приквелы, сиквелы, ремейки — по порядку выхода. */
+export interface Production {
+	studiosTitle: string;
+	studios: string[];
+	/** Сначала победы, затем номинации; внутри — по году. */
+	awards: { title: string; year: number | null; won: boolean }[];
+	triviaTitle: string;
+	trivia: string[];
+}
+
+/**
+ * «Производство и факты» из metadata: студии (у игр — разработчик и издатель, у книг —
+ * издательство), награды, факты. Пустое — null: блока нет.
+ */
+export function productionOf(
+	entity: Pick<SchemaEntityDetail, 'kind' | 'metadata'>
+): Production | null {
+	const m = entity.metadata as SchemaMovieMetadata &
+		SchemaSeriesMetadata &
+		SchemaBookMetadata &
+		SchemaGameMetadata;
+	const studios =
+		entity.kind === 'game'
+			? [m.developer, m.publisher].filter((s): s is string => !!s)
+			: entity.kind === 'book'
+				? [m.publisher].filter((s): s is string => !!s)
+				: (m.studios ?? []);
+	const awards = (m.awards ?? [])
+		.map((a) => ({ title: a.title, year: a.year ?? null, won: a.won ?? false }))
+		.toSorted((a, b) => Number(b.won) - Number(a.won) || (a.year ?? 0) - (b.year ?? 0));
+	const trivia = m.trivia ?? [];
+	if (!studios.length && !awards.length && !trivia.length) return null;
+	return {
+		studiosTitle:
+			entity.kind === 'book'
+				? 'Издательство'
+				: entity.kind === 'game'
+					? 'Разработка и издание'
+					: 'Студии',
+		studios: [...new Set(studios)],
+		awards,
+		triviaTitle:
+			entity.kind === 'book'
+				? 'Интересные факты'
+				: entity.kind === 'game'
+					? 'Факты о разработке'
+					: 'Факты о съёмках',
+		trivia
+	};
+}
+
 const RELATED_GROUPS = [
 	{ key: 'prequels', title: 'Приквелы' },
 	{ key: 'sequels', title: 'Сиквелы' },
