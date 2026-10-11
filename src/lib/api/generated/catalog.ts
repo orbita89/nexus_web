@@ -76,6 +76,40 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/catalog/admin/entities/{id}/relations': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/** Связать сущность с другой: `to_id` — её сиквел, приквел или ремейк. */
+		put: operations['put_entity_relation'];
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/admin/entities/{id}/relations/{to_id}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		post?: never;
+		/** Убрать связь с `to_id` этого вида (с какой бы стороны она ни была записана). */
+		delete: operations['delete_entity_relation'];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/catalog/admin/entities/{id}/stream': {
 		parameters: {
 			query?: never;
@@ -231,7 +265,7 @@ export interface paths {
 		delete: operations['delete_tag'];
 		options?: never;
 		head?: never;
-		/** Переименовать тег или сменить slug. */
+		/** Переименовать тег, сменить slug или вид (`genre` / `tag`). */
 		patch: operations['update_tag'];
 		trace?: never;
 	};
@@ -242,7 +276,12 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** Список сущностей: новинки сверху, без даты — в конце. */
+		/**
+		 * Список сущностей. `sort`: `new` (по умолчанию: новинки сверху, без даты — в конце), `popular`
+		 *     (больше оценок), `rating` (выше средняя, без оценок — в конце), `title`.
+		 * @description Оценки — из сводок `entity_ratings`, которые присылает `social` (`EntityRatings`): каталог в
+		 *     таблицы рецензий не ходит.
+		 */
 		get: operations['list_entities'];
 		put?: never;
 		post?: never;
@@ -265,6 +304,28 @@ export interface paths {
 		 *     фронтенда (SSG/ISR), сюда приходят её пересборка и админка.
 		 */
 		get: operations['get_entity'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/entities/{slug}/similar': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Похожие на сущность: тот же тип, больше общих тегов — выше (жанр весит вдвое), при равенстве —
+		 *     новее. Без самой
+		 *     сущности и её связанных (они и так на карточке). Нет тегов — пустая страница.
+		 * @description Первая версия без ML: один запрос с подсчётом пересечения тегов по `entity_tags (tag_id)`.
+		 */
+		get: operations['list_similar_entities'];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -338,8 +399,28 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** Все теги по алфавиту с числом сущностей. Тегов немного, поэтому без пагинации. */
+		/**
+		 * Все теги по алфавиту с числом сущностей; `?kind=genre` — только жанры. Тегов немного, поэтому
+		 *     без пагинации.
+		 */
 		get: operations['list_tags'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/tags/{slug}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Тег по slug: страница тега. */
+		get: operations['get_tag'];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -369,8 +450,26 @@ export interface components {
 			 */
 			role: string;
 		};
+		/** @description Награда или номинация. */
+		Award: {
+			/**
+			 * @description 1–200 символов.
+			 * @example «Оскар» за лучшую операторскую работу
+			 */
+			title: string;
+			/** @description `true` — получена, `false` — номинация. По умолчанию `false`. */
+			won?: boolean;
+			/**
+			 * Format: int32
+			 * @description 1880–2100; `null` — год неизвестен.
+			 * @example 2022
+			 */
+			year?: number | null;
+		};
 		/** @description Поля книги. */
 		BookMetadata: {
+			/** @description Награды и номинации: до 50. */
+			awards?: components['schemas']['Award'][] | null;
 			/**
 			 * @description ISBN-10 или ISBN-13, дефисы допустимы. Хранится без дефисов.
 			 * @example 9780441013593
@@ -383,6 +482,13 @@ export interface components {
 			pages?: number | null;
 			/** @example Ace Books */
 			publisher?: string | null;
+			/**
+			 * @description Факты: до 30, каждый 1–1000 символов.
+			 * @example [
+			 *       "Пустыню снимали в Иордании и ОАЭ."
+			 *     ]
+			 */
+			trivia?: string[] | null;
 		};
 		CreateEntity: {
 			/** @description `http(s)://...` */
@@ -420,6 +526,8 @@ export interface components {
 			slug: string;
 		};
 		CreateTag: {
+			/** @description По умолчанию `tag`. */
+			kind?: components['schemas']['TagKind'];
 			/** @example Научная фантастика */
 			name: string;
 			/** @example sci-fi */
@@ -469,9 +577,10 @@ export interface components {
 			/** @example director */
 			role: string;
 		};
-		/** @description Карточка: сущность, теги и участники в порядке титров. */
+		/** @description Карточка: сущность, теги, участники в порядке титров и связанные произведения. */
 		EntityDetail: components['schemas']['Entity'] & {
 			credits: components['schemas']['EntityCredit'][];
+			related: components['schemas']['RelatedWorks'];
 			tags: components['schemas']['Tag'][];
 		};
 		/**
@@ -479,6 +588,11 @@ export interface components {
 		 * @enum {string}
 		 */
 		EntityKind: 'movie' | 'series' | 'book' | 'game';
+		/**
+		 * @description Порядок списка сущностей.
+		 * @enum {string}
+		 */
+		EntitySort: 'new' | 'popular' | 'rating' | 'title';
 		/** @description Сущность в списке. */
 		EntitySummary: {
 			cover_url?: string | null;
@@ -497,7 +611,12 @@ export interface components {
 		/** @description Тело любого ответа с ошибкой. Нужно для документации API. */
 		ErrorBody: {
 			/**
-			 * @description Описание ошибки.
+			 * @description Машинный код: по нему клиент выбирает сообщение. Список — `documents/for-other-modules.md`.
+			 * @example unauthorized
+			 */
+			code?: string | null;
+			/**
+			 * @description Описание ошибки (английский текст для логов; формулировка может меняться).
 			 * @example unauthorized
 			 */
 			error: string;
@@ -510,6 +629,8 @@ export interface components {
 		};
 		/** @description Поля игры. */
 		GameMetadata: {
+			/** @description Награды и номинации: до 50. */
+			awards?: components['schemas']['Award'][] | null;
 			/** @example CD Projekt Red */
 			developer?: string | null;
 			/**
@@ -536,6 +657,13 @@ export interface components {
 			 *     ]
 			 */
 			trailers?: components['schemas']['TrailerSource'][] | null;
+			/**
+			 * @description Факты: до 30, каждый 1–1000 символов.
+			 * @example [
+			 *       "Пустыню снимали в Иордании и ОАЭ."
+			 *     ]
+			 */
+			trivia?: string[] | null;
 		};
 		/** @description Событие потока. */
 		JobEvent:
@@ -572,6 +700,8 @@ export interface components {
 			 * @example PG-13
 			 */
 			age_rating?: string | null;
+			/** @description Награды и номинации: до 50. */
+			awards?: components['schemas']['Award'][] | null;
 			/**
 			 * @description Страны производства, ISO 3166-1 alpha-2.
 			 * @example [
@@ -587,6 +717,14 @@ export interface components {
 			 */
 			runtime_min?: number | null;
 			/**
+			 * @description Студии производства: до 20, каждая 1–120 символов.
+			 * @example [
+			 *       "Legendary Pictures",
+			 *       "Villeneuve Films"
+			 *     ]
+			 */
+			studios?: string[] | null;
+			/**
 			 * @description Трейлер: источники по приоритету, фронтенд показывает первый доступный у зрителя.
 			 * @example [
 			 *       {
@@ -600,6 +738,13 @@ export interface components {
 			 *     ]
 			 */
 			trailers?: components['schemas']['TrailerSource'][] | null;
+			/**
+			 * @description Факты: до 30, каждый 1–1000 символов.
+			 * @example [
+			 *       "Пустыню снимали в Иордании и ОАЭ."
+			 *     ]
+			 */
+			trivia?: string[] | null;
 		};
 		/** @description Страница списка. */
 		Page_EntitySummary: {
@@ -736,6 +881,17 @@ export interface components {
 			 */
 			total: number;
 		};
+		/** @description Связать сущность с другой. */
+		PutRelation: {
+			kind: components['schemas']['RelationKind'];
+			/**
+			 * Format: int32
+			 * @description Порядок при одинаковой дате выхода, по умолчанию 0.
+			 */
+			position?: number | null;
+			/** Format: uuid */
+			to_id: string;
+		};
 		ReindexResult: {
 			/**
 			 * @description Удалённые устаревшие версии.
@@ -761,8 +917,24 @@ export interface components {
 			 */
 			previous_version: string;
 		};
+		/** @description Связанные произведения, каждая группа — по дате выхода (без даты — в конце). Пустые — `[]`. */
+		RelatedWorks: {
+			/** @description Это сиквел для них. */
+			prequels: components['schemas']['EntitySummary'][];
+			/** @description Ремейки в обе стороны: оригинал видит ремейки, ремейк — оригинал. */
+			remakes: components['schemas']['EntitySummary'][];
+			/** @description Сиквелы этого. */
+			sequels: components['schemas']['EntitySummary'][];
+		};
+		/**
+		 * @description Вид связи в админке. `prequel` — то же, что `sequel` в обратную сторону.
+		 * @enum {string}
+		 */
+		RelationKind: 'sequel' | 'prequel' | 'remake';
 		/** @description Поля сериала. */
 		SeriesMetadata: {
+			/** @description Награды и номинации: до 50. */
+			awards?: components['schemas']['Award'][] | null;
 			/**
 			 * @description Страны производства, ISO 3166-1 alpha-2.
 			 * @example [
@@ -782,6 +954,14 @@ export interface components {
 			seasons?: number | null;
 			status?: components['schemas']['SeriesStatus'] | null;
 			/**
+			 * @description Студии производства: до 20, каждая 1–120 символов.
+			 * @example [
+			 *       "Legendary Pictures",
+			 *       "Villeneuve Films"
+			 *     ]
+			 */
+			studios?: string[] | null;
+			/**
 			 * @description Трейлер: источники по приоритету, фронтенд показывает первый доступный у зрителя.
 			 * @example [
 			 *       {
@@ -795,6 +975,13 @@ export interface components {
 			 *     ]
 			 */
 			trailers?: components['schemas']['TrailerSource'][] | null;
+			/**
+			 * @description Факты: до 30, каждый 1–1000 символов.
+			 * @example [
+			 *       "Пустыню снимали в Иордании и ОАЭ."
+			 *     ]
+			 */
+			trivia?: string[] | null;
 		};
 		/** @enum {string} */
 		SeriesStatus: 'ongoing' | 'ended' | 'canceled';
@@ -833,11 +1020,18 @@ export interface components {
 		Tag: {
 			/** Format: uuid */
 			id: string;
+			kind: components['schemas']['TagKind'];
 			/** @example Научная фантастика */
 			name: string;
 			/** @example sci-fi */
 			slug: string;
 		};
+		/**
+		 * @description Вид тега: `genre` — жанр («Драма», «Космическая опера»), `tag` — остальные метки
+		 *     («Экранизация», «Открытый мир»).
+		 * @enum {string}
+		 */
+		TagKind: 'genre' | 'tag';
 		TagWithCount: {
 			/**
 			 * Format: int64
@@ -847,6 +1041,7 @@ export interface components {
 			entities_count: number;
 			/** Format: uuid */
 			id: string;
+			kind: components['schemas']['TagKind'];
 			/** @example Научная фантастика */
 			name: string;
 			/** @example sci-fi */
@@ -891,6 +1086,7 @@ export interface components {
 			slug?: string | null;
 		};
 		UpdateTag: {
+			kind?: components['schemas']['TagKind'] | null;
 			name?: string | null;
 			slug?: string | null;
 		};
@@ -902,6 +1098,7 @@ export interface components {
 	pathItems: never;
 }
 export type SchemaAddCredit = components['schemas']['AddCredit'];
+export type SchemaAward = components['schemas']['Award'];
 export type SchemaBookMetadata = components['schemas']['BookMetadata'];
 export type SchemaCreateEntity = components['schemas']['CreateEntity'];
 export type SchemaCreatePerson = components['schemas']['CreatePerson'];
@@ -911,6 +1108,7 @@ export type SchemaEntity = components['schemas']['Entity'];
 export type SchemaEntityCredit = components['schemas']['EntityCredit'];
 export type SchemaEntityDetail = components['schemas']['EntityDetail'];
 export type SchemaEntityKind = components['schemas']['EntityKind'];
+export type SchemaEntitySort = components['schemas']['EntitySort'];
 export type SchemaEntitySummary = components['schemas']['EntitySummary'];
 export type SchemaErrorBody = components['schemas']['ErrorBody'];
 export type SchemaGameMetadata = components['schemas']['GameMetadata'];
@@ -926,7 +1124,10 @@ export type SchemaPersonRef = components['schemas']['PersonRef'];
 export type SchemaPersonSummary = components['schemas']['PersonSummary'];
 export type SchemaPlannedStep = components['schemas']['PlannedStep'];
 export type SchemaProgressEvent = components['schemas']['ProgressEvent'];
+export type SchemaPutRelation = components['schemas']['PutRelation'];
 export type SchemaReindexResult = components['schemas']['ReindexResult'];
+export type SchemaRelatedWorks = components['schemas']['RelatedWorks'];
+export type SchemaRelationKind = components['schemas']['RelationKind'];
 export type SchemaSeriesMetadata = components['schemas']['SeriesMetadata'];
 export type SchemaSeriesStatus = components['schemas']['SeriesStatus'];
 export type SchemaSetTags = components['schemas']['SetTags'];
@@ -934,6 +1135,7 @@ export type SchemaStep = components['schemas']['Step'];
 export type SchemaStepEvent = components['schemas']['StepEvent'];
 export type SchemaStepStatus = components['schemas']['StepStatus'];
 export type SchemaTag = components['schemas']['Tag'];
+export type SchemaTagKind = components['schemas']['TagKind'];
 export type SchemaTagWithCount = components['schemas']['TagWithCount'];
 export type SchemaTrailerProvider = components['schemas']['TrailerProvider'];
 export type SchemaTrailerSource = components['schemas']['TrailerSource'];
@@ -1234,6 +1436,140 @@ export interface operations {
 				};
 			};
 			/** @description Не найден */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	put_entity_relation: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description id сущности */
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['PutRelation'];
+			};
+		};
+		responses: {
+			/** @description Связанные произведения сущности после правки */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['RelatedWorks'];
+				};
+			};
+			/** @description Неверные поля или `to_id` не найдена */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Сущность не найдена */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Связь с собой (`self_relation`) или такая связь уже есть (`conflict`) */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	delete_entity_relation: {
+		parameters: {
+			query: {
+				/** @description Вид связи. */
+				kind: 'sequel' | 'prequel' | 'remake';
+			};
+			header?: never;
+			path: {
+				/** @description id сущности */
+				id: string;
+				/** @description id связанной сущности */
+				to_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Удалена */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Нет или неверный `kind` */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Такой связи нет */
 			404: {
 				headers: {
 					[name: string]: unknown;
@@ -1860,6 +2196,8 @@ export interface operations {
 	list_entities: {
 		parameters: {
 			query?: {
+				/** @description По умолчанию `new`. */
+				sort?: components['schemas']['EntitySort'];
 				/** @description Тип сущности. */
 				kind?: components['schemas']['EntityKind'];
 				/**
@@ -1930,6 +2268,53 @@ export interface operations {
 				};
 				content: {
 					'application/json': components['schemas']['EntityDetail'];
+				};
+			};
+			/** @description Не найдена */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	list_similar_entities: {
+		parameters: {
+			query?: {
+				/** @description 1–24, по умолчанию 12. Вне диапазона приводится к границам. */
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				/**
+				 * @description slug сущности
+				 * @example dune-2021
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Похожие, самые похожие сверху */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Page_EntitySummary'];
+				};
+			};
+			/** @description Неверный параметр */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
 				};
 			};
 			/** @description Не найдена */
@@ -2062,7 +2447,10 @@ export interface operations {
 	};
 	list_tags: {
 		parameters: {
-			query?: never;
+			query?: {
+				/** @description Только жанры или только остальные теги; не передан — все. */
+				kind?: 'genre' | 'tag';
+			};
 			header?: never;
 			path?: never;
 			cookie?: never;
@@ -2076,6 +2464,50 @@ export interface operations {
 				};
 				content: {
 					'application/json': components['schemas']['TagWithCount'][];
+				};
+			};
+			/** @description Неверный `kind` */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	get_tag: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug тега
+				 * @example sci-fi
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Тег */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['TagWithCount'];
+				};
+			};
+			/** @description Не найден */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
 				};
 			};
 		};

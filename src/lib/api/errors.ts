@@ -1,5 +1,6 @@
-// Ошибки API. Бэкенд всегда отвечает {"error": "..."} — текст на английском и без кодов,
-// поэтому известные сообщения переводим словарём, остальные — по HTTP-статусу.
+// Ошибки API. Бэкенд отвечает {"error", "code", "retry_after"?}: error — английский текст для
+// логов, code — машинный код (таблица — nexus_project/documents/for-other-modules.md). Сообщение
+// выбираем по code; у validation код общий, поэтому сначала пробуем узнать текст, потом — статус.
 
 export class ApiError extends Error {
 	/** HTTP-статус; 0 — запрос не дошёл до сервера. */
@@ -8,16 +9,46 @@ export class ApiError extends Error {
 	readonly serverMessage: string | null;
 	/** Для 429: через сколько секунд можно повторить, если бэкенд сказал. */
 	readonly retryAfter: number | null;
+	/** Машинный код бэкенда (`not_found`, `own_review`, …), если он есть. */
+	readonly code: string | null;
 
-	constructor(status: number, serverMessage: string | null, retryAfter: number | null = null) {
-		super(translate(status, serverMessage, retryAfter));
+	constructor(
+		status: number,
+		serverMessage: string | null,
+		retryAfter: number | null = null,
+		code: string | null = null
+	) {
+		super(translate(status, serverMessage, retryAfter, code));
 		this.name = 'ApiError';
 		this.status = status;
 		this.serverMessage = serverMessage;
 		this.retryAfter = retryAfter;
+		this.code = code;
 	}
 }
 
+/** Сообщения по коду. validation и rate_limited здесь нет: у них текст зависит от поля и срока. */
+const BY_CODE: Record<string, string> = {
+	unauthorized: 'Нужно войти.',
+	invalid_credentials: 'Неверный логин или пароль.',
+	forbidden: 'Недостаточно прав.',
+	email_not_verified: 'Email не подтверждён. Перейдите по ссылке из письма.',
+	own_review: 'За свою рецензию голосовать нельзя.',
+	not_found: 'Не найдено.',
+	conflict: 'Уже существует.',
+	username_taken: 'Это имя пользователя уже занято.',
+	email_taken: 'Этот email уже зарегистрирован.',
+	not_released: 'Оценки откроются после премьеры.',
+	review_without_text: 'Комментировать можно только рецензию с текстом.',
+	self_relation: 'Нельзя связать произведение с самим собой.',
+	password_incorrect: 'Пароль неверен.',
+	invalid_token: 'Ссылка недействительна или устарела. Запросите новую.',
+	username_change_too_soon: 'Имя пользователя можно менять раз в 30 дней.',
+	unavailable: 'Сервис временно недоступен. Попробуйте позже.',
+	internal: 'Ошибка сервера. Попробуйте позже.'
+};
+
+/** Запасной путь — по тексту: уточняет validation и выручает, если кода нет. */
 const KNOWN: [RegExp, string][] = [
 	[/^email not verified$/, 'Email не подтверждён. Перейдите по ссылке из письма.'],
 	[/^invalid or expired token$/, 'Ссылка недействительна или устарела. Запросите новую.'],
@@ -53,11 +84,13 @@ export function formatWait(seconds: number): string {
 export function translate(
 	status: number,
 	serverMessage: string | null,
-	retryAfter: number | null = null
+	retryAfter: number | null = null,
+	code: string | null = null
 ): string {
 	if (status === 429 && retryAfter !== null) {
 		return `Слишком много попыток. Попробуйте через ${formatWait(retryAfter)}.`;
 	}
+	if (code && Object.hasOwn(BY_CODE, code)) return BY_CODE[code];
 	if (serverMessage) {
 		const known = KNOWN.find(([re]) => re.test(serverMessage));
 		if (known) return known[1];
@@ -72,9 +105,10 @@ export function errorMessage(e: unknown): string {
 	return BY_STATUS[0];
 }
 
-function serverMessageOf(body: unknown): string | null {
-	if (body && typeof body === 'object' && 'error' in body && typeof body.error === 'string') {
-		return body.error;
+function stringField(body: unknown, field: 'error' | 'code'): string | null {
+	if (body && typeof body === 'object' && field in body) {
+		const v = (body as Record<string, unknown>)[field];
+		if (typeof v === 'string') return v;
 	}
 	return null;
 }
@@ -111,8 +145,9 @@ export async function unwrap<T>(
 		const { status } = result.response;
 		throw new ApiError(
 			status,
-			serverMessageOf(result.error),
-			status === 429 ? retryAfterOf(result.error, result.response) : null
+			stringField(result.error, 'error'),
+			status === 429 ? retryAfterOf(result.error, result.response) : null,
+			stringField(result.error, 'code')
 		);
 	}
 	return result.data as T;

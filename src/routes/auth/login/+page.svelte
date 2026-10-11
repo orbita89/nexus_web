@@ -39,7 +39,10 @@
 		} catch (e) {
 			if (e instanceof ApiError && e.status === 401) {
 				error = 'Неверный логин или пароль.';
-			} else if (e instanceof ApiError && e.serverMessage === 'email not verified') {
+			} else if (
+				e instanceof ApiError &&
+				(e.code === 'email_not_verified' || e.serverMessage === 'email not verified')
+			) {
 				unverified = true;
 			} else {
 				error = errorMessage(e);

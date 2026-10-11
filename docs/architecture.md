@@ -353,11 +353,13 @@ SEO: `Seo.svelte` — `<title>`, `meta description` (обрезанное по �
   - `guestApi` — вход, регистрация, ссылки из писем: без токена;
   - `publicApi(fetch, url)` (`#lib/api/client.ts`) — в `+page.ts`, публичные данные. На сервере
     запрос идёт на `url.origin/api/...`, а `handleFetch` отправляет его на `BACKEND_URL`.
-- **Ошибки.** Бэкенд всегда отвечает `{"error": "..."}` — по-английски и без кодов. `unwrap()`
-  превращает ответ в данные или `ApiError { status, serverMessage, message }`, где `message` —
-  текст для пользователя: известные сообщения переводятся словарём (`errors.ts`), остальные — по
-  статусу. Сбой сети — `ApiError(0)`. Для 429 срок берётся из `retry_after` в теле или
-  заголовка `Retry-After`: «Попробуйте через 80 с». В компоненте: `catch (e) { error = errorMessage(e) }`.
+- **Ошибки.** Бэкенд отвечает `{"error", "code", "retry_after"?}`: `error` — английский текст для
+  логов, `code` — машинный код (таблица — `nexus_project/documents/for-other-modules.md`).
+  `unwrap()` превращает ответ в данные или `ApiError { status, code, serverMessage, message }`, где
+  `message` — текст для пользователя: по `code` (словарь `BY_CODE` в `errors.ts`); у `validation`
+  код общий — текст уточняется по `serverMessage`, иначе — по статусу. Сбой сети — `ApiError(0)`.
+  Для 429 срок берётся из `retry_after` в теле или заголовка `Retry-After`: «Попробуйте через 80 с».
+  В компоненте: `catch (e) { error = errorMessage(e) }`.
 
 ## Прокси и окружение
 

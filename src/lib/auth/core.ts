@@ -120,8 +120,11 @@ export function createAuth(deps: AuthDeps) {
 			return false;
 		}
 		// 429, 5xx: сессия, скорее всего, жива — токен не трогаем.
-		const body = (await response.json().catch(() => null)) as { error?: string } | null;
-		throw new ApiError(response.status, body?.error ?? null);
+		const body = (await response.json().catch(() => null)) as {
+			error?: string;
+			code?: string | null;
+		} | null;
+		throw new ApiError(response.status, body?.error ?? null, null, body?.code ?? null);
 	}
 
 	/**
@@ -186,8 +189,11 @@ export function createAuth(deps: AuthDeps) {
 			new Request(base + '/api/v1/auth/logout-all', { method: 'POST' })
 		);
 		if (!response.ok && response.status !== 401) {
-			const body = (await response.json().catch(() => null)) as { error?: string } | null;
-			throw new ApiError(response.status, body?.error ?? null);
+			const body = (await response.json().catch(() => null)) as {
+				error?: string;
+				code?: string | null;
+			} | null;
+			throw new ApiError(response.status, body?.error ?? null, null, body?.code ?? null);
 		}
 		forget();
 	}

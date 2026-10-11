@@ -15,6 +15,42 @@ describe('translate', () => {
 	});
 });
 
+describe('коды ошибок', () => {
+	it('сообщение выбирается по code, а не по тексту', () => {
+		expect(translate(409, 'some new wording', null, 'not_released')).toBe(
+			'Оценки откроются после премьеры.'
+		);
+		expect(translate(403, 'cannot vote own review', null, 'own_review')).toBe(
+			'За свою рецензию голосовать нельзя.'
+		);
+		expect(translate(409, 'x', null, 'review_without_text')).toMatch(/рецензию с текстом/);
+		expect(translate(409, 'x', null, 'username_taken')).toMatch(/имя пользователя уже занято/);
+	});
+
+	it('validation — уточняется по тексту, иначе общее сообщение', () => {
+		expect(translate(400, 'password must be 8..128 chars', null, 'validation')).toMatch(
+			/от 8 до 128/
+		);
+		expect(translate(400, 'bad field', null, 'validation')).toBe('Проверьте введённые данные.');
+	});
+
+	it('неизвестный код — запасной путь по тексту и статусу', () => {
+		expect(translate(403, 'email not verified', null, 'brand_new')).toMatch(/не подтверждён/);
+		expect(translate(404, 'nope', null, 'constructor')).toBe('Не найдено.');
+	});
+
+	it('unwrap кладёт code в ApiError', async () => {
+		const e = await unwrap(
+			Promise.resolve({
+				error: { error: 'not released yet', code: 'not_released' },
+				response: new Response(null, { status: 409 })
+			})
+		).catch((e: unknown) => e);
+		expect(e).toMatchObject({ status: 409, code: 'not_released' });
+		expect(errorMessage(e)).toBe('Оценки откроются после премьеры.');
+	});
+});
+
 describe('429', () => {
 	it('со сроком — «попробуйте через …»', () => {
 		expect(translate(429, 'too many requests', 80)).toBe(

@@ -28,9 +28,10 @@ const dune: SchemaEntityDetail = {
 	updated_at: '',
 	metadata: { runtime_min: 155, countries: ['US', 'CA'], age_rating: 'PG-13' },
 	tags: [
-		{ id: 't1', slug: 'sci-fi', name: 'Научная фантастика' },
-		{ id: 't2', slug: 'drama', name: 'Драма' }
+		{ id: 't1', slug: 'sci-fi', name: 'Научная фантастика', kind: 'genre' },
+		{ id: 't2', slug: 'drama', name: 'Драма', kind: 'genre' }
 	],
+	related: { prequels: [], sequels: [], remakes: [] },
 	credits: [
 		credit('director', 'Вильнёв'),
 		credit('actor', 'Шаламе', 'Пол Атрейдес'),

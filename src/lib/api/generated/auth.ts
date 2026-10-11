@@ -11,8 +11,28 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** Список пользователей, старые сверху. */
+		/**
+		 * Список пользователей массивом, старые сверху. Страница с `total` —
+		 *     `GET /admin/users/page`.
+		 */
 		get: operations['list_users'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/auth/admin/users/page': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Страница пользователей с `total`, старые сверху; `q` — поиск по username и email. */
+		get: operations['list_users_page'];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -569,7 +589,12 @@ export interface components {
 		/** @description Тело любого ответа с ошибкой. Нужно для документации API. */
 		ErrorBody: {
 			/**
-			 * @description Описание ошибки.
+			 * @description Машинный код: по нему клиент выбирает сообщение. Список — `documents/for-other-modules.md`.
+			 * @example unauthorized
+			 */
+			code?: string | null;
+			/**
+			 * @description Описание ошибки (английский текст для логов; формулировка может меняться).
 			 * @example unauthorized
 			 */
 			error: string;
@@ -611,6 +636,55 @@ export interface components {
 			login: string;
 			/** @example password123 */
 			password: string;
+		};
+		/** @description Страница списка. */
+		Page_UserView: {
+			items: {
+				avatar_url?: string | null;
+				/** Format: date-time */
+				created_at: string;
+				display_name?: string | null;
+				/** @example user@nexus.local */
+				email: string;
+				/**
+				 * Format: date-time
+				 * @description `null` — email не подтверждён, вход по паролю запрещён.
+				 */
+				email_verified_at?: string | null;
+				/**
+				 * @description Задан ли пароль. `false` — входит по ссылке из письма или через провайдера: пароль не
+				 *     спрашивается при смене email, задать его можно через «забыли пароль».
+				 */
+				has_password: boolean;
+				/** Format: uuid */
+				id: string;
+				/** @description `false` — заблокирован админом. */
+				is_active: boolean;
+				role: components['schemas']['Role'];
+				/** @example user */
+				username: string;
+				/**
+				 * Format: date-time
+				 * @description Когда username меняли в последний раз (менять можно раз в 30 дней). `null` — не меняли.
+				 */
+				username_changed_at?: string | null;
+			}[];
+			/**
+			 * Format: int64
+			 * @example 20
+			 */
+			limit: number;
+			/**
+			 * Format: int64
+			 * @example 0
+			 */
+			offset: number;
+			/**
+			 * Format: int64
+			 * @description Всего записей под фильтром (в поиске — оценка Meilisearch).
+			 * @example 137
+			 */
+			total: number;
 		};
 		ProvidersResponse: {
 			/**
@@ -757,6 +831,7 @@ export type SchemaHealth = components['schemas']['Health'];
 export type SchemaLinkStartResponse = components['schemas']['LinkStartResponse'];
 export type SchemaLinkedAccount = components['schemas']['LinkedAccount'];
 export type SchemaLoginRequest = components['schemas']['LoginRequest'];
+export type SchemaPageUserView = components['schemas']['Page_UserView'];
 export type SchemaProvidersResponse = components['schemas']['ProvidersResponse'];
 export type SchemaRefreshRequest = components['schemas']['RefreshRequest'];
 export type SchemaRegisterRequest = components['schemas']['RegisterRequest'];
@@ -772,14 +847,19 @@ export type $defs = Record<string, never>;
 export interface operations {
 	list_users: {
 		parameters: {
-			query?: never;
-			header?: never;
-			path: {
+			query?: {
+				/**
+				 * @description Подстрока в username или email, без учёта регистра.
+				 * @example neo
+				 */
+				q?: string;
 				/** @description Сколько вернуть, 1–100 (по умолчанию 50). */
-				limit: number | null;
+				limit?: number;
 				/** @description Сколько пропустить (по умолчанию 0). */
-				offset: number | null;
+				offset?: number;
 			};
+			header?: never;
+			path?: never;
 			cookie?: never;
 		};
 		requestBody?: never;
@@ -791,6 +871,63 @@ export interface operations {
 				};
 				content: {
 					'application/json': components['schemas']['UserView'][];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	list_users_page: {
+		parameters: {
+			query?: {
+				/**
+				 * @description Подстрока в username или email, без учёта регистра.
+				 * @example neo
+				 */
+				q?: string;
+				/** @description Сколько вернуть, 1–100 (по умолчанию 50). */
+				limit?: number;
+				/** @description Сколько пропустить (по умолчанию 0). */
+				offset?: number;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Страница пользователей */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Page_UserView'];
+				};
+			};
+			/** @description Неверный параметр */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
 				};
 			};
 			/** @description Нет токена */
