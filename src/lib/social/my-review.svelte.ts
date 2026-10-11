@@ -78,17 +78,25 @@ export class MyReviewState {
 		const rating = n === this.rating ? null : n;
 		// Сняли оценку, а текста нет — рецензии не остаётся.
 		if (rating === null && !this.review?.body) return this.remove();
-		return this.#put({ rating, body: this.review?.body ?? null });
+		// PUT заменяет запись целиком: текст и галочку спойлера передаём как были.
+		return this.#put({
+			rating,
+			body: this.review?.body ?? null,
+			is_spoiler: this.review?.is_spoiler ?? false
+		});
 	}
 
-	/** Сохранить текст рецензии (оценка остаётся). */
-	/** Сохранить текст рецензии и оценку (по умолчанию — текущую; null — без оценки). */
-	write(body: string | null, rating: number | null = this.rating) {
+	/** Сохранить текст рецензии, оценку (по умолчанию — текущую; null — без оценки) и спойлер. */
+	write(
+		body: string | null,
+		rating: number | null = this.rating,
+		isSpoiler = this.review?.is_spoiler ?? false
+	) {
 		if (!body && rating === null) {
 			this.error = 'Поставьте оценку или напишите текст.';
 			return Promise.resolve(false);
 		}
-		return this.#put({ rating, body });
+		return this.#put({ rating, body, is_spoiler: !!body && isSpoiler });
 	}
 
 	remove() {

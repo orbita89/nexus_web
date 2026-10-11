@@ -3,6 +3,7 @@ import {
 	displayName,
 	formatRating,
 	isEdited,
+	isSpoiler,
 	ratingTone,
 	readSort,
 	reviewDate,
@@ -59,5 +60,13 @@ describe('рецензия', () => {
 		);
 		expect(displayName({ username: 'user', display_name: '  ' })).toBe('user');
 		expect(displayName({ username: 'user' })).toBe('user');
+	});
+});
+
+describe('isSpoiler', () => {
+	it('по галочке автора; у оценки без текста скрывать нечего', () => {
+		expect(isSpoiler({ is_spoiler: true, body: 'Пол выживает' })).toBe(true);
+		expect(isSpoiler({ is_spoiler: false, body: 'Пол выживает' })).toBe(false);
+		expect(isSpoiler({ is_spoiler: true, body: null })).toBe(false);
 	});
 });

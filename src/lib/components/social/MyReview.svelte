@@ -17,6 +17,7 @@
 	let error = $state('');
 	let editing = $state(false);
 	let draft = $state('');
+	let spoiler = $state(false);
 	let confirmDelete = $state(false);
 
 	const path = $derived({ slug });
@@ -77,11 +78,12 @@
 		const rating = review?.rating === n ? null : n;
 		// Сняли оценку, а текста нет — рецензии не остаётся.
 		if (rating === null && !review?.body) return remove();
-		return save({ rating, body: review?.body ?? null });
+		return save({ rating, body: review?.body ?? null, is_spoiler: review?.is_spoiler ?? false });
 	}
 
 	function startEditing() {
 		draft = review?.body ?? '';
+		spoiler = review?.is_spoiler ?? false;
 		editing = true;
 	}
 
@@ -92,7 +94,7 @@
 			error = 'Поставьте оценку или напишите текст.';
 			return;
 		}
-		await save({ rating: review?.rating ?? null, body });
+		await save({ rating: review?.rating ?? null, body, is_spoiler: !!body && spoiler });
 		if (!error) editing = false;
 	}
 </script>
@@ -146,6 +148,10 @@
 					placeholder="Что понравилось, что нет — без спойлеров"
 					bind:value={draft}></textarea>
 				<div class="flex flex-wrap items-center gap-2">
+					<label class="mr-2 flex cursor-pointer items-center gap-2 text-sm">
+						<input type="checkbox" class="checkbox checkbox-sm" bind:checked={spoiler} />
+						Есть спойлеры
+					</label>
 					<button class="btn btn-primary btn-sm" disabled={busy}>Сохранить</button>
 					<button type="button" class="btn btn-ghost btn-sm" onclick={() => (editing = false)}
 						>Отмена</button

@@ -12,6 +12,7 @@
 
 	let draft = $state('');
 	let rating = $state<number | null>(null);
+	let spoiler = $state(false);
 	let confirmDelete = $state(false);
 
 	// Форму открыли (здесь или из «Оценить») — в черновик текущий текст.
@@ -20,12 +21,13 @@
 		if (!my.composing) return;
 		draft = untrack(() => my.review?.body ?? '');
 		rating = untrack(() => my.rating);
+		spoiler = untrack(() => my.review?.is_spoiler ?? false);
 		confirmDelete = false;
 	});
 
 	async function submit(event: SubmitEvent) {
 		event.preventDefault();
-		if (await my.write(draft.trim() || null, rating)) my.composing = false;
+		if (await my.write(draft.trim() || null, rating, spoiler)) my.composing = false;
 	}
 
 	async function remove() {
@@ -65,6 +67,10 @@
 			placeholder="Что понравилось, что нет — без спойлеров"
 			bind:value={draft}></textarea>
 		<div class="flex flex-wrap items-center gap-2">
+			<label class="mr-2 flex cursor-pointer items-center gap-2 text-sm">
+				<input type="checkbox" class="checkbox checkbox-sm" bind:checked={spoiler} />
+				Есть спойлеры
+			</label>
 			<button class="btn btn-primary btn-sm" disabled={my.busy}>Сохранить</button>
 			<button type="button" class="btn btn-ghost btn-sm" onclick={() => (my.composing = false)}
 				>Отмена</button
