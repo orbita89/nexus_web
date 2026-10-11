@@ -45,7 +45,8 @@
 	</div>
 	<!-- Бейдж — в углу постера, но в разметке после названия: имя ссылки начинается с названия. -->
 	{#if rating?.count && rating.average != null}
-		<span class="absolute top-2 left-2 shadow-md transition duration-300 group-hover:-translate-y-1"
+		<span
+			class="absolute top-2 right-2 shadow-md transition duration-300 group-hover:-translate-y-1"
 			><RatingBadge value={rating.average} average size="sm" /></span
 		>
 	{/if}
