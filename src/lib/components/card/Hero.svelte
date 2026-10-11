@@ -9,7 +9,8 @@
 	// - есть трейлер — шапка как у Okko (CardHero): трейлер фоном, текст поверх, постера нет;
 	// - нет трейлера — постер слева, тот же текст справа.
 	// В шапке только русское название, кнопки и под ними личные отметки. Описание, факты (год,
-	// длительность, возраст), режиссёр и роли — ниже, во вкладке «О фильме»; жанры — тегами.
+	// длительность, возраст), режиссёр и роли — ниже, во вкладке «О фильме». Под названием — жанры
+	// (теги kind = genre), остальные теги — над «О фильме».
 	// Кнопки «Трейлер» пока нет: трейлер и так идёт фоном (у CardHero — свои звук и полный экран).
 	let {
 		entity,
@@ -24,6 +25,8 @@
 		/** Кнопки: оценка, «Оценить», «В коллекцию», «Следить». */
 		actions: Snippet;
 	} = $props();
+
+	const genres = $derived(entity.tags.filter((t) => t.kind === 'genre'));
 </script>
 
 {#snippet content()}
@@ -32,6 +35,18 @@
 	>
 		{entity.title}
 	</h1>
+	{#if genres.length}
+		<ul class="mt-3 flex flex-wrap gap-x-2 text-sm text-base-content/70" aria-label="Жанры">
+			{#each genres as genre, i (genre.slug)}
+				<li>
+					{#if i}<span class="mr-2 text-base-content/30" aria-hidden="true">·</span>{/if}<a
+						href="/tags/{genre.slug}"
+						class="hover:text-primary">{genre.name}</a
+					>
+				</li>
+			{/each}
+		</ul>
+	{/if}
 	<div class="mt-7 flex flex-wrap items-center gap-3">
 		{@render actions()}
 	</div>

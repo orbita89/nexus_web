@@ -7,8 +7,14 @@
 
 	let { data }: PageProps = $props();
 
-	const tags = $derived(
+	const sorted = $derived(
 		(data.tags.data ?? []).toSorted((a, b) => a.name.localeCompare(b.name, 'ru'))
+	);
+	const groups = $derived(
+		[
+			{ title: 'Жанры', tags: sorted.filter((t) => t.kind === 'genre') },
+			{ title: 'Теги', tags: sorted.filter((t) => t.kind === 'tag') }
+		].filter((g) => g.tags.length)
 	);
 </script>
 
@@ -26,22 +32,33 @@
 
 {#if data.tags.error}
 	<LoadError message={data.tags.error} />
-{:else if tags.length}
-	<ul class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-		{#each tags as tag (tag.slug)}
-			<li>
-				<a
-					href="/tags/{tag.slug}"
-					class="group flex h-full items-center justify-between gap-3 rounded-box bg-base-200 px-4 py-3 ring-1 ring-base-300 transition hover:-translate-y-0.5 hover:ring-primary"
-				>
-					<span class="font-semibold group-hover:text-primary">{tag.name}</span>
-					<span class="text-xs whitespace-nowrap text-base-content/40"
-						>{count(tag.entities_count, ['произведение', 'произведения', 'произведений'])}</span
-					>
-				</a>
-			</li>
+{:else if groups.length}
+	<div class="flex flex-col gap-10">
+		{#each groups as group (group.title)}
+			<section aria-labelledby="tags-{group.title}">
+				<h2 id="tags-{group.title}" class="mb-4 text-2xl font-bold">{group.title}</h2>
+				<ul class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4" aria-label={group.title}>
+					{#each group.tags as tag (tag.slug)}
+						<li>
+							<a
+								href="/tags/{tag.slug}"
+								class="group flex h-full items-center justify-between gap-3 rounded-box bg-base-200 px-4 py-3 ring-1 ring-base-300 transition hover:-translate-y-0.5 hover:ring-primary"
+							>
+								<span class="font-semibold group-hover:text-primary">{tag.name}</span>
+								<span class="text-xs whitespace-nowrap text-base-content/40"
+									>{count(tag.entities_count, [
+										'произведение',
+										'произведения',
+										'произведений'
+									])}</span
+								>
+							</a>
+						</li>
+					{/each}
+				</ul>
+			</section>
 		{/each}
-	</ul>
+	</div>
 {:else}
 	<EmptyState title="Тегов пока нет" />
 {/if}

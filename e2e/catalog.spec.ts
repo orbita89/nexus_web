@@ -31,10 +31,14 @@ test('карточка: «О фильме», переход на человек�
 	await expect(hero).not.toContainText('2 ч 35 мин');
 	await expect(hero.getByLabel(/^Средняя оценка/)).toBeVisible();
 
-	// Теги — над «О фильме». Подробности — только в «О фильме», в шапке их нет.
+	// Жанры — в шапке под названием, остальные теги — над «О фильме». Подробности — только в
+	// «О фильме», в шапке их нет.
 	await expect(
-		page.getByRole('list', { name: 'Теги' }).getByRole('link', { name: 'Научная фантастика' })
+		hero.getByRole('list', { name: 'Жанры' }).getByRole('link', { name: 'Научная фантастика' })
 	).toBeVisible();
+	const tags = page.getByRole('list', { name: 'Теги' });
+	await expect(tags.getByRole('link', { name: 'Экранизация' })).toBeVisible();
+	await expect(tags.getByRole('link', { name: 'Научная фантастика' })).toHaveCount(0);
 	const about = page.getByRole('region', { name: 'О фильме' });
 	await expect(about.getByRole('list', { name: 'В главных ролях' })).toContainText('Пол Атрейдес');
 	await expect(about).not.toContainText(/дубл/i);
@@ -150,7 +154,13 @@ test('карточка — статика: живого в HTML нет, блок
 
 test('теги: список и сущности с тегом, фильтр по разделу', async ({ page }) => {
 	await page.goto('/tags');
-	await page.getByRole('link', { name: /Научная фантастика/ }).click();
+	// Две группы: жанры и остальные теги.
+	await expect(page.getByRole('list', { name: 'Теги' })).toContainText('Экранизация');
+	await expect(page.getByRole('list', { name: 'Теги' })).not.toContainText('Научная фантастика');
+	await page
+		.getByRole('list', { name: 'Жанры' })
+		.getByRole('link', { name: /Научная фантастика/ })
+		.click();
 	await expect(page).toHaveURL('/tags/sci-fi');
 	await expect(page.getByRole('heading', { name: 'Научная фантастика', level: 1 })).toBeVisible();
 	await expect(page.getByRole('link', { name: /^Дюна\s+1965 · Книга/ })).toBeVisible();

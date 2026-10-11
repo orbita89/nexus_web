@@ -50,6 +50,7 @@
 	const kind = $derived(kindByApi(entity.kind));
 	const year = $derived(yearOf(entity.release_date));
 	const trailers = $derived(trailerSources(entity));
+	const plainTags = $derived(entity.tags.filter((t) => t.kind === 'tag'));
 
 	// Вышло ли — по часам зрителя, не сборки: статика живёт дольше дня премьеры. До гидрации
 	// считаем вышедшим — зависящее от этого и так рисуется только в браузере.
@@ -147,9 +148,9 @@
 		</Hero>
 	</div>
 
-	<!-- Теги — над «О фильме». Жанры пока тоже теги; разделят на бэкенде (backend-questions). -->
-	{#if entity.tags.length}
-		<div class="mb-10"><TagChips tags={entity.tags} /></div>
+	<!-- Теги — над «О фильме»; жанры — в шапке под названием. -->
+	{#if plainTags.length}
+		<div class="mb-10"><TagChips tags={plainTags} /></div>
 	{/if}
 
 	<About {entity}>

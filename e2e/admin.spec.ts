@@ -60,12 +60,15 @@ test('теги: создать (slug из названия), переимено�
 	await form.getByRole('button', { name: 'Добавить тег' }).click();
 	const row = admin.getByRole('row').filter({ hasText: name });
 	await expect(row).toContainText('0');
+	await expect(row).toContainText('Тег');
 
+	// Переименовать и сделать жанром.
 	await row.getByRole('button', { name: `Изменить тег ${name}` }).click();
 	await admin.getByLabel('Название', { exact: true }).last().fill(`${name} (новое)`);
+	await admin.getByLabel('Жанр / тег').last().selectOption('genre');
 	await admin.getByRole('button', { name: 'Сохранить' }).click();
 	const renamed = admin.getByRole('row').filter({ hasText: `${name} (новое)` });
-	await expect(renamed).toBeVisible();
+	await expect(renamed).toContainText('Жанр');
 
 	await renamed.getByRole('button', { name: /^Удалить тег/ }).click();
 	await renamed.getByRole('button', { name: 'Удалить', exact: true }).click();

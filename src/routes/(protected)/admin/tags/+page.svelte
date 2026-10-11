@@ -1,16 +1,30 @@
 <script lang="ts">
 	import { errorMessage, unwrap } from '#lib/api/errors.ts';
-	import type { SchemaTagWithCount } from '#lib/api/generated/catalog.ts';
+	import type { SchemaTagKind, SchemaTagWithCount } from '#lib/api/generated/catalog.ts';
 	import { api } from '#lib/auth/session.svelte.ts';
 	import { slugError, slugify } from '#lib/admin/slug.ts';
 	import Alert from '#lib/components/Alert.svelte';
 
-	// Теги: создать, переименовать или сменить slug на месте, удалить (снимается со всех сущностей).
+	// Теги: создать, переименовать, сменить slug или вид (жанр — в шапке карточки, тег — над
+	// «О фильме») на месте, удалить (снимается со всех сущностей).
+	const KINDS: { value: SchemaTagKind; title: string }[] = [
+		{ value: 'genre', title: 'Жанр' },
+		{ value: 'tag', title: 'Тег' }
+	];
+	const kindTitle = (kind: SchemaTagKind) => KINDS.find((k) => k.value === kind)?.title ?? kind;
 	let tags = $state<SchemaTagWithCount[]>([]);
 	let error = $state('');
 	let editing = $state<string | null>(null);
-	let draft = $state({ name: '', slug: '' });
-	let created = $state({ name: '', slug: '' });
+	let draft = $state<{ name: string; slug: string; kind: SchemaTagKind }>({
+		name: '',
+		slug: '',
+		kind: 'tag'
+	});
+	let created = $state<{ name: string; slug: string; kind: SchemaTagKind }>({
+		name: '',
+		slug: '',
+		kind: 'tag'
+	});
 	let slugTouched = $state(false);
 	let confirmDelete = $state<string | null>(null);
 
@@ -39,18 +53,18 @@
 
 	async function create(event: SubmitEvent) {
 		event.preventDefault();
-		const body = { name: created.name.trim(), slug: created.slug.trim() };
+		const body = { name: created.name.trim(), slug: created.slug.trim(), kind: created.kind };
 		error = (!body.name && 'Введите название.') || slugError(body.slug) || '';
 		if (error) return;
 		if (await run(() => unwrap(api.catalog.POST('/api/v1/catalog/admin/tags', { body })))) {
-			created = { name: '', slug: '' };
+			created = { name: '', slug: '', kind: created.kind };
 			slugTouched = false;
 		}
 	}
 
 	async function save(event: SubmitEvent, id: string) {
 		event.preventDefault();
-		const body = { name: draft.name.trim(), slug: draft.slug.trim() };
+		const body = { name: draft.name.trim(), slug: draft.slug.trim(), kind: draft.kind };
 		error = (!body.name && 'Введите название.') || slugError(body.slug) || '';
 		if (error) return;
 		if (
@@ -97,6 +111,10 @@
 			oninput={() => (slugTouched = true)}
 		/>
 	</label>
+	<label class="sr-only" for="tag-kind-new">Жанр / тег</label>
+	<select id="tag-kind-new" class="select w-28 select-sm" bind:value={created.kind}>
+		{#each KINDS as k (k.value)}<option value={k.value}>{k.title}</option>{/each}
+	</select>
 	<button class="btn btn-primary btn-sm">Добавить тег</button>
 </form>
 
@@ -104,17 +122,25 @@
 
 <div class="overflow-x-auto rounded-box ring-1 ring-base-300">
 	<table class="table">
-		<thead><tr><th>Название</th><th>slug</th><th>Произведений</th><th></th></tr></thead>
+		<thead><tr><th>Название</th><th>slug</th><th>Вид</th><th>Произведений</th><th></th></tr></thead>
 		<tbody>
 			{#each tags as tag (tag.id)}
 				<tr>
 					{#if editing === tag.id}
-						<td colspan="4">
+						<td colspan="5">
 							<form class="flex flex-wrap items-center gap-2" onsubmit={(e) => save(e, tag.id)}>
 								<label class="sr-only" for="tag-name-{tag.id}">Название</label>
 								<input id="tag-name-{tag.id}" class="input input-sm" bind:value={draft.name} />
 								<label class="sr-only" for="tag-slug-{tag.id}">slug</label>
 								<input id="tag-slug-{tag.id}" class="input input-sm" bind:value={draft.slug} />
+								<label class="sr-only" for="tag-kind-{tag.id}">Жанр / тег</label>
+								<select
+									id="tag-kind-{tag.id}"
+									class="select w-28 select-sm"
+									bind:value={draft.kind}
+								>
+									{#each KINDS as k (k.value)}<option value={k.value}>{k.title}</option>{/each}
+								</select>
 								<button class="btn btn-primary btn-xs">Сохранить</button>
 								<button type="button" class="btn btn-ghost btn-xs" onclick={() => (editing = null)}
 									>Отмена</button
@@ -126,6 +152,7 @@
 							><a href="/tags/{tag.slug}" class="hover:text-primary">{tag.name}</a></td
 						>
 						<td class="font-mono text-sm text-base-content/60">{tag.slug}</td>
+						<td class="text-sm">{kindTitle(tag.kind)}</td>
 						<td class="tabular-nums">{tag.entities_count}</td>
 						<td class="text-right whitespace-nowrap">
 							{#if confirmDelete === tag.id}
@@ -141,7 +168,7 @@
 									class="btn btn-ghost btn-xs"
 									aria-label="Изменить тег {tag.name}"
 									onclick={() => {
-										draft = { name: tag.name, slug: tag.slug };
+										draft = { name: tag.name, slug: tag.slug, kind: tag.kind };
 										editing = tag.id;
 									}}>Изменить</button
 								>
