@@ -10,8 +10,7 @@
 	import CollectionForm from './CollectionForm.svelte';
 
 	// «В коллекцию» на карточке: свои коллекции с отметками, где произведение уже есть, и быстрое
-	// создание новой. В списке коллекций нет пунктов, поэтому при открытии читаем каждую свою
-	// коллекцию (docs/backend-questions.md — нужен признак «есть ли сущность»).
+	// создание новой. Отметки — одним запросом: ?contains={slug} даёт contains у каждой коллекции.
 	let { slug, title, onchange }: { slug: string; title: string; onchange?: () => void } = $props();
 
 	let dialog: HTMLDialogElement;
@@ -25,19 +24,10 @@
 		const username = session.user!.username;
 		const list = await unwrap(
 			api.social.GET('/api/v1/social/users/{username}/collections', {
-				params: { path: { username }, query: { limit: 100 } }
+				params: { path: { username }, query: { limit: 100, contains: slug } }
 			})
 		);
-		const details = await Promise.all(
-			list.items.map((c) =>
-				unwrap(
-					api.social.GET('/api/v1/social/collections/{id}', { params: { path: { id: c.id } } })
-				)
-			)
-		);
-		member = Object.fromEntries(
-			details.map((d) => [d.id, d.items.some((i) => i.entity.slug === slug)])
-		);
+		member = Object.fromEntries(list.items.map((c) => [c.id, c.contains === true]));
 		collections = list.items;
 	}
 

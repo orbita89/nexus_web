@@ -67,6 +67,18 @@ test('пользователь: коллекция с карточки, соде
 	await page.getByRole('heading', { name: 'В коллекциях' }).scrollIntoViewIfNeeded();
 	await expect(page.getByRole('list', { name: 'В коллекциях' })).toContainText(title);
 
+	// Отметки «уже здесь» — одним запросом (?contains=), без чтения каждой коллекции.
+	await page.reload();
+	await expect(userMenu(page)).toBeVisible();
+	const perCollection: string[] = [];
+	page.on('request', (r) => {
+		if (/\/api\/v1\/social\/collections\/[\w-]+$/.test(r.url())) perCollection.push(r.url());
+	});
+	await page.getByRole('button', { name: 'В коллекцию' }).click();
+	await expect(dialog.getByRole('checkbox', { name: new RegExp(title) })).toBeChecked();
+	expect(perCollection).toEqual([]);
+	await page.keyboard.press('Escape');
+
 	// В профиле — новая коллекция; открываем и добавляем книгу поиском.
 	await page.goto(`/u/${username}/collections`);
 	await expect(userMenu(page)).toBeVisible();
