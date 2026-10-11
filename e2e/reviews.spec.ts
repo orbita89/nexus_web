@@ -125,6 +125,32 @@ test('комментарии к рецензии: написать, счётчи
 	await expect(toggle).toHaveText(new RegExp(`Комментарии\\s*${before}`));
 });
 
+test('реакции: числа из сводки, своя — одна, после перезагрузки на месте, повторно — снять', async ({
+	page,
+	request
+}) => {
+	await registerAndSignIn(page, request, 'react');
+	const summary = await (await request.get('/api/v1/social/entities/dune-2021/rating')).json();
+	const sad = summary.reactions.sad as number;
+	await page.goto('/films/dune-2021');
+	const reactions = () => page.getByRole('group', { name: 'Реакции' });
+	await rateToggle(page).click();
+	await expect(reactions().getByRole('button', { name: 'Огонь' })).toHaveText(
+		new RegExp(`${summary.reactions.fire}`)
+	);
+
+	const button = reactions().getByRole('button', { name: 'Грустно' });
+	await button.click();
+	await expect(button).toHaveAttribute('aria-pressed', 'true');
+	await expect(button).toHaveText(new RegExp(`${sad + 1}`));
+
+	await page.reload();
+	await rateToggle(page).click();
+	await expect(button).toHaveAttribute('aria-pressed', 'true');
+	await button.click();
+	await expect(button).toHaveAttribute('aria-pressed', 'false');
+});
+
 test('вошедший: «Оценить» в шапке, рецензия в ленте, правка, удаление', async ({
 	page,
 	request

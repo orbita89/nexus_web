@@ -6,6 +6,7 @@
 	import { loginUrl } from '#lib/utils/redirect.ts';
 	import { HERO_GLASS as GLASS, HERO_PRIMARY as PRIMARY } from './buttons.ts';
 	import Reactions from './Reactions.svelte';
+	import type { ReactionCounts } from '#lib/social/reactions.ts';
 
 	// «Оценить» в шапке карточки: по нажатию — панель с 1–10 и быстрыми реакциями. Поставили —
 	// кнопка показывает «Ваша: 8» цветом оценки. Отдельного блока оценок на странице нет: сводка —
@@ -15,8 +16,16 @@
 		my,
 		slug,
 		released,
-		releaseDate
-	}: { my: MyReviewState; slug: string; released: boolean; releaseDate?: string | null } = $props();
+		releaseDate,
+		reactions
+	}: {
+		my: MyReviewState;
+		slug: string;
+		released: boolean;
+		releaseDate?: string | null;
+		/** Счётчики реакций из сводки оценок. */
+		reactions?: ReactionCounts;
+	} = $props();
 
 	let details = $state<HTMLDetailsElement>();
 	let open = $state(false);
@@ -145,7 +154,7 @@
 				<p class="mb-2 text-xs font-semibold tracking-widest text-base-content/50 uppercase">
 					Впечатление
 				</p>
-				<Reactions {slug} />
+				<Reactions {slug} counts={reactions} {released} />
 			</div>
 		</div>
 	</details>

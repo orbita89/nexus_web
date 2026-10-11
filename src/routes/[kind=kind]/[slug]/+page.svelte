@@ -134,7 +134,13 @@
 			{/snippet}
 			{#snippet actions()}
 				<AverageRating {average} total={rating.current?.data?.count ?? 0} />
-				<RateButton {my} slug={entity.slug} {released} releaseDate={entity.release_date} />
+				<RateButton
+					{my}
+					slug={entity.slug}
+					{released}
+					releaseDate={entity.release_date}
+					reactions={rating.current?.data?.reactions}
+				/>
 				<AddToCollection slug={entity.slug} title={entity.title} onchange={() => live.refresh()} />
 				<WatchButton {watch} />
 			{/snippet}

@@ -1,42 +1,80 @@
 <script lang="ts">
-	// Быстрые реакции вместо графиков: 🔥 😢 🤔 😴, одна на зрителя, повторный клик снимает.
-	// API реакций ещё нет (docs/backend-questions.md): пока выбор хранится в браузере, счётчиков
-	// нет. Когда появится — value и onchange придут сверху, а счётчики — в counts.
+	import { ApiError, errorMessage, unwrap } from '#lib/api/errors.ts';
+	import { api, session } from '#lib/auth/session.svelte.ts';
+	import {
+		applyReaction,
+		REACTIONS,
+		type Reaction,
+		type ReactionCounts
+	} from '#lib/social/reactions.ts';
+
+	// Быстрые реакции вместо графиков: 🔥 😢 🤔 😴, одна на зрителя: другая заменяет, повторный
+	// клик снимает. Числа — из сводки оценок (counts), своя — отдельным запросом с токеном. Нажатие
+	// меняет числа сразу; ошибка (в т. ч. 409 до премьеры) — откат и сообщение.
 	let {
 		slug,
-		counts
+		counts,
+		released = true
 	}: {
 		slug: string;
-		/** Сколько каждой реакции; нет — без чисел. */
-		counts?: Partial<Record<Reaction, number>>;
+		/** Из RatingSummary.reactions; ещё не загрузились — без чисел. */
+		counts?: ReactionCounts;
+		released?: boolean;
 	} = $props();
 
-	type Reaction = (typeof REACTIONS)[number]['key'];
-	const REACTIONS = [
-		{ key: 'fire', emoji: '🔥', label: 'Огонь' },
-		{ key: 'sad', emoji: '😢', label: 'Грустно' },
-		{ key: 'think', emoji: '🤔', label: 'Заставляет думать' },
-		{ key: 'bored', emoji: '😴', label: 'Скучно' }
-	] as const;
-
-	const storageKey = $derived(`nexus.reaction.${slug}`);
+	const ZERO: ReactionCounts = { fire: 0, sad: 0, think: 0, bored: 0 };
+	// Числа — из сводки; после своего нажатия — свои, пока сводку не перечитали.
+	let shown = $derived(counts);
 	let mine = $state<Reaction | null>(null);
+	let busy = $state(false);
+	let error = $state('');
 
 	$effect(() => {
-		try {
-			mine = (localStorage.getItem(storageKey) as Reaction | null) ?? null;
-		} catch {
-			mine = null;
-		}
+		const current = slug;
+		mine = null;
+		error = '';
+		if (session.status !== 'authed') return;
+		let stale = false;
+		unwrap(
+			api.social.GET('/api/v1/social/entities/{slug}/reaction', {
+				params: { path: { slug: current } }
+			})
+		)
+			.then((r) => !stale && (mine = r.kind))
+			.catch((e) => {
+				if (!stale && !(e instanceof ApiError && e.status === 404)) error = errorMessage(e);
+			});
+		return () => {
+			stale = true;
+		};
 	});
 
-	function pick(key: Reaction) {
-		mine = mine === key ? null : key;
+	async function pick(key: Reaction) {
+		if (busy) return;
+		const before = { counts: shown, mine };
+		const next = applyReaction(shown ?? ZERO, mine, key);
+		if (shown) shown = next.counts;
+		mine = next.mine;
+		busy = true;
+		error = '';
+		const params = { path: { slug } };
 		try {
-			if (mine) localStorage.setItem(storageKey, mine);
-			else localStorage.removeItem(storageKey);
-		} catch {
-			// приватный режим — просто не запоминаем
+			if (next.mine) {
+				await unwrap(
+					api.social.PUT('/api/v1/social/entities/{slug}/reaction', {
+						params,
+						body: { kind: next.mine }
+					})
+				);
+			} else {
+				await unwrap(api.social.DELETE('/api/v1/social/entities/{slug}/reaction', { params }));
+			}
+		} catch (e) {
+			shown = before.counts;
+			mine = before.mine;
+			error = errorMessage(e);
+		} finally {
+			busy = false;
 		}
 	}
 </script>
@@ -51,10 +89,12 @@
 			aria-pressed={mine === r.key}
 			aria-label={r.label}
 			title={r.label}
+			disabled={!released || session.status !== 'authed'}
 			onclick={() => pick(r.key)}
 		>
 			<span class="text-lg leading-none transition-transform active:scale-125">{r.emoji}</span>
-			{#if counts?.[r.key]}<span class="text-xs tabular-nums">{counts[r.key]}</span>{/if}
+			{#if shown?.[r.key]}<span class="text-xs tabular-nums">{shown[r.key]}</span>{/if}
 		</button>
 	{/each}
 </div>
+{#if error}<p role="alert" class="mt-2 text-sm text-error">{error}</p>{/if}
