@@ -328,6 +328,8 @@ test('без кнопки «Трейлер»: ни один источник н�
 	await stubMedia(page, { youtube: 'blocked', rutube: 'blocked' });
 	await page.goto('/films/dune-2021');
 	await expect(page.getByRole('button', { name: 'Трейлер' })).toHaveCount(0);
+	// Плеер стартовал (таймер 8 с идёт) — только теперь проматываем время.
+	await expect(heroFrame(page)).toHaveAttribute('src', new RegExp(`^${YOUTUBE}`));
 	await page.clock.runFor(8500);
 	await expect(heroFrame(page)).toHaveAttribute('src', new RegExp(`^${RUTUBE}`));
 	await page.clock.runFor(8500);
