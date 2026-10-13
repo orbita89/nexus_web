@@ -4,7 +4,7 @@
  */
 
 export interface paths {
-	'/api/v1/catalog/admin/entities': {
+	'/api/v1/catalog/admin/archive/promote/{slug}': {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -13,7 +13,33 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/** Создать сущность. `metadata` проверяется по схеме своего `kind`. */
+		/**
+		 * Вернуть фильм из архива на сайт: строка в `entities` (`active`, `active_manual` — сборка
+		 *     горячего слоя её не уберёт), связь с TMDB и popularity; затем документ удаляется из архива
+		 *     (`delete_term` + `commit`), поиск сайта и статика обновляются. Карточка — «скелет»: название,
+		 *     оригинальное название, дата выхода.
+		 */
+		post: operations['archive_promote'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/admin/entities': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Все сущности, включая скрытые с сайта (`active` в каждой): найти и включить. Фильтры и
+		 *     сортировки — как у `GET /entities`, плюс `active`.
+		 */
+		get: operations['admin_list_entities'];
+		put?: never;
+		/** Создать сущность. `metadata` проверяется по схеме своего `kind`. `active` — по умолчанию `true`. */
 		post: operations['create_entity'];
 		delete?: never;
 		options?: never;
@@ -37,7 +63,9 @@ export interface paths {
 		head?: never;
 		/**
 		 * Изменить сущность. Переданные поля заменяются, `null` очищает необязательное поле;
-		 *     `metadata` заменяется целиком. `kind` не меняется.
+		 *     `metadata` заменяется целиком. `kind` не меняется. `active: false` скрывает с сайта: поиск
+		 *     удаляет документ, фронтенд по ISR получает 404 и удаляет статику. Переключение `active`
+		 *     помечает `active_manual`: «пересобрать активные» её больше не трогает.
 		 */
 		patch: operations['update_entity'];
 		trace?: never;
@@ -189,6 +217,64 @@ export interface paths {
 		patch: operations['update_person'];
 		trace?: never;
 	};
+	'/api/v1/catalog/admin/ranking': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Настройки балла «Рекомендуемые» и окна «Скоро премьера». */
+		get: operations['get_ranking'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/admin/ranking/preview': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Предпросмотр: топ вышедших фильмов по формуле с настройками из тела — с составляющими балла и
+		 *     признаком `active`. Ничего не записывает: подбирать веса, глядя на список.
+		 */
+		post: operations['preview_ranking'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/admin/ranking/stream': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/**
+		 * Сохранить настройки и применить, потоком: шаг `rank` (пересчёт балла), затем перестройка
+		 *     поиска без проверки размера (меняются сортировка и окно «Скоро премьера»), последним `done`.
+		 *     Уже идёт перестройка или операция TMDB — `409` до потока.
+		 */
+		put: operations['save_ranking'];
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/catalog/admin/search/reindex': {
 		parameters: {
 			query?: never;
@@ -269,6 +355,75 @@ export interface paths {
 		patch: operations['update_tag'];
 		trace?: never;
 	};
+	'/api/v1/catalog/admin/tmdb/active/stream': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * «Пересобрать активные»: из сущностей со связью TMDB, кроме переключённых вручную
+		 *     (`active_manual`), активны топ `count` **вышедших** по баллу «Рекомендуемые» (без балла — по
+		 *     числу оценок TMDB и popularity) и все «Скоро премьера» (выход в ближайшие `soon_days` дней);
+		 *     остальные — скрыты, в том числе невышедшие позже и без даты. Потоком: шаг `activate`, затем
+		 *     перестройка поиска без проверки размера и ISR `{"all": true}`; последним `done` (`active`).
+		 * @description Сперва «Обновить рейтинги»: топ берётся по текущему баллу. Включённые и скрытые в админке, сиды и
+		 *     сущности без TMDB не трогаются.
+		 */
+		post: operations['active_stream'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/admin/tmdb/stats/stream': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * «Обновить рейтинги», потоком `text/event-stream`: шаги `tmdb_export` (ежедневный дамп TMDB,
+		 *     без ключа), `imdb_ratings` (`title.ratings.tsv.gz`), `stats` (запись в `entity_stats`, с
+		 *     `progress`), `rank` (пересчёт балла «Рекомендуемые»), затем перестройка поиска; последним
+		 *     `done` (`stats` — итог). Уже идёт перестройка или другая операция каталога — `409` до потока.
+		 *     Доводится до конца, даже если клиент закрыл соединение.
+		 */
+		post: operations['stats_stream'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/archive/search': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Поиск по холодному архиву: фильмы, которых нет на сайте (вне топ-100 000). Ищет по
+		 *     названию и оригинальному названию, выше — точнее совпавшие и популярные. Вернуть фильм на
+		 *     сайт — `POST /admin/archive/promote/{slug}`.
+		 */
+		get: operations['archive_search'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/catalog/entities': {
 		parameters: {
 			query?: never;
@@ -277,9 +432,12 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Список сущностей. `sort`: `new` (по умолчанию: новинки сверху, без даты — в конце), `popular`
-		 *     (больше оценок), `rating` (выше средняя, без оценок — в конце), `title`.
-		 * @description Оценки — из сводок `entity_ratings`, которые присылает `social` (`EntityRatings`): каталог в
+		 * Список видимых сущностей (активные; фильмы из TMDB — вышедшие или «Скоро премьера»). `sort`:
+		 *     `recommended` (по умолчанию: балл — рейтинг IMDb + популярность + свежесть), `trending`
+		 *     (смотрят сейчас), `top_rated` (рейтинг IMDb), `new` (вышедшие, новые сверху), `soon` (ближайшие
+		 *     премьеры), `popular` (больше наших оценок), `rating` (выше наша средняя), `title`. Фильмы с датой
+		 *     в будущем — только в `soon`.
+		 * @description Наши оценки — из сводок `entity_ratings`, которые присылает `social` (`EntityRatings`): каталог в
 		 *     таблицы рецензий не ходит.
 		 */
 		get: operations['list_entities'];
@@ -302,6 +460,9 @@ export interface paths {
 		 * Карточка сущности: поля, теги и участники в порядке титров.
 		 * @description Читается из PostgreSQL, без кэша и Meilisearch: публичные страницы отдаёт статика
 		 *     фронтенда (SSG/ISR), сюда приходят её пересборка и админка.
+		 *
+		 *     Невидимая (скрыта или фильм из TMDB ещё не в окне «Скоро премьера») — 404 для всех, кроме
+		 *     админа (ему — и невидимые связанные).
 		 */
 		get: operations['get_entity'];
 		put?: never;
@@ -321,7 +482,7 @@ export interface paths {
 		};
 		/**
 		 * Похожие на сущность: тот же тип, больше общих тегов — выше (жанр весит вдвое), при равенстве —
-		 *     новее. Без самой
+		 *     новее. Только видимые; у невидимой — 404. Без самой
 		 *     сущности и её связанных (они и так на карточке). Нет тегов — пустая страница.
 		 * @description Первая версия без ML: один запрос с подсчётом пересечения тегов по `entity_tags (tag_id)`.
 		 */
@@ -341,7 +502,7 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** Список людей по алфавиту. */
+		/** Список людей по алфавиту. Только с работами в активных сущностях (или вовсе без работ). */
 		get: operations['list_people'];
 		put?: never;
 		post?: never;
@@ -380,7 +541,9 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Полнотекстовый поиск по каталогу: опечатки, ранжирование, фильтры. Сортировка по релевантности.
+		 * Полнотекстовый поиск по активным сущностям каталога: опечатки, ранжирование, фильтры.
+		 *     Сортировка по релевантности; `sort=recommended` / `trending` / `top_rated` — по баллу
+		 *     «Рекомендуемые», TMDB popularity, рейтингу IMDb (у кого значения нет — в конце).
 		 * @description Индекс обновляется после изменений в админке с задержкой в доли секунды.
 		 */
 		get: operations['search'];
@@ -400,7 +563,8 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Все теги по алфавиту с числом сущностей; `?kind=genre` — только жанры. Тегов немного, поэтому
+		 * Все теги по алфавиту с числом активных сущностей (счётчик держат триггеры); `?kind=genre` —
+		 *     только жанры. Тегов немного, поэтому
 		 *     без пагинации.
 		 */
 		get: operations['list_tags'];
@@ -433,6 +597,23 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
 	schemas: {
+		/** @description Итог «пересобрать активные». */
+		ActiveResult: {
+			/** Format: int64 */
+			activated: number;
+			/**
+			 * Format: int64
+			 * @description Активных сущностей после (всех, не только из TMDB).
+			 */
+			active: number;
+			/** Format: int64 */
+			deactivated: number;
+			/**
+			 * Format: int64
+			 * @description Из них «Скоро премьера» (включаются всегда).
+			 */
+			soon: number;
+		};
 		AddCredit: {
 			/** @example Пол Атрейдес */
 			character_name?: string | null;
@@ -449,6 +630,44 @@ export interface components {
 			 * @example actor
 			 */
 			role: string;
+		};
+		/** @description Сущность в админском списке: как в публичном, плюс флаг активности. */
+		AdminEntitySummary: components['schemas']['EntitySummary'] & {
+			active: boolean;
+			/** @description `active` переключали в админке: «пересобрать активные» её не трогает. */
+			active_manual: boolean;
+			/** @description Видна на сайте (активна и вышла / «скоро» / вручную / не из TMDB). */
+			visible: boolean;
+		};
+		/** @description Документ архива — «скелет» фильма: ровно то, что нужно для поиска и возврата в каталог. */
+		ArchiveDoc: {
+			kind: components['schemas']['EntityKind'];
+			/** @example The Night Visitor */
+			original_title?: string | null;
+			/**
+			 * Format: double
+			 * @description TMDB popularity на момент переноса в архив.
+			 * @example 1.84
+			 */
+			popularity: number;
+			/**
+			 * Format: date
+			 * @example 1971-02-04
+			 */
+			release_date?: string | null;
+			/** @example the-night-visitor-1971 */
+			slug: string;
+			/** @example Ночной посетитель */
+			title: string;
+			/**
+			 * Format: int32
+			 * @description Id фильма в TMDB: по нему импорт пропускает фильмы архива.
+			 * @example 42491
+			 */
+			tmdb_id?: number | null;
+		};
+		ArchiveHits: {
+			items: components['schemas']['ArchiveDoc'][];
 		};
 		/** @description Награда или номинация. */
 		Award: {
@@ -491,6 +710,8 @@ export interface components {
 			trivia?: string[] | null;
 		};
 		CreateEntity: {
+			/** @description Видна на сайте. По умолчанию `true`. */
+			active?: boolean | null;
 			/** @description `http(s)://...` */
 			cover_url?: string | null;
 			description?: string | null;
@@ -535,32 +756,69 @@ export interface components {
 		};
 		/** @description Итог операции. */
 		DoneEvent: {
+			active?: components['schemas']['ActiveResult'] | null;
 			entity?: components['schemas']['EntityDetail'] | null;
 			/** @description Ни один шаг не упал (пропущенные не считаются). */
 			ok: boolean;
 			reindex?: components['schemas']['ReindexResult'] | null;
+			stats?: components['schemas']['StatsResult'] | null;
 		};
 		/** @description Сущность целиком (строка `entities`). */
 		Entity: {
+			/**
+			 * @description Включена. Скрытая хранится в БД, но её нет в списках, поиске, похожих и фильмографиях, а
+			 *     карточка — 404 для всех, кроме админа.
+			 */
+			active: boolean;
 			cover_url?: string | null;
 			/** Format: date-time */
 			created_at: string;
 			description?: string | null;
 			/** Format: uuid */
 			id: string;
+			/**
+			 * Format: double
+			 * @description Статистика (`entity_stats`): IMDb, TMDB и балл «Рекомендуемые»; нет — `null`.
+			 */
+			imdb_rating?: number | null;
+			/** Format: int32 */
+			imdb_votes?: number | null;
 			kind: components['schemas']['EntityKind'];
 			/** @description Поля, специфичные для `kind`. */
 			metadata: components['schemas']['Metadata'];
 			/** @example Dune */
 			original_title?: string | null;
+			/**
+			 * Format: double
+			 * @description Байесовский рейтинг IMDb (сортировка `top_rated`).
+			 */
+			quality?: number | null;
+			/**
+			 * Format: double
+			 * @description Балл «Рекомендуемые» (сортировка по умолчанию); у невышедших и малоизвестных — `null`.
+			 */
+			rank_score?: number | null;
 			/** Format: date */
 			release_date?: string | null;
+			release_status: components['schemas']['ReleaseStatus'];
 			/** @example dune-2021 */
 			slug: string;
 			/** @example Дюна */
 			title: string;
+			/**
+			 * Format: double
+			 * @description TMDB popularity: «смотрят сейчас».
+			 */
+			tmdb_popularity?: number | null;
+			/** Format: int32 */
+			tmdb_votes?: number | null;
 			/** Format: date-time */
 			updated_at: string;
+			/**
+			 * @description Видна на сайте: `active` и (для фильмов из TMDB) уже вышла или «Скоро премьера», либо
+			 *     включена вручную.
+			 */
+			visible: boolean;
 		};
 		/** @description Участие человека в сущности (строка `entity_credits` + человек). */
 		EntityCredit: {
@@ -592,17 +850,31 @@ export interface components {
 		 * @description Порядок списка сущностей.
 		 * @enum {string}
 		 */
-		EntitySort: 'new' | 'popular' | 'rating' | 'title';
+		EntitySort:
+			'recommended' | 'trending' | 'top_rated' | 'new' | 'soon' | 'popular' | 'rating' | 'title';
 		/** @description Сущность в списке. */
 		EntitySummary: {
 			cover_url?: string | null;
 			/** Format: uuid */
 			id: string;
+			/**
+			 * Format: double
+			 * @description Рейтинг IMDb (0–10) и число голосов; нет — `null`.
+			 * @example 8
+			 */
+			imdb_rating?: number | null;
+			/**
+			 * Format: int32
+			 * @example 912000
+			 */
+			imdb_votes?: number | null;
 			kind: components['schemas']['EntityKind'];
 			/** @example Dune */
 			original_title?: string | null;
 			/** Format: date */
 			release_date?: string | null;
+			/** @description По сегодняшней дате: `soon` — бейдж «Скоро премьера». */
+			release_status?: components['schemas']['ReleaseStatus'];
 			/** @example dune-2021 */
 			slug: string;
 			/** @example Дюна */
@@ -747,16 +1019,55 @@ export interface components {
 			trivia?: string[] | null;
 		};
 		/** @description Страница списка. */
+		Page_AdminEntitySummary: {
+			items: (components['schemas']['EntitySummary'] & {
+				active: boolean;
+				/** @description `active` переключали в админке: «пересобрать активные» её не трогает. */
+				active_manual: boolean;
+				/** @description Видна на сайте (активна и вышла / «скоро» / вручную / не из TMDB). */
+				visible: boolean;
+			})[];
+			/**
+			 * Format: int64
+			 * @example 20
+			 */
+			limit: number;
+			/**
+			 * Format: int64
+			 * @example 0
+			 */
+			offset: number;
+			/**
+			 * Format: int64
+			 * @description Всего записей под фильтром (в поиске — оценка Meilisearch).
+			 * @example 137
+			 */
+			total: number;
+		};
+		/** @description Страница списка. */
 		Page_EntitySummary: {
 			items: {
 				cover_url?: string | null;
 				/** Format: uuid */
 				id: string;
+				/**
+				 * Format: double
+				 * @description Рейтинг IMDb (0–10) и число голосов; нет — `null`.
+				 * @example 8
+				 */
+				imdb_rating?: number | null;
+				/**
+				 * Format: int32
+				 * @example 912000
+				 */
+				imdb_votes?: number | null;
 				kind: components['schemas']['EntityKind'];
 				/** @example Dune */
 				original_title?: string | null;
 				/** Format: date */
 				release_date?: string | null;
+				/** @description По сегодняшней дате: `soon` — бейдж «Скоро премьера». */
+				release_status?: components['schemas']['ReleaseStatus'];
 				/** @example dune-2021 */
 				slug: string;
 				/** @example Дюна */
@@ -892,6 +1203,81 @@ export interface components {
 			/** Format: uuid */
 			to_id: string;
 		};
+		/** @description Строка предпросмотра: фильм и составляющие балла. */
+		RankPreviewRow: {
+			active: boolean;
+			/** Format: double */
+			imdb_rating?: number | null;
+			/** Format: int32 */
+			imdb_votes?: number | null;
+			/** Format: double */
+			p_part: number;
+			/**
+			 * Format: double
+			 * @description Вклад рейтинга, популярности и свежести; `score` — их сумма.
+			 */
+			q_part: number;
+			/**
+			 * Format: double
+			 * @description Байесовский рейтинг.
+			 */
+			quality: number;
+			/** Format: double */
+			r_part: number;
+			/** Format: date */
+			release_date?: string | null;
+			/** Format: double */
+			score: number;
+			slug: string;
+			title: string;
+			/** Format: double */
+			tmdb_popularity?: number | null;
+		};
+		/** @description Настройки балла «Рекомендуемые» и окна «Скоро премьера» (`catalog_ranking`). */
+		RankingSettings: {
+			/**
+			 * Format: double
+			 * @description Через сколько лет свежесть падает вдвое, 0.1–100.
+			 * @example 4
+			 */
+			half_life_years: number;
+			/**
+			 * Format: int32
+			 * @description Меньше голосов IMDb — без балла.
+			 * @example 1000
+			 */
+			min_votes: number;
+			/**
+			 * Format: int32
+			 * @description Окно «Скоро премьера», дней (0–365).
+			 * @example 30
+			 */
+			soon_days: number;
+			/**
+			 * Format: int32
+			 * @description «Доверительные» голоса байесовского рейтинга: меньше голосов — ближе к среднему.
+			 * @example 5000
+			 */
+			trust_votes: number;
+			/**
+			 * Format: double
+			 * @description Вес TMDB popularity, 0–10.
+			 * @example 0.3
+			 */
+			weight_popularity: number;
+			/**
+			 * Format: double
+			 * @description Вес рейтинга IMDb, 0–10.
+			 * @example 0.5
+			 */
+			weight_quality: number;
+			/**
+			 * Format: double
+			 * @description Вес свежести, 0–10.
+			 * @example 0.2
+			 */
+			weight_recency: number;
+		};
 		ReindexResult: {
 			/**
 			 * @description Удалённые устаревшие версии.
@@ -929,6 +1315,16 @@ export interface components {
 		 * @enum {string}
 		 */
 		RelationKind: 'sequel' | 'prequel' | 'remake';
+		/**
+		 * @description Статус выхода по сегодняшней дате.
+		 * @enum {string}
+		 */
+		ReleaseStatus: 'released' | 'soon' | 'announced';
+		/**
+		 * @description Сортировка поиска (без неё — по релевантности); у кого значения нет — в конце.
+		 * @enum {string}
+		 */
+		SearchSort: 'recommended' | 'trending' | 'top_rated';
 		/** @description Поля сериала. */
 		SeriesMetadata: {
 			/** @description Награды и номинации: до 50. */
@@ -993,11 +1389,47 @@ export interface components {
 			 */
 			tags: string[];
 		};
+		/** @description Итог «обновить рейтинги». */
+		StatsResult: {
+			/**
+			 * Format: int64
+			 * @description У скольких — рейтинг IMDb.
+			 */
+			imdb_updated: number;
+			/**
+			 * Format: int64
+			 * @description У скольких есть балл «Рекомендуемые».
+			 */
+			ranked: number;
+			/**
+			 * @description Файл дампа TMDB.
+			 * @example movie_ids_10_11_2026.json.gz
+			 */
+			tmdb_export: string;
+			/**
+			 * Format: int64
+			 * @description У скольких сущностей изменилась TMDB popularity.
+			 */
+			tmdb_updated: number;
+		};
 		/**
 		 * @description Шаг операции.
 		 * @enum {string}
 		 */
-		Step: 'db' | 'search' | 'create_index' | 'fill' | 'check' | 'swap' | 'rotate' | 'isr';
+		Step:
+			| 'db'
+			| 'search'
+			| 'create_index'
+			| 'fill'
+			| 'check'
+			| 'swap'
+			| 'rotate'
+			| 'isr'
+			| 'tmdb_export'
+			| 'imdb_ratings'
+			| 'stats'
+			| 'rank'
+			| 'activate';
 		/** @description Состояние шага. На каждый шаг приходит `running`, затем итог (у `db` — сразу итог). */
 		StepEvent: {
 			/**
@@ -1033,7 +1465,7 @@ export interface components {
 		TagWithCount: {
 			/**
 			 * Format: int64
-			 * @description Сколько сущностей с этим тегом.
+			 * @description Сколько активных сущностей с этим тегом.
 			 * @example 12
 			 */
 			entities_count: number;
@@ -1065,6 +1497,11 @@ export interface components {
 		 *     `kind` не меняется. `metadata` заменяется целиком.
 		 */
 		UpdateEntity: {
+			/**
+			 * @description Включить (`true`) или скрыть с сайта (`false`). Помечает `active_manual`: «пересобрать
+			 *     активные» эту сущность больше не трогает.
+			 */
+			active?: boolean | null;
 			cover_url?: string | null;
 			description?: string | null;
 			metadata?: components['schemas']['Metadata'] | null;
@@ -1095,7 +1532,11 @@ export interface components {
 	headers: never;
 	pathItems: never;
 }
+export type SchemaActiveResult = components['schemas']['ActiveResult'];
 export type SchemaAddCredit = components['schemas']['AddCredit'];
+export type SchemaAdminEntitySummary = components['schemas']['AdminEntitySummary'];
+export type SchemaArchiveDoc = components['schemas']['ArchiveDoc'];
+export type SchemaArchiveHits = components['schemas']['ArchiveHits'];
 export type SchemaAward = components['schemas']['Award'];
 export type SchemaBookMetadata = components['schemas']['BookMetadata'];
 export type SchemaCreateEntity = components['schemas']['CreateEntity'];
@@ -1113,6 +1554,7 @@ export type SchemaGameMetadata = components['schemas']['GameMetadata'];
 export type SchemaJobEvent = components['schemas']['JobEvent'];
 export type SchemaMetadata = components['schemas']['Metadata'];
 export type SchemaMovieMetadata = components['schemas']['MovieMetadata'];
+export type SchemaPageAdminEntitySummary = components['schemas']['Page_AdminEntitySummary'];
 export type SchemaPageEntitySummary = components['schemas']['Page_EntitySummary'];
 export type SchemaPagePersonSummary = components['schemas']['Page_PersonSummary'];
 export type SchemaPerson = components['schemas']['Person'];
@@ -1123,12 +1565,17 @@ export type SchemaPersonSummary = components['schemas']['PersonSummary'];
 export type SchemaPlannedStep = components['schemas']['PlannedStep'];
 export type SchemaProgressEvent = components['schemas']['ProgressEvent'];
 export type SchemaPutRelation = components['schemas']['PutRelation'];
+export type SchemaRankPreviewRow = components['schemas']['RankPreviewRow'];
+export type SchemaRankingSettings = components['schemas']['RankingSettings'];
 export type SchemaReindexResult = components['schemas']['ReindexResult'];
 export type SchemaRelatedWork = components['schemas']['RelatedWork'];
 export type SchemaRelationKind = components['schemas']['RelationKind'];
+export type SchemaReleaseStatus = components['schemas']['ReleaseStatus'];
+export type SchemaSearchSort = components['schemas']['SearchSort'];
 export type SchemaSeriesMetadata = components['schemas']['SeriesMetadata'];
 export type SchemaSeriesStatus = components['schemas']['SeriesStatus'];
 export type SchemaSetTags = components['schemas']['SetTags'];
+export type SchemaStatsResult = components['schemas']['StatsResult'];
 export type SchemaStep = components['schemas']['Step'];
 export type SchemaStepEvent = components['schemas']['StepEvent'];
 export type SchemaStepStatus = components['schemas']['StepStatus'];
@@ -1142,6 +1589,136 @@ export type SchemaUpdatePerson = components['schemas']['UpdatePerson'];
 export type SchemaUpdateTag = components['schemas']['UpdateTag'];
 export type $defs = Record<string, never>;
 export interface operations {
+	archive_promote: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description slug фильма в архиве */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Фильм в каталоге */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['EntityDetail'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description В архиве нет такого slug */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description slug или TMDB id уже в каталоге; архив занят сборкой */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Архив не настроен или недоступен */
+			503: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	admin_list_entities: {
+		parameters: {
+			query?: {
+				/** @description По умолчанию `recommended`. */
+				sort?: components['schemas']['EntitySort'];
+				kind?: components['schemas']['EntityKind'];
+				/** @description Slug тега. */
+				tag?: string;
+				year?: number;
+				/** @description Подстрока в названии или оригинальном названии, без учёта регистра. */
+				q?: string;
+				/** @description `true` — только активные, `false` — только скрытые; не передан — все. */
+				active?: boolean;
+				/** @description 1–100, по умолчанию 20. */
+				limit?: number;
+				/** @description С 0. */
+				offset?: number;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Страница сущностей */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Page_AdminEntitySummary'];
+				};
+			};
+			/** @description Неверный фильтр */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
 	create_entity: {
 		parameters: {
 			query?: never;
@@ -1893,6 +2470,158 @@ export interface operations {
 			};
 		};
 	};
+	get_ranking: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Настройки */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['RankingSettings'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	preview_ranking: {
+		parameters: {
+			query?: {
+				/** @description 1–200, по умолчанию 50. */
+				limit?: number;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['RankingSettings'];
+			};
+		};
+		responses: {
+			/** @description Топ по формуле */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['RankPreviewRow'][];
+				};
+			};
+			/** @description Неверные настройки */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	save_ranking: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['RankingSettings'];
+			};
+		};
+		responses: {
+			/** @description Сохранено; поток пересчёта */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'text/event-stream': components['schemas']['JobEvent'];
+				};
+			};
+			/** @description Неверные настройки */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Уже идёт перестройка поиска или операция TMDB */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
 	reindex_handler: {
 		parameters: {
 			query?: {
@@ -2191,10 +2920,166 @@ export interface operations {
 			};
 		};
 	};
+	active_stream: {
+		parameters: {
+			query?: {
+				/**
+				 * @description Топ по баллу «Рекомендуемые» (без балла — по числу оценок TMDB), 0–1000000, по умолчанию
+				 *     80000. Плюс все «Скоро премьера».
+				 * @example 80000
+				 */
+				count?: number;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Поток событий */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'text/event-stream': components['schemas']['JobEvent'];
+				};
+			};
+			/** @description Неверное число */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Уже идёт перестройка поиска или операция каталога */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	stats_stream: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Поток событий */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'text/event-stream': components['schemas']['JobEvent'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Уже идёт перестройка поиска или операция каталога */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	archive_search: {
+		parameters: {
+			query: {
+				/**
+				 * @description Слова из названия (русского или оригинального), 1–200 символов. Должны найтись все.
+				 * @example night visitor
+				 */
+				q: string;
+				/** @description 1–20, по умолчанию 20. */
+				limit?: number;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description До `limit` документов архива */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ArchiveHits'];
+				};
+			};
+			/** @description Пустой или длинный `q`, `limit` вне 1–20 */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Архив не настроен (`ARCHIVE_DIR`) или недоступен */
+			503: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
 	list_entities: {
 		parameters: {
 			query?: {
-				/** @description По умолчанию `new`. */
+				/** @description По умолчанию `recommended`. */
 				sort?: components['schemas']['EntitySort'];
 				/** @description Тип сущности. */
 				kind?: components['schemas']['EntityKind'];
@@ -2268,7 +3153,16 @@ export interface operations {
 					'application/json': components['schemas']['EntityDetail'];
 				};
 			};
-			/** @description Не найдена */
+			/** @description Неверный токен */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Не найдена или скрыта */
 			404: {
 				headers: {
 					[name: string]: unknown;
@@ -2380,7 +3274,16 @@ export interface operations {
 					'application/json': components['schemas']['PersonDetail'];
 				};
 			};
-			/** @description Не найден */
+			/** @description Неверный токен */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Не найден или все работы скрыты */
 			404: {
 				headers: {
 					[name: string]: unknown;
@@ -2399,6 +3302,8 @@ export interface operations {
 				 * @example дюан
 				 */
 				q?: string;
+				/** @description Не передан — по релевантности. */
+				sort?: components['schemas']['SearchSort'];
 				kind?: components['schemas']['EntityKind'];
 				/** @description Slug тега. */
 				tag?: string;

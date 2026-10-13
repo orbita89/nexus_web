@@ -5,6 +5,7 @@
 	import { count } from '#lib/catalog/labels.ts';
 	import { formUrl, withQuery } from '#lib/catalog/url.ts';
 	import Alert from '#lib/components/Alert.svelte';
+	import ArchiveHint from '#lib/components/catalog/ArchiveHint.svelte';
 	import EmptyState from '#lib/components/catalog/EmptyState.svelte';
 	import EntityGrid from '#lib/components/catalog/EntityGrid.svelte';
 	import KindTabs from '#lib/components/catalog/KindTabs.svelte';
@@ -95,3 +96,5 @@
 		или попробуйте другие слова.
 	</EmptyState>
 {/if}
+
+{#if data.archive.length}<ArchiveHint docs={data.archive} />{/if}

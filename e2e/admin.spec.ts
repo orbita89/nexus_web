@@ -315,3 +315,105 @@ test('модерация: чужие рецензия, сообщение, ко�
 		404
 	);
 });
+
+// Архив на dev может быть не настроен (503), поэтому ответы архива подменяем: проверяем интерфейс.
+test('архив: поиск с ?q= в адресе, возврат на сайт, 404 и 409', async () => {
+	const doc = (slug: string, title: string, extra: object = {}) => ({
+		slug,
+		title,
+		original_title: 'The Night Visitor',
+		kind: 'movie',
+		tmdb_id: 42491,
+		release_date: '1971-02-04',
+		popularity: 1.84,
+		...extra
+	});
+	await admin.route('**/api/v1/catalog/archive/search?*', (r) =>
+		r.fulfill({
+			json: {
+				items: [
+					doc('e2e-ok', 'Ночной посетитель'),
+					doc('e2e-gone', 'Призрак', { original_title: null, tmdb_id: null, release_date: null }),
+					doc('e2e-busy', 'Занятой')
+				]
+			}
+		})
+	);
+	await admin.route('**/api/v1/catalog/admin/archive/promote/*', async (r) => {
+		const slug = r.request().url().split('/').pop();
+		if (slug === 'e2e-gone') {
+			return r.fulfill({ status: 404, json: { error: 'not found', code: 'not_found' } });
+		}
+		if (slug === 'e2e-busy') {
+			return r.fulfill({
+				status: 409,
+				json: { error: 'archive is being rebuilt, try again later', code: 'conflict' }
+			});
+		}
+		await new Promise((resolve) => setTimeout(resolve, 500));
+		return r.fulfill({
+			status: 201,
+			json: { id: 'e1', slug: 'e2e-ok', kind: 'movie', title: 'Ночной посетитель' }
+		});
+	});
+
+	await admin
+		.getByRole('navigation', { name: 'Разделы админки' })
+		.getByRole('link', { name: 'Архив' })
+		.click();
+	await expect(admin).toHaveURL('/admin/archive');
+	await expect(admin.getByText('Введите название.')).toBeVisible();
+
+	await admin.getByLabel('Поиск по архиву').fill('ночной');
+	await expect(admin).toHaveURL((url) => url.searchParams.get('q') === 'ночной');
+	await expect(admin.getByRole('row')).toHaveCount(4);
+	const ok = admin.getByRole('row').filter({ hasText: 'Ночной посетитель' });
+	await expect(ok).toContainText('The Night Visitor');
+	await expect(ok).toContainText('1971');
+	await expect(ok).toContainText('1,8');
+	await expect(ok.getByRole('link', { name: '42491' })).toHaveAttribute(
+		'href',
+		'https://www.themoviedb.org/movie/42491'
+	);
+
+	const promote = async (title: string) => {
+		await admin.getByRole('button', { name: `Вернуть на сайт: ${title}` }).click();
+		await expect(admin.getByRole('dialog')).toContainText('без описания и постера');
+		await admin.getByRole('dialog').getByRole('button', { name: 'Вернуть', exact: true }).click();
+	};
+	const closeToast = () => admin.getByRole('button', { name: 'Закрыть уведомление' }).click();
+
+	// 409 «пересборка» — строка остаётся.
+	await promote('Занятой');
+	await expect(
+		admin.getByText('Архив пересобирается, попробуйте через несколько минут')
+	).toBeVisible();
+	await closeToast();
+	await expect(admin.getByRole('row')).toHaveCount(4);
+
+	// 404 — фильма уже нет: строка исчезает.
+	await promote('Призрак');
+	await expect(admin.getByText('Фильма уже нет в архиве')).toBeVisible();
+	await closeToast();
+	await expect(admin.getByRole('row')).toHaveCount(3);
+
+	// Успех: пока идёт запрос — кнопка заблокирована; потом тост со ссылками, строки нет.
+	await promote('Ночной посетитель');
+	await expect(
+		admin.getByRole('button', { name: 'Вернуть на сайт: Ночной посетитель' })
+	).toBeDisabled();
+	await expect(admin.getByText('Фильм возвращён на сайт')).toBeVisible();
+	await expect(admin.getByRole('link', { name: 'Открыть' })).toHaveAttribute(
+		'href',
+		'/films/e2e-ok'
+	);
+	await expect(admin.getByRole('link', { name: 'Редактировать' })).toHaveAttribute(
+		'href',
+		'/admin/entities/e2e-ok'
+	);
+	await expect(admin.getByRole('row')).toHaveCount(2);
+	await closeToast();
+
+	await admin.unroute('**/api/v1/catalog/archive/search?*');
+	await admin.unroute('**/api/v1/catalog/admin/archive/promote/*');
+});

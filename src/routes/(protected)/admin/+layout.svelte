@@ -10,6 +10,7 @@
 	const sections = [
 		{ href: '/admin', title: 'Обзор' },
 		{ href: '/admin/entities', title: 'Произведения' },
+		{ href: '/admin/archive', title: 'Архив' },
 		{ href: '/admin/people', title: 'Люди' },
 		{ href: '/admin/tags', title: 'Теги' },
 		{ href: '/admin/users', title: 'Пользователи' },

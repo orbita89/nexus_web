@@ -2,7 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { errorMessage, unwrap } from '#lib/api/errors.ts';
-	import type { SchemaPageEntitySummary } from '#lib/api/generated/catalog.ts';
+	import type { SchemaPageAdminEntitySummary } from '#lib/api/generated/catalog.ts';
 	import { api } from '#lib/auth/session.svelte.ts';
 	import { kindByApi, kindBySlug, KINDS } from '#lib/catalog/kinds.ts';
 	import { yearOf } from '#lib/catalog/labels.ts';
@@ -11,15 +11,15 @@
 	import Pagination from '#lib/components/catalog/Pagination.svelte';
 	import Poster from '#lib/components/catalog/Poster.svelte';
 
-	// /admin/entities?kind=films&q=дюна&offset=24
-	let list = $state<SchemaPageEntitySummary | null>(null);
+	// /admin/entities?kind=films&q=дюна&offset=24 — все сущности, включая скрытые с сайта.
+	let list = $state<SchemaPageAdminEntitySummary | null>(null);
 	let error = $state('');
 	const kind = $derived(kindBySlug(readText(page.url, 'kind') ?? ''));
 	const q = $derived(readText(page.url, 'q'));
 
 	$effect(() => {
 		const query = { kind: kind?.kind, q, limit: PAGE_SIZE, offset: readOffset(page.url) };
-		unwrap(api.catalog.GET('/api/v1/catalog/entities', { params: { query } }))
+		unwrap(api.catalog.GET('/api/v1/catalog/admin/entities', { params: { query } }))
 			.then((r) => (list = r))
 			.catch((e) => (error = errorMessage(e)));
 	});
@@ -87,6 +87,11 @@
 						/></span
 					>
 					<span class="min-w-0 flex-1 truncate font-medium">{entity.title}</span>
+					{#if !entity.visible}<span class="badge badge-ghost badge-sm">скрыто</span>{/if}
+					{#if entity.active_manual}<span
+							class="badge badge-outline badge-sm badge-info"
+							title="Включено или скрыто вручную: «пересобрать активные» не трогает">вручную</span
+						>{/if}
 					<span class="text-xs whitespace-nowrap text-base-content/40"
 						>{kindByApi(entity.kind).one} · {yearOf(entity.release_date) ?? '—'} · {entity.slug}</span
 					>
