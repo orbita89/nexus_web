@@ -39,10 +39,11 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/**
-		 * Вернуть фильм из архива на сайт: строка в `entities` (`active`, `active_manual` — сборка
-		 *     горячего слоя её не уберёт), связь с TMDB и popularity; затем документ удаляется из архива
-		 *     (`delete_term` + `commit`), поиск сайта и статика обновляются. Карточка — «скелет»: название,
-		 *     оригинальное название, дата выхода, постер.
+		 * Вернуть фильм из архива на сайт. С `TMDB_API_KEY` — со всеми данными TMDB (описание,
+		 *     постер, титры, жанры, трейлеры; [`enrich`]), TMDB недоступен или ключа нет — «скелетом»:
+		 *     название, оригинальное название, дата выхода, постер. `active_manual` — сборка горячего слоя
+		 *     фильм не уберёт; пометка ручного переноса в архив снимается. Документ удаляется из архива,
+		 *     поиск сайта и статика обновляются.
 		 */
 		post: operations['archive_promote'];
 		delete?: never;
@@ -442,6 +443,31 @@ export interface paths {
 		get: operations['archive_get'];
 		put?: never;
 		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/archive/entities/{slug}/restore': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Открыли страницу фильма в архиве — фильм возвращается на сайт со всеми данными TMDB
+		 *     (описание, постер, длительность, страны, студии, возрастной рейтинг, трейлеры, жанры, все
+		 *     актёры и съёмочная группа) и сразу отдаётся полной карточкой: фронтенд показывает её вместо
+		 *     архивной страницы. Кто-то ищет фильм в архиве — значит, ему место на сайте.
+		 * @description Уже на сайте (вернулся раньше или параллельным запросом) — 200 и карточка. Поиск сайта,
+		 *     известность участников и статика обновляются в фоне. Без авторизации; лимит — сколько фильмов
+		 *     в час возвращается открытием страницы (`ARCHIVE_RESTORE_PER_HOUR`).
+		 */
+		post: operations['archive_restore'];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -3391,6 +3417,74 @@ export interface operations {
 				};
 			};
 			/** @description Архив не настроен (`ARCHIVE_DIR`) или недоступен */
+			503: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	archive_restore: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description slug фильма в архиве */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Фильм уже на сайте */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['EntityDetail'];
+				};
+			};
+			/** @description Фильм возвращён на сайт */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['EntityDetail'];
+				};
+			};
+			/** @description Нет ни в архиве, ни на сайте */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description `kept_in_archive` — админ убрал фильм в архив вручную; `not_restorable` — не фильм TMDB */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Лимит возвратов в час исчерпан (`Retry-After`) */
+			429: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description `restore_unavailable` — нет `TMDB_API_KEY` или лимит 0; `tmdb_unavailable` — TMDB не ответил; архив недоступен */
 			503: {
 				headers: {
 					[name: string]: unknown;
