@@ -79,6 +79,18 @@
 15. **Подсказки тегов через Meilisearch.** Поле «Жанр или тег» сужает список `GET /tags` на месте
     (их меньше 50). Если тегов станет много — facet search по `tags`, как `GET /search/studios`.
 
+## Возврат фильма из архива
+
+16. **`POST /archive/entities/{slug}/restore` на dev всегда 503.** Например,
+    `POST /api/v1/catalog/archive/entities/zastavnice-ki-2023/restore` →
+    `503 {"error":"restoring from the archive is disabled","code":"restore_unavailable"}`
+    (так же `hamlet-1970`). По коду (`archive/mod.rs`) это ответ до обращения к TMDB: у
+    запущенного приложения нет `TMDB_API_KEY` или `ARCHIVE_RESTORE_PER_HOUR=0` (по умолчанию 300 —
+    значит, скорее всего, ключ не доходит до контейнера app). Фронтенд на 503 молча показывает
+    архивную страницу, поэтому клик по фильму из «Из архива» сейчас не открывает карточку.
+    Проверить: переменные окружения контейнера app (`docker compose exec app env | grep TMDB`)
+    и что `TMDB_API_KEY` прокинут в его `environment`/`env_file`.
+
 ## Решено
 
 - Страница архивного фильма (`GET /archive/entities/{slug}`) — `/archive/{slug}`, noindex; 404 →
