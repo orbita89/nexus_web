@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { hasFilters, isSearch, readFilters, readMode, searchSortParam } from './filters';
+import { hasFilters, isSearch, readFilters, readMode, searchSortParam, yearLabel } from './filters';
 
 const at = (qs: string) => new URL(`http://x/films${qs}`);
 
@@ -12,6 +12,8 @@ describe('readFilters', () => {
 			q: 'дюна',
 			tag: undefined,
 			year: 2014,
+			yearFrom: undefined,
+			yearTo: undefined,
 			studio: 'Pixar',
 			person: 'nolan',
 			role: 'director',
@@ -28,6 +30,19 @@ describe('readFilters', () => {
 		expect(isSearch(readFilters(at('?person=nolan')))).toBe(true);
 		expect(hasFilters(readFilters(at('')))).toBe(false);
 		expect(hasFilters(readFilters(at('?archive=1')))).toBe(true);
+	});
+});
+
+describe('год', () => {
+	it('ровно или период; период важнее, и это уже поиск', () => {
+		const range = readFilters(at('?year=2014&year_from=2000&year_to=2010'));
+		expect(range).toMatchObject({ year: undefined, yearFrom: 2000, yearTo: 2010 });
+		expect(isSearch(range)).toBe(true);
+		expect(isSearch(readFilters(at('?year=2014')))).toBe(false);
+		expect(yearLabel(range)).toBe('2000–2010');
+		expect(yearLabel({ yearFrom: 2000 })).toBe('с 2000');
+		expect(yearLabel({ yearTo: 1999 })).toBe('до 1999');
+		expect(yearLabel({ year: 2014 })).toBe('2014');
 	});
 });
 

@@ -33,6 +33,8 @@
 	let query = $state('');
 	let results = $state<PickedEntity[]>([]);
 	let searching = $state(false);
+	/** Поиск недоступен (Meilisearch упал) — пишем об этом, а не молчим. */
+	let failed = $state(false);
 	let timer: ReturnType<typeof setTimeout> | undefined;
 
 	const kindName = (kind: string) => KINDS.find((k) => k.kind === kind)?.one ?? kind;
@@ -50,6 +52,7 @@
 		const q = query.trim();
 		if (q.length < 2) {
 			results = [];
+			failed = false;
 			return;
 		}
 		timer = setTimeout(async () => {
@@ -57,8 +60,10 @@
 			try {
 				const items = await search(q);
 				if (q === query.trim()) results = items;
+				failed = false;
 			} catch {
 				results = [];
+				failed = true;
 			} finally {
 				searching = false;
 			}
@@ -126,6 +131,9 @@
 				/>
 				{#if searching}<span class="loading loading-xs loading-spinner"></span>{/if}
 			</label>
+			{#if failed}<p class="mt-1 text-xs text-error">
+					Поиск сейчас недоступен. Попробуйте позже.
+				</p>{/if}
 			{#if results.length}
 				<ul
 					class="menu absolute z-20 mt-1 w-full rounded-box bg-base-200 shadow-xl ring-1 ring-base-300"

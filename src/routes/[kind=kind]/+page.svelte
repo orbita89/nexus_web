@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { navigating, page } from '$app/state';
-	import { hasFilters } from '#lib/catalog/filters.ts';
+	import { hasFilters, yearLabel } from '#lib/catalog/filters.ts';
 	import { count } from '#lib/catalog/labels.ts';
 	import { filterUrl } from '#lib/catalog/url.ts';
 	import Alert from '#lib/components/Alert.svelte';
@@ -21,7 +21,7 @@
 	const filtered = $derived(hasFilters(data.filters));
 	const tagName = $derived(data.tags.find((t) => t.slug === data.filters.tag)?.name);
 	const heading = $derived(
-		[data.kind.title, tagName, data.filters.year].filter(Boolean).join(' · ')
+		[data.kind.title, tagName, yearLabel(data.filters)].filter(Boolean).join(' · ')
 	);
 	/** Идёт переход внутри раздела (новый фильтр, порядок, страница) — выдача в загрузке. */
 	const loading = $derived(navigating.to?.url.pathname === page.url.pathname);
@@ -44,6 +44,7 @@
 
 <CatalogFilters
 	kind={data.kind}
+	path="/{data.kind.slug}"
 	filters={data.filters}
 	personName={data.personName}
 	tags={data.tags}

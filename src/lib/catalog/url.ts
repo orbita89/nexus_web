@@ -57,8 +57,8 @@ export function readOffset(url: UrlLike): number {
 }
 
 /** Год из адреса: четыре цифры, иначе undefined (кривой год не уходит в API и не даёт 400). */
-export function readYear(url: UrlLike): number | undefined {
-	const raw = url.searchParams.get('year')?.trim() ?? '';
+export function readYear(url: UrlLike, key = 'year'): number | undefined {
+	const raw = url.searchParams.get(key)?.trim() ?? '';
 	return /^\d{4}$/.test(raw) ? Number(raw) : undefined;
 }
 

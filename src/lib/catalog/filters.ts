@@ -1,10 +1,13 @@
 // Фильтры раздела каталога (/films): всё состояние — в адресе, чтобы ссылкой можно было
 // поделиться.
 //
-//   /films?q=дюна&studio=Warner%20Bros.%20Pictures&person=christopher-nolan&role=director&archive=1&sort=new
+//   /films?q=дюна&studio=Warner%20Bros.%20Pictures&person=christopher-nolan&role=director
+//         &tag=drama&year_from=2000&year_to=2010&archive=1&sort=new
 //
-// Текстовый поиск и фильтры по студии и людям — только через Meilisearch (GET /search). Без них
-// раздел — просто список (GET /entities) с тегом, годом и своей сортировкой. Архив (archive=1) —
+// Текстовый поиск, студия, люди и период лет — только через Meilisearch (GET /search). Без них
+// раздел — просто список (GET /entities) с жанром или тегом, годом и своей сортировкой. Жанр —
+// тоже тег (kind = genre): фильтр один, `tag`. Год — либо ровно (`year`), либо период
+// (`year_from` / `year_to`, можно одну границу). Архив (archive=1) —
 // отдельный блок под выдачей: GET /archive/search ищет только по названию.
 import type { SchemaEntitySort, SchemaSearchSort } from '#lib/api/generated/catalog.ts';
 import { DEFAULT_SORT, ENTITY_SORTS } from './sort.ts';
@@ -35,8 +38,12 @@ export const SEARCH_SORTS: readonly { value: SearchSort; title: string }[] = [
 
 export interface CatalogFilters {
 	q?: string;
+	/** Slug тега или жанра. */
 	tag?: string;
+	/** Ровно этот год; с периодом не бывает. */
 	year?: number;
+	yearFrom?: number;
+	yearTo?: number;
 	/** Точное название студии (из подсказок GET /search/studios). */
 	studio?: string;
 	/** Slug человека. */
@@ -50,10 +57,16 @@ export interface CatalogFilters {
 export function readFilters(url: UrlLike): CatalogFilters {
 	const person = readText(url, 'person');
 	const role = readText(url, 'role');
+	const yearFrom = readYear(url, 'year_from');
+	const yearTo = readYear(url, 'year_to');
+	const range = yearFrom !== undefined || yearTo !== undefined;
 	return {
 		q: readText(url, 'q'),
 		tag: readText(url, 'tag'),
-		year: readYear(url),
+		// Период важнее: вместе бэкенд ответил бы 400.
+		year: range ? undefined : readYear(url),
+		yearFrom,
+		yearTo,
 		studio: readText(url, 'studio'),
 		person,
 		role: person && PERSON_ROLES.some((r) => r.value === role) ? role : undefined,
@@ -61,14 +74,14 @@ export function readFilters(url: UrlLike): CatalogFilters {
 	};
 }
 
-/** Нужен поиск Meilisearch: есть текст, студия или человек. */
+/** Нужен поиск Meilisearch: текст, студия, человек или период (у списка периода нет). */
 export function isSearch(f: CatalogFilters): boolean {
-	return !!(f.q || f.studio || f.person);
+	return !!(f.q || f.studio || f.person || f.yearFrom || f.yearTo);
 }
 
 /** Активен хоть один фильтр или «в архиве» — показываем «Сбросить». */
 export function hasFilters(f: CatalogFilters): boolean {
-	return !!(f.q || f.tag || f.year || f.studio || f.person || f.archive);
+	return !!(f.q || f.tag || f.year || f.yearFrom || f.yearTo || f.studio || f.person || f.archive);
 }
 
 export type Mode =
@@ -97,4 +110,13 @@ export function readMode(url: UrlLike, f: CatalogFilters): Mode {
 /** Значение sort для API поиска: релевантность — без параметра. */
 export function searchSortParam(sort: SearchSort): SchemaSearchSort | undefined {
 	return sort === 'relevance' ? undefined : sort;
+}
+
+/** Подпись года для плашки: «2014», «2000–2010», «с 2000», «до 2010». */
+export function yearLabel(f: Pick<CatalogFilters, 'year' | 'yearFrom' | 'yearTo'>): string | null {
+	if (f.year) return String(f.year);
+	if (f.yearFrom && f.yearTo) return `${f.yearFrom}–${f.yearTo}`;
+	if (f.yearFrom) return `с ${f.yearFrom}`;
+	if (f.yearTo) return `до ${f.yearTo}`;
+	return null;
 }

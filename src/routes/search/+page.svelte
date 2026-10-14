@@ -1,11 +1,13 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
+	import { hasFilters } from '#lib/catalog/filters.ts';
 	import { KINDS } from '#lib/catalog/kinds.ts';
 	import { count } from '#lib/catalog/labels.ts';
 	import { formUrl, withQuery } from '#lib/catalog/url.ts';
 	import Alert from '#lib/components/Alert.svelte';
 	import ArchiveHint from '#lib/components/catalog/ArchiveHint.svelte';
+	import CatalogFilters from '#lib/components/catalog/CatalogFilters.svelte';
 	import EmptyState from '#lib/components/catalog/EmptyState.svelte';
 	import EntityGrid from '#lib/components/catalog/EntityGrid.svelte';
 	import KindTabs from '#lib/components/catalog/KindTabs.svelte';
@@ -17,6 +19,8 @@
 	let { data }: PageProps = $props();
 
 	const EXAMPLES = ['Интерстеллар', 'Дюна', 'Брат', 'Pixar'];
+	/** Есть запрос или фильтр — показываем выдачу, иначе подсказки. */
+	const searching = $derived(hasFilters({ ...data.filters, archive: false }));
 
 	function submit(event: SubmitEvent & { currentTarget: HTMLFormElement }) {
 		event.preventDefault();
@@ -46,15 +50,37 @@
 		aria-label="Что ищем"
 		class="input w-full input-lg"
 	/>
-	{#if data.kind}<input type="hidden" name="kind" value={data.kind.slug} />{/if}
+	<!-- Новый запрос не сбрасывает раздел и фильтры. -->
+	{#each ['kind', 'tag', 'year', 'year_from', 'year_to', 'studio', 'person', 'role'] as key (key)}
+		{@const value = page.url.searchParams.get(key)}
+		{#if value}<input type="hidden" name={key} {value} />{/if}
+	{/each}
 	<button class="btn btn-lg btn-primary">Найти</button>
 </form>
 
-{#if data.q}
+<CatalogFilters
+	kind={data.kind}
+	path="/search"
+	filters={data.filters}
+	personName={data.personName}
+	tags={data.tags}
+	titleField={false}
+	archiveField={false}
+/>
+
+{#if data.personUnavailable}
+	<div class="mb-4">
+		<Alert kind="info">
+			Фильтр по людям скоро заработает. Пока показаны фильмы по остальным фильтрам.
+		</Alert>
+	</div>
+{/if}
+
+{#if searching}
 	<div class="mb-8 overflow-x-auto"><KindTabs current={data.kind?.slug} /></div>
 {/if}
 
-{#if !data.q}
+{#if !searching}
 	<div class="mt-10 max-w-xl text-base-content/70">
 		<p>Ищите фильмы по названию — русскому или оригинальному — и по студии.</p>
 		<p class="mt-4 text-sm text-base-content/50">Например:</p>
@@ -92,8 +118,9 @@
 	<Pagination total={data.result.total} limit={data.result.limit} offset={data.result.offset} />
 {:else}
 	<EmptyState title="Ничего не нашлось">
-		По запросу «{data.q}»{data.kind ? ` в разделе «${data.kind.title}»` : ''} ничего нет. Проверьте написание
-		или попробуйте другие слова.
+		{data.q ? `По запросу «${data.q}»` : 'По этим фильтрам'}{data.kind
+			? ` в разделе «${data.kind.title}»`
+			: ''} ничего нет. Проверьте написание или измените фильтры.
 	</EmptyState>
 {/if}
 

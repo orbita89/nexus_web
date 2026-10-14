@@ -4,12 +4,15 @@
 		label: string;
 		/** Справа серым: «12 фильмов», год рождения. */
 		hint?: string;
+		/** Раздел списка («Жанры», «Теги»): заголовок — перед первым элементом раздела. */
+		group?: string;
 	}
 </script>
 
 <script lang="ts">
 	// Поле с подсказками (combobox): ввод → через 250 мс load(q) → список; стрелки, Enter, Esc,
-	// мышь. Выбор — onselect, поле очищается: выбранное показывает плашка фильтра.
+	// мышь. Выбор — onselect, поле очищается: выбранное показывает плашка фильтра. minLength = 0 —
+	// выпадающий список: открывается по клику (load('')), ввод его сужает.
 	let {
 		label,
 		placeholder,
@@ -101,10 +104,19 @@
 			bind:value={text}
 			oninput={() => fetchSoon()}
 			onfocus={() => minLength === 0 && fetchSoon(0)}
+			onclick={() => minLength === 0 && !open && fetchSoon(0)}
 			onblur={() => (open = false)}
 			{onkeydown}
 		/>
-		{#if loading}<span class="loading loading-xs loading-spinner opacity-50"></span>{/if}
+		{#if loading}<span class="loading loading-xs loading-spinner opacity-50"></span>
+		{:else if minLength === 0}<svg
+				class="size-4 opacity-40"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg
+			>{/if}
 	</label>
 	{#if open}
 		<ul
@@ -114,6 +126,14 @@
 			class="absolute z-30 mt-1 max-h-72 w-full overflow-y-auto rounded-box bg-base-100 p-1 shadow-xl ring-1 ring-base-300"
 		>
 			{#each items as item, i (item.value)}
+				{#if item.group && item.group !== items[i - 1]?.group}
+					<li
+						role="presentation"
+						class="px-3 pt-2 pb-1 text-xs font-semibold tracking-widest text-base-content/40 uppercase"
+					>
+						{item.group}
+					</li>
+				{/if}
 				<!-- mousedown, а не click: иначе blur закроет список раньше выбора. -->
 				<li
 					id="{id}-{i}"

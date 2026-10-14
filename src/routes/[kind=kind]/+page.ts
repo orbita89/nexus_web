@@ -1,5 +1,5 @@
 import { publicApi, type Api } from '#lib/api/client.ts';
-import { ApiError, unwrap } from '#lib/api/errors.ts';
+import { unwrap } from '#lib/api/errors.ts';
 import {
 	readFilters,
 	readMode,
@@ -9,6 +9,7 @@ import {
 } from '#lib/catalog/filters.ts';
 import { kindBySlug } from '#lib/catalog/kinds.ts';
 import { ratingsFor, settle } from '#lib/catalog/load.ts';
+import { personName, searchPage } from '#lib/catalog/search.ts';
 import { PAGE_SIZE, readOffset } from '#lib/catalog/url.ts';
 import type { SchemaEntityKind } from '#lib/api/generated/catalog.ts';
 import type { PageLoad } from './$types';
@@ -30,16 +31,7 @@ export const load: PageLoad = async ({ fetch, url, params }) => {
 	const [results, tags, person, archive] = await Promise.all([
 		settle(list(api, kind.kind, filters, mode, offset)),
 		settle(unwrap(api.catalog.GET('/api/v1/catalog/tags'))),
-		// Имя для плашки фильтра: в адресе только slug.
-		filters.person
-			? unwrap(
-					api.catalog.GET('/api/v1/catalog/people/{slug}', {
-						params: { path: { slug: filters.person } }
-					})
-				)
-					.then((p) => p.full_name)
-					.catch(() => filters.person!)
-			: null,
+		personName(api, filters.person),
 		archiveOn
 			? settle(
 					unwrap(
@@ -83,25 +75,5 @@ async function list(
 			personUnavailable: false
 		};
 	}
-	const query = {
-		kind,
-		q: f.q,
-		tag: f.tag,
-		year: f.year,
-		studio: f.studio,
-		person: f.person,
-		role: f.person ? f.role : undefined,
-		sort: searchSortParam(mode.sort),
-		...page
-	};
-	const search = (q: typeof query) =>
-		unwrap(api.catalog.GET('/api/v1/catalog/search', { params: { query: q } }));
-	try {
-		return { page: await search(query), personUnavailable: false };
-	} catch (e) {
-		// Заглушка бэкенда: людей в индексе пока нет — ищем по остальным фильтрам.
-		if (!(e instanceof ApiError && e.code === 'person_filter_unavailable')) throw e;
-		const rest = { ...query, person: undefined, role: undefined };
-		return { page: await search(rest), personUnavailable: true };
-	}
+	return searchPage(api, f, { kind, sort: searchSortParam(mode.sort), ...page });
 }
