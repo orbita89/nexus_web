@@ -18,7 +18,9 @@
 		placeholder,
 		load,
 		onselect,
-		minLength = 1
+		minLength = 1,
+		class: rootClass = '',
+		inputClass = 'input w-full'
 	}: {
 		label: string;
 		placeholder: string;
@@ -26,6 +28,10 @@
 		onselect: (s: Suggestion) => void;
 		/** С какой длины запроса искать; 0 — показывать подсказки и по пустому полю. */
 		minLength?: number;
+		/** Классы обёртки (место в сетке, join). */
+		class?: string;
+		/** Классы поля: по умолчанию — обычное поле на всю ширину. */
+		inputClass?: string;
 	} = $props();
 
 	const id = $props.id();
@@ -88,8 +94,8 @@
 	}
 </script>
 
-<div class="relative">
-	<label class="input w-full">
+<div class={['relative', rootClass]}>
+	<label class={inputClass}>
 		<span class="sr-only">{label}</span>
 		<input
 			type="text"

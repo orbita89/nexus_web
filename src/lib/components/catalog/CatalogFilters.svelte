@@ -14,6 +14,7 @@
 	import { count, roleLabel, yearOf } from '#lib/catalog/labels.ts';
 	import { filterUrl, type Query } from '#lib/catalog/url.ts';
 	import SuggestInput, { type Suggestion } from './SuggestInput.svelte';
+	import TitleSearch from './TitleSearch.svelte';
 
 	// Панель фильтров: название, человек (с ролью), студия, жанр или тег, год (ровно или период),
 	// «Архив» (включён по умолчанию: под выдачей — блок «Из архива»). Каждое изменение — новый адрес (фильтры в query, см. filters.ts);
@@ -123,7 +124,6 @@
 	const chips = $derived.by(() => {
 		const f = filters;
 		const list: Chip[] = [];
-		if (titleField && f.q) list.push({ label: `Название: «${f.q}»`, remove: { q: null } });
 		if (f.person) {
 			const who = f.role ? roleTitle : 'Человек';
 			list.push({
@@ -156,23 +156,14 @@
 				{@const value = page.url.searchParams.get(key)}
 				{#if value}<input type="hidden" name={key} {value} />{/if}
 			{/each}
-			<label class="input min-w-0 flex-1">
-				<span class="sr-only">Название</span>
-				<svg
-					class="size-4 opacity-50"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2"
-					aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg
-				>
-				<input
-					type="search"
-					name="q"
+			<div class="min-w-0 flex-1">
+				<TitleSearch
 					value={filters.q ?? ''}
+					kind={kind?.kind}
+					label="Название"
 					placeholder={kind?.kind === 'movie' ? 'Название фильма или студия' : 'Название'}
 				/>
-			</label>
+			</div>
 			<button class="btn btn-primary">Найти</button>
 		</form>
 	{/if}
@@ -180,25 +171,24 @@
 	<div
 		class="grid gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)_auto]"
 	>
-		<div class="flex gap-2">
-			<label class="select w-36 shrink-0">
-				<span class="sr-only">Роль</span>
-				<select
-					aria-label="Роль человека"
-					bind:value={role}
-					onchange={() => filters.person && apply({ role: role || null })}
-				>
-					{#each PERSON_ROLES as r (r.value)}<option value={r.value}>{r.title}</option>{/each}
-				</select>
-			</label>
-			<div class="min-w-0 flex-1">
-				<SuggestInput
-					label="Человек"
-					placeholder="Актёр, режиссёр…"
-					load={people}
-					onselect={(s) => apply({ person: s.value, role: role || null }, true)}
-				/>
-			</div>
+		<!-- Роль и человек — одно поле, как год: роль слева, имя с подсказками справа. -->
+		<div class="flex w-full">
+			<select
+				class="select w-36 shrink-0 rounded-r-none"
+				aria-label="Роль человека"
+				bind:value={role}
+				onchange={() => filters.person && apply({ role: role || null })}
+			>
+				{#each PERSON_ROLES as r (r.value)}<option value={r.value}>{r.title}</option>{/each}
+			</select>
+			<SuggestInput
+				class="min-w-0 flex-1"
+				inputClass="input w-full rounded-l-none border-l-0"
+				label="Человек"
+				placeholder="Актёр, режиссёр…"
+				load={people}
+				onselect={(s) => apply({ person: s.value, role: role || null }, true)}
+			/>
 		</div>
 		<SuggestInput
 			label="Студия"
@@ -231,7 +221,7 @@
 					value={filters.year ?? ''}
 					min="1800"
 					max="2100"
-					placeholder="2014"
+					placeholder="Любой"
 					inputmode="numeric"
 					onchange={(e) => apply({ ...YEAR_KEYS, year: asYear(e.currentTarget.value) })}
 				/>

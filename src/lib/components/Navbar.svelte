@@ -4,6 +4,7 @@
 	import { KINDS } from '#lib/catalog/kinds.ts';
 	import { logout, session } from '#lib/auth/session.svelte.ts';
 	import Avatar from './Avatar.svelte';
+	import TitleSearch from './catalog/TitleSearch.svelte';
 
 	const sections = [
 		...KINDS.map((k) => ({ href: `/${k.slug}`, title: k.title })),
@@ -57,13 +58,12 @@
 
 		<div class="ml-auto navbar-end w-auto flex-1 gap-2">
 			<form action="/search" method="GET" role="search" class="w-full max-w-56">
-				<input
-					type="search"
-					name="q"
+				<TitleSearch
 					value={page.url.pathname === '/search' ? (page.url.searchParams.get('q') ?? '') : ''}
 					placeholder="Поиск"
-					aria-label="Поиск по каталогу"
+					label="Поиск по каталогу"
 					class="input w-full input-sm"
+					listClass="right-0 w-80"
 				/>
 			</form>
 

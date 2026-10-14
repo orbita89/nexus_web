@@ -3,7 +3,8 @@
 import type { Api } from '#lib/api/client.ts';
 import { ApiError, unwrap } from '#lib/api/errors.ts';
 import type { SchemaEntityKind, SchemaSearchSort } from '#lib/api/generated/catalog.ts';
-import type { CatalogFilters } from './filters.ts';
+import { searchSortParam, type CatalogFilters, type Mode } from './filters.ts';
+import { PAGE_SIZE } from './url.ts';
 
 /**
  * Страница поиска. Фильтр по людям на бэкенде пока заглушка (503 `person_filter_unavailable`):
@@ -51,4 +52,26 @@ export async function personName(api: Api, slug: string | undefined): Promise<st
 	} catch {
 		return slug;
 	}
+}
+
+/**
+ * Порция выдачи раздела (/films): текст, студия, человек, период — поиск Meilisearch, иначе —
+ * список GET /entities. Одна функция и для load, и для «Показать ещё» в браузере.
+ */
+export async function sectionPage(
+	api: Api,
+	kind: SchemaEntityKind,
+	f: CatalogFilters,
+	mode: Mode,
+	offset: number
+) {
+	const page = { limit: PAGE_SIZE, offset };
+	if (!mode.search) {
+		const query = { kind, tag: f.tag, year: f.year, sort: mode.sort, ...page };
+		return {
+			page: await unwrap(api.catalog.GET('/api/v1/catalog/entities', { params: { query } })),
+			personUnavailable: false
+		};
+	}
+	return searchPage(api, f, { kind, sort: searchSortParam(mode.sort), ...page });
 }

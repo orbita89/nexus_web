@@ -8,8 +8,8 @@ import { personName, searchPage } from '#lib/catalog/search.ts';
 import { PAGE_SIZE, readOffset, readText } from '#lib/catalog/url.ts';
 import type { PageLoad } from './$types';
 
-/** Архивных фильмов в первой порции; дальше — «Ещё из архива» в браузере. */
-export const _ARCHIVE_PAGE = 12;
+/** Архивных фильмов за порцию (у архива limit не больше 20); дальше — «Показать ещё». */
+export const _ARCHIVE_PAGE = 20;
 /** Людей в блоке над фильмами; все — на /people?q=. */
 const PEOPLE_SHOWN = 6;
 

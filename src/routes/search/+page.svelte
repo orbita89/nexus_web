@@ -1,20 +1,21 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
+	import { guestApi } from '#lib/auth/session.svelte.ts';
 	import { hasFilters } from '#lib/catalog/filters.ts';
+	import { searchPage } from '#lib/catalog/search.ts';
 	import { KINDS } from '#lib/catalog/kinds.ts';
 	import { count } from '#lib/catalog/labels.ts';
-	import { filterUrl, formUrl, withQuery } from '#lib/catalog/url.ts';
+	import { filterUrl, formUrl, PAGE_SIZE, withQuery } from '#lib/catalog/url.ts';
 	import Alert from '#lib/components/Alert.svelte';
-	import ArchiveResults from '#lib/components/catalog/ArchiveResults.svelte';
 	import CatalogFilters from '#lib/components/catalog/CatalogFilters.svelte';
 	import EmptyState from '#lib/components/catalog/EmptyState.svelte';
-	import EntityGrid from '#lib/components/catalog/EntityGrid.svelte';
 	import KindTabs from '#lib/components/catalog/KindTabs.svelte';
 	import LoadError from '#lib/components/catalog/LoadError.svelte';
-	import Pagination from '#lib/components/catalog/Pagination.svelte';
 	import PersonHitCard from '#lib/components/catalog/PersonHitCard.svelte';
+	import ResultsFeed from '#lib/components/catalog/ResultsFeed.svelte';
 	import Seo from '#lib/components/catalog/Seo.svelte';
+	import TitleSearch from '#lib/components/catalog/TitleSearch.svelte';
 	import { _ARCHIVE_PAGE } from './+page.ts';
 	import type { PageProps } from './$types';
 
@@ -24,6 +25,14 @@
 	/** Есть запрос или фильтр — показываем выдачу, иначе подсказки. */
 	const searching = $derived(hasFilters(data.filters));
 	const archiveKind = $derived(!data.kind || data.kind.kind === 'movie');
+	/** Архив по запросу: в той же выдаче, после фильмов сайта. */
+	const archive = $derived(
+		data.archive?.data && data.q ? { q: data.q, first: data.archive.data } : null
+	);
+	const more = (offset: number) =>
+		searchPage(guestApi, data.filters, { kind: data.kind?.kind, limit: PAGE_SIZE, offset }).then(
+			(r) => r.page
+		);
 
 	function submit(event: SubmitEvent & { currentTarget: HTMLFormElement }) {
 		event.preventDefault();
@@ -45,12 +54,10 @@
 	role="search"
 	class="mb-4 flex max-w-2xl gap-2"
 >
-	<input
-		type="search"
-		name="q"
+	<TitleSearch
 		value={data.q ?? ''}
 		placeholder="Название фильма или студия"
-		aria-label="Что ищем"
+		label="Что ищем"
 		class="input w-full input-lg"
 	/>
 	<!-- Новый запрос не сбрасывает раздел и фильтры. -->
@@ -121,16 +128,24 @@
 	</Alert>
 {:else if data.error}
 	<LoadError message={data.error} />
-{:else if data.result?.items.length}
+{:else if data.result && (data.result.items.length || archive?.first.items.length)}
 	<p class="mb-4 text-sm text-base-content/50">
 		Найдено {data.result.total > data.result.limit ? 'около ' : ''}{count(data.result.total, [
 			'произведение',
 			'произведения',
 			'произведений'
-		])}
+		])}{archive?.first.total
+			? ` · в архиве ещё ${archive.first.total.toLocaleString('ru-RU')}`
+			: ''}
 	</p>
-	<EntityGrid entities={data.result.items} showKind={!data.kind} ratings={data.ratings} />
-	<Pagination total={data.result.total} limit={data.result.limit} offset={data.result.offset} />
+	<ResultsFeed
+		first={data.result}
+		{more}
+		ratings={data.ratings}
+		{archive}
+		archivePage={_ARCHIVE_PAGE}
+		showKind={!data.kind}
+	/>
 {:else}
 	<EmptyState title="Ничего не нашлось">
 		{data.q ? `По запросу «${data.q}»` : 'По этим фильтрам'}{data.kind
@@ -139,19 +154,10 @@
 	</EmptyState>
 {/if}
 
-{#if data.q && archiveKind}
-	{#if !data.filters.archive}
-		{#if searching && !data.result?.items.length}
-			<p class="mt-6 text-sm text-base-content/60">
-				Возможно, фильм есть в архиве —
-				<a href={filterUrl(page.url, { archive: null })} class="link link-primary"
-					>поискать в архиве</a
-				>.
-			</p>
-		{/if}
-	{:else if data.archive?.data}
-		{#key data.q}
-			<ArchiveResults q={data.q} first={data.archive.data} pageSize={_ARCHIVE_PAGE} />
-		{/key}
-	{/if}
+{#if data.q && archiveKind && !data.filters.archive && searching && !data.result?.items.length}
+	<p class="mt-6 text-sm text-base-content/60">
+		Возможно, фильм есть в архиве —
+		<a href={filterUrl(page.url, { archive: null })} class="link link-primary">поискать в архиве</a
+		>.
+	</p>
 {/if}

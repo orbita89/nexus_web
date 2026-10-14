@@ -3,19 +3,20 @@
 	import { navigating, page } from '$app/state';
 	import { hasFilters, yearLabel } from '#lib/catalog/filters.ts';
 	import { count } from '#lib/catalog/labels.ts';
+	import { sectionPage } from '#lib/catalog/search.ts';
 	import { filterUrl } from '#lib/catalog/url.ts';
+	import { guestApi } from '#lib/auth/session.svelte.ts';
 	import Alert from '#lib/components/Alert.svelte';
-	import ArchiveResults from '#lib/components/catalog/ArchiveResults.svelte';
 	import CatalogFilters from '#lib/components/catalog/CatalogFilters.svelte';
 	import EmptyState from '#lib/components/catalog/EmptyState.svelte';
-	import EntityGrid from '#lib/components/catalog/EntityGrid.svelte';
 	import LoadError from '#lib/components/catalog/LoadError.svelte';
-	import Pagination from '#lib/components/catalog/Pagination.svelte';
+	import ResultsFeed from '#lib/components/catalog/ResultsFeed.svelte';
 	import Seo from '#lib/components/catalog/Seo.svelte';
 	import { _ARCHIVE_PAGE } from './+page.ts';
 	import type { PageProps } from './$types';
 
-	// Раздел каталога: панель фильтров (CatalogFilters), порядок, выдача, «Из архива».
+	// Раздел каталога: панель фильтров (CatalogFilters), порядок и одна выдача (ResultsFeed): фильмы
+	// сайта, за ними — из архива; «Показать ещё» дописывает карточки.
 	let { data }: PageProps = $props();
 
 	const filtered = $derived(hasFilters(data.filters));
@@ -26,6 +27,14 @@
 	/** Идёт переход внутри раздела (новый фильтр, порядок, страница) — выдача в загрузке. */
 	const loading = $derived(navigating.to?.url.pathname === page.url.pathname);
 	const total = $derived(data.list.data?.total ?? 0);
+	/** Архив по запросу — только у фильмов, по названию и если не выключен. */
+	const archive = $derived(
+		data.archive?.data && data.filters.q ? { q: data.filters.q, first: data.archive.data } : null
+	);
+	const archiveTotal = $derived(archive?.first.total ?? 0);
+
+	const more = (offset: number) =>
+		sectionPage(guestApi, data.kind.kind, data.filters, data.mode, offset).then((r) => r.page);
 
 	function sortBy(value: string) {
 		const sort = value === data.mode.fallback ? null : value;
@@ -67,7 +76,7 @@
 				'фильм',
 				'фильма',
 				'фильмов'
-			])}
+			])}{archiveTotal ? ` · в архиве ещё ${archiveTotal.toLocaleString('ru-RU')}` : ''}
 		{/if}
 	</p>
 	<label class="select w-auto select-sm">
@@ -90,12 +99,13 @@
 >
 	{#if data.list.error}
 		<LoadError message={data.list.error} />
-	{:else if data.list.data && data.list.data.items.length}
-		<EntityGrid entities={data.list.data.items} ratings={data.ratings} />
-		<Pagination
-			total={data.list.data.total}
-			limit={data.list.data.limit}
-			offset={data.list.data.offset}
+	{:else if data.list.data && (data.list.data.items.length || archive?.first.items.length)}
+		<ResultsFeed
+			first={data.list.data}
+			{more}
+			ratings={data.ratings}
+			{archive}
+			archivePage={_ARCHIVE_PAGE}
 		/>
 	{:else if filtered}
 		<EmptyState title="Фильмы не найдены">
@@ -109,22 +119,12 @@
 		</EmptyState>
 	{/if}
 
-	{#if data.kind.kind === 'movie' && data.filters.q}
-		{#if !data.filters.archive}
-			{#if !data.list.data?.items.length}
-				<p class="mt-6 text-sm text-base-content/60">
-					Возможно, фильм есть в архиве —
-					<a href={filterUrl(page.url, { archive: null })} class="link link-primary"
-						>поискать в архиве</a
-					>.
-				</p>
-			{/if}
-		{:else if data.archive?.data}
-			{#key data.filters.q}
-				<ArchiveResults q={data.filters.q} first={data.archive.data} pageSize={_ARCHIVE_PAGE} />
-			{/key}
-		{:else if data.archive?.error}
-			<p class="mt-10 text-sm text-base-content/50">Архив сейчас недоступен.</p>
-		{/if}
+	{#if data.kind.kind === 'movie' && data.filters.q && !data.filters.archive && !data.list.data?.items.length}
+		<p class="mt-6 text-sm text-base-content/60">
+			Возможно, фильм есть в архиве —
+			<a href={filterUrl(page.url, { archive: null })} class="link link-primary"
+				>поискать в архиве</a
+			>.
+		</p>
 	{/if}
 </div>
