@@ -4,6 +4,31 @@
  */
 
 export interface paths {
+	'/api/v1/catalog/admin/archive/demote': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Перенести ненужные фильмы с сайта в холодный архив: документ в Tantivy (название,
+		 *     оригинальное название, дата, постер, TMDB id, popularity), затем строка удаляется из
+		 *     PostgreSQL (каскадом титры, теги, статистика, полные данные TMDB; люди без других работ — тоже),
+		 *     TMDB id — в `archived_tmdb` с `manual`: сборка горячего слоя такой фильм не вернёт, импорт
+		 *     пропустит. Поиск сайта и статика обновляются. Вернуть — `POST /admin/archive/promote/{slug}`
+		 *     («скелетом»: без описания, титров и жанров).
+		 * @description Не переносятся (`skipped`): нет на сайте, без TMDB, с данными пользователей.
+		 */
+		post: operations['archive_demote'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/catalog/admin/archive/promote/{slug}': {
 		parameters: {
 			query?: never;
@@ -585,6 +610,27 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/catalog/search/people': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Поиск людей: по имени (русскому и латиницей) с опечатками и по началу слова. Из одинаково
+		 *     подходящих выше известные (`fame`: работы в фильмах с большим числом оценок); без `q` — самые
+		 *     известные. `known_for` — основная роль (`actor`, `director`, ...).
+		 */
+		get: operations['search_people'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/catalog/search/studios': {
 		parameters: {
 			query?: never;
@@ -797,6 +843,11 @@ export interface components {
 			birth_date?: string | null;
 			/** @example Дени Вильнёв */
 			full_name: string;
+			/**
+			 * @description Имя латиницей, если отличается от `full_name`.
+			 * @example Denis Villeneuve
+			 */
+			original_name?: string | null;
 			photo_url?: string | null;
 			/** @example denis-villeneuve */
 			slug: string;
@@ -809,6 +860,29 @@ export interface components {
 			/** @example sci-fi */
 			slug: string;
 		};
+		DemoteRequest: {
+			/**
+			 * @description slug'и фильмов на сайте, 1–100, без повторов.
+			 * @example [
+			 *       "the-night-visitor-1971"
+			 *     ]
+			 */
+			slugs: string[];
+		};
+		DemoteResult: {
+			/** @description Перенесены в архив: удалены из каталога, поиска и статики. */
+			archived: string[];
+			skipped: components['schemas']['DemoteSkip'][];
+		};
+		DemoteSkip: {
+			reason: components['schemas']['DemoteSkipReason'];
+			slug: string;
+		};
+		/**
+		 * @description Почему фильм не перенесён.
+		 * @enum {string}
+		 */
+		DemoteSkipReason: 'not_found' | 'no_tmdb' | 'in_use';
 		/** @description Итог операции. */
 		DoneEvent: {
 			active?: components['schemas']['ActiveResult'] | null;
@@ -1196,6 +1270,43 @@ export interface components {
 			total: number;
 		};
 		/** @description Страница списка. */
+		Page_PersonHit: {
+			items: {
+				/** Format: date */
+				birth_date?: string | null;
+				/** @example Брэд Питт */
+				full_name: string;
+				/** Format: uuid */
+				id: string;
+				/**
+				 * @description Основная роль: где вклад в известность больше всего.
+				 * @example actor
+				 */
+				known_for?: string | null;
+				/** @example Brad Pitt */
+				original_name?: string | null;
+				photo_url?: string | null;
+				/** @example brad-pitt */
+				slug: string;
+			}[];
+			/**
+			 * Format: int64
+			 * @example 20
+			 */
+			limit: number;
+			/**
+			 * Format: int64
+			 * @example 0
+			 */
+			offset: number;
+			/**
+			 * Format: int64
+			 * @description Всего записей под фильтром (в поиске — оценка Meilisearch).
+			 * @example 137
+			 */
+			total: number;
+		};
+		/** @description Страница списка. */
 		Page_PersonSummary: {
 			items: {
 				/** Format: date */
@@ -1236,6 +1347,11 @@ export interface components {
 			full_name: string;
 			/** Format: uuid */
 			id: string;
+			/**
+			 * @description Имя латиницей (английское из TMDB), если отличается от `full_name`: по нему тоже ищут.
+			 * @example Denis Villeneuve
+			 */
+			original_name?: string | null;
 			photo_url?: string | null;
 			/** @example denis-villeneuve */
 			slug: string;
@@ -1254,6 +1370,25 @@ export interface components {
 		/** @description Человек и его фильмография (новые работы сверху). */
 		PersonDetail: components['schemas']['Person'] & {
 			credits: components['schemas']['PersonCredit'][];
+		};
+		/** @description Человек в выдаче поиска людей. */
+		PersonHit: {
+			/** Format: date */
+			birth_date?: string | null;
+			/** @example Брэд Питт */
+			full_name: string;
+			/** Format: uuid */
+			id: string;
+			/**
+			 * @description Основная роль: где вклад в известность больше всего.
+			 * @example actor
+			 */
+			known_for?: string | null;
+			/** @example Brad Pitt */
+			original_name?: string | null;
+			photo_url?: string | null;
+			/** @example brad-pitt */
+			slug: string;
 		};
 		/** @description Человек в титрах сущности. */
 		PersonRef: {
@@ -1397,6 +1532,11 @@ export interface components {
 			 */
 			indexed: number;
 			/**
+			 * @description Сколько людей в новом индексе `people`.
+			 * @example 880000
+			 */
+			people_indexed: number;
+			/**
 			 * Format: int64
 			 * @description Сколько документов было в индексе до перестройки.
 			 * @example 99870
@@ -1526,6 +1666,7 @@ export interface components {
 			| 'search'
 			| 'create_index'
 			| 'fill'
+			| 'fill_people'
 			| 'check'
 			| 'swap'
 			| 'rotate'
@@ -1629,6 +1770,7 @@ export interface components {
 			/** Format: date */
 			birth_date?: string | null;
 			full_name?: string | null;
+			original_name?: string | null;
 			photo_url?: string | null;
 			slug?: string | null;
 		};
@@ -1653,6 +1795,10 @@ export type SchemaBookMetadata = components['schemas']['BookMetadata'];
 export type SchemaCreateEntity = components['schemas']['CreateEntity'];
 export type SchemaCreatePerson = components['schemas']['CreatePerson'];
 export type SchemaCreateTag = components['schemas']['CreateTag'];
+export type SchemaDemoteRequest = components['schemas']['DemoteRequest'];
+export type SchemaDemoteResult = components['schemas']['DemoteResult'];
+export type SchemaDemoteSkip = components['schemas']['DemoteSkip'];
+export type SchemaDemoteSkipReason = components['schemas']['DemoteSkipReason'];
 export type SchemaDoneEvent = components['schemas']['DoneEvent'];
 export type SchemaEntity = components['schemas']['Entity'];
 export type SchemaEntityCredit = components['schemas']['EntityCredit'];
@@ -1668,10 +1814,12 @@ export type SchemaMovieMetadata = components['schemas']['MovieMetadata'];
 export type SchemaPageAdminEntitySummary = components['schemas']['Page_AdminEntitySummary'];
 export type SchemaPageArchiveDoc = components['schemas']['Page_ArchiveDoc'];
 export type SchemaPageEntitySummary = components['schemas']['Page_EntitySummary'];
+export type SchemaPagePersonHit = components['schemas']['Page_PersonHit'];
 export type SchemaPagePersonSummary = components['schemas']['Page_PersonSummary'];
 export type SchemaPerson = components['schemas']['Person'];
 export type SchemaPersonCredit = components['schemas']['PersonCredit'];
 export type SchemaPersonDetail = components['schemas']['PersonDetail'];
+export type SchemaPersonHit = components['schemas']['PersonHit'];
 export type SchemaPersonRef = components['schemas']['PersonRef'];
 export type SchemaPersonSummary = components['schemas']['PersonSummary'];
 export type SchemaPlannedStep = components['schemas']['PlannedStep'];
@@ -1702,6 +1850,75 @@ export type SchemaUpdatePerson = components['schemas']['UpdatePerson'];
 export type SchemaUpdateTag = components['schemas']['UpdateTag'];
 export type $defs = Record<string, never>;
 export interface operations {
+	archive_demote: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['DemoteRequest'];
+			};
+		};
+		responses: {
+			/** @description Перенесённые и пропущенные с причиной */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['DemoteResult'];
+				};
+			};
+			/** @description Пусто, больше 100, повтор или неверный slug */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Архив занят сборкой (ничего не перенесено) */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Архив не настроен или недоступен */
+			503: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
 	archive_promote: {
 		parameters: {
 			query?: never;
@@ -3520,6 +3737,59 @@ export interface operations {
 				};
 			};
 			/** @description Meilisearch недоступен; `person_filter_unavailable` — фильтр по людям ещё не готов */
+			503: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	search_people: {
+		parameters: {
+			query?: {
+				/**
+				 * @description Имя или его начало, русское или латиницей, опечатки допустимы; до 300 символов. Пустой —
+				 *     самые известные.
+				 * @example брэд
+				 */
+				q?: string;
+				/**
+				 * @description Только с этой основной ролью: `actor`, `director`, `writer`, `producer`, ...
+				 * @example director
+				 */
+				known_for?: string;
+				/** @description 1–100, по умолчанию 20. */
+				limit?: number;
+				offset?: number;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Страница людей. `total` — оценка */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Page_PersonHit'];
+				};
+			};
+			/** @description Длинный `q` или неверный `known_for` */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Meilisearch недоступен */
 			503: {
 				headers: {
 					[name: string]: unknown;

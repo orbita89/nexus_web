@@ -10,6 +10,7 @@
 	import { entityHref } from '#lib/catalog/kinds.ts';
 	import Alert from '#lib/components/Alert.svelte';
 	import CreditsEditor from '#lib/components/admin/CreditsEditor.svelte';
+	import DemoteDialog from '#lib/components/admin/DemoteDialog.svelte';
 	import EntityForm from '#lib/components/admin/EntityForm.svelte';
 	import JobLog from '#lib/components/admin/JobLog.svelte';
 	import RelationsEditor from '#lib/components/admin/RelationsEditor.svelte';
@@ -20,6 +21,7 @@
 	/** Ход последней публикации (БД → поиск → статика); null — ещё не сохраняли. */
 	let job = $state<JobState | null>(null);
 	let confirmDelete = $state(false);
+	let demote = $state<ReturnType<typeof DemoteDialog>>();
 
 	async function load(slug: string) {
 		try {
@@ -136,6 +138,28 @@
 	<div class="mt-10 max-w-3xl">
 		<RelationsEditor {entity} onchange={(related) => (entity = { ...entity!, related })} />
 	</div>
+
+	{#if entity.kind === 'movie'}
+		<section class="mt-10 max-w-3xl border-t border-base-300 pt-6">
+			<h2 class="font-semibold">Архив</h2>
+			<p class="mt-1 text-sm text-base-content/60">
+				Убрать фильм с сайта в холодный архив: он останется в поиске по архиву и его можно будет
+				вернуть — но только с названием, датой и постером.
+			</p>
+			<button class="btn mt-3 btn-outline btn-sm btn-warning" onclick={() => demote?.open()}
+				>В архив</button
+			>
+			<DemoteDialog
+				bind:this={demote}
+				slugs={[entity.slug]}
+				titles={{ [entity.slug]: entity.title }}
+				onclose={(result) => {
+					// Перенесён — карточки в каталоге больше нет: к архивной странице фильма.
+					if (entity && result?.archived.includes(entity.slug)) goto(`/archive/${entity.slug}`);
+				}}
+			/>
+		</section>
+	{/if}
 
 	<section class="mt-10 max-w-3xl border-t border-base-300 pt-6">
 		<h2 class="font-semibold text-error">Удаление</h2>

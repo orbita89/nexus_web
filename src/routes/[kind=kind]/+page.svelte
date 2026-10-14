@@ -109,11 +109,16 @@
 		</EmptyState>
 	{/if}
 
-	{#if data.filters.archive && data.kind.kind === 'movie'}
-		{#if !data.filters.q}
-			<p class="mt-10 text-sm text-base-content/50">
-				В архиве ищем только по названию — введите его в строку поиска.
-			</p>
+	{#if data.kind.kind === 'movie' && data.filters.q}
+		{#if !data.filters.archive}
+			{#if !data.list.data?.items.length}
+				<p class="mt-6 text-sm text-base-content/60">
+					Возможно, фильм есть в архиве —
+					<a href={filterUrl(page.url, { archive: null })} class="link link-primary"
+						>поискать в архиве</a
+					>.
+				</p>
+			{/if}
 		{:else if data.archive?.data}
 			{#key data.filters.q}
 				<ArchiveResults q={data.filters.q} first={data.archive.data} pageSize={_ARCHIVE_PAGE} />

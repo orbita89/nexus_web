@@ -95,7 +95,9 @@
 				<span class="text-sm text-base-content/60">
 					В индексе {result.indexed.toLocaleString('ru-RU')}, было {result.previous_count.toLocaleString(
 						'ru-RU'
-					)}; предыдущая версия — <code>{result.previous_version}</code>
+					)}{result.people_indexed != null
+						? `; людей — ${result.people_indexed.toLocaleString('ru-RU')}`
+						: ''}; предыдущая версия — <code>{result.previous_version}</code>
 				</span>
 			{/if}
 		</div>

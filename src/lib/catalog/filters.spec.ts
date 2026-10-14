@@ -5,9 +5,7 @@ const at = (qs: string) => new URL(`http://x/films${qs}`);
 
 describe('readFilters', () => {
 	it('всё из адреса; роль — только при человеке и из списка', () => {
-		const f = readFilters(
-			at('?q=дюна&studio=Pixar&person=nolan&role=director&archive=1&year=2014')
-		);
+		const f = readFilters(at('?q=дюна&studio=Pixar&person=nolan&role=director&year=2014'));
 		expect(f).toEqual({
 			q: 'дюна',
 			tag: undefined,
@@ -21,7 +19,8 @@ describe('readFilters', () => {
 		});
 		expect(readFilters(at('?role=director')).role).toBeUndefined();
 		expect(readFilters(at('?person=nolan&role=hacker')).role).toBeUndefined();
-		expect(readFilters(at('?archive=yes')).archive).toBe(false);
+		expect(readFilters(at('?archive=0')).archive).toBe(false);
+		expect(readFilters(at('?archive=yes')).archive).toBe(true);
 	});
 
 	it('поиск — при тексте, студии или человеке; тег и год — обычный список', () => {
@@ -29,7 +28,7 @@ describe('readFilters', () => {
 		expect(isSearch(readFilters(at('?studio=Pixar')))).toBe(true);
 		expect(isSearch(readFilters(at('?person=nolan')))).toBe(true);
 		expect(hasFilters(readFilters(at('')))).toBe(false);
-		expect(hasFilters(readFilters(at('?archive=1')))).toBe(true);
+		expect(hasFilters(readFilters(at('?archive=0')))).toBe(false);
 	});
 });
 
@@ -57,9 +56,9 @@ describe('readMode', () => {
 		expect(readMode(top, readFilters(top)).sort).toBe('top_rated');
 	});
 
-	it('у списка — свои порядки, по умолчанию «новые»', () => {
+	it('у списка — свои порядки, по умолчанию «Рекомендуемые»', () => {
 		const url = at('?sort=relevance');
 		const mode = readMode(url, readFilters(url));
-		expect(mode).toMatchObject({ search: false, sort: 'new' });
+		expect(mode).toMatchObject({ search: false, sort: 'recommended' });
 	});
 });

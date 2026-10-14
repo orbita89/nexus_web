@@ -4,14 +4,15 @@
 	import { errorMessage, unwrap } from '#lib/api/errors.ts';
 	import type { SchemaArchiveDoc } from '#lib/api/generated/catalog.ts';
 	import { guestApi, session } from '#lib/auth/session.svelte.ts';
-	import { count, yearOf } from '#lib/catalog/labels.ts';
+	import { yearOf } from '#lib/catalog/labels.ts';
 	import PromoteButton from '#lib/components/admin/PromoteButton.svelte';
 	import PromoteToasts from '#lib/components/admin/PromoteToasts.svelte';
 	import Poster from './Poster.svelte';
 
-	// «Из архива»: фильмы, которых нет на сайте, — под основной выдачей раздела при «Искать в
-	// архиве». Архив ищет только по названию. Приглушены и с бейджем «В архиве»; не ссылки —
-	// карточек у них нет. «Показать ещё» догружает в браузере. Админу — «Вернуть на сайт».
+	// «Из архива»: фильмы, которых нет на сайте, — под основной выдачей поиска, пока включена
+	// галочка «Архив». Архив ищет только по названию. Приглушены и с бейджем «Архив»; ведут на
+	// страницу архивного фильма (/archive/{slug}). «Ещё из архива» листает offset в браузере.
+	// Админу — «Вернуть на сайт».
 	let {
 		q,
 		first,
@@ -51,33 +52,38 @@
 </script>
 
 <section class="mt-12" aria-labelledby="archive-results">
-	<h2 id="archive-results" class="flex items-baseline gap-2 text-xl font-bold">
-		Из архива
-		<span class="text-sm font-normal text-base-content/40"
-			>{count(first.total, ['фильм', 'фильма', 'фильмов'])}</span
-		>
-	</h2>
+	<h2 id="archive-results" class="text-xl font-bold">Из архива</h2>
 	<p class="mb-4 text-sm text-base-content/60">
-		Этих фильмов нет на сайте. В архиве ищем только по названию.
+		Найдено в архиве: {first.total.toLocaleString('ru-RU')}. Этих фильмов нет на сайте, в архиве
+		ищем только по названию.
 	</p>
 	{#if docs.length}
-		<ul class="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+		<ul
+			class="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6"
+			aria-label="Фильмы из архива"
+		>
 			{#each docs as doc (doc.slug)}
 				{@const original = originalTitle(doc)}
 				<li class="relative">
-					<div class="opacity-60 grayscale-[40%]">
-						<Poster title={doc.title} kind={doc.kind} coverUrl={doc.cover_url} />
-					</div>
-					<span class="absolute top-2 left-2 badge badge-sm shadow-md badge-neutral">В архиве</span>
-					<div class="mt-2 px-0.5">
-						<h3 class="line-clamp-2 text-sm leading-snug font-semibold text-base-content/70">
-							{doc.title}
-						</h3>
-						<p class="mt-0.5 line-clamp-1 text-xs text-base-content/45">
-							{[yearOf(doc.release_date), original].filter(Boolean).join(' · ')}
-						</p>
-						{#if isAdmin}<div class="mt-2"><PromoteButton {doc} {promotions} /></div>{/if}
-					</div>
+					<a href="/archive/{doc.slug}" class="group block rounded-box outline-offset-4">
+						<div
+							class="opacity-60 grayscale-[40%] transition group-hover:opacity-90 group-hover:grayscale-0"
+						>
+							<Poster title={doc.title} kind={doc.kind} coverUrl={doc.cover_url} />
+						</div>
+						<div class="mt-2 px-0.5">
+							<h3
+								class="line-clamp-2 text-sm leading-snug font-semibold text-base-content/70 group-hover:text-primary"
+							>
+								{doc.title}
+							</h3>
+							<p class="mt-0.5 line-clamp-1 text-xs text-base-content/45">
+								{[yearOf(doc.release_date), original].filter(Boolean).join(' · ')}
+							</p>
+						</div>
+						<span class="absolute top-2 left-2 badge badge-sm shadow-md badge-neutral">Архив</span>
+					</a>
+					{#if isAdmin}<div class="mt-2"><PromoteButton {doc} {promotions} /></div>{/if}
 				</li>
 			{/each}
 		</ul>
@@ -85,7 +91,7 @@
 		{#if canMore}
 			<button class="btn mt-6 btn-outline btn-sm" disabled={loading} onclick={loadMore}>
 				{#if loading}<span class="loading loading-xs loading-spinner"></span>{/if}
-				Показать ещё
+				Ещё из архива
 			</button>
 		{/if}
 	{:else}

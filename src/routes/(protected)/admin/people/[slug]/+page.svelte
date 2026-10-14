@@ -49,6 +49,7 @@
 			initial={{
 				slug: person.slug,
 				full_name: person.full_name,
+				original_name: person.original_name ?? '',
 				birth_date: person.birth_date ?? '',
 				photo_url: person.photo_url ?? '',
 				bio: person.bio ?? ''

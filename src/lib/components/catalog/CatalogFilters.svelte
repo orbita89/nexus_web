@@ -11,14 +11,14 @@
 		type CatalogFilters
 	} from '#lib/catalog/filters.ts';
 	import type { KINDS } from '#lib/catalog/kinds.ts';
-	import { count, yearOf } from '#lib/catalog/labels.ts';
+	import { count, roleLabel, yearOf } from '#lib/catalog/labels.ts';
 	import { filterUrl, type Query } from '#lib/catalog/url.ts';
 	import SuggestInput, { type Suggestion } from './SuggestInput.svelte';
 
 	// Панель фильтров: название, человек (с ролью), студия, жанр или тег, год (ровно или период),
-	// «Искать в архиве». Каждое изменение — новый адрес (фильтры в query, см. filters.ts);
+	// «Архив» (включён по умолчанию: под выдачей — блок «Из архива»). Каждое изменение — новый адрес (фильтры в query, см. filters.ts);
 	// выбранное — плашками с ✕. Новый текст, студия или человек сбрасывают порядок: выдача
-	// поиска — по релевантности. На /search своё поле запроса и свой блок архива — там панель без них.
+	// поиска — по релевантности. На /search своё поле запроса — там панель без него.
 	let {
 		kind,
 		path,
@@ -26,7 +26,7 @@
 		personName,
 		tags,
 		titleField = true,
-		archiveField = kind?.kind === 'movie'
+		archiveField = !kind || kind.kind === 'movie'
 	}: {
 		/** Раздел; на общей странице поиска — не выбран. */
 		kind?: (typeof KINDS)[number];
@@ -74,14 +74,17 @@
 		apply({ ...YEAR_KEYS, year_from: from, year_to: to });
 	}
 
+	// Поиск людей Meilisearch: из одинаково подходящих выше известные («брэ» — Брэд Питт).
 	async function people(q: string): Promise<Suggestion[]> {
 		const found = await unwrap(
-			guestApi.catalog.GET('/api/v1/catalog/people', { params: { query: { q, limit: 8 } } })
+			guestApi.catalog.GET('/api/v1/catalog/search/people', { params: { query: { q, limit: 8 } } })
 		);
 		return found.items.map((p) => ({
 			value: p.slug,
 			label: p.full_name,
-			hint: yearOf(p.birth_date) ?? undefined
+			hint: [p.known_for && roleLabel(p.known_for), yearOf(p.birth_date)]
+				.filter(Boolean)
+				.join(' · ')
 		}));
 	}
 
@@ -135,7 +138,6 @@
 		}
 		const years = yearLabel(f);
 		if (years) list.push({ label: `Год: ${years}`, remove: YEAR_KEYS });
-		if (archiveField && f.archive) list.push({ label: 'В архиве', remove: { archive: null } });
 		return list;
 	});
 	const active = $derived(
@@ -268,9 +270,9 @@
 						type="checkbox"
 						class="checkbox checkbox-sm checkbox-primary"
 						checked={filters.archive}
-						onchange={(e) => apply({ archive: e.currentTarget.checked ? '1' : null })}
+						onchange={(e) => apply({ archive: e.currentTarget.checked ? null : '0' })}
 					/>
-					Искать в архиве
+					Архив
 				</label>
 			{/if}
 			{#each chips as chip (chip.label)}

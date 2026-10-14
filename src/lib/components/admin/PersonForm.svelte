@@ -2,6 +2,8 @@
 	export interface PersonFields {
 		slug: string;
 		full_name: string;
+		/** Имя латиницей, если отличается от full_name: по нему тоже ищут. */
+		original_name: string;
 		birth_date: string;
 		photo_url: string;
 		bio: string;
@@ -24,6 +26,7 @@
 		onsubmit: (body: {
 			slug: string;
 			full_name: string;
+			original_name: string | null;
 			birth_date: string | null;
 			photo_url: string | null;
 			bio: string | null;
@@ -31,7 +34,14 @@
 	} = $props();
 
 	const start = () =>
-		initial ?? { slug: '', full_name: '', birth_date: '', photo_url: '', bio: '' };
+		initial ?? {
+			slug: '',
+			full_name: '',
+			original_name: '',
+			birth_date: '',
+			photo_url: '',
+			bio: ''
+		};
 	let form = $state(start());
 	// Правим существующего — slug из имени не пересчитываем.
 	const isEdit = () => !!initial;
@@ -50,6 +60,7 @@
 			(await onsubmit({
 				slug,
 				full_name,
+				original_name: form.original_name.trim() || null,
 				birth_date: form.birth_date || null,
 				photo_url: form.photo_url.trim() || null,
 				bio: form.bio.trim() || null
@@ -69,6 +80,16 @@
 				bind:value={form.full_name}
 				oninput={() => !slugTouched && (form.slug = slugify(form.full_name))}
 			/>
+		</fieldset>
+		<fieldset class="fieldset">
+			<legend class="fieldset-legend">Имя латиницей</legend>
+			<input
+				class="input w-full"
+				name="original_name"
+				placeholder="Denis Villeneuve"
+				bind:value={form.original_name}
+			/>
+			<p class="label">Если отличается от имени: по нему тоже ищут.</p>
 		</fieldset>
 		<fieldset class="fieldset">
 			<legend class="fieldset-legend">slug</legend>

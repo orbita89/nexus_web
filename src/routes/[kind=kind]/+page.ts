@@ -17,9 +17,9 @@ import type { PageLoad } from './$types';
 /** Архивных фильмов в первой порции; дальше — «Показать ещё» в браузере. */
 export const _ARCHIVE_PAGE = 12;
 
-// /films?q=дюна&studio=…&person=…&role=actor&tag=…&year=2014&archive=1&sort=new&offset=24 —
+// /films?q=дюна&studio=…&person=…&role=actor&tag=…&year=2014&archive=0&sort=new&offset=24 —
 // всё состояние выдачи в адресе (filters.ts). Текст, студия, человек — поиск Meilisearch;
-// без них — обычный список. Архив — отдельно, только по названию и только у фильмов.
+// без них — обычный список. Архив — параллельно, только по названию и только у фильмов.
 export const load: PageLoad = async ({ fetch, url, params }) => {
 	const kind = kindBySlug(params.kind)!;
 	const filters = readFilters(url);

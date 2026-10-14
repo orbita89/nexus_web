@@ -29,6 +29,9 @@
 	<div class="min-w-0">
 		<p class="text-xs font-semibold tracking-widest text-primary uppercase">Человек</p>
 		<h1 class="mt-1 text-3xl font-black sm:text-5xl">{person.full_name}</h1>
+		{#if person.original_name && person.original_name !== person.full_name}
+			<p class="mt-1 text-lg text-base-content/50">{person.original_name}</p>
+		{/if}
 		{#if person.birth_date}
 			<p class="mt-2 text-sm text-base-content/50">
 				Дата рождения: {formatDate(person.birth_date)}
