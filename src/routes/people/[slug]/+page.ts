@@ -1,5 +1,6 @@
 import { publicApi } from '#lib/api/client.ts';
 import { unwrap } from '#lib/api/errors.ts';
+import { filmography, WORKS_SHOWN } from '#lib/catalog/labels.ts';
 import { orError, ratingsFor } from '#lib/catalog/load.ts';
 import type { PageLoad } from './$types';
 
@@ -13,9 +14,14 @@ export const load: PageLoad = async ({ fetch, url, params }) => {
 		),
 		'Такого человека в каталоге нет.'
 	);
+	const roles = filmography(person.credits);
+	// Оценки — одним запросом с лимитом: сначала то, что видно сразу, потом скрытое.
 	const ratings = await ratingsFor(
 		api,
-		person.credits.map((c) => c.entity)
+		[
+			...roles.flatMap((r) => r.works.slice(0, WORKS_SHOWN)),
+			...roles.flatMap((r) => r.works.slice(WORKS_SHOWN))
+		].map((w) => w.entity)
 	);
-	return { person, ratings };
+	return { person, roles, ratings };
 };

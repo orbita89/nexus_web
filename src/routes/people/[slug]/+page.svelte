@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { count, formatDate, groupWorks, summary } from '#lib/catalog/labels.ts';
+	import { SvelteSet } from 'svelte/reactivity';
+	import { count, formatDate, summary, WORKS_SHOWN } from '#lib/catalog/labels.ts';
 	import EmptyState from '#lib/components/catalog/EmptyState.svelte';
 	import EntityGrid from '#lib/components/catalog/EntityGrid.svelte';
 	import PersonAvatar from '#lib/components/catalog/PersonAvatar.svelte';
@@ -8,9 +9,11 @@
 
 	let { data }: PageProps = $props();
 
+	// Фильмография по ролям (data.roles): главная роль человека — первой, внутри — новые сверху.
+	// Длинный список — первые WORKS_SHOWN, остальное — «Показать всех» без запросов.
 	const person = $derived(data.person);
-	const works = $derived(groupWorks(person.credits));
-	const captions = $derived(new Map(works.map((w) => [w.entity.id, w.caption])));
+	const total = $derived(new Set(person.credits.map((c) => c.entity.id)).size);
+	const open = new SvelteSet<string>();
 </script>
 
 <Seo
@@ -40,20 +43,37 @@
 </header>
 
 <section aria-labelledby="works-title">
-	<h2 id="works-title" class="mb-4 text-xl font-bold">
-		Работы
-		{#if works.length}<span class="ml-1 text-sm font-normal text-base-content/40"
-				>{count(works.length, ['работа', 'работы', 'работ'])}</span
+	<h2 id="works-title" class="mb-6 text-xl font-bold">
+		Фильмография
+		{#if total}<span class="ml-1 text-sm font-normal text-base-content/40"
+				>{count(total, ['работа', 'работы', 'работ'])}</span
 			>{/if}
 	</h2>
-	{#if works.length}
-		<EntityGrid
-			entities={works.map((w) => w.entity)}
-			caption={(e) => captions.get(e.id)}
-			showKind
-			ratings={data.ratings}
-		/>
+	{#each data.roles as role (role.role)}
+		{@const all = open.has(role.role)}
+		{@const captions = new Map(role.works.map((w) => [w.entity.id, w.caption]))}
+		<section class="mb-10" aria-labelledby="role-{role.role}">
+			<h3 id="role-{role.role}" class="mb-3 flex items-baseline gap-2 text-lg font-semibold">
+				{role.title}
+				<span class="text-sm font-normal text-base-content/40">{role.works.length}</span>
+			</h3>
+			<EntityGrid
+				entities={(all ? role.works : role.works.slice(0, WORKS_SHOWN)).map((w) => w.entity)}
+				caption={(e) => captions.get(e.id)}
+				ratings={data.ratings}
+			/>
+			{#if role.works.length > WORKS_SHOWN}
+				<button
+					type="button"
+					class="btn mt-4 btn-outline btn-sm"
+					aria-expanded={all}
+					onclick={() => (all ? open.delete(role.role) : open.add(role.role))}
+				>
+					{all ? 'Свернуть' : `Показать всех (${role.works.length})`}
+				</button>
+			{/if}
+		</section>
 	{:else}
 		<EmptyState title="Работ пока нет" />
-	{/if}
+	{/each}
 </section>

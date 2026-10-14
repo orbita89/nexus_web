@@ -16,7 +16,7 @@
 
 	let { data }: PageProps = $props();
 
-	const EXAMPLES = ['Дюна', 'Стивен Кинг', 'киберпанк', 'Ведьмак'];
+	const EXAMPLES = ['Интерстеллар', 'Дюна', 'Брат', 'Pixar'];
 
 	function submit(event: SubmitEvent & { currentTarget: HTMLFormElement }) {
 		event.preventDefault();
@@ -26,7 +26,7 @@
 
 <Seo
 	title={data.q ? `Поиск: ${data.q}` : 'Поиск'}
-	description="Поиск по каталогу Nexus: фильмы, сериалы, книги и игры по названию, людям и тегам."
+	description="Поиск фильмов в Nexus по названию, оригинальному названию и студии."
 />
 
 <h1 class="mb-6 text-3xl font-black sm:text-4xl">{data.q ? `Поиск: ${data.q}` : 'Поиск'}</h1>
@@ -42,7 +42,7 @@
 		type="search"
 		name="q"
 		value={data.q ?? ''}
-		placeholder="Название, имя, тег"
+		placeholder="Название фильма или студия"
 		aria-label="Что ищем"
 		class="input w-full input-lg"
 	/>
@@ -56,7 +56,7 @@
 
 {#if !data.q}
 	<div class="mt-10 max-w-xl text-base-content/70">
-		<p>Ищите по названию, оригинальному названию, именам актёров, режиссёров и авторов, тегам.</p>
+		<p>Ищите фильмы по названию — русскому или оригинальному — и по студии.</p>
 		<p class="mt-4 text-sm text-base-content/50">Например:</p>
 		<ul class="mt-2 flex flex-wrap gap-2">
 			{#each EXAMPLES as example (example)}

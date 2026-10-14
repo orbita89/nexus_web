@@ -25,7 +25,7 @@ export function count(n: number, forms: readonly [string, string, string]): stri
 
 const ROLES: Record<string, string> = {
 	actor: 'Актёр',
-	voice_actor: 'Озвучка',
+	voice_actor: 'Озвучивание',
 	director: 'Режиссёр',
 	writer: 'Сценарист',
 	author: 'Автор',
@@ -34,13 +34,41 @@ const ROLES: Record<string, string> = {
 	developer: 'Разработчик',
 	producer: 'Продюсер',
 	cinematographer: 'Оператор',
-	editor: 'Монтаж',
+	editor: 'Монтажёр',
 	translator: 'Переводчик',
 	illustrator: 'Иллюстратор',
 	narrator: 'Рассказчик',
 	showrunner: 'Шоураннер',
 	game_designer: 'Геймдизайнер'
 };
+
+/**
+ * Группы титров в порядке показа: заголовок группы — во множественном числе («Режиссёры»).
+ * Роли не из списка идут после, с подписью roleLabel.
+ */
+export const ROLE_GROUPS: readonly { role: string; title: string }[] = [
+	{ role: 'director', title: 'Режиссёры' },
+	{ role: 'writer', title: 'Сценаристы' },
+	{ role: 'producer', title: 'Продюсеры' },
+	{ role: 'composer', title: 'Композиторы' },
+	{ role: 'cinematographer', title: 'Операторы' },
+	{ role: 'editor', title: 'Монтажёры' },
+	{ role: 'actor', title: 'В ролях' },
+	{ role: 'voice_actor', title: 'Роли озвучивали' },
+	{ role: 'author', title: 'Авторы' },
+	{ role: 'creator', title: 'Создатели' }
+];
+
+/** Место роли в ROLE_GROUPS; неизвестная — после всех. */
+export function roleRank(role: string): number {
+	const i = ROLE_GROUPS.findIndex((g) => g.role === role);
+	return i === -1 ? ROLE_GROUPS.length : i;
+}
+
+/** Заголовок группы: director → «Режиссёры»; неизвестная роль — roleLabel. */
+export function roleGroupTitle(role: string): string {
+	return ROLE_GROUPS.find((g) => g.role === role)?.title ?? roleLabel(role);
+}
 
 /** actor → «Актёр»; неизвестная роль — как есть, но читаемо: art_director → «Art director». */
 export function roleLabel(role: string): string {
@@ -194,21 +222,43 @@ export function creditLabel(credit: { role: string; character_name?: string | nu
 		: roleLabel(credit.role);
 }
 
+/** Работ в роли на странице человека сразу (две строки сетки по 6); остальные — «Показать всех». */
+export const WORKS_SHOWN = 12;
+
+/** Работа в фильмографии: произведение и подпись под ним (у актёра — персонаж). */
+export interface Work<E> {
+	entity: E;
+	caption?: string;
+}
+
 /**
- * Работы человека для сетки: одна карточка на произведение, все роли в подписи
- * («Режиссёр, Сценарист»). Порядок — как пришёл от API (новые сверху).
+ * Фильмография человека по ролям: сначала роль, где работ больше (у режиссёра — «Режиссёр»,
+ * у актёра — «Актёр»), при равенстве — порядок ROLE_GROUPS. Внутри — новые сверху, без даты —
+ * в конце; одно произведение в роли — один раз.
  */
-export function groupWorks<E extends { id: string }>(
+export function filmography<E extends { id: string; release_date?: string | null }>(
 	credits: { entity: E; role: string; character_name?: string | null }[]
-): { entity: E; caption: string }[] {
-	const byEntity = new Map<string, { entity: E; roles: string[] }>();
+): { role: string; title: string; works: Work<E>[] }[] {
+	const byRole = new Map<string, Work<E>[]>();
 	for (const credit of credits) {
-		const work = byEntity.get(credit.entity.id) ?? { entity: credit.entity, roles: [] };
-		const label = creditLabel(credit);
-		if (!work.roles.includes(label)) work.roles.push(label);
-		byEntity.set(credit.entity.id, work);
+		const works = byRole.get(credit.role) ?? [];
+		const same = works.find((w) => w.entity.id === credit.entity.id);
+		if (same) {
+			if (credit.character_name && !same.caption?.includes(credit.character_name)) {
+				same.caption = same.caption
+					? `${same.caption}, ${credit.character_name}`
+					: credit.character_name;
+			}
+		} else {
+			works.push({ entity: credit.entity, caption: credit.character_name ?? undefined });
+		}
+		byRole.set(credit.role, works);
 	}
-	return [...byEntity.values()].map(({ entity, roles }) => ({ entity, caption: roles.join(', ') }));
+	const newest = (a: Work<E>, b: Work<E>) =>
+		(b.entity.release_date ?? '').localeCompare(a.entity.release_date ?? '');
+	return [...byRole.entries()]
+		.map(([role, works]) => ({ role, title: roleLabel(role), works: works.toSorted(newest) }))
+		.toSorted((a, b) => b.works.length - a.works.length || roleRank(a.role) - roleRank(b.role));
 }
 
 /**

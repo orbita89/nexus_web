@@ -6,11 +6,12 @@ import {
 	keyFacts,
 	leadCredits,
 	creditLabel,
-	groupWorks,
+	filmography,
 	formatDate,
 	formatRuntime,
 	metadataFields,
 	plural,
+	roleGroupTitle,
 	roleLabel,
 	summary,
 	yearOf,
@@ -37,7 +38,11 @@ describe('plural', () => {
 describe('метки', () => {
 	it('роли', () => {
 		expect(roleLabel('actor')).toBe('Актёр');
-		expect(roleLabel('voice_actor')).toBe('Озвучка');
+		expect(roleLabel('voice_actor')).toBe('Озвучивание');
+		expect(roleLabel('editor')).toBe('Монтажёр');
+		expect(roleGroupTitle('cinematographer')).toBe('Операторы');
+		expect(roleGroupTitle('actor')).toBe('В ролях');
+		expect(roleGroupTitle('art_director')).toBe('Art director');
 		expect(roleLabel('art_director')).toBe('Art director');
 	});
 
@@ -128,20 +133,23 @@ describe('работы человека', () => {
 		expect(creditLabel({ role: 'director', character_name: null })).toBe('Режиссёр');
 	});
 
-	it('одна карточка на произведение, роли через запятую, порядок сохраняется', () => {
-		const a = { id: 'a' };
-		const b = { id: 'b' };
-		expect(
-			groupWorks([
-				{ entity: a, role: 'director' },
-				{ entity: b, role: 'actor', character_name: 'Дейл Купер' },
-				{ entity: a, role: 'writer' },
-				{ entity: a, role: 'writer' }
-			])
-		).toEqual([
-			{ entity: a, caption: 'Режиссёр, Сценарист' },
-			{ entity: b, caption: 'Актёр — Дейл Купер' }
+	it('фильмография по ролям: главная роль первой, внутри — новые сверху, без даты — в конце', () => {
+		const film = (id: string, release_date: string | null) => ({ id, release_date });
+		const [a, b, c] = [film('a', '2010-07-16'), film('b', '2014-11-06'), film('c', null)];
+		const roles = filmography([
+			{ entity: a, role: 'writer' },
+			{ entity: c, role: 'director' },
+			{ entity: a, role: 'director' },
+			{ entity: b, role: 'director' },
+			{ entity: b, role: 'actor', character_name: 'Купер' },
+			{ entity: b, role: 'actor', character_name: 'Камео' }
 		]);
+		expect(roles.map((r) => [r.title, r.works.map((w) => w.entity.id)])).toEqual([
+			['Режиссёр', ['b', 'a', 'c']],
+			['Сценарист', ['a']],
+			['Актёр', ['b']]
+		]);
+		expect(roles[2].works[0].caption).toBe('Купер, Камео');
 	});
 });
 

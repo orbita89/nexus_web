@@ -3,9 +3,9 @@ import type { SchemaEntityCredit, SchemaEntityDetail } from '#lib/api/generated/
 import {
 	aboutRows,
 	aboutTitle,
+	creditGroups,
 	isReleased,
 	originalTitle,
-	peopleCard,
 	productionOf,
 	relatedWorks
 } from './card';
@@ -49,11 +49,12 @@ const dune: SchemaEntityDetail = {
 const labels = (rows: { label: string }[]) => rows.map((r) => r.label);
 
 describe('aboutRows', () => {
-	it('без режиссёра и актёров (они в плашке); группа — по Кинопоиску', () => {
+	it('съёмочная группа по ролям, без актёров (они в титрах ниже); подписи — по Кинопоиску', () => {
 		const rows = aboutRows({ ...dune, original_title: 'Dune' });
 		expect(labels(rows)).toEqual([
 			'Год производства',
 			'Страна',
+			'Режиссёр',
 			'Сценарий',
 			'Композитор',
 			'Премьера',
@@ -66,20 +67,55 @@ describe('aboutRows', () => {
 			'Вильнёв'
 		]);
 	});
+
+	it('в строке — первые трое, остальные — «и ещё N»', () => {
+		const producers = ['А', 'Б', 'В', 'Г', 'Д'].map((name) => credit('producer', name));
+		const row = aboutRows({ ...dune, credits: producers }).find((r) => r.label === 'Продюсер')!;
+		expect(row.links?.map((l) => l.text)).toEqual(['А', 'Б', 'В']);
+		expect(row.more).toBe(2);
+	});
 });
 
-describe('peopleCard', () => {
-	it('режиссёр и актёры в порядке титров', () => {
-		const card = peopleCard(dune)!;
-		expect(card.lead?.label).toBe('Режиссёр');
-		expect(card.lead?.credits.map((c) => c.person.full_name)).toEqual(['Вильнёв']);
-		expect(card.cast.map((c) => c.person.full_name)).toEqual(['Шаламе', 'Фергюсон']);
+describe('creditGroups', () => {
+	it('группы в порядке таблицы ролей, внутри — порядок титров', () => {
+		const groups = creditGroups(dune.credits);
+		expect(groups.map((g) => g.title)).toEqual([
+			'Режиссёры',
+			'Сценаристы',
+			'Композиторы',
+			'В ролях'
+		]);
+		expect(groups[3].credits.map((c) => c.person.full_name)).toEqual(['Шаламе', 'Фергюсон']);
 	});
 
-	it('у книги главный — автор; никого нет — null', () => {
-		const book = { ...dune, kind: 'book' as const, credits: [credit('author', 'Херберт')] };
-		expect(peopleCard(book)?.lead?.label).toBe('Автор');
-		expect(peopleCard({ ...dune, credits: [] })).toBeNull();
+	it('человек в нескольких ролях — в каждой группе, но в группе один раз', () => {
+		const groups = creditGroups([
+			credit('director', 'Нолан'),
+			credit('writer', 'Нолан'),
+			credit('producer', 'Нолан'),
+			credit('producer', 'Нолан')
+		]);
+		expect(groups.map((g) => [g.role, g.credits.length])).toEqual([
+			['director', 1],
+			['writer', 1],
+			['producer', 1]
+		]);
+	});
+
+	it('сразу видно: актёров — 12, остальных — 6; новые роли — после, подпись как есть', () => {
+		const groups = creditGroups([
+			credit('stunts', 'Каскадёр'),
+			credit('actor', 'Актёр'),
+			credit('cinematographer', 'ван Хойтема'),
+			credit('editor', 'Ли Смит')
+		]);
+		expect(groups.map((g) => [g.title, g.shown])).toEqual([
+			['Операторы', 6],
+			['Монтажёры', 6],
+			['В ролях', 12],
+			['Stunts', 6]
+		]);
+		expect(creditGroups([])).toEqual([]);
 	});
 });
 

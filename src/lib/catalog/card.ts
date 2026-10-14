@@ -1,5 +1,5 @@
 // Данные карточки в том виде, в каком их показывает страница: таблица «О фильме» как у
-// Кинопоиска, плашка «Режиссёр и актёры», связанные произведения. Всё — из EntityDetail; нет
+// Кинопоиска, плашка «Съёмочная группа и актёры», связанные произведения. Всё — из EntityDetail; нет
 // данных (связей, студий, наград) — нет и блока.
 import type {
 	SchemaBookMetadata,
@@ -12,13 +12,23 @@ import type {
 	SchemaRelatedWork,
 	SchemaSeriesMetadata
 } from '#lib/api/generated/catalog.ts';
-import { countryName, formatDate, leadRole, metadataFields, roleLabel, yearOf } from './labels.ts';
+import {
+	countryName,
+	formatDate,
+	metadataFields,
+	roleGroupTitle,
+	roleLabel,
+	roleRank,
+	yearOf
+} from './labels.ts';
 
 /** Строка фактов: подпись и значение — текст или ссылки (люди). */
 export interface FactRow {
 	label: string;
 	text?: string;
 	links?: { href: string; text: string }[];
+	/** Сколько людей не влезло в строку — «и ещё N» ссылкой на полные титры. */
+	more?: number;
 }
 
 /** Актёры (и озвучка — у игр и мультфильмов это и есть «роли»). */
@@ -45,70 +55,57 @@ function countries(entity: SchemaEntityDetail): string | null {
 	return list?.length ? list.map(countryName).join(', ') : null;
 }
 
-/** Актёры в порядке титров. */
-export function castCredits(credits: SchemaEntityCredit[]): SchemaEntityCredit[] {
-	return credits.filter((c) => CAST_ROLES.includes(c.role));
+export interface CreditGroup {
+	role: string;
+	/** «Режиссёры», «В ролях»; неизвестная роль — как есть. */
+	title: string;
+	credits: SchemaEntityCredit[];
+	/** Сколько показать сразу; остальные — по «Показать всех». */
+	shown: number;
 }
 
+/** Сразу видно: актёров — 12, остальных ролей — 6. */
+const SHOWN = { cast: 12, crew: 6 };
+
 /**
- * Плашка под таблицей: главная роль (режиссёр, у книг — автор, у сериалов — создатель) и
- * актёры. Нет ни тех, ни других — null.
+ * Титры по группам в порядке ROLE_GROUPS, неизвестные роли — после, в порядке появления.
+ * Внутри — как прислал бэкенд (по position). Человек в нескольких ролях — в каждой группе, но в
+ * одной группе один раз. Нет титров — [].
  */
-export function peopleCard(entity: SchemaEntityDetail): {
-	lead: { label: string; credits: SchemaEntityCredit[] } | null;
-	cast: SchemaEntityCredit[];
-} | null {
-	const role = leadRole(entity.kind, entity.credits);
-	const lead = role
-		? { label: roleLabel(role), credits: entity.credits.filter((c) => c.role === role) }
-		: null;
-	const cast = castCredits(entity.credits);
-	return lead || cast.length ? { lead, cast } : null;
+export function creditGroups(credits: SchemaEntityCredit[]): CreditGroup[] {
+	const byRole = new Map<string, SchemaEntityCredit[]>();
+	for (const credit of credits) {
+		const list = byRole.get(credit.role) ?? [];
+		if (!list.some((c) => c.person.id === credit.person.id)) list.push(credit);
+		byRole.set(credit.role, list);
+	}
+	return [...byRole.entries()]
+		.toSorted(([a], [b]) => roleRank(a) - roleRank(b))
+		.map(([role, list]) => ({
+			role,
+			title: roleGroupTitle(role),
+			credits: list,
+			shown: CAST_ROLES.includes(role) ? SHOWN.cast : SHOWN.crew
+		}));
 }
 
-// Порядок съёмочной группы в «О фильме», как у Кинопоиска. Роли не из списка — после них.
-const CREW_ORDER = [
-	'director',
-	'creator',
-	'showrunner',
-	'author',
-	'writer',
-	'producer',
-	'cinematographer',
-	'composer',
-	'editor',
-	'developer',
-	'game_designer',
-	'illustrator',
-	'translator',
-	'narrator'
-];
-const CREW_LABEL: Record<string, string> = { writer: 'Сценарий', composer: 'Композитор' };
+/** В строке таблицы «О фильме» — первые трое, остальные — в полных титрах ниже. */
+const ROW_PEOPLE = 3;
+const CREW_LABEL: Record<string, string> = { writer: 'Сценарий', editor: 'Монтаж' };
 
 /**
- * Таблица «О фильме»: год, страна, съёмочная группа по ролям, дата выхода и поля metadata.
- * Оригинальное название — над описанием. Главная роль и актёры — в плашке под таблицей (peopleCard), теги —
- * над разделом.
+ * Таблица «О фильме»: год, страна, съёмочная группа по ролям (первые трое, «и ещё N»), дата
+ * выхода и поля metadata. Оригинальное название — над описанием. Полные титры с актёрами — в
+ * плашке под таблицей (creditGroups), теги — над разделом.
  */
 export function aboutRows(entity: SchemaEntityDetail): FactRow[] {
 	const year = yearOf(entity.release_date);
-	const lead = leadRole(entity.kind, entity.credits);
-	const crew = new Map<string, SchemaPersonRef[]>();
-	for (const credit of entity.credits) {
-		if (CAST_ROLES.includes(credit.role) || credit.role === lead) continue;
-		const people = crew.get(credit.role) ?? [];
-		if (!people.some((p) => p.id === credit.person.id)) people.push(credit.person);
-		crew.set(credit.role, people);
-	}
-	const rank = (role: string) => {
-		const i = CREW_ORDER.indexOf(role);
-		return i === -1 ? CREW_ORDER.length : i;
-	};
-	const crewRows = [...crew.entries()]
-		.sort(([a], [b]) => rank(a) - rank(b))
-		.map(([role, people]) => ({
-			label: CREW_LABEL[role] ?? roleLabel(role),
-			links: personLinks(people)
+	const crewRows = creditGroups(entity.credits)
+		.filter((g) => !CAST_ROLES.includes(g.role))
+		.map((g) => ({
+			label: CREW_LABEL[g.role] ?? roleLabel(g.role),
+			links: personLinks(g.credits.slice(0, ROW_PEOPLE).map((c) => c.person)),
+			more: Math.max(0, g.credits.length - ROW_PEOPLE) || undefined
 		}));
 	// Страны уже в строке «Страна» сверху.
 	const fields = metadataFields(entity.kind, entity.metadata)
