@@ -17,7 +17,7 @@ export interface paths {
 		 * Вернуть фильм из архива на сайт: строка в `entities` (`active`, `active_manual` — сборка
 		 *     горячего слоя её не уберёт), связь с TMDB и popularity; затем документ удаляется из архива
 		 *     (`delete_term` + `commit`), поиск сайта и статика обновляются. Карточка — «скелет»: название,
-		 *     оригинальное название, дата выхода.
+		 *     оригинальное название, дата выхода, постер.
 		 */
 		post: operations['archive_promote'];
 		delete?: never;
@@ -403,6 +403,26 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/catalog/archive/entities/{slug}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Фильм из архива для его страницы на сайте: название, оригинальное название, дата выхода,
+		 *     постер. Только чтение: на сайт фильм возвращает админ (`POST /admin/archive/promote/{slug}`).
+		 */
+		get: operations['archive_get'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/catalog/archive/search': {
 		parameters: {
 			query?: never;
@@ -411,9 +431,9 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Поиск по холодному архиву: фильмы, которых нет на сайте (вне топ-100 000). Ищет по
-		 *     названию и оригинальному названию, выше — точнее совпавшие и популярные. Вернуть фильм на
-		 *     сайт — `POST /admin/archive/promote/{slug}`.
+		 * Поиск по холодному архиву: фильмы, которых нет на сайте (вне горячего слоя). Ищет по
+		 *     названию и оригинальному названию, выше — точнее совпавшие и популярные. Страница фильма —
+		 *     `GET /archive/entities/{slug}`, вернуть фильм на сайт — `POST /admin/archive/promote/{slug}`.
 		 */
 		get: operations['archive_search'];
 		put?: never;
@@ -439,6 +459,9 @@ export interface paths {
 		 *     в будущем — только в `soon`.
 		 * @description Наши оценки — из сводок `entity_ratings`, которые присылает `social` (`EntityRatings`): каталог в
 		 *     таблицы рецензий не ходит.
+		 *
+		 *     Поиска по названию здесь нет: весь поиск на сайте — `GET /search` (Meilisearch); `q` — 400
+		 *     `use_search`.
 		 */
 		get: operations['list_entities'];
 		put?: never;
@@ -541,12 +564,39 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Полнотекстовый поиск по активным сущностям каталога: опечатки, ранжирование, фильтры.
+		 * Полнотекстовый поиск по активным сущностям каталога: опечатки, ранжирование, фильтры. Весь
+		 *     поиск на сайте идёт сюда (в `GET /entities` поиска по названию нет).
+		 * @description Фильтры (через AND): `kind`, `tag`, год (`year` — ровно, `year_from` / `year_to` — диапазон
+		 *     включительно), `studio` (точное название, без учёта регистра). `person` / `role` — заглушка:
+		 *     людей в индексе пока нет, ответ 503 `person_filter_unavailable`.
+		 *
 		 *     Сортировка по релевантности; `sort=recommended` / `trending` / `top_rated` — по баллу
-		 *     «Рекомендуемые», TMDB popularity, рейтингу IMDb (у кого значения нет — в конце).
-		 * @description Индекс обновляется после изменений в админке с задержкой в доли секунды.
+		 *     «Рекомендуемые», TMDB popularity, рейтингу IMDb (у кого значения нет — в конце); `new` — только
+		 *     вышедшие, новые сверху; `soon` — только не вышедшие, ближайшие сверху; `title` — по названию.
+		 *
+		 *     Индекс обновляется после изменений в админке с задержкой в доли секунды.
 		 */
 		get: operations['search'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/search/studios': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Подсказки студий для фильтра `studio` (facet search Meilisearch по полю `studios`): по части
+		 *     названия с опечатками; без `q` — самые частые. `count` — сколько видимых сущностей в индексе.
+		 */
+		get: operations['search_studios'];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -639,8 +689,16 @@ export interface components {
 			/** @description Видна на сайте (активна и вышла / «скоро» / вручную / не из TMDB). */
 			visible: boolean;
 		};
-		/** @description Документ архива — «скелет» фильма: ровно то, что нужно для поиска и возврата в каталог. */
+		/**
+		 * @description Документ архива — «скелет» фильма: то, что нужно для поиска, страницы фильма в архиве и
+		 *     возврата в каталог.
+		 */
 		ArchiveDoc: {
+			/**
+			 * @description Постер (TMDB `w780`, как `cover_url` карточки); нет у TMDB — `null`.
+			 * @example https://image.tmdb.org/t/p/w780/kQJ1ZJ3ws3ixsNLE4d3rAc2Yh0C.jpg
+			 */
+			cover_url?: string | null;
 			kind: components['schemas']['EntityKind'];
 			/** @example The Night Visitor */
 			original_title?: string | null;
@@ -665,9 +723,6 @@ export interface components {
 			 * @example 42491
 			 */
 			tmdb_id?: number | null;
-		};
-		ArchiveHits: {
-			items: components['schemas']['ArchiveDoc'][];
 		};
 		/** @description Награда или номинация. */
 		Award: {
@@ -1045,6 +1100,56 @@ export interface components {
 			total: number;
 		};
 		/** @description Страница списка. */
+		Page_ArchiveDoc: {
+			items: {
+				/**
+				 * @description Постер (TMDB `w780`, как `cover_url` карточки); нет у TMDB — `null`.
+				 * @example https://image.tmdb.org/t/p/w780/kQJ1ZJ3ws3ixsNLE4d3rAc2Yh0C.jpg
+				 */
+				cover_url?: string | null;
+				kind: components['schemas']['EntityKind'];
+				/** @example The Night Visitor */
+				original_title?: string | null;
+				/**
+				 * Format: double
+				 * @description TMDB popularity на момент переноса в архив.
+				 * @example 1.84
+				 */
+				popularity: number;
+				/**
+				 * Format: date
+				 * @example 1971-02-04
+				 */
+				release_date?: string | null;
+				/** @example the-night-visitor-1971 */
+				slug: string;
+				/** @example Ночной посетитель */
+				title: string;
+				/**
+				 * Format: int32
+				 * @description Id фильма в TMDB: по нему импорт пропускает фильмы архива.
+				 * @example 42491
+				 */
+				tmdb_id?: number | null;
+			}[];
+			/**
+			 * Format: int64
+			 * @example 20
+			 */
+			limit: number;
+			/**
+			 * Format: int64
+			 * @example 0
+			 */
+			offset: number;
+			/**
+			 * Format: int64
+			 * @description Всего записей под фильтром (в поиске — оценка Meilisearch).
+			 * @example 137
+			 */
+			total: number;
+		};
+		/** @description Страница списка. */
 		Page_EntitySummary: {
 			items: {
 				cover_url?: string | null;
@@ -1324,7 +1429,7 @@ export interface components {
 		 * @description Сортировка поиска (без неё — по релевантности); у кого значения нет — в конце.
 		 * @enum {string}
 		 */
-		SearchSort: 'recommended' | 'trending' | 'top_rated';
+		SearchSort: 'recommended' | 'trending' | 'top_rated' | 'new' | 'soon' | 'title';
 		/** @description Поля сериала. */
 		SeriesMetadata: {
 			/** @description Награды и номинации: до 50. */
@@ -1447,6 +1552,13 @@ export interface components {
 		};
 		/** @enum {string} */
 		StepStatus: 'running' | 'done' | 'skipped' | 'failed';
+		/** @description Студия в подсказках: название (значение для `studio`) и сколько сущностей в индексе. */
+		StudioHit: {
+			/** Format: int64 */
+			count: number;
+			/** @example Warner Bros. Pictures */
+			name: string;
+		};
 		Tag: {
 			/** Format: uuid */
 			id: string;
@@ -1536,7 +1648,6 @@ export type SchemaActiveResult = components['schemas']['ActiveResult'];
 export type SchemaAddCredit = components['schemas']['AddCredit'];
 export type SchemaAdminEntitySummary = components['schemas']['AdminEntitySummary'];
 export type SchemaArchiveDoc = components['schemas']['ArchiveDoc'];
-export type SchemaArchiveHits = components['schemas']['ArchiveHits'];
 export type SchemaAward = components['schemas']['Award'];
 export type SchemaBookMetadata = components['schemas']['BookMetadata'];
 export type SchemaCreateEntity = components['schemas']['CreateEntity'];
@@ -1555,6 +1666,7 @@ export type SchemaJobEvent = components['schemas']['JobEvent'];
 export type SchemaMetadata = components['schemas']['Metadata'];
 export type SchemaMovieMetadata = components['schemas']['MovieMetadata'];
 export type SchemaPageAdminEntitySummary = components['schemas']['Page_AdminEntitySummary'];
+export type SchemaPageArchiveDoc = components['schemas']['Page_ArchiveDoc'];
 export type SchemaPageEntitySummary = components['schemas']['Page_EntitySummary'];
 export type SchemaPagePersonSummary = components['schemas']['Page_PersonSummary'];
 export type SchemaPerson = components['schemas']['Person'];
@@ -1579,6 +1691,7 @@ export type SchemaStatsResult = components['schemas']['StatsResult'];
 export type SchemaStep = components['schemas']['Step'];
 export type SchemaStepEvent = components['schemas']['StepEvent'];
 export type SchemaStepStatus = components['schemas']['StepStatus'];
+export type SchemaStudioHit = components['schemas']['StudioHit'];
 export type SchemaTag = components['schemas']['Tag'];
 export type SchemaTagKind = components['schemas']['TagKind'];
 export type SchemaTagWithCount = components['schemas']['TagWithCount'];
@@ -3030,6 +3143,47 @@ export interface operations {
 			};
 		};
 	};
+	archive_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description slug фильма в архиве */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Документ архива */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ArchiveDoc'];
+				};
+			};
+			/** @description В архиве нет такого slug (фильм мог вернуться на сайт: `GET /entities/{slug}`) */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Архив не настроен (`ARCHIVE_DIR`) или недоступен */
+			503: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
 	archive_search: {
 		parameters: {
 			query: {
@@ -3040,6 +3194,8 @@ export interface operations {
 				q: string;
 				/** @description 1–20, по умолчанию 20. */
 				limit?: number;
+				/** @description 0–1000, по умолчанию 0. */
+				offset?: number;
 			};
 			header?: never;
 			path?: never;
@@ -3047,16 +3203,16 @@ export interface operations {
 		};
 		requestBody?: never;
 		responses: {
-			/** @description До `limit` документов архива */
+			/** @description Страница документов архива; `total` — всего найдено */
 			200: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
-					'application/json': components['schemas']['ArchiveHits'];
+					'application/json': components['schemas']['Page_ArchiveDoc'];
 				};
 			};
-			/** @description Пустой или длинный `q`, `limit` вне 1–20 */
+			/** @description Пустой или длинный `q`, `limit` вне 1–20, `offset` вне 0–1000 */
 			400: {
 				headers: {
 					[name: string]: unknown;
@@ -3093,11 +3249,6 @@ export interface operations {
 				 * @example 2021
 				 */
 				year?: number;
-				/**
-				 * @description Подстрока в названии или оригинальном названии, без учёта регистра.
-				 * @example дюна
-				 */
-				q?: string;
 				/** @description 1–100, по умолчанию 20. */
 				limit?: number;
 				/** @description С 0. */
@@ -3118,7 +3269,7 @@ export interface operations {
 					'application/json': components['schemas']['Page_EntitySummary'];
 				};
 			};
-			/** @description Неверный фильтр */
+			/** @description Неверный фильтр; `q` — `use_search` */
 			400: {
 				headers: {
 					[name: string]: unknown;
@@ -3298,7 +3449,8 @@ export interface operations {
 		parameters: {
 			query?: {
 				/**
-				 * @description Поисковый запрос: название, оригинальное название, люди, теги, описание. Опечатки допустимы.
+				 * @description Поисковый запрос: название, оригинальное название, студии. Опечатки допустимы. Пустой —
+				 *     все, кто подходит под фильтры.
 				 * @example дюан
 				 */
 				q?: string;
@@ -3307,7 +3459,37 @@ export interface operations {
 				kind?: components['schemas']['EntityKind'];
 				/** @description Slug тега. */
 				tag?: string;
+				/**
+				 * @description Ровно этот год выхода. Вместе с `year_from` / `year_to` — 400.
+				 * @example 2001
+				 */
 				year?: number;
+				/**
+				 * @description Год выхода от (включительно).
+				 * @example 2000
+				 */
+				year_from?: number;
+				/**
+				 * @description Год выхода до (включительно).
+				 * @example 2010
+				 */
+				year_to?: number;
+				/**
+				 * @description Студия — точное название (без учёта регистра); подсказки — `GET /search/studios`.
+				 * @example Warner Bros. Pictures
+				 */
+				studio?: string;
+				/**
+				 * @description Slug человека: фильмы с его участием. **Заглушка:** людей в индексе пока нет — 503
+				 *     `person_filter_unavailable`.
+				 * @example christopher-nolan
+				 */
+				person?: string;
+				/**
+				 * @description Роль человека из `person`: `actor`, `director`, `producer`, `writer`, ... Без `person` — 400.
+				 * @example director
+				 */
+				role?: string;
 				/** @description 1–100, по умолчанию 20. */
 				limit?: number;
 				/** @description С 0. */
@@ -3329,6 +3511,54 @@ export interface operations {
 				};
 			};
 			/** @description Неверный фильтр */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Meilisearch недоступен; `person_filter_unavailable` — фильтр по людям ещё не готов */
+			503: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	search_studios: {
+		parameters: {
+			query?: {
+				/**
+				 * @description Начало или часть названия, опечатки допустимы. Пустой — самые частые.
+				 * @example warn
+				 */
+				q?: string;
+				/** @description Только студии сущностей этого типа. */
+				kind?: components['schemas']['EntityKind'];
+				/** @description 1–50, по умолчанию 10. Вне диапазона приводится к границам. */
+				limit?: number;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Студии */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['StudioHit'][];
+				};
+			};
+			/** @description Слишком длинный `q` */
 			400: {
 				headers: {
 					[name: string]: unknown;

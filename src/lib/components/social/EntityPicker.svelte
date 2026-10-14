@@ -11,7 +11,7 @@
 </script>
 
 <script lang="ts">
-	import { ApiError, unwrap } from '#lib/api/errors.ts';
+	import { unwrap } from '#lib/api/errors.ts';
 	import { guestApi } from '#lib/auth/session.svelte.ts';
 	import { KINDS } from '#lib/catalog/kinds.ts';
 	import { yearOf } from '#lib/catalog/labels.ts';
@@ -39,14 +39,10 @@
 	const label = (e: PickedEntity) =>
 		[e.title, yearOf(e.release_date), kindName(e.kind)].filter(Boolean).join(' · ');
 
+	// Только Meilisearch: в GET /entities поиска по названию нет.
 	async function search(q: string) {
 		const params = { query: { q, limit: 8 } };
-		try {
-			return (await unwrap(guestApi.catalog.GET('/api/v1/catalog/search', { params }))).items;
-		} catch (e) {
-			if (!(e instanceof ApiError && e.status === 503)) throw e;
-			return (await unwrap(guestApi.catalog.GET('/api/v1/catalog/entities', { params }))).items;
-		}
+		return (await unwrap(guestApi.catalog.GET('/api/v1/catalog/search', { params }))).items;
 	}
 
 	function onInput() {
