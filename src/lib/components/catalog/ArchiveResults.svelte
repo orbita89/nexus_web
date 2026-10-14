@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { navigating } from '$app/state';
 	import { originalTitle } from '#lib/admin/archive.ts';
 	import { Promotions } from '#lib/admin/promote.svelte.ts';
 	import { errorMessage, unwrap } from '#lib/api/errors.ts';
@@ -10,9 +11,10 @@
 	import Poster from './Poster.svelte';
 
 	// «Из архива»: фильмы, которых нет на сайте, — под основной выдачей поиска, пока включена
-	// галочка «Архив». Архив ищет только по названию. Приглушены и с бейджем «Архив»; ведут на
-	// страницу архивного фильма (/archive/{slug}). «Ещё из архива» листает offset в браузере.
-	// Админу — «Вернуть на сайт».
+	// галочка «Архив». Архив ищет только по названию. Приглушены и с бейджем «Архив». Клик —
+	// /archive/{slug}: бэкенд возвращает фильм на сайт с данными TMDB, и открывается уже его
+	// карточка; пока идёт возврат (несколько секунд) — «Открываем…» на нажатой карточке. Без
+	// предзагрузки по наведению (её load и есть возврат) и nofollow: возвращает только клик. «Ещё из архива» листает offset. Админу — «Вернуть на сайт».
 	let {
 		q,
 		first,
@@ -32,6 +34,8 @@
 	const canMore = $derived(loaded < first.total && loaded <= MAX_OFFSET);
 	const isAdmin = $derived(session.user?.role === 'admin');
 	const promotions = new Promotions((slug) => (gone = [...gone, slug]));
+	/** Карточка, которую сейчас открываем (идёт возврат на сайт). */
+	const opening = $derived(navigating.to?.url.pathname.match(/^\/archive\/([^/]+)$/)?.[1]);
 
 	async function loadMore() {
 		loading = true;
@@ -65,7 +69,13 @@
 			{#each docs as doc (doc.slug)}
 				{@const original = originalTitle(doc)}
 				<li class="relative">
-					<a href="/archive/{doc.slug}" class="group block rounded-box outline-offset-4">
+					<a
+						href="/archive/{doc.slug}"
+						rel="nofollow"
+						data-sveltekit-preload-data="off"
+						class="group block rounded-box outline-offset-4"
+						aria-busy={opening === doc.slug}
+					>
 						<div
 							class="opacity-60 grayscale-[40%] transition group-hover:opacity-90 group-hover:grayscale-0"
 						>
@@ -82,6 +92,15 @@
 							</p>
 						</div>
 						<span class="absolute top-2 left-2 badge badge-sm shadow-md badge-neutral">Архив</span>
+						{#if opening === doc.slug}
+							<span
+								class="absolute inset-x-0 top-0 flex aspect-2/3 flex-col items-center justify-center gap-2 rounded-box bg-base-100/70 text-sm font-medium"
+								role="status"
+							>
+								<span class="loading loading-md loading-spinner text-primary"></span>
+								Открываем…
+							</span>
+						{/if}
 					</a>
 					{#if isAdmin}<div class="mt-2"><PromoteButton {doc} {promotions} /></div>{/if}
 				</li>

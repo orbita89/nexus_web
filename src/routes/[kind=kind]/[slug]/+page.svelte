@@ -2,7 +2,7 @@
 	import EntityPage from '#lib/components/card/EntityPage.svelte';
 	import type { PageProps } from './$types';
 
-	// Карточка произведения — EntityPage (её же показывает /archive/{slug} после возврата фильма).
+	// Карточка произведения — EntityPage.
 	let { data }: PageProps = $props();
 </script>
 
