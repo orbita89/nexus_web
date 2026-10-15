@@ -75,3 +75,17 @@ export async function sectionPage(
 	}
 	return searchPage(api, f, { kind, sort: searchSortParam(mode.sort), ...page });
 }
+
+/**
+ * «Запрос» всего архива: `*` в синтаксисе Tantivy — все документы, выше популярные. Отдельного
+ * списка и счётчика у архива в API нет, а этот запрос считает миллион документов 1,5–2 с — только
+ * в браузере, страница его не ждёт (docs/backend-questions.md).
+ */
+export const ARCHIVE_ALL = '*';
+
+/** Порция архива по названию (или ARCHIVE_ALL); limit у архива — не больше 20. */
+export function archivePage(api: Api, q: string, limit: number, offset = 0) {
+	return unwrap(
+		api.catalog.GET('/api/v1/catalog/archive/search', { params: { query: { q, limit, offset } } })
+	);
+}

@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { hasFilters, isSearch, readFilters, readMode, searchSortParam, yearLabel } from './filters';
+import {
+	hasFilters,
+	isSearch,
+	readArchive,
+	readFilters,
+	readMode,
+	searchSortParam,
+	yearLabel
+} from './filters';
 
 const at = (qs: string) => new URL(`http://x/films${qs}`);
 
@@ -14,13 +22,15 @@ describe('readFilters', () => {
 			yearTo: undefined,
 			studio: 'Pixar',
 			person: 'nolan',
-			role: 'director',
-			archive: true
+			role: 'director'
 		});
 		expect(readFilters(at('?role=director')).role).toBeUndefined();
 		expect(readFilters(at('?person=nolan&role=hacker')).role).toBeUndefined();
-		expect(readFilters(at('?archive=0')).archive).toBe(false);
-		expect(readFilters(at('?archive=yes')).archive).toBe(true);
+		// Архив выключен по умолчанию, включается только archive=1.
+		expect(readArchive(at(''))).toBe(false);
+		expect(readArchive(at('?archive=1'))).toBe(true);
+		expect(readArchive(at('?archive=0'))).toBe(false);
+		expect(readArchive(at('?archive=yes'))).toBe(false);
 	});
 
 	it('поиск — при тексте, студии или человеке; тег и год — обычный список', () => {
@@ -28,7 +38,7 @@ describe('readFilters', () => {
 		expect(isSearch(readFilters(at('?studio=Pixar')))).toBe(true);
 		expect(isSearch(readFilters(at('?person=nolan')))).toBe(true);
 		expect(hasFilters(readFilters(at('')))).toBe(false);
-		expect(hasFilters(readFilters(at('?archive=0')))).toBe(false);
+		expect(hasFilters(readFilters(at('?archive=1')))).toBe(false);
 	});
 });
 

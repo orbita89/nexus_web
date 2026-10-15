@@ -2,10 +2,11 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { guestApi } from '#lib/auth/session.svelte.ts';
-	import { hasFilters } from '#lib/catalog/filters.ts';
+	import { ARCHIVE_PAGE, archiveFeed } from '#lib/catalog/archive.svelte.ts';
+	import { hasFilters, readArchive } from '#lib/catalog/filters.ts';
 	import { searchPage } from '#lib/catalog/search.ts';
 	import { KINDS } from '#lib/catalog/kinds.ts';
-	import { count } from '#lib/catalog/labels.ts';
+	import { countWithArchive } from '#lib/catalog/labels.ts';
 	import { filterUrl, formUrl, PAGE_SIZE, withQuery } from '#lib/catalog/url.ts';
 	import Alert from '#lib/components/Alert.svelte';
 	import CatalogFilters from '#lib/components/catalog/CatalogFilters.svelte';
@@ -16,7 +17,6 @@
 	import ResultsFeed from '#lib/components/catalog/ResultsFeed.svelte';
 	import Seo from '#lib/components/catalog/Seo.svelte';
 	import TitleSearch from '#lib/components/catalog/TitleSearch.svelte';
-	import { _ARCHIVE_PAGE } from './+page.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -25,10 +25,10 @@
 	/** Есть запрос или фильтр — показываем выдачу, иначе подсказки. */
 	const searching = $derived(hasFilters(data.filters));
 	const archiveKind = $derived(!data.kind || data.kind.kind === 'movie');
-	/** Архив по запросу: в той же выдаче, после фильмов сайта. */
-	const archive = $derived(
-		data.archive?.data && data.q ? { q: data.q, first: data.archive.data } : null
-	);
+	/** Архив (archive=1) по названию: в той же выдаче, после фильмов сайта. */
+	const archiveOn = $derived(archiveKind && readArchive(page.url));
+	const feed = archiveFeed(() => (archiveOn && data.q ? data.q : null));
+	const archive = $derived(feed.archive);
 	const more = (offset: number) =>
 		searchPage(guestApi, data.filters, { kind: data.kind?.kind, limit: PAGE_SIZE, offset }).then(
 			(r) => r.page
@@ -72,6 +72,7 @@
 	kind={data.kind}
 	path="/search"
 	filters={data.filters}
+	archive={archiveOn}
 	personName={data.personName}
 	tags={data.tags}
 	titleField={false}
@@ -130,22 +131,24 @@
 	<LoadError message={data.error} />
 {:else if data.result && (data.result.items.length || archive?.first.items.length)}
 	<p class="mb-4 text-sm text-base-content/50">
-		Найдено {data.result.total > data.result.limit ? 'около ' : ''}{count(data.result.total, [
-			'произведение',
-			'произведения',
-			'произведений'
-		])}{archive?.first.total
-			? ` · в архиве ещё ${archive.first.total.toLocaleString('ru-RU')}`
-			: ''}
+		Найдено {data.result.total > data.result.limit ? 'около ' : ''}{countWithArchive(
+			data.result.total,
+			archive?.first.total ?? 0,
+			['произведение', 'произведения', 'произведений']
+		)}
 	</p>
 	<ResultsFeed
 		first={data.result}
 		{more}
 		ratings={data.ratings}
 		{archive}
-		archivePage={_ARCHIVE_PAGE}
+		archivePage={ARCHIVE_PAGE}
 		showKind={!data.kind}
 	/>
+{:else if feed.loading}
+	<p class="flex items-center gap-2 py-10 text-sm text-base-content/50" role="status">
+		<span class="loading loading-sm loading-spinner"></span>Ищем в архиве…
+	</p>
 {:else}
 	<EmptyState title="Ничего не нашлось">
 		{data.q ? `По запросу «${data.q}»` : 'По этим фильтрам'}{data.kind
@@ -154,10 +157,9 @@
 	</EmptyState>
 {/if}
 
-{#if data.q && archiveKind && !data.filters.archive && searching && !data.result?.items.length}
+{#if data.q && archiveKind && !archiveOn && searching && !data.result?.items.length}
 	<p class="mt-6 text-sm text-base-content/60">
 		Возможно, фильм есть в архиве —
-		<a href={filterUrl(page.url, { archive: null })} class="link link-primary">поискать в архиве</a
-		>.
+		<a href={filterUrl(page.url, { archive: '1' })} class="link link-primary">поискать в архиве</a>.
 	</p>
 {/if}

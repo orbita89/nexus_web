@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+	countWithArchive,
 	ageRating,
 	count,
 	countryName,
@@ -33,6 +34,18 @@ describe('plural', () => {
 	])('%i → %s', (n, word) => expect(plural(n, forms)).toBe(word));
 
 	it('count', () => expect(count(1500, ['оценка', 'оценки', 'оценок'])).toBe('1\u00a0500 оценок'));
+});
+
+describe('countWithArchive', () => {
+	const films = ['фильм', 'фильма', 'фильмов'] as const;
+	// Разряды Intl отделяет неразрывным пробелом.
+	const plain = (s: string) => s.replace(/\s/g, ' ');
+	it('сумма с архивом и сколько из неё в архиве; без архива — просто число', () => {
+		expect(plain(countWithArchive(119771, 1070833, films))).toBe(
+			'1 190 604 фильма, из них 1 070 833 в архиве'
+		);
+		expect(countWithArchive(21, 0, films)).toBe('21 фильм');
+	});
 });
 
 describe('метки', () => {

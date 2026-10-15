@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { navigating, page } from '$app/state';
-	import { hasFilters, yearLabel } from '#lib/catalog/filters.ts';
-	import { count } from '#lib/catalog/labels.ts';
-	import { sectionPage } from '#lib/catalog/search.ts';
+	import { ARCHIVE_PAGE, archiveFeed } from '#lib/catalog/archive.svelte.ts';
+	import { hasFilters, readArchive, yearLabel } from '#lib/catalog/filters.ts';
+	import { countWithArchive } from '#lib/catalog/labels.ts';
+	import { ARCHIVE_ALL, sectionPage } from '#lib/catalog/search.ts';
 	import { filterUrl } from '#lib/catalog/url.ts';
 	import { guestApi } from '#lib/auth/session.svelte.ts';
 	import Alert from '#lib/components/Alert.svelte';
@@ -12,7 +13,6 @@
 	import LoadError from '#lib/components/catalog/LoadError.svelte';
 	import ResultsFeed from '#lib/components/catalog/ResultsFeed.svelte';
 	import Seo from '#lib/components/catalog/Seo.svelte';
-	import { _ARCHIVE_PAGE } from './+page.ts';
 	import type { PageProps } from './$types';
 
 	// Раздел каталога: панель фильтров (CatalogFilters), порядок и одна выдача (ResultsFeed): фильмы
@@ -27,10 +27,15 @@
 	/** Идёт переход внутри раздела (новый фильтр, порядок, страница) — выдача в загрузке. */
 	const loading = $derived(navigating.to?.url.pathname === page.url.pathname);
 	const total = $derived(data.list.data?.total ?? 0);
-	/** Архив по запросу — только у фильмов, по названию и если не выключен. */
-	const archive = $derived(
-		data.archive?.data && data.filters.q ? { q: data.filters.q, first: data.archive.data } : null
+	/**
+	 * Архив (archive=1, только у фильмов): по названию или, без названия и фильтров, весь (по тегу и
+	 * году архив не ищет). Весь считается ~2 с — пока считается, «считаем архив…».
+	 */
+	const archiveOn = $derived(data.kind.kind === 'movie' && readArchive(page.url));
+	const feed = archiveFeed(() =>
+		!archiveOn ? null : data.filters.q ? data.filters.q : filtered ? null : ARCHIVE_ALL
 	);
+	const archive = $derived(feed.archive);
 	const archiveTotal = $derived(archive?.first.total ?? 0);
 
 	const more = (offset: number) =>
@@ -55,6 +60,7 @@
 	kind={data.kind}
 	path="/{data.kind.slug}"
 	filters={data.filters}
+	archive={archiveOn}
 	personName={data.personName}
 	tags={data.tags}
 />
@@ -72,11 +78,17 @@
 		{#if loading}
 			<span class="loading loading-xs loading-spinner"></span>Загружаем…
 		{:else if data.list.data}
-			{data.mode.search && total > data.list.data.limit ? 'Около ' : ''}{count(total, [
-				'фильм',
-				'фильма',
-				'фильмов'
-			])}{archiveTotal ? ` · в архиве ещё ${archiveTotal.toLocaleString('ru-RU')}` : ''}
+			{data.mode.search && total > data.list.data.limit ? 'Около ' : ''}{countWithArchive(
+				total,
+				archiveTotal,
+				['фильм', 'фильма', 'фильмов']
+			)}
+			{#if feed.loading}
+				<span class="loading loading-xs loading-spinner"></span>
+				{data.filters.q ? 'ищем в архиве…' : 'считаем архив…'}
+			{:else if archiveOn && filtered && !data.filters.q}
+				· архив ищется только по названию
+			{/if}
 		{/if}
 	</p>
 	<label class="select w-auto select-sm">
@@ -105,8 +117,12 @@
 			{more}
 			ratings={data.ratings}
 			{archive}
-			archivePage={_ARCHIVE_PAGE}
+			archivePage={ARCHIVE_PAGE}
 		/>
+	{:else if feed.loading}
+		<p class="flex items-center gap-2 py-10 text-sm text-base-content/50" role="status">
+			<span class="loading loading-sm loading-spinner"></span>Ищем в архиве…
+		</p>
 	{:else if filtered}
 		<EmptyState title="Фильмы не найдены">
 			Попробуйте изменить параметры или <a href="/{data.kind.slug}" class="link link-primary"
@@ -119,11 +135,10 @@
 		</EmptyState>
 	{/if}
 
-	{#if data.kind.kind === 'movie' && data.filters.q && !data.filters.archive && !data.list.data?.items.length}
+	{#if data.kind.kind === 'movie' && data.filters.q && !archiveOn && !data.list.data?.items.length}
 		<p class="mt-6 text-sm text-base-content/60">
 			Возможно, фильм есть в архиве —
-			<a href={filterUrl(page.url, { archive: null })} class="link link-primary"
-				>поискать в архиве</a
+			<a href={filterUrl(page.url, { archive: '1' })} class="link link-primary">поискать в архиве</a
 			>.
 		</p>
 	{/if}

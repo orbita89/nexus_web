@@ -8,15 +8,13 @@ import { personName, searchPage } from '#lib/catalog/search.ts';
 import { PAGE_SIZE, readOffset, readText } from '#lib/catalog/url.ts';
 import type { PageLoad } from './$types';
 
-/** Архивных фильмов за порцию (у архива limit не больше 20); дальше — «Показать ещё». */
-export const _ARCHIVE_PAGE = 20;
 /** Людей в блоке над фильмами; все — на /people?q=. */
 const PEOPLE_SHOWN = 6;
 
-// /search?q=дюна&kind=films&studio=…&tag=drama&year_from=2000&archive=0&offset=24 — поиск через
+// /search?q=дюна&kind=films&studio=…&tag=drama&year_from=2000&archive=1&offset=24 — поиск через
 // Meilisearch, фильтры те же, что в разделах (filters.ts). Параллельно с фильмами — люди (только по
-// тексту, без фильтров фильмов) и архив (только по названию, если не выключен). Их ошибки не
-// ломают выдачу: блока просто нет.
+// тексту, без фильтров фильмов); их ошибка не ломает выдачу — блока просто нет. Архив (archive=1)
+// догружает страница (archive.svelte.ts): переключатель не перезапрашивает выдачу.
 export const load: PageLoad = async ({ fetch, url }) => {
 	const filters = readFilters(url);
 	const q = filters.q;
@@ -32,7 +30,6 @@ export const load: PageLoad = async ({ fetch, url }) => {
 		result: null,
 		ratings: none,
 		people: [] as SchemaPersonHit[],
-		archive: null,
 		unavailable: false,
 		error: null as string | null
 	};
@@ -44,9 +41,8 @@ export const load: PageLoad = async ({ fetch, url }) => {
 	const offset = readOffset(url);
 	const onlyText = !!q && !(filters.tag || filters.year || filters.yearFrom || filters.yearTo);
 	const wantPeople = onlyText && !kind && !filters.studio && !filters.person && offset === 0;
-	const wantArchive = !!q && filters.archive && (!kind || kind.kind === 'movie');
 
-	const [found, tags, person, people, archive] = await Promise.all([
+	const [found, tags, person, people] = await Promise.all([
 		searchPage(api, filters, { kind: kind?.kind, limit: PAGE_SIZE, offset }).then(
 			(r) => ({ ...r, error: null }),
 			(e: unknown) => ({ page: null, personUnavailable: false, error: e })
@@ -62,18 +58,9 @@ export const load: PageLoad = async ({ fetch, url }) => {
 					(r) => r.items,
 					() => []
 				)
-			: [],
-		wantArchive
-			? settle(
-					unwrap(
-						api.catalog.GET('/api/v1/catalog/archive/search', {
-							params: { query: { q: q!, limit: _ARCHIVE_PAGE } }
-						})
-					)
-				)
-			: null
+			: []
 	]);
-	const base = { ...blank, tags: tags.data ?? [], personName: person, people, archive };
+	const base = { ...blank, tags: tags.data ?? [], personName: person, people };
 	if (!found.page) {
 		// 503 — Meilisearch недоступен; остальной каталог при этом работает.
 		const unavailable = found.error instanceof ApiError && found.error.status === 503;

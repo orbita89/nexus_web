@@ -2,13 +2,15 @@
 // поделиться.
 //
 //   /films?q=дюна&studio=Warner%20Bros.%20Pictures&person=christopher-nolan&role=director
-//         &tag=drama&year_from=2000&year_to=2010&archive=0&sort=new
+//         &tag=drama&year_from=2000&year_to=2010&archive=1&sort=new
 //
 // Текстовый поиск, студия, люди и период лет — только через Meilisearch (GET /search). Без них
 // раздел — просто список (GET /entities) с жанром или тегом, годом и своей сортировкой. Жанр —
 // тоже тег (kind = genre): фильтр один, `tag`. Год — либо ровно (`year`), либо период
-// (`year_from` / `year_to`, можно одну границу). Архив — отдельный блок под выдачей: GET
-// /archive/search, только по названию; включён по умолчанию, выключенный — archive=0.
+// (`year_from` / `year_to`, можно одну границу). Архив — фильмы GET /archive/search за фильмами
+// сайта в той же выдаче, только по названию (без названия и фильтров — весь архив); выключен по
+// умолчанию, включённый — archive=1. Его читает страница (readArchive), не load: переключатель не
+// перезапрашивает выдачу сайта.
 import type { SchemaEntitySort, SchemaSearchSort } from '#lib/api/generated/catalog.ts';
 import { DEFAULT_SORT, ENTITY_SORTS } from './sort.ts';
 import { readText, readYear, type UrlLike } from './url.ts';
@@ -52,8 +54,6 @@ export interface CatalogFilters {
 	person?: string;
 	/** Роль человека; без person не используется. */
 	role?: string;
-	/** Искать и в архиве (только по названию). По умолчанию — да; в адресе только archive=0. */
-	archive: boolean;
 }
 
 export function readFilters(url: UrlLike): CatalogFilters {
@@ -71,9 +71,16 @@ export function readFilters(url: UrlLike): CatalogFilters {
 		yearTo,
 		studio: readText(url, 'studio'),
 		person,
-		role: person && PERSON_ROLES.some((r) => r.value === role) ? role : undefined,
-		archive: url.searchParams.get('archive') !== '0'
+		role: person && PERSON_ROLES.some((r) => r.value === role) ? role : undefined
 	};
+}
+
+/**
+ * «Архив» (archive=1): фильмы архива за фильмами сайта. По умолчанию выключен. Только для
+ * страницы, не для load: иначе переключатель перезапрашивал бы выдачу сайта.
+ */
+export function readArchive(url: UrlLike): boolean {
+	return url.searchParams.get('archive') === '1';
 }
 
 /** Нужен поиск Meilisearch: текст, студия, человек или период (у списка периода нет). */
@@ -81,8 +88,8 @@ export function isSearch(f: CatalogFilters): boolean {
 	return !!(f.q || f.studio || f.person || f.yearFrom || f.yearTo);
 }
 
-/** Активен хоть один фильтр — показываем «Сбросить». Архив не фильтр: он только добавляет блок. */
-export function hasFilters(f: Omit<CatalogFilters, 'archive'>): boolean {
+/** Активен хоть один фильтр — показываем «Сбросить». Архив не фильтр: он только добавляет фильмы. */
+export function hasFilters(f: CatalogFilters): boolean {
 	return !!(f.q || f.tag || f.year || f.yearFrom || f.yearTo || f.studio || f.person);
 }
 

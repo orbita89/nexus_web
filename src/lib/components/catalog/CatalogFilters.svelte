@@ -17,13 +17,15 @@
 	import TitleSearch from './TitleSearch.svelte';
 
 	// Панель фильтров: название, человек (с ролью), студия, жанр или тег, год (ровно или период),
-	// «Архив» (включён по умолчанию: под выдачей — блок «Из архива»). Каждое изменение — новый адрес (фильтры в query, см. filters.ts);
+	// «Архив» (выключен по умолчанию; включённый — фильмы архива за фильмами сайта). Каждое
+	// изменение — новый адрес (фильтры в query, см. filters.ts);
 	// выбранное — плашками с ✕. Новый текст, студия или человек сбрасывают порядок: выдача
 	// поиска — по релевантности. На /search своё поле запроса — там панель без него.
 	let {
 		kind,
 		path,
 		filters,
+		archive,
 		personName,
 		tags,
 		titleField = true,
@@ -34,6 +36,8 @@
 		/** Адрес страницы без фильтров — «Сбросить фильтры» и форма без JS. */
 		path: string;
 		filters: CatalogFilters;
+		/** «Архив» включён (readArchive). */
+		archive: boolean;
 		personName: string | null;
 		tags: SchemaTagWithCount[];
 		titleField?: boolean;
@@ -259,8 +263,8 @@
 					<input
 						type="checkbox"
 						class="checkbox checkbox-sm checkbox-primary"
-						checked={filters.archive}
-						onchange={(e) => apply({ archive: e.currentTarget.checked ? null : '0' })}
+						checked={archive}
+						onchange={(e) => apply({ archive: e.currentTarget.checked ? '1' : null })}
 					/>
 					Архив
 				</label>

@@ -1,4 +1,6 @@
 import { error, redirect } from '@sveltejs/kit';
+import { browser } from '$app/env';
+import { preloadCode } from '$app/navigation';
 import { publicApi } from '#lib/api/client.ts';
 import { ApiError, errorMessage, unwrap } from '#lib/api/errors.ts';
 import { entityHref } from '#lib/catalog/kinds.ts';
@@ -11,6 +13,9 @@ import type { PageLoad } from './$types';
 export const load: PageLoad = async ({ fetch, url, params }) => {
 	const api = publicApi(fetch, url);
 	const path = { slug: params.slug };
+	// Пока бэкенд возвращает фильм (TMDB, 1–2 с), браузер грузит код карточки: после редиректа
+	// ждать остаётся только её данные.
+	if (browser) void preloadCode('/[kind=kind]/[slug]').catch(() => {});
 	try {
 		const entity = await unwrap(
 			api.catalog.POST('/api/v1/catalog/archive/entities/{slug}/restore', { params: { path } })

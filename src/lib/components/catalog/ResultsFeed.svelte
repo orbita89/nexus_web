@@ -1,8 +1,9 @@
 <script lang="ts">
-	import { errorMessage, unwrap } from '#lib/api/errors.ts';
+	import { errorMessage } from '#lib/api/errors.ts';
 	import type { SchemaArchiveDoc, SchemaEntitySummary } from '#lib/api/generated/catalog.ts';
 	import { guestApi } from '#lib/auth/session.svelte.ts';
 	import { ratingsFor, type Ratings } from '#lib/catalog/load.ts';
+	import { archivePage as fetchArchive } from '#lib/catalog/search.ts';
 	import ArchiveCard from './ArchiveCard.svelte';
 	import EntityCard from './EntityCard.svelte';
 
@@ -26,7 +27,7 @@
 		/** Следующая порция сайта с этого offset. */
 		more: (offset: number) => Promise<Page<SchemaEntitySummary>>;
 		ratings?: Ratings;
-		/** Архив по тому же запросу (только по названию); null — не ищем. */
+		/** Архив по тому же запросу (по названию или весь — ARCHIVE_ALL); null — не ищем. */
 		archive?: { q: string; first: { items: SchemaArchiveDoc[]; total: number } } | null;
 		archivePage?: number;
 		showKind?: boolean;
@@ -62,11 +63,7 @@
 				siteDone = !page.items.length || siteNext >= page.total;
 				moreRatings = { ...moreRatings, ...(await ratingsFor(guestApi, page.items)) };
 			} else if (archive) {
-				const page = await unwrap(
-					guestApi.catalog.GET('/api/v1/catalog/archive/search', {
-						params: { query: { q: archive.q, limit: archivePage, offset: archived.length } }
-					})
-				);
+				const page = await fetchArchive(guestApi, archive.q, archivePage, archived.length);
 				archived = [...archived, ...page.items];
 			}
 		} catch (e) {
