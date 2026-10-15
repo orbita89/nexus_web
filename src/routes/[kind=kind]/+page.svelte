@@ -3,10 +3,10 @@
 	import { navigating, page } from '$app/state';
 	import { ARCHIVE_PAGE, archiveFeed } from '#lib/catalog/archive.svelte.ts';
 	import { hasFilters, readArchive, yearLabel } from '#lib/catalog/filters.ts';
-	import { ARCHIVE_ALL, foundLabel, sectionPage } from '#lib/catalog/search.ts';
+	import { count } from '#lib/catalog/labels.ts';
+	import { sectionPage } from '#lib/catalog/search.ts';
 	import { filterUrl } from '#lib/catalog/url.ts';
 	import { guestApi } from '#lib/auth/session.svelte.ts';
-	import Alert from '#lib/components/Alert.svelte';
 	import CatalogFilters from '#lib/components/catalog/CatalogFilters.svelte';
 	import EmptyState from '#lib/components/catalog/EmptyState.svelte';
 	import LoadError from '#lib/components/catalog/LoadError.svelte';
@@ -26,19 +26,14 @@
 	/** Идёт переход внутри раздела (новый фильтр, порядок, страница) — выдача в загрузке. */
 	const loading = $derived(navigating.to?.url.pathname === page.url.pathname);
 	const total = $derived(data.list.data?.total ?? 0);
-	/**
-	 * Архив (archive=1, только у фильмов): по названию или, без названия и фильтров, весь (по тегу и
-	 * году архив не ищет). Весь считается ~2 с — пока считается, «считаем архив…».
-	 */
+	/** Архив (archive=1, только у фильмов) — только по названию: он в Tantivy, без фильтров. */
 	const archiveOn = $derived(data.kind.kind === 'movie' && readArchive(page.url));
-	const feed = archiveFeed(() =>
-		!archiveOn ? null : data.filters.q ? data.filters.q : filtered ? null : ARCHIVE_ALL
-	);
+	const feed = archiveFeed(() => (archiveOn && data.filters.q ? data.filters.q : null));
 	const archive = $derived(feed.archive);
 	const archiveTotal = $derived(archive?.first.total ?? 0);
 
 	const more = (offset: number) =>
-		sectionPage(guestApi, data.kind.kind, data.filters, data.mode, offset).then((r) => r.page);
+		sectionPage(guestApi, data.kind.kind, data.filters, data.mode, offset);
 
 	function sortBy(value: string) {
 		const sort = value === data.mode.fallback ? null : value;
@@ -64,28 +59,15 @@
 	tags={data.tags}
 />
 
-{#if data.personUnavailable}
-	<div class="mb-4">
-		<Alert kind="info">
-			Фильтр по людям скоро заработает. Пока показаны фильмы по остальным фильтрам.
-		</Alert>
-	</div>
-{/if}
-
 <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
 	<p class="flex items-center gap-2 text-sm text-base-content/50" aria-live="polite">
 		{#if loading}
 			<span class="loading loading-xs loading-spinner"></span>Загружаем…
 		{:else if data.list.data}
-			{foundLabel(total, ['фильм', 'фильма', 'фильмов'], {
-				text: data.mode.text,
-				limit: data.list.data.limit,
-				extra: archiveTotal
-			})}
+			{count(total + archiveTotal, ['фильм', 'фильма', 'фильмов'])}
 			{#if feed.loading}
-				<span class="loading loading-xs loading-spinner"></span>
-				{data.filters.q ? 'ищем в архиве…' : 'считаем архив…'}
-			{:else if archiveOn && filtered && !data.filters.q}
+				<span class="loading loading-xs loading-spinner"></span>ищем в архиве…
+			{:else if archiveOn && !data.filters.q}
 				· архив ищется только по названию
 			{/if}
 		{/if}

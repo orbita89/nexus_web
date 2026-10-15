@@ -555,10 +555,9 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Похожие на сущность: тот же тип, больше общих тегов — выше (жанр весит вдвое), при равенстве —
-		 *     новее. Только видимые; у невидимой — 404. Без самой
-		 *     сущности и её связанных (они и так на карточке). Нет тегов — пустая страница.
-		 * @description Первая версия без ML: один запрос с подсчётом пересечения тегов по `entity_tags (tag_id)`.
+		 * Похожие на сущность: того же типа, с хотя бы одним из её тегов (Meilisearch), сверху — по
+		 *     баллу «Рекомендуемые», затем новее. Только видимые; у невидимой — 404. Без самой сущности и её
+		 *     связанных (они и так на карточке). Нет тегов — пустая страница.
 		 */
 		get: operations['list_similar_entities'];
 		put?: never;
@@ -618,8 +617,8 @@ export interface paths {
 		 * Полнотекстовый поиск по активным сущностям каталога: опечатки, ранжирование, фильтры. Весь
 		 *     поиск на сайте идёт сюда (в `GET /entities` поиска по названию нет).
 		 * @description Фильтры (через AND): `kind`, `tag`, год (`year` — ровно, `year_from` / `year_to` — диапазон
-		 *     включительно), `studio` (точное название, без учёта регистра). `person` / `role` — заглушка:
-		 *     людей в индексе пока нет, ответ 503 `person_filter_unavailable`.
+		 *     включительно), `studio` (точное название, без учёта регистра), `person` (slug участника) и
+		 *     `role` (его роль в этой сущности; без `person` — 400).
 		 *
 		 *     Сортировка по релевантности; `sort=recommended` / `trending` / `top_rated` — по баллу
 		 *     «Рекомендуемые», TMDB popularity, рейтингу IMDb (у кого значения нет — в конце); `new` — только
@@ -1221,7 +1220,7 @@ export interface components {
 			offset: number;
 			/**
 			 * Format: int64
-			 * @description Всего записей под фильтром (в поиске — оценка Meilisearch).
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
 			 * @example 137
 			 */
 			total: number;
@@ -1271,7 +1270,7 @@ export interface components {
 			offset: number;
 			/**
 			 * Format: int64
-			 * @description Всего записей под фильтром (в поиске — оценка Meilisearch).
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
 			 * @example 137
 			 */
 			total: number;
@@ -1317,7 +1316,7 @@ export interface components {
 			offset: number;
 			/**
 			 * Format: int64
-			 * @description Всего записей под фильтром (в поиске — оценка Meilisearch).
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
 			 * @example 137
 			 */
 			total: number;
@@ -1354,7 +1353,7 @@ export interface components {
 			offset: number;
 			/**
 			 * Format: int64
-			 * @description Всего записей под фильтром (в поиске — оценка Meilisearch).
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
 			 * @example 137
 			 */
 			total: number;
@@ -1384,7 +1383,7 @@ export interface components {
 			offset: number;
 			/**
 			 * Format: int64
-			 * @description Всего записей под фильтром (в поиске — оценка Meilisearch).
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
 			 * @example 137
 			 */
 			total: number;
@@ -1622,7 +1621,8 @@ export interface components {
 		 * @description Сортировка поиска (без неё — по релевантности); у кого значения нет — в конце.
 		 * @enum {string}
 		 */
-		SearchSort: 'recommended' | 'trending' | 'top_rated' | 'new' | 'soon' | 'title';
+		SearchSort:
+			'recommended' | 'trending' | 'top_rated' | 'new' | 'soon' | 'title' | 'popular' | 'rating';
 		/** @description Поля сериала. */
 		SeriesMetadata: {
 			/** @description Награды и номинации: до 50. */
@@ -1778,6 +1778,11 @@ export interface components {
 			count: number;
 			/** @example Warner Bros. Pictures */
 			name: string;
+			/**
+			 * @description Slug страницы студии (`GET /studios/{slug}`); `null` — страницы у студии ещё нет.
+			 * @example warner-bros-pictures
+			 */
+			slug?: string | null;
 		};
 		/** @description Студия в карточке фильма: ссылка на её страницу. */
 		StudioRef: {
@@ -3723,7 +3728,7 @@ export interface operations {
 		};
 		requestBody?: never;
 		responses: {
-			/** @description Похожие, самые похожие сверху */
+			/** @description Похожие, `total` — всего подходящих */
 			200: {
 				headers: {
 					[name: string]: unknown;
@@ -3743,6 +3748,15 @@ export interface operations {
 			};
 			/** @description Не найдена */
 			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Meilisearch недоступен */
+			503: {
 				headers: {
 					[name: string]: unknown;
 				};
@@ -3861,13 +3875,19 @@ export interface operations {
 				 */
 				studio?: string;
 				/**
-				 * @description Slug человека: фильмы с его участием. **Заглушка:** людей в индексе пока нет — 503
-				 *     `person_filter_unavailable`.
+				 * @description Slug студии (`GET /studios/{slug}`): её фильмы, без запроса названия. Неизвестный slug —
+				 *     пустая выдача.
+				 * @example warner-bros-pictures
+				 */
+				studio_slug?: string;
+				/**
+				 * @description Slug человека: сущности с его участием (в любой роли).
 				 * @example christopher-nolan
 				 */
 				person?: string;
 				/**
-				 * @description Роль человека из `person`: `actor`, `director`, `producer`, `writer`, ... Без `person` — 400.
+				 * @description Роль человека из `person` в этой сущности: `actor`, `director`, `producer`, `writer`, ...
+				 *     Без `person` — 400.
 				 * @example director
 				 */
 				role?: string;
@@ -3882,7 +3902,7 @@ export interface operations {
 		};
 		requestBody?: never;
 		responses: {
-			/** @description Страница результатов. `total` — оценка */
+			/** @description Страница результатов. `total` — всего найдено (точно) */
 			200: {
 				headers: {
 					[name: string]: unknown;
@@ -3900,7 +3920,7 @@ export interface operations {
 					'application/json': components['schemas']['ErrorBody'];
 				};
 			};
-			/** @description Meilisearch недоступен; `person_filter_unavailable` — фильтр по людям ещё не готов */
+			/** @description Meilisearch недоступен */
 			503: {
 				headers: {
 					[name: string]: unknown;
@@ -3935,7 +3955,7 @@ export interface operations {
 		};
 		requestBody?: never;
 		responses: {
-			/** @description Страница людей. `total` — оценка */
+			/** @description Страница людей. `total` — всего найдено (точно) */
 			200: {
 				headers: {
 					[name: string]: unknown;

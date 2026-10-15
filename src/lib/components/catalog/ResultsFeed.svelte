@@ -27,7 +27,7 @@
 		/** Следующая порция сайта с этого offset. */
 		more: (offset: number) => Promise<Page<SchemaEntitySummary>>;
 		ratings?: Ratings;
-		/** Архив по тому же запросу (по названию или весь — ARCHIVE_ALL); null — не ищем. */
+		/** Архив по тому же запросу (только по названию); null — не ищем. */
 		archive?: { q: string; first: { items: SchemaArchiveDoc[]; total: number } } | null;
 		archivePage?: number;
 		showKind?: boolean;

@@ -915,7 +915,7 @@ export interface components {
 			offset: number;
 			/**
 			 * Format: int64
-			 * @description Всего записей под фильтром (в поиске — оценка Meilisearch).
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
 			 * @example 137
 			 */
 			total: number;
@@ -942,7 +942,7 @@ export interface components {
 			offset: number;
 			/**
 			 * Format: int64
-			 * @description Всего записей под фильтром (в поиске — оценка Meilisearch).
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
 			 * @example 137
 			 */
 			total: number;
@@ -969,7 +969,7 @@ export interface components {
 			offset: number;
 			/**
 			 * Format: int64
-			 * @description Всего записей под фильтром (в поиске — оценка Meilisearch).
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
 			 * @example 137
 			 */
 			total: number;
@@ -997,7 +997,7 @@ export interface components {
 			offset: number;
 			/**
 			 * Format: int64
-			 * @description Всего записей под фильтром (в поиске — оценка Meilisearch).
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
 			 * @example 137
 			 */
 			total: number;
@@ -1043,7 +1043,7 @@ export interface components {
 			offset: number;
 			/**
 			 * Format: int64
-			 * @description Всего записей под фильтром (в поиске — оценка Meilisearch).
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
 			 * @example 137
 			 */
 			total: number;
@@ -1101,7 +1101,7 @@ export interface components {
 			offset: number;
 			/**
 			 * Format: int64
-			 * @description Всего записей под фильтром (в поиске — оценка Meilisearch).
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
 			 * @example 137
 			 */
 			total: number;
@@ -1133,7 +1133,7 @@ export interface components {
 			offset: number;
 			/**
 			 * Format: int64
-			 * @description Всего записей под фильтром (в поиске — оценка Meilisearch).
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
 			 * @example 137
 			 */
 			total: number;
@@ -1181,7 +1181,7 @@ export interface components {
 			offset: number;
 			/**
 			 * Format: int64
-			 * @description Всего записей под фильтром (в поиске — оценка Meilisearch).
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
 			 * @example 137
 			 */
 			total: number;

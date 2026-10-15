@@ -1,7 +1,7 @@
-// Порядок списков каталога: ?sort=trending|top_rated|new|soon|title. Списки — из Meilisearch
-// (GET /search), поэтому и порядки — его. По умолчанию — «Рекомендуемые» (балл бэкенда: рейтинг
-// IMDb + популярность + свежесть), в адрес не пишется (у одной выдачи один адрес). Порядков по
-// оценкам Nexus нет: их нет в индексе (docs/backend-questions.md).
+// Порядок списков каталога: ?sort=trending|top_rated|new|soon|popular|rating|title. Списки — из
+// Meilisearch (GET /search), поэтому и порядки — его. По умолчанию — «Рекомендуемые» (балл
+// бэкенда: рейтинг IMDb + популярность + свежесть), в адрес не пишется (у одной выдачи один
+// адрес). popular и rating — по оценкам Nexus: в индекс они попадают с задержкой до минуты.
 import type { SchemaSearchSort } from '#lib/api/generated/catalog.ts';
 import type { UrlLike } from './url.ts';
 
@@ -13,6 +13,8 @@ export const LIST_SORTS: readonly { value: ListSort; title: string }[] = [
 	{ value: 'top_rated', title: 'Высокий рейтинг' },
 	{ value: 'new', title: 'Новинки' },
 	{ value: 'soon', title: 'Скоро' },
+	{ value: 'popular', title: 'Больше оценок Nexus' },
+	{ value: 'rating', title: 'Оценки Nexus' },
 	{ value: 'title', title: 'По названию' }
 ];
 

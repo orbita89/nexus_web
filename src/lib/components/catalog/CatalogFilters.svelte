@@ -12,7 +12,9 @@
 	} from '#lib/catalog/filters.ts';
 	import type { KINDS } from '#lib/catalog/kinds.ts';
 	import { count, roleLabel, yearOf } from '#lib/catalog/labels.ts';
+	import { studioHref } from '#lib/catalog/studios.ts';
 	import { filterUrl, type Query } from '#lib/catalog/url.ts';
+	import { liveQuery } from '#lib/social/card-live.svelte.ts';
 	import SuggestInput, { type Suggestion } from './SuggestInput.svelte';
 	import TitleSearch from './TitleSearch.svelte';
 
@@ -124,7 +126,24 @@
 	interface Chip {
 		label: string;
 		remove: Query;
+		/** Ссылка из плашки: страница студии. */
+		href?: string;
 	}
+	// Страница выбранной студии — по slug из подсказок студий (Meilisearch): в адресе фильтра только
+	// название. Нет страницы (slug null) — плашка без ссылки.
+	const studioPage = liveQuery(
+		() => filters.studio ?? null,
+		async (name) => {
+			if (!name) return null;
+			const found = await unwrap(
+				guestApi.catalog.GET('/api/v1/catalog/search/studios', {
+					params: { query: { q: name, limit: 5 } }
+				})
+			);
+			const slug = found.find((s) => s.name.toLowerCase() === name.toLowerCase())?.slug;
+			return slug ? studioHref(slug) : null;
+		}
+	);
 	const chips = $derived.by(() => {
 		const f = filters;
 		const list: Chip[] = [];
@@ -135,7 +154,10 @@
 				remove: { person: null, role: null }
 			});
 		}
-		if (f.studio) list.push({ label: `Студия: ${f.studio}`, remove: { studio: null } });
+		if (f.studio) {
+			const href = studioPage.current?.data ?? undefined;
+			list.push({ label: `Студия: ${f.studio}`, remove: { studio: null }, href });
+		}
 		if (f.tag) {
 			const what = selectedTag?.kind === 'genre' ? 'Жанр' : 'Тег';
 			list.push({ label: `${what}: ${selectedTag?.name ?? f.tag}`, remove: { tag: null } });
@@ -273,7 +295,11 @@
 			{/if}
 			{#each chips as chip (chip.label)}
 				<span class="badge gap-1 badge-soft py-3 pr-1 badge-primary">
-					{chip.label}
+					{#if chip.href}
+						<a href={chip.href} class="link link-hover" title="Страница студии">{chip.label}</a>
+					{:else}
+						{chip.label}
+					{/if}
 					<button
 						type="button"
 						class="btn btn-circle btn-ghost btn-xs"

@@ -52,9 +52,9 @@ describe('год', () => {
 
 describe('readMode', () => {
 	it('у поиска по умолчанию — релевантность, чужой порядок сбрасывается', () => {
-		const url = at('?q=дюна&sort=popular');
+		const url = at('?q=дюна&sort=hacker');
 		const mode = readMode(url, readFilters(url));
-		expect(mode).toMatchObject({ text: true, sort: 'relevance' });
+		expect(mode).toMatchObject({ sort: 'relevance', fallback: 'relevance' });
 		expect(searchSortParam('relevance')).toBeUndefined();
 		const top = at('?q=дюна&sort=top_rated');
 		expect(readMode(top, readFilters(top)).sort).toBe('top_rated');
@@ -63,7 +63,7 @@ describe('readMode', () => {
 	it('без текста — без релевантности, по умолчанию «Рекомендуемые» (и со студией, и с человеком)', () => {
 		const url = at('?sort=relevance&studio=Pixar');
 		const mode = readMode(url, readFilters(url));
-		expect(mode).toMatchObject({ text: false, sort: 'recommended' });
+		expect(mode).toMatchObject({ sort: 'recommended', fallback: 'recommended' });
 		expect(mode.options.map((o) => o.value)).not.toContain('relevance');
 	});
 });

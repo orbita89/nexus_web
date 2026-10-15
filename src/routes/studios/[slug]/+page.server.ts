@@ -16,14 +16,18 @@ export const prerender = 'auto';
 
 export const load: PageServerLoad = async ({ fetch, url, params }) => {
 	const api = publicApi(fetch, url);
-	const studio = await orError(
-		unwrap(
-			api.catalog.GET('/api/v1/catalog/studios/{slug}', { params: { path: { slug: params.slug } } })
+	// Фильмы — из Meilisearch по slug студии, параллельно со студией. Тоже orError, а не ошибка на
+	// странице: сбой поиска не должен попасть в статику.
+	const [studio, films] = await Promise.all([
+		orError(
+			unwrap(
+				api.catalog.GET('/api/v1/catalog/studios/{slug}', {
+					params: { path: { slug: params.slug } }
+				})
+			),
+			'Студия не найдена.'
 		),
-		'Студия не найдена.'
-	);
-	// Фильмы — из Meilisearch по названию студии (его знаем только из ответа выше). Тоже orError, а
-	// не ошибка на странице: сбой поиска не должен попасть в статику.
-	const films = await orError(studioFilms(api, studio.name, DEFAULT_SORT, 0));
+		orError(studioFilms(api, params.slug, DEFAULT_SORT, 0))
+	]);
 	return { studio, films };
 };

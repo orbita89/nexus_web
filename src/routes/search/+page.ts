@@ -26,7 +26,6 @@ export const load: PageLoad = async ({ fetch, url }) => {
 		q,
 		kind,
 		filters,
-		personUnavailable: false,
 		result: null,
 		ratings: none,
 		people: [] as SchemaPersonHit[],
@@ -44,8 +43,8 @@ export const load: PageLoad = async ({ fetch, url }) => {
 
 	const [found, tags, person, people] = await Promise.all([
 		searchPage(api, filters, { kind: kind?.kind, limit: PAGE_SIZE, offset }).then(
-			(r) => ({ ...r, error: null }),
-			(e: unknown) => ({ page: null, personUnavailable: false, error: e })
+			(page) => ({ page, error: null }),
+			(e: unknown) => ({ page: null, error: e })
 		),
 		tagsCall,
 		personName(api, filters.person),
@@ -69,7 +68,6 @@ export const load: PageLoad = async ({ fetch, url }) => {
 	return {
 		...base,
 		result: found.page,
-		personUnavailable: found.personUnavailable,
 		ratings: await ratingsFor(api, found.page.items)
 	};
 };

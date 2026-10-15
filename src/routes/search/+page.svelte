@@ -4,7 +4,8 @@
 	import { guestApi } from '#lib/auth/session.svelte.ts';
 	import { ARCHIVE_PAGE, archiveFeed } from '#lib/catalog/archive.svelte.ts';
 	import { hasFilters, readArchive } from '#lib/catalog/filters.ts';
-	import { foundLabel, searchPage } from '#lib/catalog/search.ts';
+	import { count } from '#lib/catalog/labels.ts';
+	import { searchPage } from '#lib/catalog/search.ts';
 	import { KINDS } from '#lib/catalog/kinds.ts';
 	import { filterUrl, formUrl, PAGE_SIZE, withQuery } from '#lib/catalog/url.ts';
 	import Alert from '#lib/components/Alert.svelte';
@@ -29,9 +30,7 @@
 	const feed = archiveFeed(() => (archiveOn && data.q ? data.q : null));
 	const archive = $derived(feed.archive);
 	const more = (offset: number) =>
-		searchPage(guestApi, data.filters, { kind: data.kind?.kind, limit: PAGE_SIZE, offset }).then(
-			(r) => r.page
-		);
+		searchPage(guestApi, data.filters, { kind: data.kind?.kind, limit: PAGE_SIZE, offset });
 
 	function submit(event: SubmitEvent & { currentTarget: HTMLFormElement }) {
 		event.preventDefault();
@@ -78,14 +77,6 @@
 	archiveField={archiveKind}
 />
 
-{#if data.personUnavailable}
-	<div class="mb-4">
-		<Alert kind="info">
-			Фильтр по людям скоро заработает. Пока показаны фильмы по остальным фильтрам.
-		</Alert>
-	</div>
-{/if}
-
 {#if searching}
 	<div class="mb-8 overflow-x-auto"><KindTabs current={data.kind?.slug} /></div>
 {/if}
@@ -130,11 +121,11 @@
 	<LoadError message={data.error} />
 {:else if data.result && (data.result.items.length || archive?.first.items.length)}
 	<p class="mb-4 text-sm text-base-content/50">
-		Найдено {foundLabel(data.result.total, ['произведение', 'произведения', 'произведений'], {
-			text: !!data.q,
-			limit: data.result.limit,
-			extra: archive?.first.total ?? 0
-		}).toLowerCase()}
+		Найдено {count(data.result.total + (archive?.first.total ?? 0), [
+			'произведение',
+			'произведения',
+			'произведений'
+		])}
 	</p>
 	<ResultsFeed
 		first={data.result}

@@ -450,8 +450,8 @@ test('раздел: порядок в адресе, выдача из Meilisearc
 	await page.goto('/films');
 	const sort = page.getByLabel('Сортировка');
 	await expect(sort).toHaveValue('recommended');
-	// Порядков по оценкам Nexus нет: их нет в индексе Meilisearch.
-	await expect(sort.locator('option[value="rating"]')).toHaveCount(0);
+	// Порядки по оценкам Nexus — тоже из Meilisearch.
+	await expect(sort.locator('option[value="rating"]')).toHaveCount(1);
 
 	// До гидрации список ещё не связан с адресом — повторяем, пока адрес не сменится.
 	await expect(async () => {

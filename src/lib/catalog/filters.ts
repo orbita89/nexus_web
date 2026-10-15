@@ -89,8 +89,6 @@ export interface Mode {
 	options: readonly { value: SearchSort; title: string }[];
 	/** Порядок по умолчанию: в адрес не пишется. */
 	fallback: SearchSort;
-	/** Есть текст — total у Meilisearch оценка («около»). */
-	text: boolean;
 }
 
 /** Порядок из ?sort=; не подходящий режиму (релевантность без текста) — умолчание режима. */
@@ -100,7 +98,7 @@ export function readMode(url: UrlLike, f: CatalogFilters): Mode {
 	const options = text ? SEARCH_SORTS : LIST_SORTS;
 	const fallback = text ? 'relevance' : DEFAULT_SORT;
 	const sort = options.find((s) => s.value === raw)?.value ?? fallback;
-	return { sort, options, fallback, text };
+	return { sort, options, fallback };
 }
 
 /** Значение sort для API поиска: релевантность — без параметра. */

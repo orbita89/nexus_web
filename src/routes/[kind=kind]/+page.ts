@@ -23,18 +23,13 @@ export const load: PageLoad = async ({ fetch, url, params }) => {
 		settle(unwrap(api.catalog.GET('/api/v1/catalog/tags'))),
 		personName(api, filters.person)
 	]);
-	const items = results.data?.page.items ?? [];
-	const ratings = await ratingsFor(api, items);
+	const ratings = await ratingsFor(api, results.data?.items ?? []);
 	return {
 		kind,
 		filters,
 		mode,
 		ratings,
-		list: results.data
-			? { data: results.data.page, error: null }
-			: { data: null, error: results.error },
-		/** Фильтр по людям ещё не готов на бэкенде — показали выдачу без него. */
-		personUnavailable: results.data?.personUnavailable ?? false,
+		list: results,
 		personName: person,
 		tags: (tags.data ?? []).toSorted((a, b) => a.name.localeCompare(b.name, 'ru'))
 	};

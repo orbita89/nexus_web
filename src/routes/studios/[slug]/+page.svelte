@@ -34,13 +34,13 @@
 
 	// Ответ помечен студией и порядком: пока идёт новый запрос, видно, что на экране — прежний.
 	const sorted = liveQuery(
-		() => ({ slug: studio.slug, name: studio.name, sort }),
+		() => ({ slug: studio.slug, sort }),
 		async (key) => ({
 			...key,
 			list:
 				key.sort === DEFAULT_SORT
 					? null
-					: await settle(studioFilms(guestApi, key.name, key.sort, 0))
+					: await settle(studioFilms(guestApi, key.slug, key.sort, 0))
 		})
 	);
 	const answer = $derived(sorted.current?.data?.slug === studio.slug ? sorted.current.data : null);
@@ -53,7 +53,7 @@
 		(list) => ratingsFor(guestApi, list.items)
 	);
 
-	const more = (offset: number) => studioFilms(guestApi, studio.name, sort, offset);
+	const more = (offset: number) => studioFilms(guestApi, studio.slug, sort, offset);
 
 	function sortBy(value: string) {
 		goto(filterUrl(page.url, { sort: value === DEFAULT_SORT ? null : value }), { reset: false });
