@@ -108,10 +108,12 @@
 для этого не хватает в индексе, собрано в промт [backend-prompt-meilisearch.md](backend-prompt-meilisearch.md)
 (там же — архив в Meilisearch, фильтр по людям, студия по slug, рекомендации, админка).
 
-20. **Потолок 1000 у `GET /search`.** В `entity_settings` нет `pagination.maxTotalHits`, у
-    Meilisearch по умолчанию 1000: `total` не больше 1000 (`/films` — «Больше 1 000 фильмов»
+20. **Потолок 1000 и неточный `total` у `GET /search` — главное.** В `entity_settings` нет
+    `pagination.maxTotalHits`, у Meilisearch по умолчанию 1000: `total` не больше 1000 (`/films` — «Больше 1 000 фильмов»
     вместо 119 773), `offset` ≥ 1000 — пусто. Нужно `"pagination": {"maxTotalHits": N}` с N
-    больше горячего слоя (например, 300 000) — тогда счётчик и «Показать ещё» по всему каталогу.
+    больше горячего слоя (например, 500 000) и точный `total` (`totalHits` в режиме
+    `page`/`hitsPerPage`, а не `estimatedTotalHits`) — тогда точный счётчик и «Показать ещё» по
+    всему каталогу.
 21. **Порядки по оценкам Nexus в индексе.** `GET /entities` умел `sort=popular|rating` (число и
     средняя оценок Nexus), `GET /search` — нет, и из разделов и студий эти порядки ушли. Нужны
     поля `ratings_count` / `rating_avg` в документе (`sortableAttributes`) и `sort=popular|rating`
