@@ -23,19 +23,6 @@ export function count(n: number, forms: readonly [string, string, string]): stri
 	return `${n.toLocaleString('ru-RU')} ${plural(n, forms)}`;
 }
 
-/**
- * Сколько всего вместе с архивом: «1 190 604 фильма, из них 1 070 833 в архиве». Без архива —
- * просто число.
- */
-export function countWithArchive(
-	site: number,
-	archive: number,
-	forms: readonly [string, string, string]
-): string {
-	const total = count(site + archive, forms);
-	return archive ? `${total}, из них ${archive.toLocaleString('ru-RU')} в архиве` : total;
-}
-
 const ROLES: Record<string, string> = {
 	actor: 'Актёр',
 	voice_actor: 'Озвучивание',
