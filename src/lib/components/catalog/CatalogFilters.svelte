@@ -217,37 +217,39 @@
 				<option value="exact">Год</option>
 				<option value="range">Период</option>
 			</select>
+			<!-- Год — текст с цифровой клавиатурой, не number: без стрелок и смены года колёсиком.
+			     Не четыре цифры — фильтр не ставится (asYear). -->
 			{#if yearMode === 'exact'}
 				<input
-					type="number"
+					type="text"
 					class="input join-item w-full lg:w-24"
 					aria-label="Год"
 					value={filters.year ?? ''}
-					min="1800"
-					max="2100"
+					maxlength="4"
+					autocomplete="off"
 					placeholder="Любой"
 					inputmode="numeric"
 					onchange={(e) => apply({ ...YEAR_KEYS, year: asYear(e.currentTarget.value) })}
 				/>
 			{:else}
 				<input
-					type="number"
+					type="text"
 					class="input join-item w-full lg:w-22"
 					aria-label="Год от"
 					value={filters.yearFrom ?? ''}
-					min="1800"
-					max="2100"
+					maxlength="4"
+					autocomplete="off"
 					placeholder="от"
 					inputmode="numeric"
 					onchange={(e) => setRange('from', e.currentTarget.value)}
 				/>
 				<input
-					type="number"
+					type="text"
 					class="input join-item w-full lg:w-22"
 					aria-label="Год до"
 					value={filters.yearTo ?? ''}
-					min="1800"
-					max="2100"
+					maxlength="4"
+					autocomplete="off"
 					placeholder="до"
 					inputmode="numeric"
 					onchange={(e) => setRange('to', e.currentTarget.value)}
