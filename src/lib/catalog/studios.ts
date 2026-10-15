@@ -1,19 +1,18 @@
 // Студии: страница /studios/{slug} (GET /studios/{slug}) и её фильмы — тот же список, что в
-// каталоге (GET /entities?studio={slug}), с теми же сортировками.
+// каталоге: Meilisearch с фильтром `studio` (точное название студии, как в metadata.studios).
 import type { Api } from '#lib/api/client.ts';
-import { unwrap } from '#lib/api/errors.ts';
-import type { EntitySort } from './sort.ts';
+import { listPage } from './search.ts';
+import type { ListSort } from './sort.ts';
 import { PAGE_SIZE } from './url.ts';
 
 export const studioHref = (slug: string) => `/studios/${slug}`;
 
-/** Порция фильмов студии — для load страницы и для «Показать ещё» и сортировки в браузере. */
-export function studioFilms(api: Api, studio: string, sort: EntitySort, offset: number) {
-	return unwrap(
-		api.catalog.GET('/api/v1/catalog/entities', {
-			params: { query: { studio, sort, limit: PAGE_SIZE, offset } }
-		})
-	);
+/**
+ * Порция фильмов студии по её названию — для load страницы и для «Показать ещё» и сортировки в
+ * браузере.
+ */
+export function studioFilms(api: Api, name: string, sort: ListSort, offset: number) {
+	return listPage(api, { studio: name }, { sort, limit: PAGE_SIZE, offset });
 }
 
 /** Флаг страны из ISO 3166-1 alpha-2: US → 🇺🇸. Не две латинские буквы — пусто. */

@@ -5,7 +5,7 @@
 	import { guestApi } from '#lib/auth/session.svelte.ts';
 	import { countryName, count } from '#lib/catalog/labels.ts';
 	import { ratingsFor, settle } from '#lib/catalog/load.ts';
-	import { DEFAULT_SORT, ENTITY_SORTS, readEntitySort } from '#lib/catalog/sort.ts';
+	import { DEFAULT_SORT, LIST_SORTS, readListSort } from '#lib/catalog/sort.ts';
 	import { countryFlag, homepageLabel, studioFilms, studioHref } from '#lib/catalog/studios.ts';
 	import { filterUrl } from '#lib/catalog/url.ts';
 	import Clamp from '#lib/components/catalog/Clamp.svelte';
@@ -30,17 +30,17 @@
 
 	let mounted = $state(false);
 	onMount(() => (mounted = true));
-	const sort = $derived(mounted ? readEntitySort(page.url) : DEFAULT_SORT);
+	const sort = $derived(mounted ? readListSort(page.url) : DEFAULT_SORT);
 
 	// Ответ помечен студией и порядком: пока идёт новый запрос, видно, что на экране — прежний.
 	const sorted = liveQuery(
-		() => ({ slug: studio.slug, sort }),
+		() => ({ slug: studio.slug, name: studio.name, sort }),
 		async (key) => ({
 			...key,
 			list:
 				key.sort === DEFAULT_SORT
 					? null
-					: await settle(studioFilms(guestApi, key.slug, key.sort, 0))
+					: await settle(studioFilms(guestApi, key.name, key.sort, 0))
 		})
 	);
 	const answer = $derived(sorted.current?.data?.slug === studio.slug ? sorted.current.data : null);
@@ -53,7 +53,7 @@
 		(list) => ratingsFor(guestApi, list.items)
 	);
 
-	const more = (offset: number) => studioFilms(guestApi, studio.slug, sort, offset);
+	const more = (offset: number) => studioFilms(guestApi, studio.name, sort, offset);
 
 	function sortBy(value: string) {
 		goto(filterUrl(page.url, { sort: value === DEFAULT_SORT ? null : value }), { reset: false });
@@ -146,7 +146,7 @@
 					value={sort}
 					onchange={(e) => sortBy(e.currentTarget.value)}
 				>
-					{#each ENTITY_SORTS as option (option.value)}
+					{#each LIST_SORTS as option (option.value)}
 						<option value={option.value}>{option.title}</option>
 					{/each}
 				</select>

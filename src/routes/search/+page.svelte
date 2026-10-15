@@ -4,9 +4,8 @@
 	import { guestApi } from '#lib/auth/session.svelte.ts';
 	import { ARCHIVE_PAGE, archiveFeed } from '#lib/catalog/archive.svelte.ts';
 	import { hasFilters, readArchive } from '#lib/catalog/filters.ts';
-	import { searchPage } from '#lib/catalog/search.ts';
+	import { foundLabel, searchPage } from '#lib/catalog/search.ts';
 	import { KINDS } from '#lib/catalog/kinds.ts';
-	import { count } from '#lib/catalog/labels.ts';
 	import { filterUrl, formUrl, PAGE_SIZE, withQuery } from '#lib/catalog/url.ts';
 	import Alert from '#lib/components/Alert.svelte';
 	import CatalogFilters from '#lib/components/catalog/CatalogFilters.svelte';
@@ -131,10 +130,11 @@
 	<LoadError message={data.error} />
 {:else if data.result && (data.result.items.length || archive?.first.items.length)}
 	<p class="mb-4 text-sm text-base-content/50">
-		Найдено {data.result.total > data.result.limit ? 'около ' : ''}{count(
-			data.result.total + (archive?.first.total ?? 0),
-			['произведение', 'произведения', 'произведений']
-		)}
+		Найдено {foundLabel(data.result.total, ['произведение', 'произведения', 'произведений'], {
+			text: !!data.q,
+			limit: data.result.limit,
+			extra: archive?.first.total ?? 0
+		}).toLowerCase()}
 	</p>
 	<ResultsFeed
 		first={data.result}

@@ -4,15 +4,14 @@
 //   /films?q=дюна&studio=Warner%20Bros.%20Pictures&person=christopher-nolan&role=director
 //         &tag=drama&year_from=2000&year_to=2010&archive=1&sort=new
 //
-// Текстовый поиск, студия, люди и период лет — только через Meilisearch (GET /search). Без них
-// раздел — просто список (GET /entities) с жанром или тегом, годом и своей сортировкой. Жанр —
-// тоже тег (kind = genre): фильтр один, `tag`. Год — либо ровно (`year`), либо период
+// Выдача всегда из Meilisearch (GET /search): быстро и без PostgreSQL. С текстом — по
+// релевантности, без него — «Рекомендуемые». Жанр — тоже тег (kind = genre): фильтр один, `tag`. Год — либо ровно (`year`), либо период
 // (`year_from` / `year_to`, можно одну границу). Архив — фильмы GET /archive/search за фильмами
 // сайта в той же выдаче, только по названию (без названия и фильтров — весь архив); выключен по
 // умолчанию, включённый — archive=1. Его читает страница (readArchive), не load: переключатель не
 // перезапрашивает выдачу сайта.
-import type { SchemaEntitySort, SchemaSearchSort } from '#lib/api/generated/catalog.ts';
-import { DEFAULT_SORT, ENTITY_SORTS } from './sort.ts';
+import type { SchemaSearchSort } from '#lib/api/generated/catalog.ts';
+import { DEFAULT_SORT, LIST_SORTS } from './sort.ts';
 import { readText, readYear, type UrlLike } from './url.ts';
 
 /** Роли для фильтра «Человек»; пустая — любая. */
@@ -30,14 +29,10 @@ export const PERSON_ROLES = [
 /** Порядок поиска: «по релевантности» — когда sort не передан. */
 export type SearchSort = SchemaSearchSort | 'relevance';
 
+/** С текстом в запросе — ещё «По релевантности» (по умолчанию). */
 export const SEARCH_SORTS: readonly { value: SearchSort; title: string }[] = [
 	{ value: 'relevance', title: 'По релевантности' },
-	{ value: 'recommended', title: 'Рекомендуемые' },
-	{ value: 'trending', title: 'Смотрят сейчас' },
-	{ value: 'top_rated', title: 'Высокий рейтинг' },
-	{ value: 'new', title: 'Новинки' },
-	{ value: 'soon', title: 'Скоро' },
-	{ value: 'title', title: 'По названию' }
+	...LIST_SORTS
 ];
 
 export interface CatalogFilters {
@@ -83,37 +78,29 @@ export function readArchive(url: UrlLike): boolean {
 	return url.searchParams.get('archive') === '1';
 }
 
-/** Нужен поиск Meilisearch: текст, студия, человек или период (у списка периода нет). */
-export function isSearch(f: CatalogFilters): boolean {
-	return !!(f.q || f.studio || f.person || f.yearFrom || f.yearTo);
-}
-
 /** Активен хоть один фильтр — показываем «Сбросить». Архив не фильтр: он только добавляет фильмы. */
 export function hasFilters(f: CatalogFilters): boolean {
 	return !!(f.q || f.tag || f.year || f.yearFrom || f.yearTo || f.studio || f.person);
 }
 
-export type Mode =
-	| { search: true; sort: SearchSort; options: typeof SEARCH_SORTS; fallback: SearchSort }
-	| {
-			search: false;
-			sort: SchemaEntitySort;
-			options: typeof ENTITY_SORTS;
-			fallback: SchemaEntitySort;
-	  };
+/** Порядок выдачи: с текстом — по релевантности или любой из списка, без текста — из списка. */
+export interface Mode {
+	sort: SearchSort;
+	options: readonly { value: SearchSort; title: string }[];
+	/** Порядок по умолчанию: в адрес не пишется. */
+	fallback: SearchSort;
+	/** Есть текст — total у Meilisearch оценка («около»). */
+	text: boolean;
+}
 
-/**
- * Режим выдачи и порядок из ?sort=. У поиска свой набор: по умолчанию — по релевантности; порядок
- * списка, не подходящий поиску (и наоборот), — сбрасывается на умолчание режима.
- */
+/** Порядок из ?sort=; не подходящий режиму (релевантность без текста) — умолчание режима. */
 export function readMode(url: UrlLike, f: CatalogFilters): Mode {
 	const raw = url.searchParams.get('sort');
-	if (isSearch(f)) {
-		const sort = SEARCH_SORTS.find((s) => s.value === raw)?.value ?? 'relevance';
-		return { search: true, sort, options: SEARCH_SORTS, fallback: 'relevance' };
-	}
-	const sort = ENTITY_SORTS.find((s) => s.value === raw)?.value ?? DEFAULT_SORT;
-	return { search: false, sort, options: ENTITY_SORTS, fallback: DEFAULT_SORT };
+	const text = !!f.q;
+	const options = text ? SEARCH_SORTS : LIST_SORTS;
+	const fallback = text ? 'relevance' : DEFAULT_SORT;
+	const sort = options.find((s) => s.value === raw)?.value ?? fallback;
+	return { sort, options, fallback, text };
 }
 
 /** Значение sort для API поиска: релевантность — без параметра. */

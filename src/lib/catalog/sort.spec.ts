@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { readEntitySort } from './sort';
+import { readListSort } from './sort';
 
-describe('readEntitySort', () => {
-	it('из адреса; неизвестная или нет — «новые»', () => {
-		expect(readEntitySort(new URL('http://x/films?sort=rating'))).toBe('rating');
-		expect(readEntitySort(new URL('http://x/films?sort=popular'))).toBe('popular');
-		expect(readEntitySort(new URL('http://x/films?sort=hacker'))).toBe('recommended');
-		expect(readEntitySort(new URL('http://x/films'))).toBe('recommended');
+describe('readListSort', () => {
+	it('из адреса; неизвестный, по оценкам Nexus (их нет в поиске) или нет — «Рекомендуемые»', () => {
+		expect(readListSort(new URL('http://x/films?sort=top_rated'))).toBe('top_rated');
+		expect(readListSort(new URL('http://x/films?sort=rating'))).toBe('recommended');
+		expect(readListSort(new URL('http://x/films?sort=popular'))).toBe('recommended');
+		expect(readListSort(new URL('http://x/films?sort=hacker'))).toBe('recommended');
+		expect(readListSort(new URL('http://x/films'))).toBe('recommended');
 	});
 });

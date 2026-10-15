@@ -2,10 +2,13 @@ import { publicApi } from '#lib/api/client.ts';
 import { unwrap } from '#lib/api/errors.ts';
 import { kindBySlug } from '#lib/catalog/kinds.ts';
 import { orError, ratingsFor, settle } from '#lib/catalog/load.ts';
+import { listPage } from '#lib/catalog/search.ts';
+import { DEFAULT_SORT } from '#lib/catalog/sort.ts';
 import { PAGE_SIZE, readOffset, readText } from '#lib/catalog/url.ts';
 import type { PageLoad } from './$types';
 
-// /tags/sci-fi?kind=books&offset=24. Тег — GET /tags/{slug} (нет — 404), произведения — списком.
+// /tags/sci-fi?kind=books&offset=24. Тег — GET /tags/{slug} (нет — 404), произведения — из
+// Meilisearch (listPage).
 export const load: PageLoad = async ({ fetch, url, params }) => {
 	const api = publicApi(fetch, url);
 	const kind = kindBySlug(readText(url, 'kind') ?? '');
@@ -17,12 +20,10 @@ export const load: PageLoad = async ({ fetch, url, params }) => {
 			'Такого тега нет.'
 		),
 		settle(
-			unwrap(
-				api.catalog.GET('/api/v1/catalog/entities', {
-					params: {
-						query: { tag: params.slug, kind: kind?.kind, limit: PAGE_SIZE, offset: readOffset(url) }
-					}
-				})
+			listPage(
+				api,
+				{ tag: params.slug },
+				{ kind: kind?.kind, sort: DEFAULT_SORT, limit: PAGE_SIZE, offset: readOffset(url) }
 			)
 		)
 	]);

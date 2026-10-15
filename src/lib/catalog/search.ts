@@ -1,10 +1,32 @@
-// Выдача поиска Meilisearch (GET /search) с фильтрами из адреса — для разделов (/films) и
-// общей страницы /search.
+// Списки каталога — из Meilisearch (GET /search): разделы (/films), общая страница /search,
+// главная, теги, студии. В PostgreSQL (GET /entities) за списками не ходим: там сортировка всего
+// каталога бывает по 7 с, у Meilisearch — десятки миллисекунд.
 import type { Api } from '#lib/api/client.ts';
 import { ApiError, unwrap } from '#lib/api/errors.ts';
 import type { SchemaEntityKind, SchemaSearchSort } from '#lib/api/generated/catalog.ts';
 import { searchSortParam, type CatalogFilters, type Mode } from './filters.ts';
+import { count } from './labels.ts';
 import { PAGE_SIZE } from './url.ts';
+
+/**
+ * Дальше этого Meilisearch не считает и не листает (`pagination.maxTotalHits`, по умолчанию 1000;
+ * docs/backend-questions.md): total ровно столько — найдено больше.
+ */
+export const SEARCH_MAX_TOTAL = 1000;
+
+/**
+ * Подпись числа найденного: «Больше 1 000 фильмов» на потолке Meilisearch, «Около 25 фильмов» —
+ * оценка поиска по тексту, иначе просто число. extra — сколько ещё нашлось в архиве.
+ */
+export function foundLabel(
+	total: number,
+	forms: readonly [string, string, string],
+	options: { text?: boolean; limit?: number; extra?: number } = {}
+): string {
+	const n = count(total + (options.extra ?? 0), forms);
+	if (total === SEARCH_MAX_TOTAL) return `Больше ${n}`;
+	return options.text && total > (options.limit ?? 0) ? `Около ${n}` : n;
+}
 
 /**
  * Страница поиска. Фильтр по людям на бэкенде пока заглушка (503 `person_filter_unavailable`):
@@ -54,26 +76,25 @@ export async function personName(api: Api, slug: string | undefined): Promise<st
 	}
 }
 
-/**
- * Порция выдачи раздела (/films): текст, студия, человек, период — поиск Meilisearch, иначе —
- * список GET /entities. Одна функция и для load, и для «Показать ещё» в браузере.
- */
-export async function sectionPage(
+/** Порция выдачи раздела (/films): одна функция и для load, и для «Показать ещё» в браузере. */
+export function sectionPage(
 	api: Api,
 	kind: SchemaEntityKind,
 	f: CatalogFilters,
 	mode: Mode,
 	offset: number
 ) {
-	const page = { limit: PAGE_SIZE, offset };
-	if (!mode.search) {
-		const query = { kind, tag: f.tag, year: f.year, sort: mode.sort, ...page };
-		return {
-			page: await unwrap(api.catalog.GET('/api/v1/catalog/entities', { params: { query } })),
-			personUnavailable: false
-		};
-	}
-	return searchPage(api, f, { kind, sort: searchSortParam(mode.sort), ...page });
+	return searchPage(api, f, { kind, sort: searchSortParam(mode.sort), limit: PAGE_SIZE, offset });
+}
+
+/** Просто список без текста (главная, тег, студия): страница поиска с одним-двумя фильтрами. */
+export async function listPage(
+	api: Api,
+	f: Pick<CatalogFilters, 'tag' | 'studio'>,
+	options: { kind?: SchemaEntityKind; sort: SchemaSearchSort; limit: number; offset?: number }
+) {
+	const { page } = await searchPage(api, f, { offset: 0, ...options });
+	return page;
 }
 
 /**

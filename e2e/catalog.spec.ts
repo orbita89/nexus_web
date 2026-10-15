@@ -439,29 +439,32 @@ test('в подвале — атрибуция TMDB', async ({ page }) => {
 	);
 });
 
-test('раздел: порядок в адресе, оценки на постерах одним запросом', async ({ page }) => {
+test('раздел: порядок в адресе, выдача из Meilisearch, оценки одним запросом', async ({ page }) => {
 	let ratingRequests = 0;
+	const dbLists: string[] = [];
 	page.on('request', (r) => {
-		if (r.url().includes('/api/v1/social/ratings')) ratingRequests++;
+		const url = new URL(r.url());
+		if (url.pathname === '/api/v1/social/ratings') ratingRequests++;
+		if (url.pathname === '/api/v1/catalog/entities') dbLists.push(url.search);
 	});
 	await page.goto('/films');
-	const order = page.getByRole('navigation', { name: 'Порядок' });
-	await expect(order.getByRole('link', { name: 'Новые' })).toHaveAttribute('aria-current', 'page');
+	const sort = page.getByLabel('Сортировка');
+	await expect(sort).toHaveValue('recommended');
+	// Порядков по оценкам Nexus нет: их нет в индексе Meilisearch.
+	await expect(sort.locator('option[value="rating"]')).toHaveCount(0);
 
-	await order.getByRole('link', { name: 'По оценке' }).click();
-	await expect(page).toHaveURL('/films?sort=rating');
-	const grid = page.getByRole('main').getByRole('list').last();
-	const badges = grid.getByLabel(/^Средняя оценка/);
-	await expect(badges.first()).toBeVisible();
-	const values = (await badges.allTextContents()).map((t) => Number(t.replace(',', '.')));
-	expect(values).toEqual(values.toSorted((a, b) => b - a));
+	// До гидрации список ещё не связан с адресом — повторяем, пока адрес не сменится.
+	await expect(async () => {
+		await sort.selectOption('top_rated');
+		await expect(page).toHaveURL('/films?sort=top_rated', { timeout: 1000 });
+	}).toPass();
+	await expect(page.getByRole('main').getByRole('listitem').first()).toBeVisible();
 	// Сетка пришла с сервера или клиентской навигацией — оценки одним запросом на страницу.
 	expect(ratingRequests).toBeLessThanOrEqual(1);
 
-	// Фильтр не сбрасывает порядок; «Новые» в адрес не пишется.
-	await page.getByRole('searchbox', { name: 'Название' }).fill('Дюна');
-	await page.getByRole('button', { name: 'Показать' }).click();
-	await expect(page).toHaveURL(/[?&]sort=rating/);
-	await order.getByRole('link', { name: 'Новые' }).click();
-	await expect(page).not.toHaveURL(/sort=/);
+	// «Рекомендуемые» — по умолчанию, в адрес не пишутся.
+	await sort.selectOption('recommended');
+	await expect(page).toHaveURL('/films');
+	// Списки — только из Meilisearch (GET /search), не из PostgreSQL.
+	expect(dbLists).toEqual([]);
 });

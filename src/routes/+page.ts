@@ -2,6 +2,8 @@ import { publicApi } from '#lib/api/client.ts';
 import { unwrap } from '#lib/api/errors.ts';
 import { KINDS } from '#lib/catalog/kinds.ts';
 import { ratingsFor, settle } from '#lib/catalog/load.ts';
+import { listPage } from '#lib/catalog/search.ts';
+import { DEFAULT_SORT } from '#lib/catalog/sort.ts';
 import type { PageLoad } from './$types';
 
 const STRIP_SIZE = 12;
@@ -14,11 +16,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
 			KINDS.map(async (k) => ({
 				...k,
 				result: await settle(
-					unwrap(
-						api.catalog.GET('/api/v1/catalog/entities', {
-							params: { query: { kind: k.kind, limit: STRIP_SIZE } }
-						})
-					)
+					listPage(api, {}, { kind: k.kind, sort: DEFAULT_SORT, limit: STRIP_SIZE })
 				)
 			}))
 		),

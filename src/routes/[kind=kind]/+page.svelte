@@ -3,8 +3,7 @@
 	import { navigating, page } from '$app/state';
 	import { ARCHIVE_PAGE, archiveFeed } from '#lib/catalog/archive.svelte.ts';
 	import { hasFilters, readArchive, yearLabel } from '#lib/catalog/filters.ts';
-	import { count } from '#lib/catalog/labels.ts';
-	import { ARCHIVE_ALL, sectionPage } from '#lib/catalog/search.ts';
+	import { ARCHIVE_ALL, foundLabel, sectionPage } from '#lib/catalog/search.ts';
 	import { filterUrl } from '#lib/catalog/url.ts';
 	import { guestApi } from '#lib/auth/session.svelte.ts';
 	import Alert from '#lib/components/Alert.svelte';
@@ -78,10 +77,11 @@
 		{#if loading}
 			<span class="loading loading-xs loading-spinner"></span>Загружаем…
 		{:else if data.list.data}
-			{data.mode.search && total > data.list.data.limit ? 'Около ' : ''}{count(
-				total + archiveTotal,
-				['фильм', 'фильма', 'фильмов']
-			)}
+			{foundLabel(total, ['фильм', 'фильма', 'фильмов'], {
+				text: data.mode.text,
+				limit: data.list.data.limit,
+				extra: archiveTotal
+			})}
 			{#if feed.loading}
 				<span class="loading loading-xs loading-spinner"></span>
 				{data.filters.q ? 'ищем в архиве…' : 'считаем архив…'}
