@@ -1,6 +1,7 @@
 // Продовый сервер: сборка adapter-node + ISR статических страниц (карточки, студии). Запуск:
 // `node server/index.js` после `pnpm build`. nginx отдаёт их с диска сам, сюда они приходят,
-// только если файла нет (новое произведение или студия, удалённое, чужой раздел в адресе).
+// только если файла нет (новое произведение или студия, удалённое, чужой раздел в адресе). Без
+// nginx готовый файл с диска отдаёт этот сервер — тоже без бэкенда.
 //
 //   PORT, HOST     где слушать (127.0.0.1:3000)
 //   ORIGIN         публичный адрес сайта, если не задан при сборке (https://nexus.example)
@@ -9,6 +10,8 @@
 //   ISR_CONCURRENCY  сколько страниц рисовать одновременно при {"all": true} (8)
 import http from 'node:http';
 import { timingSafeEqual } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { handler } from '../build/handler.js';
 import { base, dir, origin as builtOrigin, server } from '../build/adapter-node.js';
 import { STATIC_PAGE, createIsr } from './isr.js';
@@ -20,10 +23,11 @@ const secret = process.env.ISR_SECRET ?? '';
 if (!origin) throw new Error('ORIGIN не задан: он нужен для og:url в статических страницах');
 if (!secret) throw new Error('ISR_SECRET не задан');
 
+const root = `${dir}/prerendered${base}`;
 // handler.js при импорте уже выполнил server.init — перерисовка идёт тем же экземпляром.
 const isr = createIsr({
 	server,
-	root: `${dir}/prerendered${base}`,
+	root,
 	origin,
 	backend: process.env.BACKEND_URL || 'http://localhost'
 });
@@ -37,20 +41,26 @@ const httpServer = http.createServer(async (req, res) => {
 	if (url.pathname === '/_isr/revalidate') return revalidate(req, res);
 
 	// Статику не отдаём из build/prerendered через handler: его таблица файлов (размеры, etag)
-	// снята при сборке и после перерисовки врёт. Рисуем, сохраняем и отдаём свежую.
+	// снята при сборке и после перерисовки врёт. Файл на диске есть — отдаём его (x-isr: hit, без
+	// бэкенда); нет — рисуем, сохраняем и отдаём свежий (x-isr: miss).
 	const page = STATIC_PAGE.exec(url.pathname);
 	if (page && (req.method === 'GET' || req.method === 'HEAD')) {
+		const isData = Boolean(page[2]);
+		/** @param {string | Buffer} body @param {'hit' | 'miss'} cache */
+		const send = (body, cache) => {
+			res.writeHead(200, {
+				'content-type': isData ? 'application/json' : 'text/html; charset=utf-8',
+				'cache-control': 'public, max-age=0, must-revalidate',
+				'x-isr': cache
+			});
+			res.end(req.method === 'HEAD' ? undefined : body);
+		};
+		const file = join(root, isData ? `${page[1]}/__data.json` : `${page[1]}.html`);
+		const saved = await readFile(file).catch(() => null);
+		if (saved) return send(saved, 'hit');
 		try {
 			const result = await isr.regenerate(page[1]);
-			if (result.status === 200) {
-				const isData = Boolean(page[2]);
-				res.writeHead(200, {
-					'content-type': isData ? 'application/json' : 'text/html; charset=utf-8',
-					'cache-control': 'public, max-age=0, must-revalidate',
-					'x-isr': 'miss'
-				});
-				return res.end(req.method === 'HEAD' ? undefined : isData ? result.data : result.html);
-			}
+			if (result.status === 200) return send((isData ? result.data : result.html) ?? '', 'miss');
 		} catch (error) {
 			console.error(`ISR ${page[1]}:`, error);
 		}
