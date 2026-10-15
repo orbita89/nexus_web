@@ -21,6 +21,7 @@ import {
 	roleRank,
 	yearOf
 } from './labels.ts';
+import { studioHref } from './studios.ts';
 
 /** Строка фактов: подпись и значение — текст или ссылки (люди). */
 export interface FactRow {
@@ -131,7 +132,8 @@ export function aboutRows(entity: SchemaEntityDetail): FactRow[] {
 /** Связанные произведения: приквелы, сиквелы, ремейки — по порядку выхода. */
 export interface Production {
 	studiosTitle: string;
-	studios: string[];
+	/** У фильмов и сериалов — ссылки на страницы студий; у игр и книг — просто названия. */
+	studios: { name: string; href?: string; logoUrl?: string | null }[];
 	/** Сначала победы, затем номинации; внутри — по году. */
 	awards: { title: string; year: number | null; won: boolean }[];
 	triviaTitle: string;
@@ -139,22 +141,28 @@ export interface Production {
 }
 
 /**
- * «Производство и факты» из metadata: студии (у игр — разработчик и издатель, у книг —
- * издательство), награды, факты. Пустое — null: блока нет.
+ * «Производство и факты»: студии (у фильмов и сериалов — EntityDetail.studios со страницами, у игр —
+ * разработчик и издатель, у книг — издательство из metadata), награды, факты. Пустое — null.
  */
 export function productionOf(
-	entity: Pick<SchemaEntityDetail, 'kind' | 'metadata'>
+	entity: Pick<SchemaEntityDetail, 'kind' | 'metadata' | 'studios'>
 ): Production | null {
 	const m = entity.metadata as SchemaMovieMetadata &
 		SchemaSeriesMetadata &
 		SchemaBookMetadata &
 		SchemaGameMetadata;
+	const plain = (names: (string | null | undefined)[]) =>
+		[...new Set(names.filter((s): s is string => !!s))].map((name) => ({ name }));
 	const studios =
 		entity.kind === 'game'
-			? [m.developer, m.publisher].filter((s): s is string => !!s)
+			? plain([m.developer, m.publisher])
 			: entity.kind === 'book'
-				? [m.publisher].filter((s): s is string => !!s)
-				: (m.studios ?? []);
+				? plain([m.publisher])
+				: entity.studios.map((s) => ({
+						name: s.name,
+						href: studioHref(s.slug),
+						logoUrl: s.logo_url
+					}));
 	const awards = (m.awards ?? [])
 		.map((a) => ({ title: a.title, year: a.year ?? null, won: a.won ?? false }))
 		.toSorted((a, b) => Number(b.won) - Number(a.won) || (a.year ?? 0) - (b.year ?? 0));
@@ -167,7 +175,7 @@ export function productionOf(
 				: entity.kind === 'game'
 					? 'Разработка и издание'
 					: 'Студии',
-		studios: [...new Set(studios)],
+		studios,
 		awards,
 		triviaTitle:
 			entity.kind === 'book'

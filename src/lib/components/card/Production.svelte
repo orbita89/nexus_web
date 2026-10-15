@@ -1,9 +1,13 @@
 <script lang="ts">
+	import { navigating } from '$app/state';
 	import type { Production } from '#lib/catalog/card.ts';
+	import StudioLogo from '#lib/components/catalog/StudioLogo.svelte';
 
 	// Производство и факты — боковая колонка рядом с таблицей «О фильме» (на телефоне — под ней):
-	// студии (у игр — разработчик и издатель, у книг — издательство), награды, факты. Данные —
-	// productionOf() из metadata; пустой раздел не рисуется, пустой блок целиком — тоже (страница).
+	// студии (у фильмов и сериалов — ссылки на их страницы с логотипом; у игр — разработчик и
+	// издатель, у книг — издательство), награды, факты. Данные — productionOf(); пустой раздел не
+	// рисуется, пустой блок целиком — тоже (страница). Первое открытие студии бэкенд дополняет из
+	// TMDB (1–2 с) — пока идёт переход, на месте логотипа крутится индикатор.
 	let { production }: { production: Production } = $props();
 
 	const wins = $derived(production.awards.filter((a) => a.won));
@@ -39,9 +43,27 @@
 		<div>
 			{@render heading(production.studiosTitle)}
 			<ul class="flex flex-wrap gap-1.5">
-				{#each production.studios as studio (studio)}<li class="badge border-base-300 bg-base-100">
-						{studio}
-					</li>{/each}
+				{#each production.studios as studio (studio.name)}
+					{@const opening = !!studio.href && navigating.to?.url.pathname === studio.href}
+					<li>
+						{#if studio.href}
+							<a
+								href={studio.href}
+								class="badge h-auto min-h-6 gap-1.5 border-base-300 bg-base-100 py-0.5 transition-colors hover:border-primary hover:text-primary"
+								aria-busy={opening}
+							>
+								{#if opening}
+									<span class="loading loading-xs loading-spinner"></span>
+								{:else}
+									<StudioLogo url={studio.logoUrl} />
+								{/if}
+								{studio.name}
+							</a>
+						{:else}
+							<span class="badge border-base-300 bg-base-100">{studio.name}</span>
+						{/if}
+					</li>
+				{/each}
 			</ul>
 		</div>
 	{/if}

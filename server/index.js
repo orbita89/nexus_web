@@ -1,23 +1,23 @@
-// Продовый сервер: сборка adapter-node + ISR карточек. Запуск: `node server/index.js` после
-// `pnpm build`. nginx отдаёт карточки с диска сам, сюда они приходят, только если файла
-// нет (новое произведение, удалённое, чужой раздел в адресе).
+// Продовый сервер: сборка adapter-node + ISR статических страниц (карточки, студии). Запуск:
+// `node server/index.js` после `pnpm build`. nginx отдаёт их с диска сам, сюда они приходят,
+// только если файла нет (новое произведение или студия, удалённое, чужой раздел в адресе).
 //
 //   PORT, HOST     где слушать (127.0.0.1:3000)
 //   ORIGIN         публичный адрес сайта, если не задан при сборке (https://nexus.example)
 //   ISR_SECRET     токен для POST /_isr/revalidate
 //   BACKEND_URL    API для списка каталога при {"all": true} (http://localhost)
-//   ISR_CONCURRENCY  сколько карточек рисовать одновременно при {"all": true} (8)
+//   ISR_CONCURRENCY  сколько страниц рисовать одновременно при {"all": true} (8)
 import http from 'node:http';
 import { timingSafeEqual } from 'node:crypto';
 import { handler } from '../build/handler.js';
 import { base, dir, origin as builtOrigin, server } from '../build/adapter-node.js';
-import { CARD, createIsr } from './isr.js';
+import { STATIC_PAGE, createIsr } from './isr.js';
 
 const port = Number(process.env.PORT ?? 3000);
 const host = process.env.HOST ?? '127.0.0.1';
 const origin = builtOrigin || process.env.ORIGIN;
 const secret = process.env.ISR_SECRET ?? '';
-if (!origin) throw new Error('ORIGIN не задан: он нужен для og:url в статических карточках');
+if (!origin) throw new Error('ORIGIN не задан: он нужен для og:url в статических страницах');
 if (!secret) throw new Error('ISR_SECRET не задан');
 
 // handler.js при импорте уже выполнил server.init — перерисовка идёт тем же экземпляром.
@@ -36,14 +36,14 @@ const httpServer = http.createServer(async (req, res) => {
 
 	if (url.pathname === '/_isr/revalidate') return revalidate(req, res);
 
-	// Карточку не отдаём из build/prerendered через handler: его таблица файлов (размеры, etag)
+	// Статику не отдаём из build/prerendered через handler: его таблица файлов (размеры, etag)
 	// снята при сборке и после перерисовки врёт. Рисуем, сохраняем и отдаём свежую.
-	const card = CARD.exec(url.pathname);
-	if (card && (req.method === 'GET' || req.method === 'HEAD')) {
+	const page = STATIC_PAGE.exec(url.pathname);
+	if (page && (req.method === 'GET' || req.method === 'HEAD')) {
 		try {
-			const result = await isr.regenerate(card[1]);
+			const result = await isr.regenerate(page[1]);
 			if (result.status === 200) {
-				const isData = Boolean(card[2]);
+				const isData = Boolean(page[2]);
 				res.writeHead(200, {
 					'content-type': isData ? 'application/json' : 'text/html; charset=utf-8',
 					'cache-control': 'public, max-age=0, must-revalidate',
@@ -52,7 +52,7 @@ const httpServer = http.createServer(async (req, res) => {
 				return res.end(req.method === 'HEAD' ? undefined : isData ? result.data : result.html);
 			}
 		} catch (error) {
-			console.error(`ISR ${card[1]}:`, error);
+			console.error(`ISR ${page[1]}:`, error);
 		}
 		// 404, редирект, ошибка — обычный SSR с настоящим ответом и заголовками.
 	}
@@ -67,11 +67,12 @@ const httpServer = http.createServer(async (req, res) => {
  * POST /_isr/revalidate, Authorization: Bearer <ISR_SECRET>. Бэкенд ждёт ответ не дольше 30 с и
  * считает успехом любой 2xx (libs/shared/src/isr.rs в nexus_project).
  *
- *   {"paths": ["/films/dune-2021", "/people/denis-villeneuve"]}
+ *   {"paths": ["/films/dune-2021", "/studios/mosfilm", "/people/denis-villeneuve"]}
  *   → 200 {"results": [{"path": "/films/dune-2021", "status": 200},
+ *                      {"path": "/studios/mosfilm", "status": 200},
  *                      {"path": "/people/denis-villeneuve", "skipped": true}]}
- *   Карточки перерисовываются до ответа; адреса без статики (люди, разделы) пропускаются.
- *   502 — какая-то карточка не нарисовалась (бэкенд лежит): старые файлы на месте, можно повторить.
+ *   Карточки и студии перерисовываются до ответа; адреса без статики (люди, разделы) пропускаются.
+ *   502 — какая-то страница не нарисовалась (бэкенд лежит): старые файлы на месте, можно повторить.
  *
  *   {"all": true} → 202 {"started": true}: вся статика пересобирается в фоне (ход — в логе
  *   сервера). Уже идёт — 202 {"started": false}.
@@ -107,9 +108,9 @@ async function revalidate(req, res) {
 
 	const results = await Promise.all(
 		/** @type {string[]} */ (paths).map((path) => {
-			const card = CARD.exec(path)?.[1];
-			if (!card) return { path, skipped: true };
-			return isr.regenerate(card).then(
+			const page = STATIC_PAGE.exec(path)?.[1];
+			if (!page) return { path, skipped: true };
+			return isr.regenerate(page).then(
 				({ status }) => ({ path, status }),
 				(error) => ({ path, status: 500, error: String(error) })
 			);

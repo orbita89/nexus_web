@@ -1,6 +1,7 @@
-// Перерисовать статические карточки на работающем сервере (ISR, server/index.js) без сборки.
+// Перерисовать статические страницы (карточки, студии) на работающем сервере (ISR,
+// server/index.js) без сборки.
 //
-//   pnpm revalidate /films/dune-2021 /books/dune-novel   — указанные карточки, до ответа
+//   pnpm revalidate /films/dune-2021 /studios/mosfilm    — указанные страницы, до ответа
 //   pnpm revalidate films/dune-2021                      — ведущий / можно не писать
 //   pnpm revalidate --all                                — вся статика, в фоне на сервере
 //
@@ -15,7 +16,7 @@ const BATCH = 100;
 
 const args = process.argv.slice(2).filter((arg) => arg !== '--');
 if (!secret) fail('ISR_SECRET не задан');
-if (!args.length) fail('укажите адреса карточек (/films/dune-2021) или --all');
+if (!args.length) fail('укажите адреса страниц (/films/dune-2021, /studios/mosfilm) или --all');
 
 if (args.includes('--all')) {
 	const { started } = await post({ all: true });
@@ -62,7 +63,7 @@ async function post(body) {
 		);
 	}
 	const json = await response.json().catch(() => ({}));
-	// 502 — часть карточек не нарисовалась, results всё равно есть; остальное без них — ошибка
+	// 502 — часть страниц не нарисовалась, results всё равно есть; остальное без них — ошибка
 	// запроса целиком (неверный токен, тело).
 	if (!response.ok && !json.results) fail(`${response.status}: ${JSON.stringify(json)}`);
 	return json;

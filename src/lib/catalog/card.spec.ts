@@ -31,6 +31,7 @@ const dune: SchemaEntityDetail = {
 	created_at: '',
 	updated_at: '',
 	metadata: { runtime_min: 155, countries: ['US', 'CA'], age_rating: 'PG-13' },
+	studios: [],
 	tags: [
 		{ id: 't1', slug: 'sci-fi', name: 'Научная фантастика', kind: 'genre' },
 		{ id: 't2', slug: 'drama', name: 'Драма', kind: 'genre' }
@@ -182,11 +183,15 @@ describe('productionOf', () => {
 		expect(productionOf(dune)).toBeNull();
 	});
 
-	it('фильм: студии, сначала победы, факты', () => {
+	it('фильм: студии ссылками из studios (не из metadata), сначала победы, факты', () => {
 		const p = productionOf({
 			...dune,
+			studios: [
+				{ slug: 'legendary-pictures', name: 'Legendary Pictures', logo_url: 'https://x/l.png' },
+				{ slug: 'mosfilm', name: 'Mosfilm' }
+			],
 			metadata: {
-				studios: ['Legendary'],
+				studios: ['Legendary Pictures', 'Mosfilm', 'Ещё без страницы'],
 				awards: [
 					{ title: 'Оскар — фильм', year: 2022, won: false },
 					{ title: 'Оскар — звук', year: 2022, won: true }
@@ -195,16 +200,28 @@ describe('productionOf', () => {
 			}
 		});
 		expect(p?.studiosTitle).toBe('Студии');
+		expect(p?.studios).toEqual([
+			{
+				name: 'Legendary Pictures',
+				href: '/studios/legendary-pictures',
+				logoUrl: 'https://x/l.png'
+			},
+			{ name: 'Mosfilm', href: '/studios/mosfilm', logoUrl: undefined }
+		]);
 		expect(p?.awards.map((a) => a.won)).toEqual([true, false]);
 		expect(p?.triviaTitle).toBe('Факты о съёмках');
 	});
 
 	it('игра — разработчик и издатель, книга — издательство', () => {
 		expect(
-			productionOf({ kind: 'game', metadata: { developer: 'CDPR', publisher: 'CDPR' } })?.studios
-		).toEqual(['CDPR']);
-		expect(productionOf({ kind: 'book', metadata: { publisher: 'Chilton' } })?.studiosTitle).toBe(
-			'Издательство'
-		);
+			productionOf({
+				kind: 'game',
+				metadata: { developer: 'CDPR', publisher: 'CDPR' },
+				studios: []
+			})?.studios
+		).toEqual([{ name: 'CDPR' }]);
+		expect(
+			productionOf({ kind: 'book', metadata: { publisher: 'Chilton' }, studios: [] })?.studiosTitle
+		).toBe('Издательство');
 	});
 });

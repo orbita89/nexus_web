@@ -1,5 +1,6 @@
-// ISR карточек: перерисовать одну страницу сборкой SvelteKit и атомарно положить HTML и
-// __data.json (и их .br/.gz) туда, откуда их отдаёт nginx. Полная сборка для этого не нужна.
+// ISR статических страниц (карточки произведений и студии): перерисовать одну страницу сборкой
+// SvelteKit и атомарно положить HTML и __data.json (и их .br/.gz) туда, откуда их отдаёт nginx.
+// Полная сборка для этого не нужна.
 import { randomBytes } from 'node:crypto';
 import { mkdir, readdir, rename, rm, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
@@ -10,14 +11,18 @@ const br = promisify(brotliCompress);
 const gz = promisify(gzip);
 
 /**
- * Карточка и её данные: /films/dune-2021, /films/dune-2021/__data.json. slug — как на бэкенде:
- * латиница, цифры, дефисы; заодно в путь файла не попадут `..` и `%2e`.
+ * Статическая страница и её данные: карточка (/films/dune-2021, /films/dune-2021/__data.json) или
+ * студия (/studios/mosfilm). slug — как на бэкенде: латиница, цифры, дефисы; заодно в путь файла
+ * не попадут `..` и `%2e`. Те же адреса — в location статики deploy/nginx.conf.
  */
-export const CARD = /^(\/(?:films|series|books|games)\/[a-z0-9]+(?:-[a-z0-9]+)*)(\/__data\.json)?$/;
+export const STATIC_PAGE =
+	/^(\/(?:films|series|books|games|studios)\/[a-z0-9]+(?:-[a-z0-9]+)*)(\/__data\.json)?$/;
 
 /** Раздел в адресе по типу сущности — как KINDS в src/lib/catalog/kinds.ts. */
 const SECTION = { movie: 'films', series: 'series', book: 'books', game: 'games' };
-/** Сколько карточек рисовать одновременно при пересборке всего: не забить CPU и бэкенд. */
+/** Каталоги статики на диске: разделы карточек и студии (списка студий в API нет — только диск). */
+const STATIC_DIRS = [...Object.values(SECTION), 'studios'];
+/** Сколько страниц рисовать одновременно при пересборке всего: не забить CPU и бэкенд. */
 const ALL_CONCURRENCY = Number(process.env.ISR_CONCURRENCY ?? 8);
 
 /**
@@ -30,7 +35,7 @@ const ALL_CONCURRENCY = Number(process.env.ISR_CONCURRENCY ?? 8);
  *   backend — API для списка каталога (BACKEND_URL)
  */
 export function createIsr({ server, root, origin, backend }) {
-	/** Перерисовки в работе: промах и сигнал бэкенда на одну карточку — одна перерисовка. */
+	/** Перерисовки в работе: промах и сигнал бэкенда на одну страницу — одна перерисовка. */
 	const running = new Map();
 
 	/** @param {string} pathname */
@@ -42,9 +47,9 @@ export function createIsr({ server, root, origin, backend }) {
 		});
 
 	/**
-	 * Перерисовать карточку. 200 — файлы заменены; 404 и редиректы (удалили, сменили раздел) —
+	 * Перерисовать страницу. 200 — файлы заменены; 404 и редиректы (удалили, сменили раздел) —
 	 * файлы удалены, адрес обслуживает сервер; 5xx (бэкенд лежит) — старые файлы остаются.
-	 * @param {string} path адрес карточки без __data.json
+	 * @param {string} path адрес страницы без __data.json
 	 * @returns {Promise<{ path: string, status: number, html?: string, data?: string }>}
 	 */
 	function regenerate(path) {
@@ -80,7 +85,8 @@ export function createIsr({ server, root, origin, backend }) {
 
 	/**
 	 * Пересобрать всю статику в фоне: весь каталог из API и всё, что уже лежит на диске (удалённые
-	 * с тех пор сущности так уходят из статики). Уже идёт — false, второй не запускается.
+	 * с тех пор сущности так уходят из статики, студии перерисовываются). Уже идёт — false, второй
+	 * не запускается.
 	 */
 	function regenerateAll() {
 		if (all) return false;
@@ -93,7 +99,7 @@ export function createIsr({ server, root, origin, backend }) {
 	async function regenerateAllNow() {
 		const started = Date.now();
 		const paths = new Set([...(await cataloguePaths()), ...(await diskPaths())]);
-		console.log(`ISR all: ${paths.size} карточек`);
+		console.log(`ISR all: ${paths.size} страниц`);
 
 		const queue = [...paths];
 		let done = 0;
@@ -128,14 +134,14 @@ export function createIsr({ server, root, origin, backend }) {
 		return paths;
 	}
 
-	/** Адреса карточек, у которых есть HTML на диске. */
+	/** Адреса страниц (карточек и студий), у которых есть HTML на диске. */
 	async function diskPaths() {
 		const paths = [];
-		for (const section of Object.values(SECTION)) {
-			const files = await readdir(join(root, section)).catch(() => []);
+		for (const dir of STATIC_DIRS) {
+			const files = await readdir(join(root, dir)).catch(() => []);
 			for (const file of files) {
-				const path = `/${section}/${file.slice(0, -'.html'.length)}`;
-				if (file.endsWith('.html') && CARD.test(path)) paths.push(path);
+				const path = `/${dir}/${file.slice(0, -'.html'.length)}`;
+				if (file.endsWith('.html') && STATIC_PAGE.test(path)) paths.push(path);
 			}
 		}
 		return paths;

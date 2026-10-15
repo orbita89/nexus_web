@@ -39,8 +39,8 @@ APP_BASE_URL=http://localhost:5173
 | ----------------------------- | ----------------------------------------------------------------------------------- |
 | `pnpm dev`                    | Dev-сервер с прокси на бэкенд                                                       |
 | `pnpm build` / `pnpm preview` | Сборка со статикой всех карточек в `build/prerendered` (нужен бэкенд) / запуск      |
-| `pnpm start`                  | Прод-сервер с ISR карточек (`ISR_SECRET`), за nginx — `deploy/nginx.conf`           |
-| `pnpm revalidate <адреса>`    | Перерисовать карточки на работающем сервере; `--all` — весь каталог (`ISR_SECRET`)  |
+| `pnpm start`                  | Прод-сервер с ISR карточек и студий (`ISR_SECRET`), за nginx — `deploy/nginx.conf`  |
+| `pnpm revalidate <адреса>`    | Перерисовать карточки и студии на сервере; `--all` — всю статику (`ISR_SECRET`)     |
 | `pnpm verify`                 | **Всё, что проверяет CI:** prettier + eslint, svelte-check, unit-тесты, сборка, e2e |
 | `pnpm lint` / `pnpm format`   | Проверить / исправить форматирование и eslint                                       |
 | `pnpm check`                  | svelte-check (типы; предупреждения считаются ошибками)                              |

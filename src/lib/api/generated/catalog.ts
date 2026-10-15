@@ -677,6 +677,28 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/catalog/studios/{slug}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Страница студии: название, логотип, страна, штаб-квартира, сайт, описание, материнская
+		 *     компания и число фильмов. Список фильмов — `GET /entities?studio=<slug>` (сортировки и
+		 *     пагинация как у каталога). Описание, штаб-квартира и сайт подтягиваются из TMDB при первом
+		 *     открытии и сохраняются; TMDB не ответил — страница без них (попробуется в следующий раз).
+		 */
+		get: operations['get_studio'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/catalog/tags': {
 		parameters: {
 			query?: never;
@@ -994,6 +1016,11 @@ export interface components {
 		EntityDetail: components['schemas']['Entity'] & {
 			credits: components['schemas']['EntityCredit'][];
 			related: components['schemas']['RelatedWork'][];
+			/**
+			 * @description Студии из `metadata.studios` в том же порядке, со ссылкой на страницу (`/studios/{slug}`).
+			 *     Названия, для которых студии ещё нет (появится при синхронизации), пропускаются.
+			 */
+			studios: components['schemas']['StudioRef'][];
 			tags: components['schemas']['Tag'][];
 		};
 		/**
@@ -1719,12 +1746,46 @@ export interface components {
 		};
 		/** @enum {string} */
 		StepStatus: 'running' | 'done' | 'skipped' | 'failed';
+		/** @description Страница студии. Фильмы — `GET /entities?studio=<slug>`. */
+		StudioDetail: {
+			/** @description Описание из TMDB (обычно по-английски, у многих студий его нет). */
+			description?: string | null;
+			/**
+			 * Format: int64
+			 * @description Видимых вышедших сущностей студии (как в `GET /entities?studio=`).
+			 * @example 1343
+			 */
+			entities_count: number;
+			/** @example Burbank, California, United States */
+			headquarters?: string | null;
+			/** @example https://www.warnerbros.com */
+			homepage?: string | null;
+			logo_url?: string | null;
+			/** @example Warner Bros. Pictures */
+			name: string;
+			/**
+			 * @description Страна (ISO 3166-1 alpha-2).
+			 * @example US
+			 */
+			origin_country?: string | null;
+			parent?: components['schemas']['StudioRef'] | null;
+			/** @example warner-bros-pictures */
+			slug: string;
+		};
 		/** @description Студия в подсказках: название (значение для `studio`) и сколько сущностей в индексе. */
 		StudioHit: {
 			/** Format: int64 */
 			count: number;
 			/** @example Warner Bros. Pictures */
 			name: string;
+		};
+		/** @description Студия в карточке фильма: ссылка на её страницу. */
+		StudioRef: {
+			logo_url?: string | null;
+			/** @example Warner Bros. Pictures */
+			name: string;
+			/** @example warner-bros-pictures */
+			slug: string;
 		};
 		Tag: {
 			/** Format: uuid */
@@ -1865,7 +1926,9 @@ export type SchemaStatsResult = components['schemas']['StatsResult'];
 export type SchemaStep = components['schemas']['Step'];
 export type SchemaStepEvent = components['schemas']['StepEvent'];
 export type SchemaStepStatus = components['schemas']['StepStatus'];
+export type SchemaStudioDetail = components['schemas']['StudioDetail'];
 export type SchemaStudioHit = components['schemas']['StudioHit'];
+export type SchemaStudioRef = components['schemas']['StudioRef'];
 export type SchemaTag = components['schemas']['Tag'];
 export type SchemaTagKind = components['schemas']['TagKind'];
 export type SchemaTagWithCount = components['schemas']['TagWithCount'];
@@ -2022,6 +2085,8 @@ export interface operations {
 				/** @description Slug тега. */
 				tag?: string;
 				year?: number;
+				/** @description Slug студии. */
+				studio?: string;
 				/** @description Подстрока в названии или оригинальном названии, без учёта регистра. */
 				q?: string;
 				/** @description `true` — только активные, `false` — только скрытые; не передан — все. */
@@ -3560,6 +3625,11 @@ export interface operations {
 				 * @example 2021
 				 */
 				year?: number;
+				/**
+				 * @description Slug студии (`GET /studios/{slug}`): её фильмы. Неизвестный slug — пустой список.
+				 * @example mosfilm
+				 */
+				studio?: string;
 				/** @description 1–100, по умолчанию 20. */
 				limit?: number;
 				/** @description С 0. */
@@ -3933,6 +4003,41 @@ export interface operations {
 			};
 			/** @description Meilisearch недоступен */
 			503: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	get_studio: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug студии
+				 * @example warner-bros-pictures
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Студия */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['StudioDetail'];
+				};
+			};
+			/** @description Нет такой студии */
+			404: {
 				headers: {
 					[name: string]: unknown;
 				};
