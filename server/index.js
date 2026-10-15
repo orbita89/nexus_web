@@ -32,6 +32,13 @@ const isr = createIsr({
 	backend: process.env.BACKEND_URL || 'http://localhost'
 });
 
+/**
+ * Кэш статических страниц в браузере: 5 минут открывает их повторно без запроса (и предзагрузку
+ * при наведении — тоже); правка карточки видна у того, кто её недавно открывал, не позже чем через
+ * 5 минут. Дальше — переспрос с ETag и 304. Так же в deploy/nginx.conf.
+ */
+const STATIC_CACHE = 'public, max-age=300';
+
 /** Не больше 100 адресов за запрос (бэкенд шлёт пачками по 100); на всё сразу — {"all": true}. */
 const MAX_PATHS = 100;
 
@@ -42,8 +49,8 @@ const httpServer = http.createServer(async (req, res) => {
 
 	// Статику не отдаём из build/prerendered через handler: его таблица файлов (размеры, etag)
 	// снята при сборке и после перерисовки врёт. Файл на диске есть — отдаём его (x-isr: hit, без
-	// бэкенда) с ETag, как nginx: браузер переспрашивает (предзагрузка при наведении, возврат на
-	// страницу) и получает 304 без тела; нет файла — рисуем, сохраняем и отдаём свежий (x-isr: miss).
+	// бэкенда) с ETag, как nginx: 5 минут браузер берёт её из своего кэша, потом переспрашивает и
+	// получает 304 без тела; нет файла — рисуем, сохраняем и отдаём свежий (x-isr: miss).
 	const page = STATIC_PAGE.exec(url.pathname);
 	if (page && (req.method === 'GET' || req.method === 'HEAD')) {
 		const isData = Boolean(page[2]);
@@ -51,7 +58,7 @@ const httpServer = http.createServer(async (req, res) => {
 		const send = (body, cache, etag) => {
 			res.writeHead(200, {
 				'content-type': isData ? 'application/json' : 'text/html; charset=utf-8',
-				'cache-control': 'public, max-age=0, must-revalidate',
+				'cache-control': STATIC_CACHE,
 				'x-isr': cache,
 				...(etag && { etag })
 			});
@@ -63,7 +70,7 @@ const httpServer = http.createServer(async (req, res) => {
 			// Как у nginx: время изменения и размер. ISR заменяет файл через rename — ETag меняется.
 			const etag = `"${Math.floor(info.mtimeMs / 1000).toString(16)}-${info.size.toString(16)}"`;
 			if (req.headers['if-none-match'] === etag) {
-				res.writeHead(304, { etag, 'cache-control': 'public, max-age=0, must-revalidate' });
+				res.writeHead(304, { etag, 'cache-control': STATIC_CACHE });
 				return res.end();
 			}
 			const saved = await readFile(file).catch(() => null);
