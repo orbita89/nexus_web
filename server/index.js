@@ -10,7 +10,7 @@
 //   ISR_CONCURRENCY  сколько страниц рисовать одновременно при {"all": true} (8)
 import http from 'node:http';
 import { timingSafeEqual } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { handler } from '../build/handler.js';
 import { base, dir, origin as builtOrigin, server } from '../build/adapter-node.js';
@@ -42,22 +42,33 @@ const httpServer = http.createServer(async (req, res) => {
 
 	// Статику не отдаём из build/prerendered через handler: его таблица файлов (размеры, etag)
 	// снята при сборке и после перерисовки врёт. Файл на диске есть — отдаём его (x-isr: hit, без
-	// бэкенда); нет — рисуем, сохраняем и отдаём свежий (x-isr: miss).
+	// бэкенда) с ETag, как nginx: браузер переспрашивает (предзагрузка при наведении, возврат на
+	// страницу) и получает 304 без тела; нет файла — рисуем, сохраняем и отдаём свежий (x-isr: miss).
 	const page = STATIC_PAGE.exec(url.pathname);
 	if (page && (req.method === 'GET' || req.method === 'HEAD')) {
 		const isData = Boolean(page[2]);
-		/** @param {string | Buffer} body @param {'hit' | 'miss'} cache */
-		const send = (body, cache) => {
+		/** @param {string | Buffer} body @param {'hit' | 'miss'} cache @param {string} [etag] */
+		const send = (body, cache, etag) => {
 			res.writeHead(200, {
 				'content-type': isData ? 'application/json' : 'text/html; charset=utf-8',
 				'cache-control': 'public, max-age=0, must-revalidate',
-				'x-isr': cache
+				'x-isr': cache,
+				...(etag && { etag })
 			});
 			res.end(req.method === 'HEAD' ? undefined : body);
 		};
 		const file = join(root, isData ? `${page[1]}/__data.json` : `${page[1]}.html`);
-		const saved = await readFile(file).catch(() => null);
-		if (saved) return send(saved, 'hit');
+		const info = await stat(file).catch(() => null);
+		if (info) {
+			// Как у nginx: время изменения и размер. ISR заменяет файл через rename — ETag меняется.
+			const etag = `"${Math.floor(info.mtimeMs / 1000).toString(16)}-${info.size.toString(16)}"`;
+			if (req.headers['if-none-match'] === etag) {
+				res.writeHead(304, { etag, 'cache-control': 'public, max-age=0, must-revalidate' });
+				return res.end();
+			}
+			const saved = await readFile(file).catch(() => null);
+			if (saved) return send(saved, 'hit', etag);
+		}
 		try {
 			const result = await isr.regenerate(page[1]);
 			if (result.status === 200) return send((isData ? result.data : result.html) ?? '', 'miss');
