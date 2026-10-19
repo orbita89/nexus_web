@@ -17,7 +17,9 @@ export default defineConfig({
 	},
 	projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
 	webServer: {
-		command: 'pnpm build && pnpm preview --port 4173 --strictPort',
+		// Без пререндера карточек: e2e статику не проверяют (карточки рисуются на запрос), а
+		// пререндер всего каталога растягивает сборку с 25 секунд до десятков минут.
+		command: 'PRERENDER_ENTITIES=0 pnpm build && pnpm preview --port 4173 --strictPort',
 		port: 4173,
 		// На SIGTERM vite preview не завершается, и Playwright ждёт его до глобального таймаута.
 		gracefulShutdown: { signal: 'SIGINT', timeout: 3000 },

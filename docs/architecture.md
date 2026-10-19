@@ -108,7 +108,7 @@ scripts/api-types.mjs  генерация типов API
 браузер берёт при переходах вместо запросов к API. `'auto'`, а не `true`: с `true` маршрут
 выпадает из серверной сборки — ни перерисовать одну карточку, ни показать новую до сборки.
 
-- **Сборка.** Любой `pnpm build` (и `verify`, и e2e) — со статикой; нужен живой `BACKEND_URL`,
+- **Сборка.** `pnpm build` (и `verify`) — со статикой, e2e собирают без неё; нужен живой `BACKEND_URL`,
   для прода — `ORIGIN` (попадает в `og:url`). Без бэкенда — `PRERENDER_ENTITIES=0` (так в CI):
   `entries()` листает `GET /catalog/entities`, на каждую карточку — `films/x.html`,
   `films/x/__data.json` и их `.br`/`.gz` в `build/prerendered`. Каждая сборка стирает `build/`
