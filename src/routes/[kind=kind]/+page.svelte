@@ -65,12 +65,8 @@
 			<span class="loading loading-xs loading-spinner"></span>Загружаем…
 		{:else if data.list.data}
 			{#if archiveOn && !data.filters.q}
-				{count(total, ['фильм', 'фильма', 'фильмов'])} на сайте
-				{#if data.archiveSize}
-					· ещё {data.archiveSize.toLocaleString('ru-RU')} в архиве — поиск по названию
-				{:else}
-					· архив ищется только по названию
-				{/if}
+				{count(total + (data.archiveSize ?? 0), ['фильм', 'фильма', 'фильмов'])}
+				· в архиве поиск только по названию
 			{:else}
 				{count(total + archiveTotal, ['фильм', 'фильма', 'фильмов'])}
 				{#if feed.loading}
