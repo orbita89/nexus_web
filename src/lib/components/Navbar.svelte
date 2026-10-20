@@ -3,6 +3,8 @@
 	import { page } from '$app/state';
 	import { KINDS } from '#lib/catalog/kinds.ts';
 	import { logout, session } from '#lib/auth/session.svelte.ts';
+	import { chat } from '#lib/chat/chat.svelte.ts';
+	import { unreadLabel } from '#lib/chat/rooms.ts';
 	import Avatar from './Avatar.svelte';
 	import TitleSearch from './catalog/TitleSearch.svelte';
 
@@ -66,6 +68,26 @@
 					listClass="right-0 w-80"
 				/>
 			</form>
+
+			<!-- Чат на узком экране — выезжающий лист; на десктопе панель всегда справа. -->
+			<button
+				class="btn indicator btn-circle btn-ghost btn-sm lg:hidden"
+				aria-label="Чат"
+				onclick={() => (chat.sheet = true)}
+			>
+				{#if chat.unread}<span class="indicator-item badge badge-xs badge-primary"
+						>{unreadLabel(chat.unread)}</span
+					>{/if}
+				<svg
+					class="size-5"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					aria-hidden="true"
+					><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg
+				>
+			</button>
 
 			{#if session.status === 'authed' && session.user}
 				<div class="dropdown dropdown-end">

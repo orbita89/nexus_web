@@ -6,9 +6,9 @@
 import { untrack } from 'svelte';
 import { browser } from '$app/env';
 import { accessToken, session } from '#lib/auth/session.svelte.ts';
-import { Realtime, type RealtimeEvent, type SocketLike } from './client.ts';
+import { Realtime, type RealtimeEvent, type ReplyMessage, type SocketLike } from './client.ts';
 
-export type { RealtimeEvent };
+export type { RealtimeEvent, ReplyMessage };
 
 let instance: Realtime | null = null;
 
@@ -40,12 +40,24 @@ export function useRealtime(
 		const rt = realtime();
 		if (!rt) return;
 		const list = channels();
+		// Пустой список — подписываться не на что (гость без открытой комнаты): сокет не открываем.
+		if (list && !list.length) return;
 		return rt.subscribe(
 			list,
 			(event) => untrack(() => onEvent(event)),
 			onResync && (() => untrack(onResync))
 		);
 	});
+}
+
+/** Отправить сообщение в соединение (чат). false — соединения нет. */
+export function sendRealtime(message: object): boolean {
+	return realtime()?.send(message) ?? false;
+}
+
+/** Ответы сервера на sendRealtime, пока жив компонент. */
+export function useRealtimeReplies(listener: (message: ReplyMessage) => void) {
+	$effect(() => realtime()?.onReply((message) => untrack(() => listener(message))));
 }
 
 /** Вход соединения следует за сессией. Вызывается один раз — в корневом +layout.svelte. */

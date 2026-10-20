@@ -4,6 +4,41 @@
  */
 
 export interface paths {
+	'/api/v1/social/admin/chat/rooms': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Создать свою комнату. */
+		post: operations['admin_create_chat_room'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/social/admin/chat/rooms/{slug}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		post?: never;
+		/** Удалить свою комнату вместе с сообщениями и участниками → 204. */
+		delete: operations['admin_delete_chat_room'];
+		options?: never;
+		head?: never;
+		/** Изменить название или описание своей комнаты (slug не меняется: это адрес канала). */
+		patch: operations['admin_update_chat_room'];
+		trace?: never;
+	};
 	'/api/v1/social/admin/collections/{id}': {
 		parameters: {
 			query?: never;
@@ -102,6 +137,136 @@ export interface paths {
 		post?: never;
 		/** Открыть тему для ответов (повторно — тоже 204). */
 		delete: operations['admin_unlock_thread'];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/social/chat/messages/{id}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Одно сообщение: клиент перечитывает его по событию `chat.message.updated` / `deleted`. */
+		get: operations['get_chat_message'];
+		put?: never;
+		post?: never;
+		/** Удалить сообщение: автор или admin. В истории остаётся заглушка → 204. */
+		delete: operations['delete_chat_message'];
+		options?: never;
+		head?: never;
+		/** Изменить своё сообщение. */
+		patch: operations['update_chat_message'];
+		trace?: never;
+	};
+	'/api/v1/social/chat/rooms': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Свои комнаты: больше участников — выше. */
+		get: operations['list_chat_rooms'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/social/chat/rooms/{slug}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Своя комната по slug. */
+		get: operations['get_chat_room'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/social/chat/rooms/{slug}/membership': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/** Вступить в комнату → 204 (повторно — тоже 204): она в «моих чатах», канал подписан. */
+		put: operations['join_chat_room'];
+		post?: never;
+		/** Выйти из комнаты → 204 (даже если не был участником). */
+		delete: operations['leave_chat_room'];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/social/chat/{kind}/{slug}/messages': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * История комнаты: страница по 50 (до 100), старые сверху; дальше в прошлое —
+		 *     `?before=<next_before>`. Публичная, как форум.
+		 */
+		get: operations['chat_history'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/social/chat/{kind}/{slug}/mute': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/** Заглушить комнату: события приходят, но фронтенд не показывает уведомления → 204. */
+		put: operations['mute_chat'];
+		post?: never;
+		/** Снять заглушение → 204 (даже если не было). */
+		delete: operations['unmute_chat'];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/social/chats': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Мои чаты: комнаты всех сущностей, людей и тегов из интересов и свои комнаты, в которые
+		 *     вступил (сообщений может ещё не быть).
+		 *     Сверху — с самыми свежими сообщениями, затем без сообщений (новые интересы сверху).
+		 */
+		get: operations['list_own_chats'];
+		put?: never;
+		post?: never;
+		delete?: never;
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -364,11 +529,64 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** Свои интересы, новые сверху. */
+		/** Свои интересы-сущности, новые сверху. */
 		get: operations['list_own'];
 		put?: never;
 		post?: never;
 		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/social/interests/people': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Свои интересы-люди, новые сверху. */
+		get: operations['list_own_person_interests'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/social/interests/tags': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Свои интересы-теги и жанры, новые сверху. */
+		get: operations['list_own_tag_interests'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/social/people/{slug}/interest': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Есть ли человек в своих интересах: кнопка «Следить» на его странице. */
+		get: operations['get_own_person_interest'];
+		/** Добавить человека в интересы → 204 (повторно — тоже 204). */
+		put: operations['add_person_interest'];
+		post?: never;
+		/** Убрать человека из интересов → 204 (даже если его там не было). */
+		delete: operations['remove_person_interest'];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -457,6 +675,25 @@ export interface paths {
 		post?: never;
 		/** Снять свой голос. Голоса не было — тоже 200. */
 		delete: operations['unvote_review'];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/social/tags/{slug}/interest': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Есть ли тег в своих интересах. */
+		get: operations['get_own_tag_interest'];
+		/** Добавить тег в интересы → 204 (повторно — тоже 204). */
+		put: operations['add_tag_interest'];
+		post?: never;
+		/** Убрать тег из интересов → 204 (даже если его там не было). */
+		delete: operations['remove_tag_interest'];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -663,6 +900,67 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
 	schemas: {
+		/** @description Страница истории: старые сверху, последнее — самое новое. */
+		ChatHistory: {
+			items: components['schemas']['ChatMessage'][];
+			/**
+			 * Format: uuid
+			 * @description Курсор для более старых: `?before=`. `null` — это начало истории.
+			 */
+			next_before?: string | null;
+		};
+		/** @description Сообщение чата. Удалённое — заглушка: `deleted: true`, без `author` и `body`. */
+		ChatMessage: {
+			author?: components['schemas']['UserRef'] | null;
+			body?: string | null;
+			/** Format: date-time */
+			created_at: string;
+			deleted: boolean;
+			/** Format: date-time */
+			edited_at?: string | null;
+			/** Format: uuid */
+			id: string;
+			/**
+			 * @description Вид комнаты: `entity`, `person`, `tag`, `room`.
+			 * @example entity
+			 */
+			kind: string;
+			/**
+			 * Format: uuid
+			 * @description Ответ на сообщение той же комнаты (`null` — нет или оно удалено насовсем).
+			 */
+			reply_to?: string | null;
+			/**
+			 * Format: uuid
+			 * @description id сущности, человека или тега комнаты; у своей комнаты — id комнаты.
+			 */
+			target_id: string;
+		};
+		/**
+		 * @description Комната в списке «мои чаты». Заполнено ровно одно из `entity`, `person`, `tag`, `custom` —
+		 *     по `kind`.
+		 */
+		ChatSummary: {
+			custom?: components['schemas']['CustomRoom'] | null;
+			entity?: components['schemas']['EntityRef'] | null;
+			/** @example entity */
+			kind: string;
+			last_message?: components['schemas']['ChatMessage'] | null;
+			muted: boolean;
+			person?: components['schemas']['PersonRef'] | null;
+			/**
+			 * @description Имя канала и комнаты для WebSocket: `entity:<slug>`, `person:<slug>`, `tag:<slug>`,
+			 *     `room:<slug>`.
+			 * @example entity:dune-2021
+			 */
+			room: string;
+			tag?: components['schemas']['TagRef'] | null;
+			/**
+			 * Format: int64
+			 * @description Непрочитанные чужие сообщения, не больше 100.
+			 */
+			unread: number;
+		};
 		/** @description Коллекция в списке. */
 		Collection: {
 			/** @description Есть ли в коллекции сущность из `?contains=`; без параметра поля нет. */
@@ -737,6 +1035,20 @@ export interface components {
 			 */
 			body: string;
 		};
+		CreateRoom: {
+			/** @description До 500 символов. */
+			description?: string | null;
+			/**
+			 * @description a-z, 0-9 и дефисы между ними, 1–80: адрес `room:<slug>`.
+			 * @example cyberpunk-fans
+			 */
+			slug: string;
+			/**
+			 * @description 1–100 символов.
+			 * @example Киберпанк
+			 */
+			title: string;
+		};
 		/** @description Новая тема. */
 		CreateThread: {
 			/**
@@ -756,6 +1068,22 @@ export interface components {
 			 * @description 1–200 символов.
 			 * @example Дюна: книга против фильма
 			 */
+			title: string;
+		};
+		/** @description Своя комната (админа): название, описание, счётчики. */
+		CustomRoom: {
+			/** Format: date-time */
+			created_at: string;
+			description?: string | null;
+			/** Format: uuid */
+			id: string;
+			/** Format: int64 */
+			members_count: number;
+			/** Format: int32 */
+			messages_count: number;
+			/** @example cyberpunk-fans */
+			slug: string;
+			/** @example Киберпанк */
 			title: string;
 		};
 		/** @description Сущность каталога в чужих ответах: ровно столько, сколько нужно для ссылки на карточку. */
@@ -921,6 +1249,40 @@ export interface components {
 			total: number;
 		};
 		/** @description Страница списка. */
+		Page_CustomRoom: {
+			items: {
+				/** Format: date-time */
+				created_at: string;
+				description?: string | null;
+				/** Format: uuid */
+				id: string;
+				/** Format: int64 */
+				members_count: number;
+				/** Format: int32 */
+				messages_count: number;
+				/** @example cyberpunk-fans */
+				slug: string;
+				/** @example Киберпанк */
+				title: string;
+			}[];
+			/**
+			 * Format: int64
+			 * @example 20
+			 */
+			limit: number;
+			/**
+			 * Format: int64
+			 * @example 0
+			 */
+			offset: number;
+			/**
+			 * Format: int64
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @example 137
+			 */
+			total: number;
+		};
+		/** @description Страница списка. */
 		Page_Follow: {
 			items: {
 				/**
@@ -984,6 +1346,33 @@ export interface components {
 				created_at: string;
 				entity: components['schemas']['EntityRef'];
 				kind: components['schemas']['MarkKind'];
+			}[];
+			/**
+			 * Format: int64
+			 * @example 20
+			 */
+			limit: number;
+			/**
+			 * Format: int64
+			 * @example 0
+			 */
+			offset: number;
+			/**
+			 * Format: int64
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @example 137
+			 */
+			total: number;
+		};
+		/** @description Страница списка. */
+		Page_PersonInterest: {
+			items: {
+				person: components['schemas']['PersonRef'];
+				/**
+				 * Format: date-time
+				 * @description Когда добавлен.
+				 */
+				since: string;
 			}[];
 			/**
 			 * Format: int64
@@ -1139,6 +1528,33 @@ export interface components {
 			total: number;
 		};
 		/** @description Страница списка. */
+		Page_TagInterest: {
+			items: {
+				/**
+				 * Format: date-time
+				 * @description Когда добавлен.
+				 */
+				since: string;
+				tag: components['schemas']['TagRef'];
+			}[];
+			/**
+			 * Format: int64
+			 * @example 20
+			 */
+			limit: number;
+			/**
+			 * Format: int64
+			 * @example 0
+			 */
+			offset: number;
+			/**
+			 * Format: int64
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @example 137
+			 */
+			total: number;
+		};
+		/** @description Страница списка. */
 		Page_Thread: {
 			items: {
 				author: components['schemas']['UserRef'];
@@ -1185,6 +1601,25 @@ export interface components {
 			 * @example 137
 			 */
 			total: number;
+		};
+		/** @description Человек в интересах пользователя. */
+		PersonInterest: {
+			person: components['schemas']['PersonRef'];
+			/**
+			 * Format: date-time
+			 * @description Когда добавлен.
+			 */
+			since: string;
+		};
+		/** @description Человек каталога (автор, режиссёр, актёр) в чужих ответах: ссылка на его страницу. */
+		PersonRef: {
+			/** @example Дени Вильнёв */
+			full_name: string;
+			/** Format: uuid */
+			id: string;
+			photo_url?: string | null;
+			/** @example denis-villeneuve */
+			slug: string;
 		};
 		/** @description Сообщение в теме. Ветки — через `parent_id`: список плоский, по времени. */
 		Post: {
@@ -1446,6 +1881,29 @@ export interface components {
 			threads_count: number;
 			user: components['schemas']['UserRef'];
 		};
+		/** @description Тег или жанр в интересах пользователя. */
+		TagInterest: {
+			/**
+			 * Format: date-time
+			 * @description Когда добавлен.
+			 */
+			since: string;
+			tag: components['schemas']['TagRef'];
+		};
+		/** @description Тег или жанр каталога в чужих ответах. */
+		TagRef: {
+			/** Format: uuid */
+			id: string;
+			/**
+			 * @description `genre` или `tag`.
+			 * @example genre
+			 */
+			kind: string;
+			/** @example Научная фантастика */
+			name: string;
+			/** @example sci-fi */
+			slug: string;
+		};
 		/** @description Тема в списке: без текста и сообщений. */
 		Thread: {
 			author: components['schemas']['UserRef'];
@@ -1488,6 +1946,10 @@ export interface components {
 		 * @enum {string}
 		 */
 		ThreadSort: 'active' | 'new';
+		UpdateChatMessage: {
+			/** @description 1–2000 символов. */
+			body: string;
+		};
 		/** @description Изменение коллекции: переданные поля заменяются, `null` очищает описание. */
 		UpdateCollection: {
 			description?: string | null;
@@ -1498,6 +1960,12 @@ export interface components {
 		UpdatePost: {
 			/** @description 1–10 000 символов. */
 			body: string;
+		};
+		UpdateRoom: {
+			/** @description До 500 символов; пустая строка — убрать; не передан — не меняется. */
+			description?: string | null;
+			/** @description 1–100 символов; не передан — не меняется. */
+			title?: string | null;
 		};
 		/** @description Изменение темы: переданные поля заменяются, `entities` — набор целиком. */
 		UpdateThread: {
@@ -1547,13 +2015,18 @@ export interface components {
 	headers: never;
 	pathItems: never;
 }
+export type SchemaChatHistory = components['schemas']['ChatHistory'];
+export type SchemaChatMessage = components['schemas']['ChatMessage'];
+export type SchemaChatSummary = components['schemas']['ChatSummary'];
 export type SchemaCollection = components['schemas']['Collection'];
 export type SchemaCollectionDetail = components['schemas']['CollectionDetail'];
 export type SchemaCollectionItem = components['schemas']['CollectionItem'];
 export type SchemaCreateCollection = components['schemas']['CreateCollection'];
 export type SchemaCreatePost = components['schemas']['CreatePost'];
 export type SchemaCreateReviewComment = components['schemas']['CreateReviewComment'];
+export type SchemaCreateRoom = components['schemas']['CreateRoom'];
 export type SchemaCreateThread = components['schemas']['CreateThread'];
+export type SchemaCustomRoom = components['schemas']['CustomRoom'];
 export type SchemaEntityRef = components['schemas']['EntityRef'];
 export type SchemaErrorBody = components['schemas']['ErrorBody'];
 export type SchemaFeedItem = components['schemas']['FeedItem'];
@@ -1566,13 +2039,18 @@ export type SchemaMark = components['schemas']['Mark'];
 export type SchemaMarkKind = components['schemas']['MarkKind'];
 export type SchemaMarkedEntity = components['schemas']['MarkedEntity'];
 export type SchemaPageCollection = components['schemas']['Page_Collection'];
+export type SchemaPageCustomRoom = components['schemas']['Page_CustomRoom'];
 export type SchemaPageFollow = components['schemas']['Page_Follow'];
 export type SchemaPageInterest = components['schemas']['Page_Interest'];
 export type SchemaPageMarkedEntity = components['schemas']['Page_MarkedEntity'];
+export type SchemaPagePersonInterest = components['schemas']['Page_PersonInterest'];
 export type SchemaPagePost = components['schemas']['Page_Post'];
 export type SchemaPageReview = components['schemas']['Page_Review'];
 export type SchemaPageReviewComment = components['schemas']['Page_ReviewComment'];
+export type SchemaPageTagInterest = components['schemas']['Page_TagInterest'];
 export type SchemaPageThread = components['schemas']['Page_Thread'];
+export type SchemaPersonInterest = components['schemas']['PersonInterest'];
+export type SchemaPersonRef = components['schemas']['PersonRef'];
 export type SchemaPost = components['schemas']['Post'];
 export type SchemaPutCollectionItem = components['schemas']['PutCollectionItem'];
 export type SchemaPutReview = components['schemas']['PutReview'];
@@ -1588,16 +2066,197 @@ export type SchemaReview = components['schemas']['Review'];
 export type SchemaReviewComment = components['schemas']['ReviewComment'];
 export type SchemaReviewSort = components['schemas']['ReviewSort'];
 export type SchemaSocialProfile = components['schemas']['SocialProfile'];
+export type SchemaTagInterest = components['schemas']['TagInterest'];
+export type SchemaTagRef = components['schemas']['TagRef'];
 export type SchemaThread = components['schemas']['Thread'];
 export type SchemaThreadDetail = components['schemas']['ThreadDetail'];
 export type SchemaThreadSort = components['schemas']['ThreadSort'];
+export type SchemaUpdateChatMessage = components['schemas']['UpdateChatMessage'];
 export type SchemaUpdateCollection = components['schemas']['UpdateCollection'];
 export type SchemaUpdatePost = components['schemas']['UpdatePost'];
+export type SchemaUpdateRoom = components['schemas']['UpdateRoom'];
 export type SchemaUpdateThread = components['schemas']['UpdateThread'];
 export type SchemaUserRef = components['schemas']['UserRef'];
 export type SchemaVoteResult = components['schemas']['VoteResult'];
 export type $defs = Record<string, never>;
 export interface operations {
+	admin_create_chat_room: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['CreateRoom'];
+			};
+		};
+		responses: {
+			/** @description Создана */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['CustomRoom'];
+				};
+			};
+			/** @description Неверный slug, название или описание */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description slug занят */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	admin_delete_chat_room: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug комнаты
+				 * @example cyberpunk-fans
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Удалена */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такой комнаты */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	admin_update_chat_room: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug комнаты
+				 * @example cyberpunk-fans
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['UpdateRoom'];
+			};
+		};
+		responses: {
+			/** @description Изменена */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['CustomRoom'];
+				};
+			};
+			/** @description Неверное название или описание */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такой комнаты */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
 	admin_delete_collection: {
 		parameters: {
 			query?: never;
@@ -1925,6 +2584,470 @@ export interface operations {
 			};
 			/** @description Не найдена */
 			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	get_chat_message: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description id сообщения */
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Сообщение */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ChatMessage'];
+				};
+			};
+			/** @description Не найдено */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	delete_chat_message: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description id сообщения */
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Удалено (повторно — тоже 204) */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Чужое сообщение */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Не найдено */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	update_chat_message: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description id сообщения */
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['UpdateChatMessage'];
+			};
+		};
+		responses: {
+			/** @description Изменено */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ChatMessage'];
+				};
+			};
+			/** @description Пустой или длинный текст, сообщение удалено */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Чужое сообщение */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Не найдено */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	list_chat_rooms: {
+		parameters: {
+			query?: {
+				/** @description 1–100, по умолчанию 20. */
+				limit?: number;
+				/** @description С 0. */
+				offset?: number;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Страница комнат */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Page_CustomRoom'];
+				};
+			};
+		};
+	};
+	get_chat_room: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug комнаты
+				 * @example cyberpunk-fans
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Комната */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['CustomRoom'];
+				};
+			};
+			/** @description Нет такой комнаты */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	join_chat_room: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug комнаты
+				 * @example cyberpunk-fans
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Участник */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такой комнаты */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	leave_chat_room: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug комнаты
+				 * @example cyberpunk-fans
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Не участник */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такой комнаты */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	chat_history: {
+		parameters: {
+			query?: {
+				/** @description Сообщения старше этого id (курсор `next_before`). Без него — самые новые. */
+				before?: string;
+				/** @description 1–100, по умолчанию 50. */
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				/**
+				 * @description Вид комнаты: `entity`, `person`, `tag`, `room`
+				 * @example entity
+				 */
+				kind: string;
+				/**
+				 * @description slug сущности, человека, тега или своей комнаты
+				 * @example dune-2021
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Страница истории */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ChatHistory'];
+				};
+			};
+			/** @description `limit` вне 1–100 */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Неизвестный вид комнаты или slug */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	mute_chat: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description Вид комнаты: `entity`, `person`, `tag`, `room`
+				 * @example entity
+				 */
+				kind: string;
+				/**
+				 * @description slug сущности, человека, тега или своей комнаты
+				 * @example dune-2021
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Заглушена (повторно — тоже 204) */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Неизвестный вид комнаты или slug */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	unmute_chat: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description Вид комнаты: `entity`, `person`, `tag`, `room`
+				 * @example entity
+				 */
+				kind: string;
+				/**
+				 * @description slug сущности, человека, тега или своей комнаты
+				 * @example dune-2021
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Не заглушена */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Неизвестный вид комнаты или slug */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	list_own_chats: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Комнаты по интересам */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ChatSummary'][];
+				};
+			};
+			/** @description Нет токена */
+			401: {
 				headers: {
 					[name: string]: unknown;
 				};
@@ -3249,6 +4372,211 @@ export interface operations {
 			};
 		};
 	};
+	list_own_person_interests: {
+		parameters: {
+			query?: {
+				/** @description 1–100, по умолчанию 20. */
+				limit?: number;
+				/** @description С 0. */
+				offset?: number;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Страница интересов */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Page_PersonInterest'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	list_own_tag_interests: {
+		parameters: {
+			query?: {
+				/** @description 1–100, по умолчанию 20. */
+				limit?: number;
+				/** @description С 0. */
+				offset?: number;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Страница интересов */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Page_TagInterest'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	get_own_person_interest: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug человека
+				 * @example denis-villeneuve
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description В интересах */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['PersonInterest'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Человек не найден или его нет в интересах */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	add_person_interest: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug человека
+				 * @example denis-villeneuve
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description В интересах */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Уже 500 людей в интересах */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Человек не найден */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	remove_person_interest: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug человека
+				 * @example denis-villeneuve
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Не в интересах */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Человек не найден */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
 	delete_post: {
 		parameters: {
 			query?: never;
@@ -3660,6 +4988,143 @@ export interface operations {
 				};
 			};
 			/** @description Рецензия не найдена */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	get_own_tag_interest: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug тега
+				 * @example sci-fi
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description В интересах */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['TagInterest'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Тег не найден или его нет в интересах */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	add_tag_interest: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug тега
+				 * @example sci-fi
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description В интересах */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Уже 500 тегов в интересах */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Тег не найден */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	remove_tag_interest: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug тега
+				 * @example sci-fi
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Не в интересах */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Тег не найден */
 			404: {
 				headers: {
 					[name: string]: unknown;

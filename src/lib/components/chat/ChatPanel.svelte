@@ -1,0 +1,166 @@
+<script lang="ts">
+	import { onMount } from 'svelte';
+	import { afterNavigate } from '$app/navigation';
+	import { session } from '#lib/auth/session.svelte.ts';
+	import { chat } from '#lib/chat/chat.svelte.ts';
+	import { authorName, roomMeta, unreadLabel } from '#lib/chat/rooms.ts';
+	import { useRealtime, useRealtimeReplies } from '#lib/realtime/realtime.svelte.ts';
+	import ChatList from './ChatList.svelte';
+	import ChatRoom from './ChatRoom.svelte';
+	import RoomIcon from './RoomIcon.svelte';
+
+	// Правая панель чата на всех страницах. Десктоп (lg) — закреплена справа, сворачивается в
+	// полосу с иконками; уже — выезжающий лист (открывается иконкой в шапке, chat.sheet).
+	onMount(() => chat.restore());
+
+	// Список — у вошедшего; вход, выход — перечитать.
+	$effect(() => {
+		void session.status;
+		void chat.loadChats();
+	});
+
+	// Вошедшему — все события соединения (интересы и комнаты сервер подписывает сам).
+	useRealtime(
+		() => (session.status === 'authed' ? null : []),
+		(event) => chat.onEvent(event),
+		() => chat.resync()
+	);
+	// Открытая комната не из интересов (и у гостя) — подписать её канал.
+	useRealtime(
+		() => (chat.current ? [chat.current.room] : []),
+		(event) => session.status !== 'authed' && chat.onEvent(event),
+		() => session.status !== 'authed' && chat.resync()
+	);
+	useRealtimeReplies((reply) => chat.onReply(reply));
+
+	// Мобильный лист закрывается переходом по ссылке (на карточку из шапки комнаты).
+	afterNavigate(() => (chat.sheet = false));
+
+	const strip = $derived((chat.chats ?? []).slice(0, 8));
+</script>
+
+<svelte:window onkeydown={(e) => e.key === 'Escape' && chat.sheet && (chat.sheet = false)} />
+
+<!-- Затемнение под листом (мобильная ширина). -->
+{#if chat.sheet}
+	<button
+		class="fixed inset-0 z-40 bg-black/50 lg:hidden"
+		aria-label="Закрыть чат"
+		onclick={() => (chat.sheet = false)}
+	></button>
+{/if}
+
+<aside
+	aria-label="Чат"
+	class={[
+		'fixed right-0 z-50 flex flex-col border-l border-base-300 bg-base-200 transition-transform duration-200',
+		'inset-y-0 w-full max-w-sm pt-[env(safe-area-inset-top)]',
+		chat.sheet ? 'translate-x-0 shadow-2xl' : 'translate-x-full',
+		'lg:top-16 lg:z-10 lg:max-w-none lg:translate-x-0 lg:pt-0 lg:shadow-none',
+		chat.collapsed ? 'lg:w-16' : 'lg:w-80'
+	]}
+>
+	{#if chat.collapsed}
+		<!-- Свёрнута (только десктоп): развернуть, общий счётчик и последние комнаты. -->
+		<div class="hidden flex-1 flex-col items-center gap-2 overflow-y-auto py-3 lg:flex">
+			<button
+				class="btn indicator btn-square btn-ghost"
+				aria-label="Развернуть чат"
+				title="Развернуть чат"
+				onclick={() => chat.toggleCollapsed()}
+			>
+				{#if chat.unread}<span class="indicator-item badge badge-xs badge-primary"
+						>{unreadLabel(chat.unread)}</span
+					>{/if}
+				<svg
+					class="size-5"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					aria-hidden="true"
+					><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg
+				>
+			</button>
+			<div class="h-px w-8 bg-base-300"></div>
+			{#each strip as c (c.room)}
+				{@const meta = roomMeta(c)}
+				<button
+					class="indicator rounded-full transition hover:scale-105"
+					title={meta.title}
+					aria-label={meta.title}
+					onclick={() => chat.open(meta)}
+				>
+					{#if c.unread && !c.muted}<span class="indicator-item badge badge-xs badge-primary"
+							>{unreadLabel(c.unread)}</span
+						>{/if}
+					<RoomIcon {meta} />
+				</button>
+			{/each}
+		</div>
+	{/if}
+
+	<div class={['min-h-0 flex-1 flex-col', chat.collapsed ? 'flex lg:hidden' : 'flex']}>
+		<div class="flex items-center justify-end gap-1 px-2 py-2">
+			<p class="mr-auto pl-2 text-xs font-bold tracking-widest text-base-content/60 uppercase">
+				Чат
+			</p>
+			<a
+				href="/chat"
+				class="btn btn-square btn-ghost btn-sm"
+				title="Каталог комнат"
+				aria-label="Каталог комнат"
+			>
+				<svg
+					class="size-4"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					aria-hidden="true"
+					><path
+						d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"
+					/></svg
+				>
+			</a>
+			<button
+				class="btn hidden btn-square btn-ghost btn-sm lg:inline-flex"
+				title="Свернуть"
+				aria-label="Свернуть чат"
+				onclick={() => chat.toggleCollapsed()}>»</button
+			>
+			<button
+				class="btn btn-square btn-ghost btn-sm lg:hidden"
+				aria-label="Закрыть чат"
+				onclick={() => (chat.sheet = false)}>✕</button
+			>
+		</div>
+		{#if chat.current}
+			<ChatRoom meta={chat.current} />
+		{:else}
+			<ChatList />
+		{/if}
+	</div>
+</aside>
+
+<!-- Уведомления о новых сообщениях не в открытой комнате. -->
+{#if chat.toasts.length}
+	<div class="toast toast-start z-50">
+		{#each chat.toasts as t (t.id)}
+			<div class="alert max-w-xs bg-base-200 shadow-lg">
+				<button class="flex min-w-0 items-center gap-3 text-left" onclick={() => chat.open(t.meta)}>
+					<RoomIcon meta={t.meta} size="size-8" />
+					<span class="min-w-0">
+						<span class="block truncate text-xs font-bold">{t.meta.title}</span>
+						<span class="block truncate text-xs text-base-content/70"
+							>{t.message.author ? `${authorName(t.message.author)}: ` : ''}{t.message.body}</span
+						>
+					</span>
+				</button>
+				<button class="btn btn-ghost btn-xs" aria-label="Скрыть" onclick={() => chat.dismiss(t.id)}
+					>✕</button
+				>
+			</div>
+		{/each}
+	</div>
+{/if}

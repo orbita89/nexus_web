@@ -494,6 +494,26 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/catalog/archive/stats': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Сколько работ в архиве, всего и по типам — для подписи на сайте («ещё N в архиве»).
+		 *     Публичный, без запроса к PostgreSQL: счётчики Tantivy с одного снимка индекса.
+		 */
+		get: operations['archive_stats'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/catalog/entities': {
 		parameters: {
 			query?: never;
@@ -815,6 +835,18 @@ export interface components {
 			 * @example 42491
 			 */
 			tmdb_id?: number | null;
+		};
+		/** @description Размер холодного архива: сколько работ можно найти через `GET /archive/search`. */
+		ArchiveStats: {
+			/** @description По типам: все `kind` каталога, нет в архиве — 0 (`{"movie": 1200000, "book": 0, ...}`). */
+			by_kind: {
+				[key: string]: number;
+			};
+			/**
+			 * Format: int64
+			 * @description Документов в индексе архива (работ не на сайте); с `?kind=` — только этого типа.
+			 */
+			total: number;
 		};
 		/** @description Награда или номинация. */
 		Award: {
@@ -1909,6 +1941,7 @@ export type SchemaActiveResult = components['schemas']['ActiveResult'];
 export type SchemaAddCredit = components['schemas']['AddCredit'];
 export type SchemaAdminEntitySummary = components['schemas']['AdminEntitySummary'];
 export type SchemaArchiveDoc = components['schemas']['ArchiveDoc'];
+export type SchemaArchiveStats = components['schemas']['ArchiveStats'];
 export type SchemaAward = components['schemas']['Award'];
 export type SchemaBookMetadata = components['schemas']['BookMetadata'];
 export type SchemaCreateEntity = components['schemas']['CreateEntity'];
@@ -3623,6 +3656,47 @@ export interface operations {
 				};
 			};
 			/** @description Пустой или длинный `q`, `limit` вне 1–20, `offset` вне 0–1000 */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Архив не настроен (`ARCHIVE_DIR`) или недоступен */
+			503: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	archive_stats: {
+		parameters: {
+			query?: {
+				/** @description Только этот тип: `total` — его число. Без параметра — всего. */
+				kind?: components['schemas']['EntityKind'];
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Число работ в архиве, всего и по типам */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ArchiveStats'];
+				};
+			};
+			/** @description Неизвестный `kind` */
 			400: {
 				headers: {
 					[name: string]: unknown;

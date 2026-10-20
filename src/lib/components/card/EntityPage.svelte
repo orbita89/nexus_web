@@ -3,7 +3,7 @@
 	import { unwrap } from '#lib/api/errors.ts';
 	import { session } from '#lib/auth/session.svelte.ts';
 	import { isReleased, productionOf } from '#lib/catalog/card.ts';
-	import { kindByApi } from '#lib/catalog/kinds.ts';
+	import { entityHref, kindByApi } from '#lib/catalog/kinds.ts';
 	import { summary, yearOf } from '#lib/catalog/labels.ts';
 	import { trailerSources } from '#lib/catalog/trailer.ts';
 	import About from '#lib/components/card/About.svelte';
@@ -22,6 +22,7 @@
 	import AddToCollection from '#lib/components/social/AddToCollection.svelte';
 	import CardCollections from '#lib/components/social/CardCollections.svelte';
 	import WatchButton from '#lib/components/social/WatchButton.svelte';
+	import ChatButton from '#lib/components/chat/ChatButton.svelte';
 	import { useRealtime } from '#lib/realtime/realtime.svelte.ts';
 	import { browserApi, CardLive, liveQuery } from '#lib/social/card-live.svelte.ts';
 	import { Marks } from '#lib/social/marks.svelte.ts';
@@ -144,6 +145,14 @@
 				/>
 				<AddToCollection slug={entity.slug} title={entity.title} onchange={() => live.refresh()} />
 				<WatchButton {watch} />
+				<ChatButton
+					meta={{
+						room: `entity:${entity.slug}`,
+						title: entity.title,
+						href: entityHref(entity),
+						image: entity.cover_url ?? null
+					}}
+				/>
 			{/snippet}
 		</Hero>
 	</div>

@@ -6,10 +6,18 @@
 	import LoadError from '#lib/components/catalog/LoadError.svelte';
 	import Pagination from '#lib/components/catalog/Pagination.svelte';
 	import Seo from '#lib/components/catalog/Seo.svelte';
+	import ChatButton from '#lib/components/chat/ChatButton.svelte';
+	import WatchButton from '#lib/components/social/WatchButton.svelte';
+	import { Watch } from '#lib/social/watch.svelte.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
 
+	const watch = new Watch(
+		() => data.tag.slug,
+		() => data.tag.id,
+		'tags'
+	);
 	const heading = $derived(data.kind ? `${data.tag.name} · ${data.kind.title}` : data.tag.name);
 </script>
 
@@ -26,6 +34,17 @@
 	<p class="mt-1 text-sm text-base-content/50">
 		{count(data.tag.entities_count, ['произведение', 'произведения', 'произведений'])} в каталоге
 	</p>
+	<div class="mt-4 flex flex-wrap items-center gap-2">
+		<WatchButton {watch} />
+		<ChatButton
+			meta={{
+				room: `tag:${data.tag.slug}`,
+				title: data.tag.name,
+				href: `/tags/${data.tag.slug}`,
+				image: null
+			}}
+		/>
+	</div>
 </header>
 
 <div class="mb-8 overflow-x-auto"><KindTabs current={data.kind?.slug} /></div>

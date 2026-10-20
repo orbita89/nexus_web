@@ -39,8 +39,12 @@ type ServerMessage =
 	| { type: 'event'; event: string; channels: string[]; data: Record<string, unknown> }
 	| { type: 'lagged'; missed: number }
 	| { type: 'subscribed' | 'unsubscribed'; channels: string[] }
-	| { type: 'error'; error: string }
-	| { type: 'pong' };
+	| { type: 'error'; error: string; client_id?: string; retry_after?: number }
+	| { type: 'pong' }
+	| { type: 'chat.sent' | 'chat.read_saved'; [key: string]: unknown };
+
+/** Ответ сервера не про события: chat.sent, chat.read_saved, error — для чата. */
+export type ReplyMessage = { type: string; [key: string]: unknown };
 
 const OPEN = 1;
 /** Повторить auth за столько до истечения: accessToken() обновляет токены моложе 30 с. */
@@ -66,6 +70,7 @@ export class Realtime {
 	#socket: SocketLike | null = null;
 	#counts = new Map<string, number>();
 	#subs = new Set<Subscription>();
+	#replies = new Set<(message: ReplyMessage) => void>();
 	#wantAuth = false;
 	#attempt = 0;
 	#reconnectTimer: unknown = null;
@@ -95,6 +100,22 @@ export class Realtime {
 			const removed = (channels ?? []).filter((c) => !isAutomatic(c) && this.#dec(c));
 			if (removed.length) this.#send({ type: 'unsubscribe', channels: removed });
 		};
+	}
+
+	/**
+	 * Отправить сообщение в соединение (chat.send, chat.read). false — соединения нет: сообщение
+	 * не ушло, вызывающий показывает ошибку.
+	 */
+	send(message: object): boolean {
+		if (this.#socket?.readyState !== OPEN) return false;
+		this.#socket.send(JSON.stringify(message));
+		return true;
+	}
+
+	/** Слушать ответы сервера на send (chat.sent, chat.read_saved, error). Возвращает отписку. */
+	onReply(listener: (message: ReplyMessage) => void): () => void {
+		this.#replies.add(listener);
+		return () => this.#replies.delete(listener);
 	}
 
 	/** Вошли — auth в текущее соединение; вышли — новое гостевое соединение. */
@@ -201,6 +222,11 @@ export class Realtime {
 				break;
 			case 'lagged':
 				this.#resync();
+				break;
+			case 'chat.sent':
+			case 'chat.read_saved':
+			case 'error':
+				for (const listener of this.#replies) listener(message);
 				break;
 		}
 	}

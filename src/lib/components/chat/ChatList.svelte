@@ -1,0 +1,165 @@
+<script lang="ts">
+	import { page } from '$app/state';
+	import { session } from '#lib/auth/session.svelte.ts';
+	import { chat } from '#lib/chat/chat.svelte.ts';
+	import {
+		authorName,
+		ROOM_KINDS,
+		roomMeta,
+		shortTime,
+		unreadLabel,
+		type RoomKind
+	} from '#lib/chat/rooms.ts';
+	import { loginUrl } from '#lib/utils/redirect.ts';
+	import RoomIcon from './RoomIcon.svelte';
+
+	// «Мои чаты»: фильтр по виду, поиск по названию, строки — порядок бэкенда (свежие сверху).
+	let query = $state('');
+
+	const tabs: { kind: RoomKind | null; title: string }[] = [
+		{ kind: null, title: 'Все' },
+		{ kind: 'entity', title: 'Фильмы' },
+		{ kind: 'person', title: 'Люди' },
+		{ kind: 'tag', title: 'Темы' },
+		{ kind: 'room', title: 'Комнаты' }
+	];
+
+	const shown = $derived(
+		(chat.chats ?? [])
+			.filter((c) => !chat.filter || c.kind === chat.filter)
+			.map((c) => ({ chat: c, meta: roomMeta(c) }))
+			.filter(({ meta }) => meta.title.toLowerCase().includes(query.trim().toLowerCase()))
+	);
+	const heading = $derived(ROOM_KINDS.find((k) => k.kind === chat.filter)?.title ?? 'Мои чаты');
+</script>
+
+<div class="flex min-h-0 flex-1 flex-col">
+	<div class="px-4 pt-1">
+		<div class="flex rounded-full bg-base-300/60 p-1" role="tablist" aria-label="Вид чатов">
+			{#each tabs as tab (tab.title)}
+				<button
+					role="tab"
+					aria-selected={chat.filter === tab.kind}
+					class={[
+						'flex-1 rounded-full px-1.5 py-1 text-[0.65rem] font-bold tracking-wider uppercase transition',
+						chat.filter === tab.kind
+							? 'bg-base-100 text-base-content shadow-sm'
+							: 'text-base-content/50 hover:text-base-content'
+					]}
+					onclick={() => (chat.filter = tab.kind)}>{tab.title}</button
+				>
+			{/each}
+		</div>
+		<label class="input mt-3 w-full input-sm">
+			<input type="search" placeholder="Найти чат" bind:value={query} aria-label="Найти чат" />
+			<svg
+				class="size-4 opacity-50"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg
+			>
+		</label>
+	</div>
+
+	<p class="px-4 pt-4 pb-1 text-[0.65rem] font-bold tracking-widest text-base-content/50 uppercase">
+		{heading}{#if chat.chats}&nbsp;({shown.length}){/if}
+	</p>
+
+	<div class="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
+		{#if session.status === 'guest'}
+			<p class="px-2 py-6 text-sm text-base-content/60">
+				<a href={loginUrl(page.url)} class="link link-primary">Войдите</a>, чтобы видеть чаты своих
+				интересов. Читать чат фильма можно и без входа — кнопка «Открыть чат» на карточке.
+			</p>
+		{:else if chat.chatsError}
+			<p role="alert" class="px-2 py-4 text-sm text-error">
+				{chat.chatsError}
+				<button class="link" onclick={() => chat.loadChats()}>Повторить</button>
+			</p>
+		{:else if !chat.chats}
+			{#each [1, 2, 3, 4, 5] as i (i)}
+				<div class="flex items-center gap-3 px-2 py-2">
+					<span class="size-10 skeleton rounded-full"></span>
+					<span class="h-8 flex-1 skeleton"></span>
+				</div>
+			{/each}
+		{:else if !chat.chats.length}
+			<p class="px-2 py-6 text-sm text-base-content/60">
+				Добавьте фильмы, людей или темы в интересы — их чаты появятся здесь.
+			</p>
+		{:else if !shown.length}
+			<p class="px-2 py-6 text-sm text-base-content/60">Ничего не нашлось.</p>
+		{:else}
+			<ul>
+				{#each shown as { chat: c, meta } (c.room)}
+					{@const last = c.last_message}
+					<li>
+						<button
+							class="flex w-full items-center gap-3 rounded-box px-2 py-2 text-left transition hover:bg-base-300/60"
+							onclick={() => chat.open(meta)}
+						>
+							<span class="relative">
+								<RoomIcon {meta} />
+								{#if c.unread && !c.muted}
+									<span
+										class="absolute -right-0.5 -bottom-0.5 size-3 rounded-full bg-success ring-2 ring-base-200"
+									></span>
+								{/if}
+							</span>
+							<span class="min-w-0 flex-1">
+								<span class="flex items-baseline gap-2">
+									<span class="truncate text-sm font-bold">{meta.title}</span>
+									{#if c.muted}
+										<svg
+											class="size-3.5 shrink-0 opacity-50"
+											viewBox="0 0 24 24"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="2"
+											aria-label="Заглушён"
+											role="img"
+											><path
+												d="M13.7 21a2 2 0 0 1-3.4 0M18.6 13A17 17 0 0 1 18 8M6.3 6.3A6 6 0 0 0 6 8c0 7-3 9-3 9h14M2 2l20 20M18 8a6 6 0 0 0-9.3-5"
+											/></svg
+										>
+									{/if}
+									{#if last}
+										<span class="ml-auto shrink-0 text-xs text-base-content/40"
+											>{shortTime(last.created_at)}</span
+										>
+									{/if}
+								</span>
+								<span class="flex items-center gap-2">
+									<span class="truncate text-xs text-base-content/50">
+										{#if !last}
+											Сообщений пока нет
+										{:else if last.deleted}
+											Сообщение удалено
+										{:else}
+											{last.author ? `${authorName(last.author)}: ` : ''}{last.body}
+										{/if}
+									</span>
+									{#if c.unread}
+										<span
+											class={[
+												'ml-auto badge shrink-0 badge-xs font-bold',
+												c.muted ? 'badge-ghost' : 'badge-primary'
+											]}
+											aria-label="Непрочитанных: {c.unread}">{unreadLabel(c.unread)}</span
+										>
+									{/if}
+								</span>
+							</span>
+						</button>
+					</li>
+				{/each}
+			</ul>
+		{/if}
+	</div>
+
+	<p class="border-t border-base-300 px-4 py-3 text-xs text-base-content/60">
+		<a href="/chat" class="link link-primary">Каталог комнат</a> — вступайте в общие комнаты Nexus.
+	</p>
+</div>

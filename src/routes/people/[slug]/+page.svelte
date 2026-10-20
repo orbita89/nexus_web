@@ -5,6 +5,9 @@
 	import EntityGrid from '#lib/components/catalog/EntityGrid.svelte';
 	import PersonAvatar from '#lib/components/catalog/PersonAvatar.svelte';
 	import Seo from '#lib/components/catalog/Seo.svelte';
+	import ChatButton from '#lib/components/chat/ChatButton.svelte';
+	import WatchButton from '#lib/components/social/WatchButton.svelte';
+	import { Watch } from '#lib/social/watch.svelte.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -14,6 +17,11 @@
 	const person = $derived(data.person);
 	const total = $derived(new Set(person.credits.map((c) => c.entity.id)).size);
 	const open = new SvelteSet<string>();
+	const watch = new Watch(
+		() => person.slug,
+		() => person.id,
+		'people'
+	);
 </script>
 
 <Seo
@@ -37,6 +45,17 @@
 				Дата рождения: {formatDate(person.birth_date)}
 			</p>
 		{/if}
+		<div class="mt-4 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+			<WatchButton {watch} />
+			<ChatButton
+				meta={{
+					room: `person:${person.slug}`,
+					title: person.full_name,
+					href: `/people/${person.slug}`,
+					image: person.photo_url ?? null
+				}}
+			/>
+		</div>
 		{#if person.bio}
 			<p class="mt-4 max-w-2xl leading-relaxed whitespace-pre-line text-base-content/80">
 				{person.bio}

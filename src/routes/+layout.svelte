@@ -3,6 +3,8 @@
 	import favicon from '#lib/assets/favicon.svg';
 	import Navbar from '#lib/components/Navbar.svelte';
 	import ReplyToasts from '#lib/components/social/ReplyToasts.svelte';
+	import ChatPanel from '#lib/components/chat/ChatPanel.svelte';
+	import { chat } from '#lib/chat/chat.svelte.ts';
 	import { syncRealtimeAuth } from '#lib/realtime/realtime.svelte.ts';
 	import { dropLegacyStorage } from '#lib/utils/legacy-storage.ts';
 	import { onMount } from 'svelte';
@@ -27,7 +29,13 @@
 	<title>Nexus</title>
 </svelte:head>
 
-<div class="relative isolate flex min-h-screen flex-col overflow-x-clip">
+<!-- Справа закреплена панель чата: на десктопе контент сдвигается на её ширину. -->
+<div
+	class={[
+		'relative isolate flex min-h-screen flex-col overflow-x-clip',
+		chat.collapsed ? 'lg:pr-16' : 'lg:pr-80'
+	]}
+>
 	<Navbar />
 	<main class="mx-auto w-full max-w-6xl flex-1 px-4 py-6">
 		{@render children()}
@@ -59,3 +67,4 @@
 	</footer>
 	<ReplyToasts />
 </div>
+<ChatPanel />
