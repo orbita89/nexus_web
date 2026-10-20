@@ -83,3 +83,19 @@ export function archivePage(api: Api, q: string, limit: number, offset = 0) {
 		api.catalog.GET('/api/v1/catalog/archive/search', { params: { query: { q, limit, offset } } })
 	);
 }
+
+/**
+ * Сколько фильмов в архиве (не на сайте, ищутся только по названию). null — архив недоступен (503)
+ * или ответ не пришёл: подпись про архив тогда просто не показываем. Пути ещё нет в контракте
+ * catalog.json — поэтому обычный fetch.
+ */
+export async function archiveMovies(fetch: typeof globalThis.fetch, origin: string) {
+	try {
+		const res = await fetch(`${origin}/api/v1/catalog/archive/stats`);
+		if (!res.ok) return null;
+		const stats: { by_kind?: Record<string, number> } = await res.json();
+		return stats.by_kind?.movie ?? null;
+	} catch {
+		return null;
+	}
+}

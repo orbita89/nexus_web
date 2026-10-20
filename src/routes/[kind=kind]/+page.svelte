@@ -64,11 +64,18 @@
 		{#if loading}
 			<span class="loading loading-xs loading-spinner"></span>Загружаем…
 		{:else if data.list.data}
-			{count(total + archiveTotal, ['фильм', 'фильма', 'фильмов'])}
-			{#if feed.loading}
-				<span class="loading loading-xs loading-spinner"></span>ищем в архиве…
-			{:else if archiveOn && !data.filters.q}
-				· архив ищется только по названию
+			{#if archiveOn && !data.filters.q}
+				{count(total, ['фильм', 'фильма', 'фильмов'])} на сайте
+				{#if data.archiveSize}
+					· ещё {data.archiveSize.toLocaleString('ru-RU')} в архиве — поиск по названию
+				{:else}
+					· архив ищется только по названию
+				{/if}
+			{:else}
+				{count(total + archiveTotal, ['фильм', 'фильма', 'фильмов'])}
+				{#if feed.loading}
+					<span class="loading loading-xs loading-spinner"></span>ищем в архиве…
+				{/if}
 			{/if}
 		{/if}
 	</p>

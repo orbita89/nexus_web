@@ -16,9 +16,8 @@ export interface paths {
 		/**
 		 * Перенести ненужные фильмы с сайта в холодный архив: документ в Tantivy (название,
 		 *     оригинальное название, дата, постер, TMDB id, popularity), затем строка удаляется из
-		 *     PostgreSQL (каскадом титры, теги, статистика, полные данные TMDB; люди без других работ — тоже),
-		 *     TMDB id — в `archived_tmdb` с `manual`: сборка горячего слоя такой фильм не вернёт, импорт
-		 *     пропустит. Поиск сайта и статика обновляются. Вернуть — `POST /admin/archive/promote/{slug}`
+		 *     PostgreSQL (каскадом титры, теги, статистика; люди без других работ — тоже). Документ помечен
+		 *     `manual`: сборка горячего слоя такой фильм не вернёт, импорт пропустит (TMDB id есть в архиве). Поиск сайта и статика обновляются. Вернуть — `POST /admin/archive/promote/{slug}`
 		 *     («скелетом»: без описания, титров и жанров).
 		 * @description Не переносятся (`skipped`): нет на сайте, без TMDB, с данными пользователей.
 		 */
@@ -42,7 +41,7 @@ export interface paths {
 		 * Вернуть фильм из архива на сайт. С `TMDB_API_KEY` — со всеми данными TMDB (описание,
 		 *     постер, титры, жанры, трейлеры; [`enrich`]), TMDB недоступен или ключа нет — «скелетом»:
 		 *     название, оригинальное название, дата выхода, постер. `active_manual` — сборка горячего слоя
-		 *     фильм не уберёт; пометка ручного переноса в архив снимается. Документ удаляется из архива,
+		 *     фильм не уберёт; пометка ручного переноса в архив снимается вместе с документом. Документ удаляется из архива,
 		 *     поиск сайта и статика обновляются.
 		 */
 		post: operations['archive_promote'];
@@ -842,6 +841,7 @@ export interface components {
 			 * @example 9780441013593
 			 */
 			isbn?: string | null;
+			libgen?: components['schemas']['LibgenSource'] | null;
 			/**
 			 * Format: int32
 			 * @example 896
@@ -1137,6 +1137,33 @@ export interface components {
 					/** @enum {string} */
 					type: 'done';
 			  });
+		LibgenFile: {
+			/**
+			 * @description `fb2`, `epub`, `pdf`, `djvu`…: до 20 символов.
+			 * @example fb2
+			 */
+			extension?: string | null;
+			/**
+			 * Format: int64
+			 * @description `ID` строки дампа LibGen.
+			 */
+			id?: number | null;
+			/**
+			 * @description md5 файла, 32 hex в нижнем регистре.
+			 * @example 0123456789abcdef0123456789abcdef
+			 */
+			md5: string;
+		};
+		/** @description Файлы книги в LibGen (форматы, сканы) и ключ произведения, по которому импорт их объединяет. */
+		LibgenSource: {
+			/** @description 1–200 файлов, md5 без повторов. */
+			files: components['schemas']['LibgenFile'][];
+			/**
+			 * @description Нормализованные название и авторы: `мастер и маргарита|булгаков михаил афанасьевич`.
+			 *     1–1000 символов.
+			 */
+			work: string;
+		};
 		/**
 		 * @description Поля, специфичные для типа (`kind`). Все поля необязательны, неизвестные запрещены.
 		 *     Только для документации: разбирается по `kind` функцией [`validate`].
@@ -1901,6 +1928,8 @@ export type SchemaEntitySummary = components['schemas']['EntitySummary'];
 export type SchemaErrorBody = components['schemas']['ErrorBody'];
 export type SchemaGameMetadata = components['schemas']['GameMetadata'];
 export type SchemaJobEvent = components['schemas']['JobEvent'];
+export type SchemaLibgenFile = components['schemas']['LibgenFile'];
+export type SchemaLibgenSource = components['schemas']['LibgenSource'];
 export type SchemaMetadata = components['schemas']['Metadata'];
 export type SchemaMovieMetadata = components['schemas']['MovieMetadata'];
 export type SchemaPageAdminEntitySummary = components['schemas']['Page_AdminEntitySummary'];

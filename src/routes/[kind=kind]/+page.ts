@@ -3,7 +3,7 @@ import { unwrap } from '#lib/api/errors.ts';
 import { readFilters, readMode } from '#lib/catalog/filters.ts';
 import { kindBySlug } from '#lib/catalog/kinds.ts';
 import { ratingsFor, settle } from '#lib/catalog/load.ts';
-import { personName, sectionPage } from '#lib/catalog/search.ts';
+import { archiveMovies, personName, sectionPage } from '#lib/catalog/search.ts';
 import { readOffset } from '#lib/catalog/url.ts';
 import type { PageLoad } from './$types';
 
@@ -18,10 +18,12 @@ export const load: PageLoad = async ({ fetch, url, params }) => {
 	const offset = readOffset(url);
 	const api = publicApi(fetch, url);
 
-	const [results, tags, person] = await Promise.all([
+	const [results, tags, person, archiveSize] = await Promise.all([
 		settle(sectionPage(api, kind.kind, filters, mode, offset)),
 		settle(unwrap(api.catalog.GET('/api/v1/catalog/tags'))),
-		personName(api, filters.person)
+		personName(api, filters.person),
+		// Размер архива — для подписи «ещё N в архиве»; меняется только при пересборке архива.
+		kind.kind === 'movie' ? archiveMovies(fetch, url.origin) : null
 	]);
 	const ratings = await ratingsFor(api, results.data?.items ?? []);
 	return {
@@ -31,6 +33,7 @@ export const load: PageLoad = async ({ fetch, url, params }) => {
 		ratings,
 		list: results,
 		personName: person,
+		archiveSize,
 		tags: (tags.data ?? []).toSorted((a, b) => a.name.localeCompare(b.name, 'ru'))
 	};
 };
