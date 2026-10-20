@@ -168,7 +168,7 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** Свои комнаты: больше участников — выше. */
+		/** Свои комнаты: больше участников — выше. Вошедшему — `joined` (вступил ли). */
 		get: operations['list_chat_rooms'];
 		put?: never;
 		post?: never;
@@ -185,7 +185,7 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** Своя комната по slug. */
+		/** Своя комната по slug. Вошедшему — `joined` (вступил ли). */
 		get: operations['get_chat_room'];
 		put?: never;
 		post?: never;
@@ -208,6 +208,27 @@ export interface paths {
 		post?: never;
 		/** Выйти из комнаты → 204 (даже если не был участником). */
 		delete: operations['leave_chat_room'];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/social/chat/{kind}/{slug}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Комната для открытой панели: что это, последнее сообщение и (для вошедшего) в «моих чатах»
+		 *     ли она, заглушена ли, сколько непрочитанных. Работает и для комнаты не из «моих чатов»
+		 *     (открытой с карточки). Публичный: у гостя `me: null`.
+		 */
+		get: operations['get_chat_room_info'];
+		put?: never;
+		post?: never;
+		delete?: never;
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -937,6 +958,41 @@ export interface components {
 			target_id: string;
 		};
 		/**
+		 * @description Комната для открытой панели чата: что это, последнее сообщение и состояние текущего
+		 *     пользователя. Заполнено одно из `entity`, `person`, `tag`, `custom` — по `kind`.
+		 */
+		ChatRoomInfo: {
+			custom?: components['schemas']['CustomRoom'] | null;
+			entity?: components['schemas']['EntityRef'] | null;
+			/** @example entity */
+			kind: string;
+			last_message?: components['schemas']['ChatMessage'] | null;
+			me?: components['schemas']['ChatRoomMe'] | null;
+			person?: components['schemas']['PersonRef'] | null;
+			/**
+			 * @description Имя канала и комнаты для WebSocket.
+			 * @example entity:dune-2021
+			 */
+			room: string;
+			tag?: components['schemas']['TagRef'] | null;
+		};
+		/** @description Комната глазами текущего пользователя. */
+		ChatRoomMe: {
+			/**
+			 * Format: uuid
+			 * @description Последнее прочитанное сообщение (`null` — ничего): разделитель «новые сообщения».
+			 */
+			last_read_id?: string | null;
+			/** @description Комната в «моих чатах»: сущность, человек или тег в интересах, в свою комнату — вступил. */
+			member: boolean;
+			muted: boolean;
+			/**
+			 * Format: int64
+			 * @description Непрочитанные чужие сообщения, не больше 100.
+			 */
+			unread: number;
+		};
+		/**
 		 * @description Комната в списке «мои чаты». Заполнено ровно одно из `entity`, `person`, `tag`, `custom` —
 		 *     по `kind`.
 		 */
@@ -1077,6 +1133,8 @@ export interface components {
 			description?: string | null;
 			/** Format: uuid */
 			id: string;
+			/** @description Вступил ли текущий пользователь; `null` — гость. */
+			joined?: boolean | null;
 			/** Format: int64 */
 			members_count: number;
 			/** Format: int32 */
@@ -1256,6 +1314,8 @@ export interface components {
 				description?: string | null;
 				/** Format: uuid */
 				id: string;
+				/** @description Вступил ли текущий пользователь; `null` — гость. */
+				joined?: boolean | null;
 				/** Format: int64 */
 				members_count: number;
 				/** Format: int32 */
@@ -2017,6 +2077,8 @@ export interface components {
 }
 export type SchemaChatHistory = components['schemas']['ChatHistory'];
 export type SchemaChatMessage = components['schemas']['ChatMessage'];
+export type SchemaChatRoomInfo = components['schemas']['ChatRoomInfo'];
+export type SchemaChatRoomMe = components['schemas']['ChatRoomMe'];
 export type SchemaChatSummary = components['schemas']['ChatSummary'];
 export type SchemaCollection = components['schemas']['Collection'];
 export type SchemaCollectionDetail = components['schemas']['CollectionDetail'];
@@ -2759,6 +2821,15 @@ export interface operations {
 					'application/json': components['schemas']['Page_CustomRoom'];
 				};
 			};
+			/** @description Неверный токен */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
 		};
 	};
 	get_chat_room: {
@@ -2783,6 +2854,15 @@ export interface operations {
 				};
 				content: {
 					'application/json': components['schemas']['CustomRoom'];
+				};
+			};
+			/** @description Неверный токен */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
 				};
 			};
 			/** @description Нет такой комнаты */
@@ -2870,6 +2950,55 @@ export interface operations {
 				};
 			};
 			/** @description Нет такой комнаты */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	get_chat_room_info: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description Вид комнаты: `entity`, `person`, `tag`, `room`
+				 * @example entity
+				 */
+				kind: string;
+				/**
+				 * @description slug сущности, человека, тега или своей комнаты
+				 * @example dune-2021
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Комната */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ChatRoomInfo'];
+				};
+			};
+			/** @description Неверный токен */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Неизвестный вид комнаты или slug */
 			404: {
 				headers: {
 					[name: string]: unknown;

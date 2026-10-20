@@ -51,6 +51,42 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/catalog/admin/banners': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Все баннеры (и неактивные, и вне окна показа) по странице, затем `position`. */
+		get: operations['admin_list_banners'];
+		put?: never;
+		/** Создать баннер. */
+		post: operations['create_banner'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/admin/banners/{id}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		post?: never;
+		/** Удалить баннер. */
+		delete: operations['delete_banner'];
+		options?: never;
+		head?: never;
+		/** Изменить баннер: переданные поля заменяются, `null` очищает необязательное. */
+		patch: operations['update_banner'];
+		trace?: never;
+	};
 	'/api/v1/catalog/admin/entities': {
 		parameters: {
 			query?: never;
@@ -514,6 +550,26 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/catalog/banners': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Баннеры страницы сайта: активные, сейчас в окне показа (`starts_at`/`ends_at`, пустые — без
+		 *     границы), по `position`, затем старые сверху; до 20.
+		 */
+		get: operations['list_banners'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/catalog/entities': {
 		parameters: {
 			query?: never;
@@ -864,6 +920,28 @@ export interface components {
 			 */
 			year?: number | null;
 		};
+		Banner: {
+			/** Format: date-time */
+			created_at: string;
+			/** Format: date-time */
+			ends_at?: string | null;
+			/** Format: uuid */
+			id: string;
+			image_url: string;
+			is_active: boolean;
+			/** @description `http(s)://...` или путь сайта `/films/dune-2021`. */
+			link_url?: string | null;
+			/** @example films */
+			page: string;
+			/** Format: int32 */
+			position: number;
+			/** Format: date-time */
+			starts_at?: string | null;
+			subtitle?: string | null;
+			title: string;
+			/** Format: date-time */
+			updated_at: string;
+		};
 		/** @description Поля книги. */
 		BookMetadata: {
 			/** @description Награды и номинации: до 50. */
@@ -888,6 +966,24 @@ export interface components {
 			 *     ]
 			 */
 			trivia?: string[] | null;
+		};
+		CreateBanner: {
+			/** Format: date-time */
+			ends_at?: string | null;
+			image_url: string;
+			/** @description По умолчанию `true`. */
+			is_active?: boolean | null;
+			link_url?: string | null;
+			page: string;
+			/**
+			 * Format: int32
+			 * @description По умолчанию 0.
+			 */
+			position?: number | null;
+			/** Format: date-time */
+			starts_at?: string | null;
+			subtitle?: string | null;
+			title: string;
 		};
 		CreateEntity: {
 			/** @description Видна на сайте. По умолчанию `true`. */
@@ -1316,6 +1412,47 @@ export interface components {
 				 * @example 42491
 				 */
 				tmdb_id?: number | null;
+			}[];
+			/**
+			 * Format: int64
+			 * @example 20
+			 */
+			limit: number;
+			/**
+			 * Format: int64
+			 * @example 0
+			 */
+			offset: number;
+			/**
+			 * Format: int64
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @example 137
+			 */
+			total: number;
+		};
+		/** @description Страница списка. */
+		Page_Banner: {
+			items: {
+				/** Format: date-time */
+				created_at: string;
+				/** Format: date-time */
+				ends_at?: string | null;
+				/** Format: uuid */
+				id: string;
+				image_url: string;
+				is_active: boolean;
+				/** @description `http(s)://...` или путь сайта `/films/dune-2021`. */
+				link_url?: string | null;
+				/** @example films */
+				page: string;
+				/** Format: int32 */
+				position: number;
+				/** Format: date-time */
+				starts_at?: string | null;
+				subtitle?: string | null;
+				title: string;
+				/** Format: date-time */
+				updated_at: string;
 			}[];
 			/**
 			 * Format: int64
@@ -1896,6 +2033,21 @@ export interface components {
 			id: string;
 			provider: components['schemas']['TrailerProvider'];
 		};
+		/** @description Переданные поля заменяются, `null` очищает необязательное. */
+		UpdateBanner: {
+			/** Format: date-time */
+			ends_at?: string | null;
+			image_url?: string | null;
+			is_active?: boolean | null;
+			link_url?: string | null;
+			page?: string | null;
+			/** Format: int32 */
+			position?: number | null;
+			/** Format: date-time */
+			starts_at?: string | null;
+			subtitle?: string | null;
+			title?: string | null;
+		};
 		/**
 		 * @description Изменение сущности: переданные поля заменяются, `null` очищает необязательное поле.
 		 *     `kind` не меняется. `metadata` заменяется целиком.
@@ -1943,7 +2095,9 @@ export type SchemaAdminEntitySummary = components['schemas']['AdminEntitySummary
 export type SchemaArchiveDoc = components['schemas']['ArchiveDoc'];
 export type SchemaArchiveStats = components['schemas']['ArchiveStats'];
 export type SchemaAward = components['schemas']['Award'];
+export type SchemaBanner = components['schemas']['Banner'];
 export type SchemaBookMetadata = components['schemas']['BookMetadata'];
+export type SchemaCreateBanner = components['schemas']['CreateBanner'];
 export type SchemaCreateEntity = components['schemas']['CreateEntity'];
 export type SchemaCreatePerson = components['schemas']['CreatePerson'];
 export type SchemaCreateTag = components['schemas']['CreateTag'];
@@ -1967,6 +2121,7 @@ export type SchemaMetadata = components['schemas']['Metadata'];
 export type SchemaMovieMetadata = components['schemas']['MovieMetadata'];
 export type SchemaPageAdminEntitySummary = components['schemas']['Page_AdminEntitySummary'];
 export type SchemaPageArchiveDoc = components['schemas']['Page_ArchiveDoc'];
+export type SchemaPageBanner = components['schemas']['Page_Banner'];
 export type SchemaPageEntitySummary = components['schemas']['Page_EntitySummary'];
 export type SchemaPagePersonHit = components['schemas']['Page_PersonHit'];
 export type SchemaPagePersonSummary = components['schemas']['Page_PersonSummary'];
@@ -2001,6 +2156,7 @@ export type SchemaTagKind = components['schemas']['TagKind'];
 export type SchemaTagWithCount = components['schemas']['TagWithCount'];
 export type SchemaTrailerProvider = components['schemas']['TrailerProvider'];
 export type SchemaTrailerSource = components['schemas']['TrailerSource'];
+export type SchemaUpdateBanner = components['schemas']['UpdateBanner'];
 export type SchemaUpdateEntity = components['schemas']['UpdateEntity'];
 export type SchemaUpdatePerson = components['schemas']['UpdatePerson'];
 export type SchemaUpdateTag = components['schemas']['UpdateTag'];
@@ -2134,6 +2290,220 @@ export interface operations {
 			};
 			/** @description Архив не настроен или недоступен */
 			503: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	admin_list_banners: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Только эта страница; без него — все. */
+				page: string | null;
+				limit: number | null;
+				offset: number | null;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Баннеры */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Page_Banner'];
+				};
+			};
+			/** @description Неизвестная страница */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	create_banner: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['CreateBanner'];
+			};
+		};
+		responses: {
+			/** @description Создан */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Banner'];
+				};
+			};
+			/** @description Неверные поля */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	delete_banner: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description id баннера */
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Удалён */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Не найден */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	update_banner: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description id баннера */
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['UpdateBanner'];
+			};
+		};
+		responses: {
+			/** @description Изменён */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Banner'];
+				};
+			};
+			/** @description Неверные поля */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Не найден */
+			404: {
 				headers: {
 					[name: string]: unknown;
 				};
@@ -3707,6 +4077,38 @@ export interface operations {
 			};
 			/** @description Архив не настроен (`ARCHIVE_DIR`) или недоступен */
 			503: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	list_banners: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Страница: `home`, `films`, `series`, `books`, `games`, `people`. */
+				page: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Баннеры страницы */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Banner'][];
+				};
+			};
+			/** @description Неизвестная страница */
+			400: {
 				headers: {
 					[name: string]: unknown;
 				};

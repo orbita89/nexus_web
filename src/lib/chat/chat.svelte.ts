@@ -7,7 +7,11 @@
 // - прочитано — chat.read с задержкой, когда последнее сообщение видно (seen);
 // - свёрнута ли панель и открытая комната — в localStorage.
 import { browser } from '$app/env';
-import type { SchemaChatMessage, SchemaChatSummary } from '#lib/api/generated/social.ts';
+import type {
+	SchemaChatMessage,
+	SchemaChatRoomInfo,
+	SchemaChatSummary
+} from '#lib/api/generated/social.ts';
 import { errorMessage, unwrap } from '#lib/api/errors.ts';
 import { api, guestApi, session } from '#lib/auth/session.svelte.ts';
 import type { RealtimeEvent, ReplyMessage } from '#lib/realtime/client.ts';
@@ -57,14 +61,16 @@ class Chat {
 	chatsError = $state('');
 
 	current = $state<RoomMeta | null>(null);
+	/** Состояние открытой комнаты для меня (GET /chat/{kind}/{slug}); me — null у гостя. */
+	info = $state<SchemaChatRoomInfo | null>(null);
+	/** Последнее прочитанное на момент открытия: после него — разделитель «Новые». */
+	readMark = $state<string | null>(null);
 	messages = $state<Item[]>([]);
 	/** Курсор старых сообщений; null — это начало истории. */
 	nextBefore = $state<string | null>(null);
 	historyLoading = $state(false);
 	historyError = $state('');
 	replyTo = $state<Message | null>(null);
-	/** Заглушение комнаты не из списка (открыта с карточки). */
-	#mutedExtra = $state<Record<string, boolean>>({});
 
 	toasts = $state<Toast[]>([]);
 
@@ -82,7 +88,13 @@ class Chat {
 	}
 
 	muted(room: string): boolean {
-		return this.summary(room)?.muted ?? this.#mutedExtra[room] ?? false;
+		const me = this.info?.room === room ? this.info.me : null;
+		return this.summary(room)?.muted ?? me?.muted ?? false;
+	}
+
+	/** Комната и так в подписках (интерес или вступил): отдельный subscribe не нужен. */
+	get member(): boolean {
+		return !!this.current && this.info?.room === this.current.room && !!this.info.me?.member;
 	}
 
 	/** Состояние из localStorage — один раз, в браузере. */
@@ -125,14 +137,39 @@ class Chat {
 			this.messages = [];
 			this.nextBefore = null;
 			this.replyTo = null;
+			this.info = null;
+			this.readMark = null;
+			void this.loadInfo();
 			void this.loadHistory();
 		}
 		this.toasts = this.toasts.filter((t) => t.meta.room !== meta.room);
 		this.#save();
 	}
 
+	/** Состояние комнаты: шапка, заглушение, участие, последнее прочитанное. */
+	async loadInfo() {
+		const meta = this.current;
+		if (!meta) return;
+		try {
+			const info = await unwrap(
+				client().social.GET('/api/v1/social/chat/{kind}/{slug}', {
+					params: { path: splitRoom(meta.room) }
+				})
+			);
+			if (this.current?.room !== meta.room) return;
+			this.info = info;
+			this.readMark = info.me?.last_read_id ?? null;
+			this.current = roomMeta(info);
+			this.#save();
+		} catch {
+			// без состояния — шапка из того, что передали при открытии
+		}
+	}
+
 	/** Назад к списку. */
 	close() {
+		this.info = null;
+		this.readMark = null;
 		this.current = null;
 		this.messages = [];
 		this.replyTo = null;
@@ -311,6 +348,7 @@ class Chat {
 	/** Переподключились или lagged: пропущенное не придёт — перечитать. */
 	resync() {
 		void this.loadChats();
+		void this.loadInfo();
 		void this.loadHistory();
 	}
 
@@ -397,7 +435,29 @@ class Chat {
 			);
 			const chat = this.summary(room);
 			if (chat) chat.muted = next;
-			else this.#mutedExtra[room] = next;
+			if (this.info?.room === room && this.info.me) this.info.me.muted = next;
+		} catch (e) {
+			this.historyError = errorMessage(e);
+		}
+	}
+
+	/** «Следить» / «Вступить» из шапки комнаты: интерес или участие в комнате админа. */
+	async toggleMember() {
+		const info = this.info;
+		if (!info?.me || this.current?.room !== info.room) return;
+		const next = !info.me.member;
+		const { kind, slug } = splitRoom(info.room);
+		const params = { path: { slug } };
+		// Пути интересов и участия устроены одинаково: PUT / DELETE, 204.
+		const path = (
+			kind === 'room'
+				? '/api/v1/social/chat/rooms/{slug}/membership'
+				: `/api/v1/social/${{ entity: 'entities', person: 'people', tag: 'tags' }[kind]}/{slug}/interest`
+		) as '/api/v1/social/entities/{slug}/interest';
+		try {
+			await unwrap(next ? api.social.PUT(path, { params }) : api.social.DELETE(path, { params }));
+			info.me.member = next;
+			void this.loadChats();
 		} catch (e) {
 			this.historyError = errorMessage(e);
 		}

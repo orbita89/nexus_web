@@ -96,6 +96,21 @@
 				<p class="truncate text-sm font-bold">{meta.title}</p>
 			{/if}
 		</div>
+		{#if chat.info?.me && chat.info.room === meta.room}
+			{@const room = meta.room.startsWith('room:')}
+			<button
+				class={['btn rounded-full btn-xs', chat.info.me.member ? 'btn-ghost' : 'btn-primary']}
+				aria-pressed={chat.info.me.member}
+				onclick={() => chat.toggleMember()}
+				>{chat.info.me.member
+					? room
+						? 'Выйти'
+						: 'Вы следите'
+					: room
+						? 'Вступить'
+						: 'Следить'}</button
+			>
+		{/if}
 		{#if session.status === 'authed'}
 			<button
 				class={['btn btn-square btn-ghost btn-sm', { 'text-base-content/40': muted }]}
@@ -157,7 +172,10 @@
 				Сообщений пока нет — начните разговор.
 			</p>
 		{/if}
-		{#each chat.messages as item (item.clientId ?? item.id)}
+		{#each chat.messages as item, i (item.clientId ?? item.id)}
+			{#if chat.readMark && i > 0 && chat.messages[i - 1].id === chat.readMark}
+				<p class="divider my-1 px-3 text-xs font-bold text-primary">Новые</p>
+			{/if}
 			{#if item === last}
 				<div bind:this={lastElement}>
 					<ChatMessage {item} quoted={item.reply_to ? byId.get(item.reply_to) : null} />

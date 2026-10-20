@@ -27,7 +27,7 @@
 	);
 	// Открытая комната не из интересов (и у гостя) — подписать её канал.
 	useRealtime(
-		() => (chat.current ? [chat.current.room] : []),
+		() => (chat.current && !chat.member ? [chat.current.room] : []),
 		(event) => session.status !== 'authed' && chat.onEvent(event),
 		() => session.status !== 'authed' && chat.resync()
 	);

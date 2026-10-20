@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { errorMessage, unwrap } from '#lib/api/errors.ts';
+	import type { SchemaCustomRoom } from '#lib/api/generated/social.ts';
 	import { api, session } from '#lib/auth/session.svelte.ts';
 	import { chat } from '#lib/chat/chat.svelte.ts';
 	import { count } from '#lib/catalog/labels.ts';
@@ -13,13 +14,26 @@
 	import type { PageProps } from './$types';
 
 	// Каталог комнат: «Вступить» — комната в «Моих чатах» и канал подписан; «Выйти» — наоборот.
-	// Участник ли — по списку «Мои чаты» (GET /chats).
+	// Вступил ли — поле joined (у вошедшего; на сервере страница рендерится как для гостя).
 	let { data }: PageProps = $props();
 
 	let busy = $state('');
 	let error = $state('');
 
-	const member = (slug: string) => !!chat.summary(`room:${slug}`);
+	// Загрузка страницы — без токена (joined: null); вошедшему каталог перечитывается с токеном.
+	let mine = $state<SchemaCustomRoom[] | null>(null);
+	$effect(() => {
+		if (session.status !== 'authed') return;
+		unwrap(api.social.GET('/api/v1/social/chat/rooms', { params: { query: { limit: 100 } } }))
+			.then((page) => (mine = page.items))
+			.catch(() => {});
+	});
+	const rooms = $derived(mine ?? data.rooms.data?.items ?? []);
+
+	/** Вступил ли: joined из каталога, после «Вступить / Выйти» — локально. */
+	const toggled = $state<Record<string, boolean>>({});
+	const member = (slug: string) =>
+		toggled[slug] ?? rooms.find((r) => r.slug === slug)?.joined ?? false;
 
 	async function toggle(slug: string) {
 		const params = { path: { slug } };
@@ -31,7 +45,8 @@
 					? api.social.DELETE('/api/v1/social/chat/rooms/{slug}/membership', { params })
 					: api.social.PUT('/api/v1/social/chat/rooms/{slug}/membership', { params })
 			);
-			await chat.loadChats();
+			toggled[slug] = !member(slug);
+			void chat.loadChats();
 		} catch (e) {
 			error = errorMessage(e);
 		} finally {
@@ -54,11 +69,11 @@
 
 {#if data.rooms.error}
 	<LoadError message={data.rooms.error} />
-{:else if !data.rooms.data?.items.length}
+{:else if !rooms.length}
 	<EmptyState title="Комнат пока нет" />
 {:else}
 	<ul class="grid gap-3 sm:grid-cols-2">
-		{#each data.rooms.data.items as room (room.id)}
+		{#each rooms as room (room.id)}
 			{@const meta = { room: `room:${room.slug}`, title: room.title, href: '/chat', image: null }}
 			<li class="flex items-start gap-4 rounded-box bg-base-200 p-4 ring-1 ring-base-300">
 				<RoomIcon {meta} size="size-12" />
@@ -76,7 +91,7 @@
 						{#if session.status === 'authed'}
 							<button
 								class={['btn rounded-full btn-sm', member(room.slug) ? 'btn-ghost' : 'btn-primary']}
-								disabled={busy === room.slug || !chat.chats}
+								disabled={busy === room.slug || (!mine && !(room.slug in toggled))}
 								onclick={() => toggle(room.slug)}>{member(room.slug) ? 'Выйти' : 'Вступить'}</button
 							>
 						{:else if session.status === 'guest'}

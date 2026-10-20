@@ -1,6 +1,6 @@
 // Имена комнат чата и их подписи — без Svelte, чтобы проверялось unit-тестами.
 // Комната — строка `<kind>:<slug>`, одна и та же в WebSocket, событиях и GET /chats.
-import type { SchemaChatSummary } from '#lib/api/generated/social.ts';
+import type { SchemaChatRoomInfo, SchemaChatSummary } from '#lib/api/generated/social.ts';
 import { refHref } from '#lib/catalog/kinds.ts';
 
 export type RoomKind = 'entity' | 'person' | 'tag' | 'room';
@@ -27,7 +27,8 @@ export function splitRoom(room: string): { kind: RoomKind; slug: string } {
 	return { kind: room.slice(0, i) as RoomKind, slug: room.slice(i + 1) };
 }
 
-export function roomMeta(chat: SchemaChatSummary): RoomMeta {
+/** Шапка комнаты — из строки «Моих чатов» или из состояния комнаты (GET /chat/{kind}/{slug}). */
+export function roomMeta(chat: SchemaChatSummary | SchemaChatRoomInfo): RoomMeta {
 	const { room } = chat;
 	if (chat.entity)
 		return {
