@@ -57,15 +57,23 @@
 
 	// Последнее сообщение на экране — прочитано (с задержкой — в chat.seen).
 	let lastElement = $state<HTMLElement>();
+	let bottomVisible = $state(false);
+	let pageVisible = $state(true);
 	$effect(() => {
-		const id = last?.id;
-		if (!lastElement || !id) return;
-		const observer = new IntersectionObserver(
-			([entry]) => entry.isIntersecting && !document.hidden && chat.seen(id),
-			{ root: feed }
-		);
+		if (!lastElement) return;
+		const observer = new IntersectionObserver(([entry]) => (bottomVisible = entry.isIntersecting), {
+			root: feed
+		});
 		observer.observe(lastElement);
 		return () => observer.disconnect();
+	});
+	// Низ ленты виден, а панель на экране — прочитано. Перепроверяем, когда открыли лист,
+	// развернули панель или вернулись на вкладку: observer сам в этих случаях не срабатывает.
+	$effect(() => {
+		const id = last?.id;
+		void chat.sheet;
+		void chat.collapsed;
+		if (id && bottomVisible && pageVisible && chat.watching) chat.seen(id);
 	});
 
 	function submit() {
@@ -79,6 +87,8 @@
 		if (chat.replyTo) input?.focus();
 	});
 </script>
+
+<svelte:document onvisibilitychange={() => (pageVisible = !document.hidden)} />
 
 <div class="flex min-h-0 flex-1 flex-col">
 	<header class="flex items-center gap-2 border-b border-base-300 px-2 pb-2">

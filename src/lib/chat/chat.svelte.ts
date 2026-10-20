@@ -316,8 +316,8 @@ class Chat {
 				const here = this.current?.room === room;
 				if (here && !this.messages.some((m) => m.id === message.id))
 					this.messages = [...this.messages, message];
-				this.#bump(room, message, !mine && !(here && this.#watching()));
-				if (!mine && !this.muted(room) && !(here && this.#watching())) this.#toast(room, message);
+				this.#bump(room, message, !mine && !(here && this.watching));
+				if (!mine && !this.muted(room) && !(here && this.watching)) this.#toast(room, message);
 				break;
 			}
 			case 'chat.message.updated':
@@ -353,7 +353,7 @@ class Chat {
 	}
 
 	/** Панель показывает открытую комнату (не свёрнута, не скрыт лист, вкладка видна). */
-	#watching() {
+	get watching(): boolean {
 		if (typeof document !== 'undefined' && document.hidden) return false;
 		const mobile = typeof matchMedia !== 'undefined' && !matchMedia('(min-width: 64rem)').matches;
 		return mobile ? this.sheet : !this.collapsed;
@@ -410,10 +410,12 @@ class Chat {
 	seen(messageId: string) {
 		const room = this.current?.room;
 		if (!room || session.status !== 'authed' || this.#readSent.get(room) === messageId) return;
+		// Панель скрыта (лист закрыт, свёрнута, вкладка в фоне) — пользователь ничего не видел.
+		if (!this.watching) return;
 		if (this.#readTimer) clearTimeout(this.#readTimer);
 		this.#readTimer = setTimeout(() => {
 			this.#readTimer = null;
-			if (this.current?.room !== room) return;
+			if (this.current?.room !== room || !this.watching) return;
 			if (sendRealtime({ type: 'chat.read', room, message_id: messageId })) {
 				this.#readSent.set(room, messageId);
 				const chat = this.summary(room);
