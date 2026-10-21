@@ -375,10 +375,12 @@
 						value={rank}
 						class="grid grid-cols-[auto_auto_minmax(0,1fr)] content-start gap-x-4 border-t border-base-content/10 py-6 first:border-t-0 first:pt-0 sm:gap-x-6 sm:py-10"
 					>
-						<!-- Номер — главный элемент топа: крупная тонкая цифра по верху постера. -->
+						<!-- Номер — главный элемент топа: крупная тонкая цифра по верху постера (на компьютере).
+						     На телефоне — лента карточек: постер во всю ширину с номером поверх, текст под ним
+						     от той же левой линии. -->
 						<span
 							class={[
-								'col-start-1 row-start-1 w-9 text-right text-4xl leading-[0.8] font-light tracking-tighter tabular-nums sm:row-[1/span_2] sm:w-20 sm:text-7xl',
+								'hidden w-9 text-right text-4xl leading-[0.8] font-light tracking-tighter tabular-nums sm:col-start-1 sm:row-[1/span_2] sm:row-start-1 sm:block sm:w-20 sm:text-7xl',
 								rank <= 3 ? 'text-(--page-accent)' : 'text-base-content/65'
 							]}
 							aria-hidden="true">{rank}</span
@@ -388,10 +390,13 @@
 							href={href ?? undefined}
 							tabindex="-1"
 							aria-hidden="true"
-							class="group col-span-3 col-start-1 row-start-2 mt-4 block w-[clamp(13rem,62vw,18rem)] justify-self-center overflow-hidden rounded-box shadow-lg ring-1 ring-white/10 transition duration-300 hover:shadow-2xl hover:ring-(--page-accent)/60 sm:col-span-1 sm:col-start-2 sm:row-[1/span_2] sm:mt-0 sm:w-[clamp(12rem,24vw,17rem)] sm:justify-self-start"
+							class="group relative col-span-3 col-start-1 row-start-1 block aspect-[2/3] max-h-[70vh] w-full overflow-hidden rounded-box shadow-lg ring-1 ring-white/10 transition duration-300 hover:shadow-2xl hover:ring-(--page-accent)/60 sm:col-span-1 sm:col-start-2 sm:row-[1/span_2] sm:aspect-auto sm:max-h-none sm:w-[clamp(12rem,24vw,17rem)]"
 						>
 							{#if kind}
-								<div class="transition-transform duration-300 group-hover:scale-[1.03]">
+								<!-- На телефоне постер обрезается по высоте экрана, середина остаётся в кадре. -->
+								<div
+									class="absolute inset-x-0 top-1/2 -translate-y-1/2 transition-transform duration-300 group-hover:scale-[1.03] sm:static sm:translate-y-0"
+								>
 									<Poster
 										title={item.entity.title}
 										{kind}
@@ -400,6 +405,13 @@
 									/>
 								</div>
 							{/if}
+							<span
+								class={[
+									'absolute bottom-0 left-0 bg-linear-to-tr from-black/70 to-transparent px-4 pt-6 pb-3 text-6xl leading-none font-light tracking-tighter tabular-nums sm:hidden',
+									rank <= 3 ? 'text-(--page-accent)' : 'text-white/90'
+								]}
+								aria-hidden="true">{rank}</span
+							>
 						</a>
 						<!-- Текст не растягивает строку: на компьютере он ограничен высотой постера (лишнее
 					     плавно скрывается), колонка ~65 символов; на телефоне название — до 2 строк, заметка — до 3. -->
@@ -410,7 +422,7 @@
 									{@attach fadeIfOverflow}
 								>
 									<div
-										class="col-span-2 col-start-2 row-start-1 flex min-w-0 flex-wrap items-baseline gap-x-2 sm:block"
+										class="col-span-3 col-start-1 row-start-2 mt-4 flex min-w-0 flex-wrap items-baseline gap-x-2 sm:mt-0 sm:block"
 									>
 										<h2 class="line-clamp-2 text-lg leading-snug font-bold sm:text-2xl">
 											<span class="sr-only">{rank} место. </span>
@@ -430,7 +442,7 @@
 											</p>
 										{/if}
 									</div>
-									<div class="col-span-2 col-start-2 row-start-3 mt-4 min-w-0">
+									<div class="col-span-3 col-start-1 row-start-3 mt-2 min-w-0 sm:mt-4">
 										{#if item.note}
 											<!-- Заметка — голос подборки: цитата с акцентной линией. -->
 											<p
