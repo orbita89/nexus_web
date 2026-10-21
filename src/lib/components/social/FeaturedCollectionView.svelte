@@ -3,7 +3,12 @@
 	import type { SchemaCollectionDetail } from '#lib/api/generated/social.ts';
 	import { asKind, kindByApi, refHref } from '#lib/catalog/kinds.ts';
 	import { count, yearOf } from '#lib/catalog/labels.ts';
-	import { featuredBadge } from '#lib/social/collections.ts';
+	import {
+		BACKEND_NEEDED_HINT,
+		COLLECTION_LIMITS,
+		collectionFormError,
+		featuredBadge
+	} from '#lib/social/collections.ts';
 	import {
 		buildFeaturedUrl,
 		featuredDescription,
@@ -16,6 +21,7 @@
 		collectionCoverUrl,
 		collectionThemeId,
 		collectionWallpaperUrl,
+		headerMode,
 		pageAccent,
 		resolveFeaturedHero,
 		resolvePageStyle
@@ -28,7 +34,67 @@
 	// Особая коллекция («Топ-10»): нумерованный рейтинг и полная SEO-разметка. Не зависит от
 	// маршрута — при переезде на /top/{slug} переносится как есть.
 	// actions — панель под шапкой (вне overflow-hidden, чтобы выпадающий поиск не обрезался).
-	let { collection, actions }: { collection: SchemaCollectionDetail; actions?: Snippet } = $props();
+	// editText: 'on' — можно править название/описание (onsavetext), 'disabled' — кнопка
+	// с подсказкой (админ без поддержки бэкенда), иначе кнопки нет.
+	let {
+		collection,
+		actions,
+		editText,
+		onsavetext,
+		headerModeOverride
+	}: {
+		collection: SchemaCollectionDetail;
+		actions?: Snippet;
+		editText?: 'on' | 'disabled';
+		onsavetext?: (form: { title: string; description: string }) => Promise<string | null>;
+		headerModeOverride?: 'styled' | 'plain' | 'none';
+	} = $props();
+
+	// Оптимистичная правка: показываем новое сразу, при ошибке откатываем.
+	let optimistic = $state<{ title: string; description: string | null } | null>(null);
+	const shownTitle = $derived(optimistic?.title ?? collection.title);
+	const shownDescription = $derived(optimistic ? optimistic.description : collection.description);
+	let editing = $state(false);
+	let draftTitle = $state('');
+	let draftDescription = $state('');
+	let textError = $state('');
+	let saving = $state(false);
+	const uid = $props.id();
+
+	function startEdit() {
+		draftTitle = shownTitle;
+		draftDescription = shownDescription ?? '';
+		textError = '';
+		editing = true;
+	}
+
+	async function saveText(event: SubmitEvent) {
+		event.preventDefault();
+		const form = { title: draftTitle, description: draftDescription };
+		const local = collectionFormError(form);
+		if (local) {
+			textError = local;
+			return;
+		}
+		saving = true;
+		textError = '';
+		optimistic = { title: form.title.trim(), description: form.description.trim() || null };
+		editing = false;
+		const err = (await onsavetext?.(form)) ?? null;
+		saving = false;
+		if (err) {
+			optimistic = null;
+			textError = err;
+			editing = true;
+		}
+	}
+
+	// Новые данные с сервера — оптимистичное значение больше не нужно.
+	$effect(() => {
+		void collection.title;
+		void collection.description;
+		if (!saving) optimistic = null;
+	});
 
 	const origin = $derived(page.url.origin);
 	const canonical = $derived(origin + buildFeaturedUrl(collection));
@@ -37,9 +103,13 @@
 	const look = $derived(resolveFeaturedHero(collection));
 	// Оформление страницы: обои шапкой или фоном, затемнение/размытие, эффекты, свой акцент.
 	const style = $derived(resolvePageStyle(collection));
+	// Шапка: тематическая, нейтральная (без темы/обоев, страница — по-прежнему с обоями) или без шапки.
+	const hmode = $derived(headerModeOverride ?? headerMode(collection));
 	const accent = $derived(pageAccent(collection));
 	// При mode 'page' обои уже фоном страницы — в шапке их не дублируем.
-	const headerWallpaper = $derived(look.kind === 'cover' && style.mode === 'header');
+	const headerWallpaper = $derived(
+		hmode === 'styled' && look.kind === 'cover' && style.mode === 'header'
+	);
 	// og:image: обложка → обои → обложка первого произведения.
 	const image = $derived(
 		collectionCoverUrl(collection) ??
@@ -86,6 +156,84 @@
 	{@html ld}
 </svelte:head>
 
+{#snippet editButton()}
+	{#if editText && !editing}
+		<button
+			type="button"
+			class="btn mt-1 btn-ghost btn-xs"
+			disabled={editText === 'disabled' || saving}
+			title={editText === 'disabled' ? BACKEND_NEEDED_HINT : 'Изменить название и описание'}
+			aria-label="Изменить название и описание"
+			onclick={startEdit}
+		>
+			✎ Изменить
+		</button>
+		{#if editText === 'disabled'}
+			<span class="mt-2 text-xs font-normal text-base-content/50">{BACKEND_NEEDED_HINT}</span>
+		{/if}
+	{/if}
+{/snippet}
+
+{#snippet heading()}
+	<div class="flex flex-wrap items-start gap-x-2">
+		<h1 class="flex items-start gap-2 text-3xl font-black sm:text-4xl">
+			<span
+				class="mt-1 shrink-0 text-2xl text-warning sm:text-3xl"
+				style:color={style.accent}
+				role="img"
+				aria-label={featuredBadge(shownTitle)}
+				title={featuredBadge(shownTitle)}>★</span
+			>
+			<span>{shownTitle}</span>
+		</h1>
+		{@render editButton()}
+	</div>
+	{#if editing}
+		{@render textForm()}
+	{:else if shownDescription}
+		<p class="mt-2 max-w-2xl whitespace-pre-line text-base-content/70">
+			{shownDescription}
+		</p>
+	{/if}
+	{#if textError && !editing}<p class="mt-2 text-sm text-error" role="alert">{textError}</p>{/if}
+	<p class="mt-4 text-sm text-base-content/60">
+		{count(collection.items_count, ['произведение', 'произведения', 'произведений'])}
+	</p>
+	<p class="mt-2 text-right text-xs text-base-content/45">
+		обновлена {reviewDate(collection.updated_at)}
+	</p>
+{/snippet}
+
+{#snippet textForm()}
+	<form class="mt-3 flex max-w-2xl flex-col gap-2" onsubmit={saveText}>
+		<label class="form-control">
+			<span class="label-text text-xs">Название</span>
+			<input
+				class="input-bordered input w-full input-sm"
+				required
+				maxlength={COLLECTION_LIMITS.title}
+				bind:value={draftTitle}
+				aria-describedby="{uid}-err"
+			/>
+		</label>
+		<label class="form-control">
+			<span class="label-text text-xs">Описание</span>
+			<textarea
+				class="textarea-bordered textarea w-full textarea-sm"
+				rows="3"
+				maxlength={COLLECTION_LIMITS.description}
+				bind:value={draftDescription}></textarea>
+		</label>
+		<div class="flex items-center gap-2">
+			<button type="submit" class="btn btn-primary btn-sm" disabled={saving}>Сохранить</button>
+			<button type="button" class="btn btn-ghost btn-sm" onclick={() => (editing = false)}
+				>Отмена</button
+			>
+			<span id="{uid}-err" class="text-sm text-error" role="alert">{textError}</span>
+		</div>
+	</form>
+{/snippet}
+
 <CollectionBackdrop
 	themeId={collectionThemeId(collection)}
 	wallpaperUrl={collectionWallpaperUrl(collection)}
@@ -96,82 +244,73 @@
 	accent={style.accent}
 />
 <div class="relative z-10" style:--page-accent={accent}>
-	<header
-		class={[
-			'relative isolate overflow-hidden rounded-box p-5 sm:p-8',
-			look.kind === 'cover' && style.mode === 'page'
-				? 'bg-base-100/40 backdrop-blur-sm'
-				: ['bg-linear-to-br', look.theme.gradient]
-		]}
-	>
-		{#if headerWallpaper && look.kind === 'cover'}
-			<img
-				src={look.url}
-				alt=""
-				class="absolute inset-0 -z-30 h-full w-full object-cover"
-				class:scale-105={style.blur > 0}
-				style:filter={style.blur ? `blur(${style.blur}px)` : null}
-				fetchpriority="high"
-			/>
-			<div
-				class="absolute inset-0 -z-20 bg-base-100"
-				style:opacity={(style.dim / 100) * 0.6}
-				aria-hidden="true"
-			></div>
-			<!-- Затемнение слева направо и снизу: текст читается на любых обоях. -->
-			<div
-				class="absolute inset-0 -z-20 bg-linear-to-r from-base-100 via-base-100/80 to-base-100/20"
-				aria-hidden="true"
-			></div>
-			<div
-				class="absolute inset-0 -z-20 bg-linear-to-t from-base-100/70 to-transparent"
-				aria-hidden="true"
-			></div>
-		{:else if look.kind === 'collage'}
-			<div
-				class="absolute inset-y-0 right-0 -z-20 hidden w-1/2 grid-cols-4 gap-2 p-3 opacity-25 sm:grid"
-				aria-hidden="true"
-			>
-				{#each collection.items.slice(0, 4) as item (item.entity.id)}
-					{#if item.entity.cover_url}
-						<img
-							src={item.entity.cover_url}
-							alt=""
-							class="h-full w-full rounded-box object-cover"
-						/>
-					{/if}
-				{/each}
-			</div>
-		{/if}
-		{#if look.theme.pattern && style.effects}
-			<div
-				class="pointer-events-none absolute inset-0 -z-10"
-				style:background={look.theme.pattern}
-				aria-hidden="true"
-			></div>
-		{/if}
-		<h1 class="flex items-start gap-2 text-3xl font-black sm:text-4xl">
-			<span
-				class="mt-1 shrink-0 text-2xl text-warning sm:text-3xl"
-				style:color={style.accent}
-				role="img"
-				aria-label={featuredBadge(collection.title)}
-				title={featuredBadge(collection.title)}>★</span
-			>
-			<span>{collection.title}</span>
-		</h1>
-		{#if collection.description}
-			<p class="mt-2 max-w-2xl whitespace-pre-line text-base-content/70">
-				{collection.description}
-			</p>
-		{/if}
-		<p class="mt-4 text-sm text-base-content/60">
-			{count(collection.items_count, ['произведение', 'произведения', 'произведений'])}
-		</p>
-		<p class="mt-2 text-right text-xs text-base-content/45">
-			обновлена {reviewDate(collection.updated_at)}
-		</p>
-	</header>
+	{#if hmode === 'none'}
+		<!-- Без шапки: только заголовок, описание и мета (SSR, h1 = название). -->
+		<div class="mb-2">
+			{@render heading()}
+		</div>
+	{:else}
+		<header
+			class={[
+				'relative isolate overflow-hidden rounded-box p-5 sm:p-8',
+				hmode === 'plain'
+					? 'bg-base-100/85 ring-1 ring-base-content/10 backdrop-blur-sm'
+					: look.kind === 'cover' && style.mode === 'page'
+						? 'bg-base-100/40 backdrop-blur-sm'
+						: ['bg-linear-to-br', look.theme.gradient]
+			]}
+		>
+			{#if hmode === 'styled'}
+				{#if headerWallpaper && look.kind === 'cover'}
+					<img
+						src={look.url}
+						alt=""
+						class="absolute inset-0 -z-30 h-full w-full object-cover"
+						class:scale-105={style.blur > 0}
+						style:filter={style.blur ? `blur(${style.blur}px)` : null}
+						fetchpriority="high"
+					/>
+					<div
+						class="absolute inset-0 -z-20 bg-base-100"
+						style:opacity={(style.dim / 100) * 0.6}
+						aria-hidden="true"
+					></div>
+					<!-- Затемнение слева направо и снизу: текст читается на любых обоях. -->
+					<div
+						class="absolute inset-0 -z-20 bg-linear-to-r from-base-100 via-base-100/80 to-base-100/20"
+						aria-hidden="true"
+					></div>
+					<div
+						class="absolute inset-0 -z-20 bg-linear-to-t from-base-100/70 to-transparent"
+						aria-hidden="true"
+					></div>
+				{:else if look.kind === 'collage'}
+					<div
+						class="absolute inset-y-0 right-0 -z-20 hidden w-1/2 grid-cols-4 gap-2 p-3 opacity-25 sm:grid"
+						aria-hidden="true"
+					>
+						{#each collection.items.slice(0, 4) as item (item.entity.id)}
+							{#if item.entity.cover_url}
+								<img
+									src={item.entity.cover_url}
+									alt=""
+									class="h-full w-full rounded-box object-cover"
+								/>
+							{/if}
+						{/each}
+					</div>
+				{/if}
+				{#if look.theme.pattern && style.effects}
+					<div
+						class="pointer-events-none absolute inset-0 -z-10"
+						style:background={look.theme.pattern}
+						aria-hidden="true"
+					></div>
+				{/if}
+			{/if}
+			{@render heading()}
+		</header>
+	{/if}
 	<div class="relative z-30 mb-8">{@render actions?.()}</div>
 
 	{#if items.length}

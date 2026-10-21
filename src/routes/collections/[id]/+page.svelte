@@ -7,8 +7,11 @@
 	import { asKind } from '#lib/catalog/kinds.ts';
 	import { count, summary } from '#lib/catalog/labels.ts';
 	import {
+		ADMIN_EDIT_SUPPORTED,
 		FEATURED_PRIVATE_ERROR,
+		collectionTextError,
 		editsAsAdmin,
+		updateCollectionText,
 		isFeaturedMustBePublic
 	} from '#lib/social/collections.ts';
 	import { displayName, reviewDate } from '#lib/social/reviews.ts';
@@ -68,6 +71,23 @@
 			return null;
 		} catch (e) {
 			return isFeaturedMustBePublic(e) ? FEATURED_PRIVATE_ERROR : errorMessage(e);
+		}
+	}
+
+	// Название/описание прямо в шапке особой коллекции: владелец — PATCH; админ — когда появится
+	// поддержка бэкенда (ADMIN_EDIT_SUPPORTED), пока кнопка неактивна с подсказкой.
+	const editText = $derived<'on' | 'disabled' | undefined>(
+		own ? 'on' : asAdmin ? (ADMIN_EDIT_SUPPORTED ? 'on' : 'disabled') : undefined
+	);
+
+	async function saveText(form: { title: string; description: string }) {
+		if (!own) return 'Нужна поддержка бэкенда';
+		try {
+			await updateCollectionText(api, collection!.id, form);
+			await invalidateAll();
+			return null;
+		} catch (e) {
+			return collectionTextError(e, errorMessage);
 		}
 	}
 
@@ -164,7 +184,7 @@
 	<div class="h-40 skeleton" aria-label="Загрузка коллекции"></div>
 {:else if collection.is_featured && mode !== 'edit' && mode !== 'items'}
 	<!-- Особая коллекция: свой вид и SEO (см. buildFeaturedUrl — будущий /top/{slug}). -->
-	<FeaturedCollectionView {collection} actions={controls} />
+	<FeaturedCollectionView {collection} actions={controls} {editText} onsavetext={saveText} />
 {:else}
 	<Seo
 		title={collection.title}

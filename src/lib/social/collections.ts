@@ -174,3 +174,36 @@ export async function deleteCollectionItem(
 			: api.social.DELETE('/api/v1/social/collections/{id}/items/{slug}', { params })
 	);
 }
+
+// Название и описание. Владелец — PATCH /collections/{id}.
+// TODO(backend): PATCH /admin/collections/{id} для админа — docs/backend-tasks/featured-collections-header.md.
+// Когда путь появится в generated/social.ts — включить флаг и вызвать его в updateCollectionText.
+export const ADMIN_EDIT_SUPPORTED = false;
+
+export const BACKEND_NEEDED_HINT = 'Нужна поддержка бэкенда';
+
+/** Изменить название и описание (пустое описание — null). Только владелец. */
+export function updateCollectionText(
+	api: Api,
+	id: string,
+	form: { title: string; description: string }
+): Promise<SchemaCollectionDetail> {
+	return unwrap(
+		api.social.PATCH('/api/v1/social/collections/{id}', {
+			params: { path: { id } },
+			body: { title: form.title.trim(), description: form.description.trim() || null }
+		})
+	);
+}
+
+/** Понятный текст ошибки правки названия/описания. */
+export function collectionTextError(e: unknown, fallback: (e: unknown) => string): string {
+	if (e instanceof ApiError) {
+		if (e.status === 403) return 'Недостаточно прав: менять название может только владелец.';
+		if (e.status === 404) return 'Коллекция не найдена.';
+		if (e.code === 'validation' && e.field === 'title') return 'Неверное название — проверьте.';
+		if (e.code === 'validation' && e.field === 'description')
+			return 'Неверное описание — проверьте.';
+	}
+	return fallback(e);
+}

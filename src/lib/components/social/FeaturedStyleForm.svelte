@@ -3,6 +3,7 @@
 	import type { SchemaCollection } from '#lib/api/generated/social.ts';
 	import { api } from '#lib/auth/session.svelte.ts';
 	import {
+		BACKEND_NEEDED_HINT,
 		adminSetFeatured,
 		featuredAdminError,
 		validationField,
@@ -11,13 +12,23 @@
 	import CollectionBackdrop from '#lib/components/social/CollectionBackdrop.svelte';
 	import {
 		FEATURED_THEMES,
+		headerMode,
 		normalizeAccent,
 		resolvePageStyle,
 		styleUrlError,
 		themeById,
 		themeDefaultDim
 	} from '#lib/social/featuredThemes.ts';
-	import type { FeaturedThemeId, WallpaperMode } from '#lib/social/featuredThemes.ts';
+	import type { FeaturedThemeId, HeaderMode, WallpaperMode } from '#lib/social/featuredThemes.ts';
+
+	// header_mode пока нет в API (docs/backend-tasks/featured-collections-header.md): радио
+	// показывает режим по умолчанию и неактивно. Когда поле появится — включить и сохранять.
+	const HEADER_MODE_SUPPORTED = false;
+	const HEADER_MODE_LABELS: Record<HeaderMode, string> = {
+		styled: 'Тематическая',
+		plain: 'Нейтральная',
+		none: 'Без шапки'
+	};
 
 	// Оформление особой коллекции: обои, обложка, тема. Сохраняется PUT …/featured только с
 	// изменёнными полями; пустое поле — null (убрать). Используется на странице и в «Подборках».
@@ -97,6 +108,8 @@
 			accent_color: accTrim || null
 		})
 	);
+	// Без поля в API режим шапки следует за режимом обоев (resolver headerMode).
+	const hmode = $derived(headerMode({ ...collection, wallpaper_mode: mode }));
 	const themeDim = $derived(themeDefaultDim(knownTheme ? draft.theme : null));
 	const pickerValue = $derived(normalizeAccent(accTrim) ?? '#888888');
 	const wpOk = $derived(draft.wallpaper_url && !local.wallpaper_url ? draft.wallpaper_url : null);
@@ -214,6 +227,20 @@
 			</div>
 			<span class="text-xs text-error">{fieldErrors.wallpaper_mode ?? ''}</span>
 		</fieldset>
+		<fieldset class="form-control" disabled={busy || !HEADER_MODE_SUPPORTED}>
+			<legend class="label-text text-xs">Шапка</legend>
+			<div class="flex flex-wrap gap-3 pt-1">
+				{#each Object.entries(HEADER_MODE_LABELS) as [value, label] (value)}
+					<label class="flex items-center gap-1 text-sm">
+						<input type="radio" class="radio radio-xs" {value} checked={hmode === value} />
+						{label}
+					</label>
+				{/each}
+			</div>
+			{#if !HEADER_MODE_SUPPORTED}
+				<span class="text-xs text-base-content/50">{BACKEND_NEEDED_HINT}</span>
+			{/if}
+		</fieldset>
 		<div class="form-control min-w-40 flex-1">
 			<div class="flex items-center justify-between gap-2">
 				<label class="label-text text-xs" for="{uid}-dim"
@@ -306,10 +333,17 @@
 	<!-- Предпросмотр: обои с затемнением поверх темы, рядом обложка. -->
 	<div class="flex items-stretch gap-2">
 		<div
-			class="relative isolate h-16 flex-1 overflow-hidden rounded-box bg-linear-to-br ring-1 {preview.gradient} {preview.ring}"
-			aria-label="Предпросмотр шапки"
+			class={[
+				'relative isolate h-16 flex-1 overflow-hidden rounded-box',
+				hmode === 'styled' && ['bg-linear-to-br ring-1', preview.gradient, preview.ring],
+				hmode === 'plain' && 'bg-base-100 ring-1 ring-base-content/10',
+				hmode === 'none' && 'ring-dashed bg-base-200/40 ring-1 ring-base-content/5'
+			]}
+			aria-label="Предпросмотр шапки: {HEADER_MODE_LABELS[hmode]}"
 		>
-			{#if wpOk && previewStyle.mode === 'header'}
+			{#if hmode !== 'styled'}
+				<!-- Нейтральная шапка или без шапки: ни темы, ни обоев. -->
+			{:else if wpOk && previewStyle.mode === 'header'}
 				<img
 					src={wpOk}
 					alt=""
