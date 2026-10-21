@@ -11,12 +11,15 @@ export class ApiError extends Error {
 	readonly retryAfter: number | null;
 	/** Машинный код бэкенда (`not_found`, `own_review`, …), если он есть. */
 	readonly code: string | null;
+	/** Поле с ошибкой валидации (`slides[1].image_url`), если бэкенд его указал. */
+	readonly field: string | null;
 
 	constructor(
 		status: number,
 		serverMessage: string | null,
 		retryAfter: number | null = null,
-		code: string | null = null
+		code: string | null = null,
+		field: string | null = null
 	) {
 		super(translate(status, serverMessage, retryAfter, code));
 		this.name = 'ApiError';
@@ -24,6 +27,7 @@ export class ApiError extends Error {
 		this.serverMessage = serverMessage;
 		this.retryAfter = retryAfter;
 		this.code = code;
+		this.field = field;
 	}
 }
 
@@ -105,7 +109,7 @@ export function errorMessage(e: unknown): string {
 	return BY_STATUS[0];
 }
 
-function stringField(body: unknown, field: 'error' | 'code'): string | null {
+function stringField(body: unknown, field: 'error' | 'code' | 'field'): string | null {
 	if (body && typeof body === 'object' && field in body) {
 		const v = (body as Record<string, unknown>)[field];
 		if (typeof v === 'string') return v;
@@ -147,7 +151,8 @@ export async function unwrap<T>(
 			status,
 			stringField(result.error, 'error'),
 			status === 429 ? retryAfterOf(result.error, result.response) : null,
-			stringField(result.error, 'code')
+			stringField(result.error, 'code'),
+			stringField(result.error, 'field')
 		);
 	}
 	return result.data as T;

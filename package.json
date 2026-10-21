@@ -54,6 +54,7 @@
 		"#lib/*": "./src/lib/*"
 	},
 	"dependencies": {
+		"dompurify": "^3.2.6",
 		"openapi-fetch": "^0.17.0"
 	},
 	"packageManager": "pnpm@12.6.0",

@@ -13,6 +13,7 @@
 		{ href: '/admin/archive', title: 'Архив' },
 		{ href: '/admin/people', title: 'Люди' },
 		{ href: '/admin/tags', title: 'Теги' },
+		{ href: '/admin/banners', title: 'Баннеры' },
 		{ href: '/admin/chat', title: 'Комнаты чата' },
 		{ href: '/admin/users', title: 'Пользователи' },
 		{ href: '/admin/index', title: 'Индексация' }

@@ -9,9 +9,11 @@
 	import { dropLegacyStorage } from '#lib/utils/legacy-storage.ts';
 	import { onMount } from 'svelte';
 	import { KINDS } from '#lib/catalog/kinds.ts';
+	import BannerCarousel from '#lib/components/catalog/BannerCarousel.svelte';
+	import { page } from '$app/state';
 	import type { LayoutProps } from './$types';
 
-	let { children }: LayoutProps = $props();
+	let { children, data }: LayoutProps = $props();
 
 	// Реалтайм-соединение входит и выходит вместе с сессией.
 	syncRealtimeAuth();
@@ -22,6 +24,9 @@
 			// localStorage недоступен (приватный режим) — чистить нечего
 		}
 	});
+	const isAdmin = $derived(
+		page.url.pathname === '/admin' || page.url.pathname.startsWith('/admin/')
+	);
 </script>
 
 <svelte:head>
@@ -38,6 +43,10 @@
 >
 	<Navbar />
 	<main class="mx-auto w-full max-w-6xl flex-1 px-4 py-6">
+		<!-- Баннеры по пути страницы (+layout.server.ts); в админке не показываем. -->
+		{#if !isAdmin}
+			<BannerCarousel banners={data.banners} />
+		{/if}
 		{@render children()}
 	</main>
 	<footer class="mt-10 border-t border-base-300 bg-base-200/40">

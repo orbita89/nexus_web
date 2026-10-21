@@ -15,29 +15,29 @@ GET /api/v1/catalog/banners?page=<page>
 
 ```ts
 type Banner = {
-  id: string;            // uuid
-  page: string;
-  title: string;         // до 300 символов
-  subtitle: string | null;
-  image_url: string;     // http(s)
-  link_url: string | null; // http(s)://… или путь сайта "/films/dune-2021"
-  position: number;
-  is_active: boolean;
-  starts_at: string | null; // ISO
-  ends_at: string | null;
-  created_at: string;
-  updated_at: string;
+	id: string; // uuid
+	page: string;
+	title: string; // до 300 символов
+	subtitle: string | null;
+	image_url: string; // http(s)
+	link_url: string | null; // http(s)://… или путь сайта "/films/dune-2021"
+	position: number;
+	is_active: boolean;
+	starts_at: string | null; // ISO
+	ends_at: string | null;
+	created_at: string;
+	updated_at: string;
 };
 ```
 
 Админка (токен админа; 401 без токена, 403 не админ, 400 валидация, 404 нет id):
 
-| Метод | Путь | Тело / ответ |
-|---|---|---|
-| GET | `/api/v1/catalog/admin/banners?page=&limit=&offset=` | `Page<Banner>` (все, включая выключенные) |
-| POST | `/api/v1/catalog/admin/banners` | `{page, title, image_url, subtitle?, link_url?, position?=0, is_active?=true, starts_at?, ends_at?}` → 201 `Banner` |
-| PATCH | `/api/v1/catalog/admin/banners/{id}` | любые поля; `null` очищает `subtitle`, `link_url`, `starts_at`, `ends_at` → 200 `Banner` |
-| DELETE | `/api/v1/catalog/admin/banners/{id}` | 204 |
+| Метод  | Путь                                                 | Тело / ответ                                                                                                        |
+| ------ | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/api/v1/catalog/admin/banners?page=&limit=&offset=` | `Page<Banner>` (все, включая выключенные)                                                                           |
+| POST   | `/api/v1/catalog/admin/banners`                      | `{page, title, image_url, subtitle?, link_url?, position?=0, is_active?=true, starts_at?, ends_at?}` → 201 `Banner` |
+| PATCH  | `/api/v1/catalog/admin/banners/{id}`                 | любые поля; `null` очищает `subtitle`, `link_url`, `starts_at`, `ends_at` → 200 `Banner`                            |
+| DELETE | `/api/v1/catalog/admin/banners/{id}`                 | 204                                                                                                                 |
 
 Правила: `ends_at > starts_at`; `image_url` только http(s); `link_url` — http(s) или путь с `/` (не `//`).
 

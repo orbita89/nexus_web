@@ -599,6 +599,11 @@ export interface components {
 			 */
 			error: string;
 			/**
+			 * @description Только для 400 [`AppError::Invalid`]: поле запроса с ошибкой (`content_html`, `slides[1].title`).
+			 * @example content_html
+			 */
+			field?: string | null;
+			/**
 			 * Format: int64
 			 * @description Только для 429: через сколько секунд можно повторить (то же, что заголовок `Retry-After`).
 			 * @example 80

@@ -58,7 +58,7 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** Все баннеры (и неактивные, и вне окна показа) по странице, затем `position`. */
+		/** Все баннеры (и неактивные, и вне окна показа): `priority desc`, затем `position`. */
 		get: operations['admin_list_banners'];
 		put?: never;
 		/** Создать баннер. */
@@ -83,7 +83,10 @@ export interface paths {
 		delete: operations['delete_banner'];
 		options?: never;
 		head?: never;
-		/** Изменить баннер: переданные поля заменяются, `null` очищает необязательное. */
+		/**
+		 * Изменить баннер: переданные поля заменяются (массивы — целиком), `null` очищает
+		 *     необязательное; итог проверяется целиком, как при создании.
+		 */
 		patch: operations['update_banner'];
 		trace?: never;
 	};
@@ -559,7 +562,8 @@ export interface paths {
 		};
 		/**
 		 * Баннеры страницы сайта: активные, сейчас в окне показа (`starts_at`/`ends_at`, пустые — без
-		 *     границы), по `position`, затем старые сверху; до 20.
+		 *     границы), совпал хотя бы один target и не совпал `exclude_paths` (`/admin/*` — всегда пусто);
+		 *     `priority desc`, затем `position`; до 20. `Cache-Control: public, max-age=60`.
 		 */
 		get: operations['list_banners'];
 		put?: never;
@@ -921,27 +925,85 @@ export interface components {
 			year?: number | null;
 		};
 		Banner: {
+			buttons: components['schemas']['BannerButton'][];
+			/** @description Санитизированный HTML (allowlist). */
+			content_html?: string | null;
 			/** Format: date-time */
 			created_at: string;
 			/** Format: date-time */
 			ends_at?: string | null;
+			/** @description Шаблоны путей, где баннер не показывать (`/admin/*` исключён всегда). */
+			exclude_paths: string[];
 			/** Format: uuid */
 			id: string;
-			image_url: string;
+			/** @description Обязателен только при `kind=image`. */
+			image_url?: string | null;
 			is_active: boolean;
+			kind: components['schemas']['BannerKind'];
 			/** @description `http(s)://...` или путь сайта `/films/dune-2021`. */
 			link_url?: string | null;
-			/** @example films */
-			page: string;
+			/**
+			 * @description Переходный период: первый `targets[].page` или `null`.
+			 * @example films
+			 */
+			page?: string | null;
 			/** Format: int32 */
 			position: number;
+			/**
+			 * Format: int32
+			 * @description Больше — выше в списке.
+			 */
+			priority: number;
+			slides: components['schemas']['BannerSlide'][];
 			/** Format: date-time */
 			starts_at?: string | null;
 			subtitle?: string | null;
+			targets: components['schemas']['BannerTarget'][];
+			/**
+			 * @description Пресет оформления (`banners::THEMES`).
+			 * @example halloween
+			 */
+			theme?: string | null;
 			title: string;
 			/** Format: date-time */
 			updated_at: string;
 		};
+		BannerButton: {
+			/** @description 1..60 символов. */
+			label: string;
+			style: components['schemas']['ButtonStyle'];
+			/** @description `http(s)://` или путь `/…` (не `//`). */
+			url: string;
+		};
+		/** @enum {string} */
+		BannerKind: 'image' | 'html' | 'slides';
+		BannerSlide: {
+			/** @description Санитизируется как `Banner.content_html`. */
+			content_html?: string | null;
+			/** @description `http(s)://`. */
+			image_url?: string | null;
+			/** @description `http(s)://` или путь `/…` (не `//`). */
+			link_url?: string | null;
+			subtitle?: string | null;
+			/** @description ≤ 300. */
+			title?: string | null;
+		};
+		/** @description Где показывать баннер. */
+		BannerTarget:
+			| {
+					/** @enum {string} */
+					type: 'all';
+			  }
+			| {
+					page: string;
+					/** @enum {string} */
+					type: 'page';
+			  }
+			| {
+					pattern: string;
+					/** @enum {string} */
+					type: 'path';
+			  };
 		/** @description Поля книги. */
 		BookMetadata: {
 			/** @description Награды и номинации: до 50. */
@@ -967,22 +1029,41 @@ export interface components {
 			 */
 			trivia?: string[] | null;
 		};
+		/** @enum {string} */
+		ButtonStyle: 'primary' | 'secondary' | 'ghost';
 		CreateBanner: {
+			/** @description 0..3. */
+			buttons?: components['schemas']['BannerButton'][];
+			content_html?: string | null;
 			/** Format: date-time */
 			ends_at?: string | null;
-			image_url: string;
+			exclude_paths?: string[];
+			/** @description Обязателен при `kind=image`. */
+			image_url?: string | null;
 			/** @description По умолчанию `true`. */
 			is_active?: boolean | null;
+			kind?: components['schemas']['BannerKind'] | null;
 			link_url?: string | null;
-			page: string;
+			/** @description Устаревшее: то же, что `targets: [{"type":"page","page":...}]`. */
+			page?: string | null;
 			/**
 			 * Format: int32
 			 * @description По умолчанию 0.
 			 */
 			position?: number | null;
+			/**
+			 * Format: int32
+			 * @description По умолчанию 0.
+			 */
+			priority?: number | null;
+			/** @description 1..10 при `kind=slides`. */
+			slides?: components['schemas']['BannerSlide'][];
 			/** Format: date-time */
 			starts_at?: string | null;
 			subtitle?: string | null;
+			/** @description 1..20. Можно не передавать, если передан устаревший `page`. */
+			targets?: components['schemas']['BannerTarget'][] | null;
+			theme?: string | null;
 			title: string;
 		};
 		CreateEntity: {
@@ -1201,6 +1282,11 @@ export interface components {
 			 * @example unauthorized
 			 */
 			error: string;
+			/**
+			 * @description Только для 400 [`AppError::Invalid`]: поле запроса с ошибкой (`content_html`, `slides[1].title`).
+			 * @example content_html
+			 */
+			field?: string | null;
 			/**
 			 * Format: int64
 			 * @description Только для 429: через сколько секунд можно повторить (то же, что заголовок `Retry-After`).
@@ -1433,23 +1519,45 @@ export interface components {
 		/** @description Страница списка. */
 		Page_Banner: {
 			items: {
+				buttons: components['schemas']['BannerButton'][];
+				/** @description Санитизированный HTML (allowlist). */
+				content_html?: string | null;
 				/** Format: date-time */
 				created_at: string;
 				/** Format: date-time */
 				ends_at?: string | null;
+				/** @description Шаблоны путей, где баннер не показывать (`/admin/*` исключён всегда). */
+				exclude_paths: string[];
 				/** Format: uuid */
 				id: string;
-				image_url: string;
+				/** @description Обязателен только при `kind=image`. */
+				image_url?: string | null;
 				is_active: boolean;
+				kind: components['schemas']['BannerKind'];
 				/** @description `http(s)://...` или путь сайта `/films/dune-2021`. */
 				link_url?: string | null;
-				/** @example films */
-				page: string;
+				/**
+				 * @description Переходный период: первый `targets[].page` или `null`.
+				 * @example films
+				 */
+				page?: string | null;
 				/** Format: int32 */
 				position: number;
+				/**
+				 * Format: int32
+				 * @description Больше — выше в списке.
+				 */
+				priority: number;
+				slides: components['schemas']['BannerSlide'][];
 				/** Format: date-time */
 				starts_at?: string | null;
 				subtitle?: string | null;
+				targets: components['schemas']['BannerTarget'][];
+				/**
+				 * @description Пресет оформления (`banners::THEMES`).
+				 * @example halloween
+				 */
+				theme?: string | null;
 				title: string;
 				/** Format: date-time */
 				updated_at: string;
@@ -2033,19 +2141,32 @@ export interface components {
 			id: string;
 			provider: components['schemas']['TrailerProvider'];
 		};
-		/** @description Переданные поля заменяются, `null` очищает необязательное. */
+		/**
+		 * @description Переданные поля заменяются (массивы `slides`, `buttons`, `targets`, `exclude_paths` —
+		 *     целиком), `null` очищает необязательное.
+		 */
 		UpdateBanner: {
+			buttons?: components['schemas']['BannerButton'][] | null;
+			content_html?: string | null;
 			/** Format: date-time */
 			ends_at?: string | null;
+			exclude_paths?: string[] | null;
 			image_url?: string | null;
 			is_active?: boolean | null;
+			kind?: components['schemas']['BannerKind'] | null;
 			link_url?: string | null;
+			/** @description Устаревшее: заменяет `targets` на `[{"type":"page","page":...}]` (если `targets` не передан). */
 			page?: string | null;
 			/** Format: int32 */
 			position?: number | null;
+			/** Format: int32 */
+			priority?: number | null;
+			slides?: components['schemas']['BannerSlide'][] | null;
 			/** Format: date-time */
 			starts_at?: string | null;
 			subtitle?: string | null;
+			targets?: components['schemas']['BannerTarget'][] | null;
+			theme?: string | null;
 			title?: string | null;
 		};
 		/**
@@ -2096,7 +2217,12 @@ export type SchemaArchiveDoc = components['schemas']['ArchiveDoc'];
 export type SchemaArchiveStats = components['schemas']['ArchiveStats'];
 export type SchemaAward = components['schemas']['Award'];
 export type SchemaBanner = components['schemas']['Banner'];
+export type SchemaBannerButton = components['schemas']['BannerButton'];
+export type SchemaBannerKind = components['schemas']['BannerKind'];
+export type SchemaBannerSlide = components['schemas']['BannerSlide'];
+export type SchemaBannerTarget = components['schemas']['BannerTarget'];
 export type SchemaBookMetadata = components['schemas']['BookMetadata'];
+export type SchemaButtonStyle = components['schemas']['ButtonStyle'];
 export type SchemaCreateBanner = components['schemas']['CreateBanner'];
 export type SchemaCreateEntity = components['schemas']['CreateEntity'];
 export type SchemaCreatePerson = components['schemas']['CreatePerson'];
@@ -2301,14 +2427,18 @@ export interface operations {
 	};
 	admin_list_banners: {
 		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Только эта страница; без него — все. */
-				page: string | null;
-				limit: number | null;
-				offset: number | null;
+			query?: {
+				/** @description Цель: `all`, страница (`home`, `films`, …) или `path` — баннеры с такой целью. */
+				target?: string;
+				/** @description Совместимость: то же, что `target=<page>`. */
+				page?: string;
+				/** @description Подстрока заголовка (без учёта регистра). */
+				q?: string;
+				limit?: number;
+				offset?: number;
 			};
+			header?: never;
+			path?: never;
 			cookie?: never;
 		};
 		requestBody?: never;
@@ -2322,7 +2452,7 @@ export interface operations {
 					'application/json': components['schemas']['Page_Banner'];
 				};
 			};
-			/** @description Неизвестная страница */
+			/** @description Неизвестный target/page */
 			400: {
 				headers: {
 					[name: string]: unknown;
@@ -2373,7 +2503,7 @@ export interface operations {
 					'application/json': components['schemas']['Banner'];
 				};
 			};
-			/** @description Неверные поля */
+			/** @description Неверные поля (`field` — какое) */
 			400: {
 				headers: {
 					[name: string]: unknown;
@@ -2475,7 +2605,7 @@ export interface operations {
 					'application/json': components['schemas']['Banner'];
 				};
 			};
-			/** @description Неверные поля */
+			/** @description Неверные поля (`field` — какое) */
 			400: {
 				headers: {
 					[name: string]: unknown;
@@ -4088,12 +4218,14 @@ export interface operations {
 	};
 	list_banners: {
 		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Страница: `home`, `films`, `series`, `books`, `games`, `people`. */
-				page: string;
+			query?: {
+				/** @description Путь страницы сайта: `/films/dune-2021` (query и `#` отбрасываются). Нужен `path` или `page`. */
+				path?: string;
+				/** @description Совместимость: `home`, `films`, `series`, `books`, `games`, `people` (= путь `/`, `/films`, …). */
+				page?: string;
 			};
+			header?: never;
+			path?: never;
 			cookie?: never;
 		};
 		requestBody?: never;
@@ -4101,13 +4233,15 @@ export interface operations {
 			/** @description Баннеры страницы */
 			200: {
 				headers: {
+					/** @description public, max-age=60 */
+					'Cache-Control'?: string;
 					[name: string]: unknown;
 				};
 				content: {
 					'application/json': components['schemas']['Banner'][];
 				};
 			};
-			/** @description Неизвестная страница */
+			/** @description Нет path/page, неизвестная page или path не с `/` */
 			400: {
 				headers: {
 					[name: string]: unknown;
