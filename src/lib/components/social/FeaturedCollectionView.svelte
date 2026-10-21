@@ -332,7 +332,7 @@
 						aria-hidden="true">{rank}</span
 					>
 					<div
-						class="col-span-2 col-start-2 row-start-2 mt-3 w-[clamp(13rem,62vw,18rem)] overflow-hidden rounded-box shadow-lg sm:col-span-1 sm:row-[1/span_2] sm:mt-0 sm:w-[clamp(12rem,24vw,17rem)]"
+						class="col-span-2 col-start-2 row-start-2 mt-3 w-[clamp(13rem,62vw,18rem)] justify-self-center overflow-hidden rounded-box shadow-lg sm:col-span-1 sm:row-[1/span_2] sm:mt-0 sm:w-[clamp(12rem,24vw,17rem)] sm:justify-self-start"
 					>
 						{#if kind}
 							<Poster
