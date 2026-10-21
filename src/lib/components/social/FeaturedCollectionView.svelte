@@ -104,7 +104,7 @@
 	const hmode = $derived(headerModeOverride ?? headerMode(collection));
 	const accent = $derived(pageAccent(collection));
 	const hasWallpaper = $derived(!!collectionWallpaperUrl(collection));
-	// Раскрытые описания по id сущности (на телефоне описание свёрнуто до 3 строк).
+	// Раскрытые описания по id сущности (на телефоне описание скрыто до клика).
 	let expanded = $state<Record<string, boolean>>({});
 	// При mode 'page' обои уже фоном страницы — в шапке их не дублируем.
 	const headerWallpaper = $derived(
@@ -309,7 +309,7 @@
 
 	{#if items.length}
 		<!-- Строка: номер | постер | текст. На телефоне заметка и описание уходят под постер на всю
-		     ширину, описание — 3 строки и «Ещё». На обоях текст с тенью, без подложки. -->
+		     ширину, описание — по кнопке «Описание»; заметка видна всегда. На обоях текст с тенью, без подложки. -->
 		<ol
 			class={['mx-auto max-w-4xl', hasWallpaper && 'over-wallpaper']}
 			reversed
@@ -359,27 +359,32 @@
 					{#if item.note || about}
 						<div class="col-span-2 col-start-2 mt-4 min-w-0 sm:col-span-1 sm:col-start-3 sm:mt-3">
 							{#if item.note}
-								<p class="text-sm leading-relaxed whitespace-pre-line text-base-content/95">
+								<p
+									class="text-sm leading-relaxed font-semibold whitespace-pre-line text-base-content sm:text-base"
+								>
 									{item.note}
 								</p>
 							{/if}
 							{#if about}
 								<p
 									class={[
-										'text-sm leading-relaxed text-base-content/85',
+										'text-sm leading-relaxed font-medium text-base-content/90 sm:text-base',
 										item.note && 'mt-3',
-										!open && 'line-clamp-3 sm:line-clamp-none'
+										!open && 'hidden sm:block'
 									]}
 								>
 									{about}
 								</p>
 								<button
 									type="button"
-									class="mt-1 text-sm text-(--page-accent) hover:underline sm:hidden"
+									class={[
+										'text-sm font-medium text-(--page-accent) hover:underline sm:hidden',
+										(item.note || open) && 'mt-2'
+									]}
 									aria-expanded={open}
 									onclick={() => (expanded[item.entity.id] = !open)}
 								>
-									{open ? 'Свернуть' : 'Ещё'}
+									{open ? 'Скрыть описание' : 'Описание'}
 								</button>
 							{/if}
 						</div>
