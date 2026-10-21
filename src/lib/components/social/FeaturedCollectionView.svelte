@@ -388,7 +388,7 @@
 							href={href ?? undefined}
 							tabindex="-1"
 							aria-hidden="true"
-							class="group col-span-2 col-start-2 row-start-2 mt-4 block w-[clamp(13rem,62vw,18rem)] justify-self-center overflow-hidden rounded-box shadow-lg ring-1 ring-white/10 transition duration-300 hover:shadow-2xl hover:ring-(--page-accent)/60 sm:col-span-1 sm:row-[1/span_2] sm:mt-0 sm:w-[clamp(12rem,24vw,17rem)] sm:justify-self-start"
+							class="group col-span-3 col-start-1 row-start-2 mt-4 block w-[clamp(13rem,62vw,18rem)] justify-self-center overflow-hidden rounded-box shadow-lg ring-1 ring-white/10 transition duration-300 hover:shadow-2xl hover:ring-(--page-accent)/60 sm:col-span-1 sm:col-start-2 sm:row-[1/span_2] sm:mt-0 sm:w-[clamp(12rem,24vw,17rem)] sm:justify-self-start"
 						>
 							{#if kind}
 								<div class="transition-transform duration-300 group-hover:scale-[1.03]">
