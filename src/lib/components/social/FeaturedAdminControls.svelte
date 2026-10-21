@@ -31,6 +31,9 @@
 	// Оформление (тема/обложка): поля появятся на бэкенде — пока форма выключена, запросов нет.
 	let themeId = $derived(collectionThemeId(collection) ?? 'default');
 	let coverUrl = $derived(collectionCoverUrl(collection) ?? '');
+	let wallpaperUrl = $derived(
+		((collection as { wallpaper_url?: string | null }).wallpaper_url as string | null) ?? ''
+	);
 
 	// Адрес /collections/{slug}: пусто — подставляем транслит названия.
 	let slugDraft = $derived(collection.slug ?? slugify(collection.title));
@@ -142,6 +145,15 @@
 							<option value={t.id}>{t.label}</option>
 						{/each}
 					</select>
+				</label>
+				<label class="form-control min-w-56 flex-1">
+					<span class="label-text text-xs">Обои (URL, широкий фон)</span>
+					<input
+						type="url"
+						class="input-bordered input input-sm"
+						placeholder="https://…"
+						bind:value={wallpaperUrl}
+					/>
 				</label>
 				<label class="form-control min-w-56 flex-1">
 					<span class="label-text text-xs">Обложка (URL)</span>

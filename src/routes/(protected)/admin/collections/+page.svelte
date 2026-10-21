@@ -207,6 +207,22 @@
 						>
 						{#if invalid}<span class="w-full text-xs text-error">{invalid}</span>{/if}
 					</form>
+					<fieldset class="mt-1 flex flex-wrap items-center gap-1" disabled>
+						<input
+							class="input w-44 input-xs"
+							placeholder="Обои (URL)"
+							aria-label="Обои «{c.title}»"
+						/>
+						<input
+							class="input w-44 input-xs"
+							placeholder="Обложка (URL)"
+							aria-label="Обложка «{c.title}»"
+						/>
+						<select class="select w-32 select-xs" aria-label="Тема «{c.title}»"
+							><option>Тема</option></select
+						>
+						<span class="text-xs text-base-content/60">Нужна поддержка бэкенда</span>
+					</fieldset>
 				</div>
 				<a href={buildFeaturedUrl(c)} class="btn btn-ghost btn-xs" target="_blank">Открыть</a>
 				<button

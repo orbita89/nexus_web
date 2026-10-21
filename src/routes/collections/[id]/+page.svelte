@@ -14,6 +14,7 @@
 	import EntityGrid from '#lib/components/catalog/EntityGrid.svelte';
 	import Seo from '#lib/components/catalog/Seo.svelte';
 	import CollectionEditor from '#lib/components/social/CollectionEditor.svelte';
+	import CollectionItemSearch from '#lib/components/social/CollectionItemSearch.svelte';
 	import CollectionForm from '#lib/components/social/CollectionForm.svelte';
 	import FeaturedCollectionView from '#lib/components/social/FeaturedCollectionView.svelte';
 	import FeaturedAdminControls from '#lib/components/social/FeaturedAdminControls.svelte';
@@ -119,6 +120,13 @@
 				{/if}
 			</div>
 			{#if error}<div class="mt-2"><Alert>{error}</Alert></div>{/if}
+			{#if mode !== 'items'}
+				<CollectionItemSearch
+					collectionId={collection.id}
+					slugs={collection.items.map((i) => i.entity.slug)}
+					onchange={() => invalidateAll()}
+				/>
+			{/if}
 		{/if}
 	{/if}
 {/snippet}

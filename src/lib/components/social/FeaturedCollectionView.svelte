@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import type { SchemaCollectionDetail } from '#lib/api/generated/social.ts';
-	import { asKind, refHref } from '#lib/catalog/kinds.ts';
+	import { asKind, kindByApi, refHref } from '#lib/catalog/kinds.ts';
 	import { count, yearOf } from '#lib/catalog/labels.ts';
 	import { featuredBadge } from '#lib/social/collections.ts';
 	import {
@@ -44,7 +44,14 @@
 			}))
 			.reverse()
 	);
-	const tier = (rank: number) => (rank === 1 ? 'gold' : rank <= 3 ? 'podium' : 'regular');
+	// Раскрытые описания по id сущности.
+	let expanded = $state<Record<string, boolean>>({});
+	const DESCRIPTION_LIMIT = 600;
+	// Слот под описание сущности: EntityRef пока его не содержит — рендерим, когда бэкенд добавит.
+	const entityDescription = (entity: object): string | null => {
+		const d = (entity as { overview?: unknown }).overview;
+		return typeof d === 'string' && d.trim() ? d.trim() : null;
+	};
 </script>
 
 <svelte:head>
@@ -116,56 +123,35 @@
 </header>
 
 {#if items.length}
-	<ol
-		class="flex max-w-4xl flex-col gap-6 sm:gap-8"
-		reversed
-		aria-label="Рейтинг: от {total}-го места к первому"
-	>
+	<ol class="max-w-4xl" reversed aria-label="Рейтинг: от {total}-го места к первому">
 		{#each items as { item, rank, kind, href }, i (item.entity.id)}
-			{@const t = tier(rank)}
 			{@const year = yearOf(item.entity.release_date)}
+			{@const kindLabel = kind ? kindByApi(kind)?.one : null}
+			{@const about = entityDescription(item.entity)}
+			{@const open = expanded[item.entity.id] ?? false}
 			<li
 				value={rank}
-				class={[
-					'flex flex-col gap-4 rounded-box p-4 sm:flex-row sm:gap-6 sm:p-6',
-					t === 'gold'
-						? 'bg-primary/10 shadow-xl ring-2 ring-primary sm:p-8'
-						: t === 'podium'
-							? 'bg-base-200 ring-2 ring-primary/50'
-							: 'bg-base-200 ring-1 ring-base-300'
-				]}
+				class="flex gap-3 border-t border-base-content/10 py-8 first:border-t-0 first:pt-0 sm:gap-5 sm:py-10"
 			>
-				<div class="flex shrink-0 items-start gap-4">
-					<span
-						class={[
-							'w-16 text-center leading-none font-black tabular-nums sm:w-24',
-							t === 'gold'
-								? 'text-7xl text-primary sm:text-9xl'
-								: t === 'podium'
-									? 'text-6xl text-primary sm:text-8xl'
-									: 'text-5xl text-primary/70 sm:text-7xl'
-						]}
-						aria-hidden="true">{rank}</span
-					>
-					<div
-						class={t === 'gold' ? 'w-40 sm:w-56' : t === 'podium' ? 'w-36 sm:w-48' : 'w-32 sm:w-40'}
-					>
-						{#if kind}
-							<Poster
-								title={item.entity.title}
-								{kind}
-								coverUrl={item.entity.cover_url}
-								eager={i < 2}
-							/>
-						{/if}
-					</div>
+				<span
+					class={[
+						'w-8 shrink-0 pt-0.5 text-right text-2xl leading-none font-semibold tabular-nums sm:w-10 sm:text-3xl',
+						rank <= 3 ? 'text-primary' : 'text-base-content/40'
+					]}
+					aria-hidden="true">{rank}</span
+				>
+				<div class="w-24 shrink-0 overflow-hidden rounded-box sm:w-28 md:w-36">
+					{#if kind}
+						<Poster
+							title={item.entity.title}
+							{kind}
+							coverUrl={item.entity.cover_url}
+							eager={i < 2}
+						/>
+					{/if}
 				</div>
 				<div class="min-w-0 flex-1">
-					<h2
-						class={t === 'gold'
-							? 'text-2xl font-black sm:text-4xl'
-							: 'text-xl font-bold sm:text-2xl'}
-					>
+					<h2 class="text-lg leading-snug font-bold sm:text-xl">
 						<span class="sr-only">{rank} место. </span>
 						{#if href}
 							<a {href} class="link link-hover">{item.entity.title}</a>
@@ -173,14 +159,42 @@
 							{item.entity.title}
 						{/if}
 					</h2>
-					{#if year}
-						<p class="text-sm text-base-content/60">{year}</p>
+					{#if year || kindLabel}
+						<p class="mt-1 text-sm text-base-content/55">
+							{[year, kindLabel].filter(Boolean).join(' · ')}
+						</p>
+					{/if}
+					{#if about}
+						<p
+							class={['mt-3 text-sm leading-relaxed text-base-content/80', !open && 'line-clamp-6']}
+						>
+							{open ? about : truncate(about, DESCRIPTION_LIMIT)}
+						</p>
 					{/if}
 					{#if item.note}
-						<blockquote class="mt-3 border-l-4 border-primary/50 pl-3 text-base-content/80 italic">
-							<p class="line-clamp-4" title={item.note}>{truncate(item.note)}</p>
-							<footer class="mt-1 text-xs text-base-content/50 not-italic">— Редакция</footer>
-						</blockquote>
+						<div class="mt-3">
+							<p class="text-xs font-medium tracking-wide text-base-content/45 uppercase">
+								Комментарий редакции
+							</p>
+							<p
+								class={[
+									'mt-1 text-sm leading-relaxed whitespace-pre-line text-base-content/70 italic',
+									!open && 'line-clamp-6'
+								]}
+							>
+								{open ? item.note : truncate(item.note, DESCRIPTION_LIMIT)}
+							</p>
+						</div>
+					{/if}
+					{#if (about?.length ?? 0) + (item.note?.length ?? 0) > 280}
+						<button
+							type="button"
+							class="mt-2 text-sm text-primary hover:underline"
+							aria-expanded={open}
+							onclick={() => (expanded[item.entity.id] = !open)}
+						>
+							{open ? 'Свернуть' : 'Ещё'}
+						</button>
 					{/if}
 				</div>
 			</li>

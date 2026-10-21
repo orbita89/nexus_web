@@ -1,42 +1,87 @@
-# Особые коллекции: обложка и тема (задача бэкенду)
+# Особые коллекции: обои, тема, описания (задача бэкенду)
 
-Особые коллекции создаёт только админ, поэтому оформление тоже задаёт админ: своя обложка
-(например, к Хеллоуину) или тематический пресет (мелодрама, Новый год…).
+Особые коллекции создаёт и оформляет только админ. Нужно: обои (широкий фон страницы
+коллекции), обложка карточки, тематический пресет и краткие описания фильмов внутри коллекции.
 
-## Поля Collection
+## 1. Оформление: `wallpaper_url`, `cover_url`, `theme`
 
-Во **всех** ответах с Collection / CollectionDetail (список, деталь, `collections/featured`,
-профиль, preview):
+Новые поля Collection — во **всех** ответах с Collection / CollectionDetail (список, деталь,
+by-slug, `collections/featured`, профиль, preview):
 
-- `cover_url: string | null` — обложка, заданная админом (https-URL или результат загрузки
-  через существующий upload/media). Рекомендуемое соотношение 16:9, ≥1280px по ширине.
-- `theme: string | null` — id пресета. Строка без enum на уровне БД; допустимые сейчас:
-  `default, halloween, romance, new-year, horror, sci-fi, family, summer`
-  (фронт: `src/lib/social/featuredThemes.ts`; неизвестное значение фронт игнорирует).
+| Поле            | Тип              | Смысл                                                                                                   |
+| --------------- | ---------------- | ------------------------------------------------------------------------------------------------------- |
+| `wallpaper_url` | `string \| null` | Обои: широкий фон/hero страницы `/collections/{slug}`. Рекомендуется 21:9 или 16:9, ≥ 1920px по ширине. |
+| `cover_url`     | `string \| null` | Обложка карточки коллекции (главная, список особых). 16:9, ≥ 1280px.                                    |
+| `theme`         | `string \| null` | id пресета оформления.                                                                                  |
 
-Для не-особых коллекций поля всегда `null`.
+Хранение изображений — как у баннеров (`image_url` в `catalog.json`, `/api/v1/catalog/admin/banners`):
+обычный https-URL строкой, отдельного upload-эндпоинта нет. Если появится общий upload/media —
+принимать его URL так же.
 
-## Эндпоинт
+Пресеты `theme` (фронт: `src/lib/catalog/themes.ts` → `src/lib/social/featuredThemes.ts`),
+строка без enum в БД, неизвестное значение фронт игнорирует:
+`default` (Стандартная), `halloween` (Хеллоуин), `romance` (Мелодрама), `new-year` (Новый год),
+`horror` (Ужасы), `sci-fi` (Фантастика), `family` (Семейное), `summer` (Лето).
 
-`PATCH /api/v1/social/admin/collections/{id}/featured` (роль admin), тело — все поля необязательны:
+Для не-особых коллекций все три поля всегда `null`.
+
+### Эндпоинт
+
+Расширить существующий `PUT /api/v1/social/admin/collections/{id}/featured` (роль admin).
+Все поля необязательны; отсутствующее поле — не менять, `null` — сбросить:
 
 ```json
-{ "position": 3, "cover_url": "https://…", "theme": "halloween" }
+{
+	"position": 3,
+	"slug": "halloween-2026",
+	"wallpaper_url": "https://cdn…/wall.jpg",
+	"cover_url": "https://cdn…/cover.jpg",
+	"theme": "halloween"
+}
 ```
 
-- `cover_url`: `null` — сбросить; иначе https-URL ≤ 2048 символов или id загруженного файла.
-- `theme`: `null` — сбросить; строка `^[a-z0-9-]{1,32}$`.
-- Коллекция должна быть особой, иначе 409 `code: "not_featured"`.
-- Ответ — обновлённая Collection.
+Ответ — обновлённая Collection (с новыми полями).
 
-## Ошибки
+### Валидация и ошибки
 
-У 400 сейчас нет машинного кода — фронт отличает «коллекция приватная» по тексту.
-Просьба: `code: "collection_private"` для приватной, `code: "validation"` с полем для
-cover_url/theme.
+- `wallpaper_url`, `cover_url`: https-URL, ≤ 2048 символов → иначе 422 `code: "validation"`, `field`.
+- `theme`: `^[a-z0-9-]{1,32}$` → иначе 422 `code: "validation"`, `field: "theme"`.
+- Коллекция не особая и запрос только меняет оформление → 409 `code: "not_featured"`.
+- Приватная коллекция → 400 `code: "collection_private"` (сейчас фронт различает по тексту).
+- Не админ → 403, нет коллекции → 404.
+
+## 2. Описания фильмов в элементах коллекции
+
+Сейчас `CollectionItem.entity` (EntityRef) = `{cover_url, id, kind, release_date, slug, title}` —
+без описания, и страница коллекции выглядит пусто.
+
+Добавить в `entity` элементов коллекции:
+
+- `overview: string | null` — описание сущности, обрезанное до ≤ 1000 символов
+  (по границе слова/предложения, без HTML).
+
+Где: `GET /api/v1/social/collections/{id}` и by-slug (деталь коллекции). В превью/списках
+не обязательно. Загружать одним батч-запросом к каталогу для всех items страницы — **без N+1**.
+Если у сущности нет описания — `null`.
+
+## 3. Админ редактирует состав особой коллекции
+
+Сейчас добавлять и убирать фильмы может только владелец. Админу нужно то же
+для любой особой коллекции:
+
+- `PUT /api/v1/social/admin/collections/{id}/items/{slug}` — тело как у
+  `PutCollectionItem` (`{note?, position?}`), ответ как у обычного PUT;
+- `DELETE /api/v1/social/admin/collections/{id}/items/{slug}` → 204.
+
+Только роль admin (иначе 403), только для `is_featured` (иначе 400).
 
 ## Фронт после реализации
 
-Перегенерировать `src/lib/api/generated/social.ts`, включить
-`FEATURED_STYLE_SUPPORTED` в `featuredThemes.ts`, дописать вызов сохранения в
-`FeaturedAdminControls.svelte`.
+1. Перегенерировать `src/lib/api/generated/social.ts`.
+2. Включить `FEATURED_STYLE_SUPPORTED` в `src/lib/social/featuredThemes.ts`, убрать
+   StyleExtension-обход, добавить `wallpaper_url`.
+3. `FeaturedAdminControls.svelte` и админка «Подборки» (`/admin/collections`): разблокировать поля
+   «Обои», «Обложка», «Тема» и сохранять через `PUT …/featured`.
+4. `FeaturedCollectionView.svelte`: обои — фон hero с градиентным оверлеем к фону страницы
+   (читаемость заголовка); без обоев — тема/коллаж как сейчас. Слот описания у каждого
+   элемента (`entity.overview`, 3–4 строки с line-clamp).
