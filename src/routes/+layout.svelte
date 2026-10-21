@@ -24,6 +24,11 @@
 			// localStorage недоступен (приватный режим) — чистить нечего
 		}
 	});
+	// Страница особой коллекции — спецпроект на всю страницу: подвал сайта не показываем.
+	const hideFooter = $derived(
+		(page.data as { collection?: { is_featured?: boolean } | null }).collection?.is_featured ===
+			true
+	);
 	const isAdmin = $derived(
 		page.url.pathname === '/admin' || page.url.pathname.startsWith('/admin/')
 	);
@@ -49,31 +54,33 @@
 		{/if}
 		{@render children()}
 	</main>
-	<footer class="mt-10 border-t border-base-300 bg-base-200/40">
-		<div
-			class="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-8 text-sm text-base-content/50 sm:flex-row sm:items-center sm:justify-between"
-		>
-			<p>
-				<span class="font-black tracking-widest text-base-content uppercase">Nexus</span>
-				<span class="text-primary">·</span> фильмы, сериалы, книги и игры
-			</p>
-			<nav aria-label="Каталог" class="flex flex-wrap gap-x-4 gap-y-1">
-				{#each KINDS as k (k.slug)}
-					<a href="/{k.slug}" class="link link-hover">{k.title}</a>
-				{/each}
-				<a href="/people" class="link link-hover">Люди</a>
-				<a href="/collections" class="link link-hover">Коллекции</a>
-				<a href="/forum" class="link link-hover">Форум</a>
-				<a href="/tags" class="link link-hover">Теги</a>
-			</nav>
-			<p class="text-xs">
-				Постеры:
-				<a href="https://www.themoviedb.org/" class="link link-hover" rel="noopener external"
-					>TMDB</a
-				>
-			</p>
-		</div>
-	</footer>
+	{#if !hideFooter}
+		<footer class="mt-10 border-t border-base-300 bg-base-200/40">
+			<div
+				class="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-8 text-sm text-base-content/50 sm:flex-row sm:items-center sm:justify-between"
+			>
+				<p>
+					<span class="font-black tracking-widest text-base-content uppercase">Nexus</span>
+					<span class="text-primary">·</span> фильмы, сериалы, книги и игры
+				</p>
+				<nav aria-label="Каталог" class="flex flex-wrap gap-x-4 gap-y-1">
+					{#each KINDS as k (k.slug)}
+						<a href="/{k.slug}" class="link link-hover">{k.title}</a>
+					{/each}
+					<a href="/people" class="link link-hover">Люди</a>
+					<a href="/collections" class="link link-hover">Коллекции</a>
+					<a href="/forum" class="link link-hover">Форум</a>
+					<a href="/tags" class="link link-hover">Теги</a>
+				</nav>
+				<p class="text-xs">
+					Постеры:
+					<a href="https://www.themoviedb.org/" class="link link-hover" rel="noopener external"
+						>TMDB</a
+					>
+				</p>
+			</div>
+		</footer>
+	{/if}
 	<ReplyToasts />
 </div>
 <ChatPanel />
