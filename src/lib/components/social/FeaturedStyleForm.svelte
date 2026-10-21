@@ -8,6 +8,7 @@
 		validationField,
 		type FeaturedOptions
 	} from '#lib/social/collections.ts';
+	import CollectionBackdrop from '#lib/components/social/CollectionBackdrop.svelte';
 	import { FEATURED_THEMES, styleUrlError, themeById } from '#lib/social/featuredThemes.ts';
 	import type { FeaturedThemeId } from '#lib/social/featuredThemes.ts';
 
@@ -150,6 +151,17 @@
 				<div class="absolute inset-0 -z-10" style:background={preview.pattern}></div>
 			{/if}
 			<span class="absolute bottom-1.5 left-2 text-sm font-black">{collection.title}</span>
+		</div>
+		<div
+			class="relative isolate h-16 w-24 shrink-0 overflow-hidden rounded-box bg-base-100 ring-1 ring-base-content/10"
+			aria-label="Предпросмотр фона страницы"
+			title="Фон страницы"
+		>
+			<CollectionBackdrop
+				preview
+				themeId={knownTheme ? (draft.theme as FeaturedThemeId) : null}
+				wallpaperUrl={draft.wallpaper_url && !local.wallpaper_url ? draft.wallpaper_url : null}
+			/>
 		</div>
 		{#if draft.cover_url && !local.cover_url}
 			<img

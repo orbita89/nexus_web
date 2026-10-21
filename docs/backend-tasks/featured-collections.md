@@ -52,8 +52,8 @@ by-slug, `collections/featured`, профиль, preview):
 
 ### Валидация и ошибки
 
-- `wallpaper_url`, `cover_url`: https-URL, ≤ 2048 символов → иначе 422 `code: "validation"`, `field`.
-- `theme`: `^[a-z0-9-]{1,32}$` → иначе 422 `code: "validation"`, `field: "theme"`.
+- `wallpaper_url`, `cover_url`: https-URL, ≤ 2048 символов → иначе 400 `code: "validation"`, `field`.
+- `theme`: `^[a-z0-9-]{1,32}$` → иначе 400 `code: "validation"`, `field: "theme"`.
 - Коллекция не особая и запрос только меняет оформление → 409 `code: "not_featured"`.
 - Приватная коллекция → 400 `code: "collection_private"` (сейчас фронт различает по тексту).
 - Не админ → 403, нет коллекции → 404.
