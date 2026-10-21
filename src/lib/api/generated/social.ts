@@ -64,10 +64,13 @@ export interface paths {
 			cookie?: never;
 		};
 		get?: never;
-		/** Пометить публичную коллекцию особой или поменять её порядок среди особых. */
+		/** Пометить публичную коллекцию особой, поменять её порядок или адрес. */
 		put: operations['admin_feature_collection'];
 		post?: never;
-		/** Снять с коллекции отметку «особая». */
+		/**
+		 * Снять с коллекции отметку «особая». slug уходит в историю: старый адрес ведёт на
+		 *     `/collections/{id}`, другой коллекции он не достанется.
+		 */
 		delete: operations['admin_unfeature_collection'];
 		options?: never;
 		head?: never;
@@ -323,6 +326,27 @@ export interface paths {
 		put?: never;
 		/** Создать коллекцию. */
 		post: operations['create_collection'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/social/collections/by-slug/{slug}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Особая коллекция по читаемому адресу (`/collections/{slug}` на сайте). Бывший адрес —
+		 *     куда перенаправить: `redirect_slug` (коллекция всё ещё особая) или `redirect_id` (больше не
+		 *     особая, но публичная). Удалена, приватна или slug неизвестен — 404. Доступен гостю.
+		 */
+		get: operations['get_collection_by_slug'];
+		put?: never;
+		post?: never;
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -1079,11 +1103,26 @@ export interface components {
 			owner: components['schemas']['UserRef'];
 			/** @description Первые 4 произведения по порядку: обложки в карточке коллекции. */
 			preview: components['schemas']['EntityRef'][];
+			/**
+			 * @description Читаемый адрес особой коллекции (`/collections/{slug}`); у обычной — `null`.
+			 * @example russkiy-top-2021
+			 */
+			slug?: string | null;
 			/** @example Лучшая фантастика */
 			title: string;
 			/** Format: date-time */
 			updated_at: string;
 		};
+		/** @description Ответ `GET /collections/by-slug/{slug}`: коллекция или куда перенаправить (301 на фронтенде). */
+		CollectionBySlug:
+			| components['schemas']['CollectionDetail']
+			| {
+					redirect_slug: string;
+			  }
+			| {
+					/** Format: uuid */
+					redirect_id: string;
+			  };
 		/** @description Коллекция с содержимым по порядку. */
 		CollectionDetail: components['schemas']['Collection'] & {
 			items: components['schemas']['CollectionItem'][];
@@ -1235,10 +1274,17 @@ export interface components {
 		FeatureCollection: {
 			/**
 			 * Format: int32
-			 * @description Порядок среди особых; без него — в конец.
+			 * @description Порядок среди особых; без него — в конец (при повторном PUT — не меняется).
 			 * @example 0
 			 */
 			position?: number | null;
+			/**
+			 * @description Адрес `/collections/{slug}`: a-z, 0-9, дефисы между ними, 3–100, не UUID и не служебное
+			 *     слово. Без него — при первой пометке транслит названия (занят — `-2`, `-3`…), при
+			 *     повторном PUT — не меняется.
+			 * @example russkiy-top-2021
+			 */
+			slug?: string | null;
 		};
 		/** @description Запись ленты: заполнено ровно одно из `review`, `thread`, `collection` — по `type`. */
 		FeedItem: {
@@ -1347,6 +1393,11 @@ export interface components {
 				owner: components['schemas']['UserRef'];
 				/** @description Первые 4 произведения по порядку: обложки в карточке коллекции. */
 				preview: components['schemas']['EntityRef'][];
+				/**
+				 * @description Читаемый адрес особой коллекции (`/collections/{slug}`); у обычной — `null`.
+				 * @example russkiy-top-2021
+				 */
+				slug?: string | null;
 				/** @example Лучшая фантастика */
 				title: string;
 				/** Format: date-time */
@@ -2144,6 +2195,7 @@ export type SchemaChatRoomInfo = components['schemas']['ChatRoomInfo'];
 export type SchemaChatRoomMe = components['schemas']['ChatRoomMe'];
 export type SchemaChatSummary = components['schemas']['ChatSummary'];
 export type SchemaCollection = components['schemas']['Collection'];
+export type SchemaCollectionBySlug = components['schemas']['CollectionBySlug'];
 export type SchemaCollectionDetail = components['schemas']['CollectionDetail'];
 export type SchemaCollectionItem = components['schemas']['CollectionItem'];
 export type SchemaCreateCollection = components['schemas']['CreateCollection'];
@@ -2441,7 +2493,7 @@ export interface operations {
 			};
 			cookie?: never;
 		};
-		/** @description Можно не передавать тело: в конец */
+		/** @description Можно не передавать тело: в конец, slug — транслит названия */
 		requestBody: {
 			content: {
 				'application/json': components['schemas']['FeatureCollection'];
@@ -2457,7 +2509,7 @@ export interface operations {
 					'application/json': components['schemas']['Collection'];
 				};
 			};
-			/** @description Коллекция приватная */
+			/** @description Коллекция приватная; неверный slug (формат, UUID, служебное слово) */
 			400: {
 				headers: {
 					[name: string]: unknown;
@@ -2486,6 +2538,15 @@ export interface operations {
 			};
 			/** @description Не найдена */
 			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description slug занят другой коллекцией (сейчас или раньше) */
+			409: {
 				headers: {
 					[name: string]: unknown;
 				};
@@ -3420,6 +3481,41 @@ export interface operations {
 			};
 			/** @description Нет токена */
 			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	get_collection_by_slug: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug особой коллекции
+				 * @example russkiy-top-2021
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Коллекция (`CollectionDetail`) или `{redirect_slug}` / `{redirect_id}` */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['CollectionBySlug'];
+				};
+			};
+			/** @description Нет такого адреса */
+			404: {
 				headers: {
 					[name: string]: unknown;
 				};

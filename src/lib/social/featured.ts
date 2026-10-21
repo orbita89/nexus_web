@@ -2,13 +2,15 @@ import type { SchemaCollection, SchemaCollectionDetail } from '#lib/api/generate
 import { refHref } from '#lib/catalog/kinds.ts';
 
 /**
- * Адрес страницы особой коллекции — единственное место, где он собирается.
- * Пока /collections/{id}; при переезде на /top/{slug} поменять здесь, а в
- * routes/collections/[id]/+page.ts отдать redirect(301, buildFeaturedUrl(collection))
- * для is_featured — разметка (FeaturedCollectionView) переедет без изменений.
+ * Адрес страницы особой коллекции — единственное место, где он собирается:
+ * /collections/{slug}, если коллекция особая и slug есть, иначе /collections/{id}. От него строятся
+ * canonical, og:url, JSON-LD, sitemap и ссылки в карточках.
  */
-export function buildFeaturedUrl(collection: Pick<SchemaCollection, 'id'>): string {
-	return `/collections/${collection.id}`;
+export function buildFeaturedUrl(
+	collection: Pick<SchemaCollection, 'id' | 'slug' | 'is_featured'>
+): string {
+	const slug = collection.is_featured ? collection.slug : null;
+	return `/collections/${encodeURIComponent(slug || collection.id)}`;
 }
 
 /** <title> без суффикса сайта: «{title} — топ фильмов». */

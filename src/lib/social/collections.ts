@@ -3,7 +3,11 @@
 
 import type { Api } from '#lib/api/client.ts';
 import { ApiError, unwrap } from '#lib/api/errors.ts';
-import type { SchemaCollection } from '#lib/api/generated/social.ts';
+import type {
+	SchemaCollection,
+	SchemaCollectionBySlug,
+	SchemaCollectionDetail
+} from '#lib/api/generated/social.ts';
 
 export const COLLECTION_LIMITS = { title: 200, description: 2000, note: 1000, items: 500 };
 
@@ -34,16 +38,45 @@ export function getFeaturedCollections(api: Api): Promise<SchemaCollection[]> {
 	return unwrap(api.social.GET('/api/v1/social/collections/featured'));
 }
 
-/** Админ: сделать коллекцию особой или поменять её позицию. Приватная → 400. */
+/** Новые публичные коллекции (страница limit/offset). */
+export function listPublicCollections(
+	api: Api,
+	offset = 0,
+	limit = 20
+): Promise<SchemaCollection[]> {
+	return unwrap(
+		api.social.GET('/api/v1/social/collections', { params: { query: { offset, limit } } })
+	).then((page) => page.items);
+}
+
+/** Особая коллекция по slug: сама коллекция, либо куда перенаправить. 404 — ApiError. */
+export function getCollectionBySlug(api: Api, slug: string): Promise<SchemaCollectionBySlug> {
+	return unwrap(
+		api.social.GET('/api/v1/social/collections/by-slug/{slug}', { params: { path: { slug } } })
+	);
+}
+
+/** Ответ by-slug — сама коллекция (а не перенаправление). */
+export function isCollectionDetail(r: SchemaCollectionBySlug): r is SchemaCollectionDetail {
+	return 'id' in r;
+}
+
+/**
+ * Админ: сделать коллекцию особой, поменять её позицию и/или адрес (slug).
+ * Приватная или неверный slug → 400, slug занят → 409.
+ */
 export function adminSetFeatured(
 	api: Api,
 	id: string,
-	position?: number
+	opts: { position?: number; slug?: string } = {}
 ): Promise<SchemaCollection> {
+	const body: { position?: number; slug?: string } = {};
+	if (opts.position !== undefined) body.position = opts.position;
+	if (opts.slug !== undefined) body.slug = opts.slug;
 	return unwrap(
 		api.social.PUT('/api/v1/social/admin/collections/{id}/featured', {
 			params: { path: { id } },
-			body: position === undefined ? {} : { position }
+			body
 		})
 	);
 }
@@ -74,11 +107,12 @@ export function featuredBadge(title: string): string {
 export function featuredAdminError(e: unknown, fallback: (e: unknown) => string): string {
 	if (e instanceof ApiError) {
 		if (e.status === 403) return 'Недостаточно прав.';
+		if (e.status === 409) return 'Такой адрес уже занят.';
 		if (e.status === 400) {
 			// У 400 нет отдельного code: приватность узнаём по тексту бэкенда, иначе — общий текст.
 			const raw = `${e.code ?? ''} ${e.serverMessage ?? ''}`.toLowerCase();
 			if (/private|public|приват|публич/.test(raw)) return 'Сначала сделайте коллекцию публичной.';
-			return `Не удалось сохранить: ${e.message}`;
+			return `Не удалось сохранить: ${e.serverMessage ?? e.message}`;
 		}
 		if (e.status === 404) return 'Коллекция не найдена.';
 	}

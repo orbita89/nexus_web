@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { SchemaCollection } from '#lib/api/generated/social.ts';
+	import { buildFeaturedUrl } from '#lib/social/featured.ts';
 	import { asKind } from '#lib/catalog/kinds.ts';
 	import { count, summary } from '#lib/catalog/labels.ts';
 	import { displayName } from '#lib/social/reviews.ts';
@@ -16,7 +17,7 @@
 	class="flex h-full flex-col rounded-box bg-base-200 p-4 ring-1 ring-base-300 transition hover:ring-primary/50"
 >
 	<a
-		href="/collections/{collection.id}"
+		href={buildFeaturedUrl(collection)}
 		class="mb-3 grid grid-cols-4 gap-1.5"
 		tabindex="-1"
 		aria-hidden="true"
@@ -38,7 +39,7 @@
 		{/each}
 	</a>
 	<h3 class="flex items-start gap-2 text-lg leading-snug font-semibold">
-		<a href="/collections/{collection.id}" class="min-w-0 flex-1 hover:text-primary"
+		<a href={buildFeaturedUrl(collection)} class="min-w-0 flex-1 hover:text-primary"
 			>{collection.title}</a
 		>
 		{#if !collection.is_public}

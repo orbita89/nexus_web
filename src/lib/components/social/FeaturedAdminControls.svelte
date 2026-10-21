@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 	import { errorMessage } from '#lib/api/errors.ts';
 	import type { SchemaCollection } from '#lib/api/generated/social.ts';
 	import { api, session } from '#lib/auth/session.svelte.ts';
@@ -7,6 +9,8 @@
 		adminUnsetFeatured,
 		featuredAdminError
 	} from '#lib/social/collections.ts';
+	import { buildFeaturedUrl } from '#lib/social/featured.ts';
+	import { slugError, slugify } from '#lib/social/slug.ts';
 	import {
 		FEATURED_STYLE_SUPPORTED,
 		FEATURED_THEMES,
@@ -28,15 +32,45 @@
 	let themeId = $derived(collectionThemeId(collection) ?? 'default');
 	let coverUrl = $derived(collectionCoverUrl(collection) ?? '');
 
+	// Адрес /collections/{slug}: пусто — подставляем транслит названия.
+	let slugDraft = $derived(collection.slug ?? slugify(collection.title));
+	let slugInvalid = $derived(slugError(slugDraft.trim()));
+
+	/** Адрес страницы поменялся (slug, снятие пометки) — обновить строку браузера. */
+	async function syncUrl(href: string) {
+		if (page.url.pathname.startsWith('/collections/') && page.url.pathname !== href) {
+			await goto(href, { replaceState: true });
+		}
+	}
+
+	async function saveSlug() {
+		const slug = slugDraft.trim();
+		if (slugInvalid || slug === collection.slug) return;
+		busy = true;
+		error = '';
+		try {
+			const updated = await adminSetFeatured(api, collection.id, { slug });
+			onchange?.(updated);
+			await syncUrl(buildFeaturedUrl(updated));
+		} catch (e) {
+			error = featuredAdminError(e, errorMessage);
+		} finally {
+			busy = false;
+		}
+	}
+
 	async function toggle() {
 		busy = true;
 		error = '';
 		try {
 			if (featured) {
 				await adminUnsetFeatured(api, collection.id);
-				onchange?.({ ...collection, is_featured: false, featured_position: null });
+				onchange?.({ ...collection, is_featured: false, featured_position: null, slug: null });
+				await syncUrl(`/collections/${collection.id}`);
 			} else {
-				onchange?.(await adminSetFeatured(api, collection.id));
+				const updated = await adminSetFeatured(api, collection.id);
+				onchange?.(updated);
+				await syncUrl(buildFeaturedUrl(updated));
 			}
 		} catch (e) {
 			error = featuredAdminError(e, errorMessage);
@@ -63,6 +97,40 @@
 			</button>
 		{/if}
 		{#if featured}
+			<form
+				class="flex w-full flex-wrap items-end gap-2"
+				onsubmit={(e) => {
+					e.preventDefault();
+					void saveSlug();
+				}}
+			>
+				<label class="form-control min-w-56 flex-1">
+					<span class="label-text text-xs">Адрес: /collections/…</span>
+					<input
+						class="input-bordered input font-mono input-sm"
+						class:input-error={!!slugInvalid}
+						maxlength="100"
+						autocomplete="off"
+						spellcheck="false"
+						disabled={busy}
+						bind:value={slugDraft}
+					/>
+				</label>
+				<button
+					type="button"
+					class="btn btn-ghost btn-sm"
+					disabled={busy}
+					title="Транслит названия"
+					onclick={() => (slugDraft = slugify(collection.title))}>Из названия</button
+				>
+				<button
+					type="submit"
+					class="btn btn-sm"
+					disabled={busy || !!slugInvalid || slugDraft.trim() === collection.slug}
+					>Сохранить адрес</button
+				>
+				{#if slugInvalid}<span class="w-full text-xs text-error">{slugInvalid}</span>{/if}
+			</form>
 			<fieldset
 				class="flex w-full flex-wrap items-end gap-2"
 				disabled={!FEATURED_STYLE_SUPPORTED || busy}

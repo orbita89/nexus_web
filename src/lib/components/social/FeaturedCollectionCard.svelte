@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { SchemaCollection } from '#lib/api/generated/social.ts';
+	import { buildFeaturedUrl } from '#lib/social/featured.ts';
 	import { asKind } from '#lib/catalog/kinds.ts';
 	import { count, summary } from '#lib/catalog/labels.ts';
 	import { featuredBadge } from '#lib/social/collections.ts';
@@ -32,7 +33,7 @@
 		>
 	</div>
 	{#if look.kind === 'cover'}
-		<a href="/collections/{collection.id}" class="mb-4 block" tabindex="-1" aria-hidden="true">
+		<a href={buildFeaturedUrl(collection)} class="mb-4 block" tabindex="-1" aria-hidden="true">
 			<img
 				src={look.url}
 				alt=""
@@ -42,7 +43,7 @@
 		</a>
 	{:else}
 		<a
-			href="/collections/{collection.id}"
+			href={buildFeaturedUrl(collection)}
 			class="mb-4 grid grid-cols-4 gap-2"
 			tabindex="-1"
 			aria-hidden="true"
@@ -62,7 +63,7 @@
 		</a>
 	{/if}
 	<h3 class="text-xl leading-snug font-black sm:text-2xl">
-		<a href="/collections/{collection.id}" class="hover:text-primary">{collection.title}</a>
+		<a href={buildFeaturedUrl(collection)} class="hover:text-primary">{collection.title}</a>
 	</h3>
 	{#if collection.description}
 		<p class="mt-1.5 line-clamp-3 text-sm text-base-content/70">
