@@ -6,7 +6,11 @@
 	import { api, session } from '#lib/auth/session.svelte.ts';
 	import { asKind } from '#lib/catalog/kinds.ts';
 	import { count, summary } from '#lib/catalog/labels.ts';
-	import { FEATURED_PRIVATE_ERROR, isFeaturedMustBePublic } from '#lib/social/collections.ts';
+	import {
+		FEATURED_PRIVATE_ERROR,
+		editsAsAdmin,
+		isFeaturedMustBePublic
+	} from '#lib/social/collections.ts';
 	import { displayName, reviewDate } from '#lib/social/reviews.ts';
 	import Alert from '#lib/components/Alert.svelte';
 	import Avatar from '#lib/components/Avatar.svelte';
@@ -32,6 +36,11 @@
 	const own = $derived(
 		!!collection && session.status === 'authed' && session.user?.id === collection.owner.id
 	);
+	// Админ правит состав чужой особой коллекции через админские пути.
+	const asAdmin = $derived(
+		!!collection && session.status === 'authed' && editsAsAdmin(collection, session.user)
+	);
+	const canEditItems = $derived(own || asAdmin);
 	// EntityRef → карточка постера; заметка владельца — подписью.
 	const entities = $derived(
 		(collection?.items ?? []).flatMap((item): SchemaEntitySummary[] => {
@@ -97,26 +106,30 @@
 				/>
 			</div>
 		{/if}
-		{#if own && mode !== 'edit'}
+		{#if canEditItems && mode !== 'edit'}
 			<div class="mt-4 flex flex-wrap items-center gap-2">
 				<button
 					class={['btn btn-sm', mode === 'items' ? 'btn-primary' : '']}
 					onclick={() => (mode = mode === 'items' ? 'view' : 'items')}
 					>{mode === 'items' ? 'Готово' : 'Изменить содержимое'}</button
 				>
-				<button class="btn btn-ghost btn-sm" onclick={() => (mode = 'edit')}
-					>Название и описание</button
-				>
-				{#if mode === 'delete'}
-					<span class="flex items-center gap-2 text-sm">
-						Удалить коллекцию?
-						<button class="btn btn-error btn-sm" onclick={remove}>Удалить</button>
-						<button class="btn btn-ghost btn-sm" onclick={() => (mode = 'view')}>Отмена</button>
-					</span>
+				{#if !own}
+					<span class="text-xs text-base-content/60">Правка состава как администратор</span>
 				{:else}
-					<button class="btn btn-ghost btn-sm" onclick={() => (mode = 'delete')}
-						>Удалить коллекцию</button
+					<button class="btn btn-ghost btn-sm" onclick={() => (mode = 'edit')}
+						>Название и описание</button
 					>
+					{#if mode === 'delete'}
+						<span class="flex items-center gap-2 text-sm">
+							Удалить коллекцию?
+							<button class="btn btn-error btn-sm" onclick={remove}>Удалить</button>
+							<button class="btn btn-ghost btn-sm" onclick={() => (mode = 'view')}>Отмена</button>
+						</span>
+					{:else}
+						<button class="btn btn-ghost btn-sm" onclick={() => (mode = 'delete')}
+							>Удалить коллекцию</button
+						>
+					{/if}
 				{/if}
 			</div>
 			{#if error}<div class="mt-2"><Alert>{error}</Alert></div>{/if}
@@ -124,6 +137,7 @@
 				<CollectionItemSearch
 					collectionId={collection.id}
 					slugs={collection.items.map((i) => i.entity.slug)}
+					{asAdmin}
 					onchange={() => invalidateAll()}
 				/>
 			{/if}
@@ -183,11 +197,12 @@
 		{@render controls()}
 	</header>
 
-	{#if own && mode === 'items'}
+	{#if canEditItems && mode === 'items'}
 		<div class="max-w-3xl">
 			<CollectionEditor
 				collectionId={collection.id}
 				items={collection.items}
+				{asAdmin}
 				onchange={() => invalidateAll()}
 			/>
 		</div>

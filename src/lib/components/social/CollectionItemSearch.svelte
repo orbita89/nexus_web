@@ -1,5 +1,10 @@
 <script lang="ts">
 	import { errorMessage, unwrap } from '#lib/api/errors.ts';
+	import {
+		COLLECTION_LIMITS,
+		featuredAdminError,
+		putCollectionItem
+	} from '#lib/social/collections.ts';
 	import type { SchemaEntitySummary } from '#lib/api/generated/catalog.ts';
 	import { api, guestApi } from '#lib/auth/session.svelte.ts';
 	import { KINDS } from '#lib/catalog/kinds.ts';
@@ -11,8 +16,15 @@
 	let {
 		collectionId,
 		slugs,
+		asAdmin = false,
 		onchange
-	}: { collectionId: string; slugs: string[]; onchange: () => void } = $props();
+	}: {
+		collectionId: string;
+		slugs: string[];
+		/** Админ в чужой особой — админские пути состава. */
+		asAdmin?: boolean;
+		onchange: () => void;
+	} = $props();
 
 	let query = $state('');
 	let results = $state<SchemaEntitySummary[]>([]);
@@ -20,6 +32,10 @@
 	let failed = $state(false);
 	let error = $state('');
 	let pending = $state<string | null>(null);
+	/** Только что добавленное: можно сразу написать заметку (необязательно). */
+	let justAdded = $state<SchemaEntitySummary | null>(null);
+	let noteDraft = $state('');
+	let noteBusy = $state(false);
 	/** Добавленные, пока страница не перечиталась, — сразу помечаем «Уже в коллекции». */
 	let added = $state<string[]>([]);
 	let timer: ReturnType<typeof setTimeout> | undefined;
@@ -52,9 +68,25 @@
 		}, 250);
 	}
 
-	function message(e: unknown) {
-		const status = (e as { status?: number })?.status;
-		return status === 403 ? 'Недостаточно прав' : errorMessage(e);
+	const message = (e: unknown) => featuredAdminError(e, errorMessage);
+
+	async function saveNote(event: SubmitEvent) {
+		event.preventDefault();
+		const entity = justAdded;
+		const note = noteDraft.trim();
+		if (!entity || !note) return void (justAdded = null);
+		noteBusy = true;
+		error = '';
+		try {
+			await putCollectionItem(api, collectionId, entity.slug, { note }, asAdmin);
+			justAdded = null;
+			noteDraft = '';
+			onchange();
+		} catch (e) {
+			error = message(e);
+		} finally {
+			noteBusy = false;
+		}
 	}
 
 	async function add(entity: SchemaEntitySummary) {
@@ -63,12 +95,11 @@
 		pending = entity.slug;
 		added = [...added, entity.slug];
 		try {
-			await unwrap(
-				api.social.PUT('/api/v1/social/collections/{id}/items/{slug}', {
-					params: { path: { id: collectionId, slug: entity.slug } },
-					body: {}
-				})
-			);
+			await putCollectionItem(api, collectionId, entity.slug, {}, asAdmin);
+			justAdded = entity;
+			noteDraft = '';
+			query = '';
+			results = [];
 			onchange();
 		} catch (e) {
 			added = added.filter((s) => s !== entity.slug);
@@ -94,6 +125,28 @@
 	</label>
 	{#if failed}<p class="mt-1 text-xs text-error">Поиск сейчас недоступен. Попробуйте позже.</p>{/if}
 	{#if error}<p class="mt-1 text-xs text-error" role="alert">{error}</p>{/if}
+	{#if justAdded}
+		<form class="mt-2 flex flex-col gap-2 rounded-box bg-base-200 p-3" onsubmit={saveNote}>
+			<label class="text-sm" for="added-note"
+				>Добавлено: <b>{justAdded.title}</b>. Заметка (необязательно)</label
+			>
+			<textarea
+				id="added-note"
+				class="textarea w-full textarea-sm"
+				rows="2"
+				maxlength={COLLECTION_LIMITS.note}
+				disabled={noteBusy}
+				bind:value={noteDraft}></textarea>
+			<div class="flex gap-2">
+				<button class="btn btn-primary btn-sm" disabled={noteBusy || !noteDraft.trim()}
+					>Сохранить заметку</button
+				>
+				<button type="button" class="btn btn-ghost btn-sm" onclick={() => (justAdded = null)}
+					>Без заметки</button
+				>
+			</div>
+		</form>
+	{/if}
 	{#if results.length}
 		<ul
 			class="absolute z-20 mt-1 flex max-h-96 w-full flex-col overflow-y-auto rounded-box bg-base-200 p-1 shadow-xl ring-1 ring-base-300"

@@ -1,5 +1,13 @@
 # Особые коллекции: обои, тема, описания (задача бэкенду)
 
+> **Сделано.** Бэкенд: nexus_project 2fba7bd (контракт `documents/api/social.json`). Фронт подключён:
+> `FeaturedStyleForm.svelte` (обои, обложка, тема — на странице коллекции и в «Подборках»),
+> шапка с обоями и og:image (`FeaturedCollectionView.svelte`), `entity.overview` под заметкой,
+> админская правка состава чужой особой (`editsAsAdmin`, `putCollectionItem`/`deleteCollectionItem`
+> в `src/lib/social/collections.ts`). Отличия от текста ниже: ошибки проверки — **400** `validation`
+> (не 422); `409 not_featured` не нужен (PUT …/featured сам делает коллекцию особой), `not_featured`
+> (400) — у админской правки состава. Порядок в админской правке — PUT с `position` для сдвинутых.
+
 Особые коллекции создаёт и оформляет только админ. Нужно: обои (широкий фон страницы
 коллекции), обложка карточки, тематический пресет и краткие описания фильмов внутри коллекции.
 
@@ -75,7 +83,9 @@ by-slug, `collections/featured`, профиль, preview):
 
 Только роль admin (иначе 403), только для `is_featured` (иначе 400).
 
-## Фронт после реализации
+## Фронт (сделано)
+
+Все пункты ниже выполнены.
 
 1. Перегенерировать `src/lib/api/generated/social.ts`.
 2. Включить `FEATURED_STYLE_SUPPORTED` в `src/lib/social/featuredThemes.ts`, убрать

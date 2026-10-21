@@ -3,6 +3,7 @@
 	import type { SchemaCollection } from '#lib/api/generated/social.ts';
 	import { api } from '#lib/auth/session.svelte.ts';
 	import Alert from '#lib/components/Alert.svelte';
+	import FeaturedStyleForm from '#lib/components/social/FeaturedStyleForm.svelte';
 	import {
 		adminSetFeatured,
 		adminUnsetFeatured,
@@ -64,7 +65,17 @@
 			await adminUnsetFeatured(api, c.id);
 			list = list.filter((x) => x.id !== c.id);
 			browse = browse.map((x) =>
-				x.id === c.id ? { ...x, is_featured: false, featured_position: null, slug: null } : x
+				x.id === c.id
+					? {
+							...x,
+							is_featured: false,
+							featured_position: null,
+							slug: null,
+							wallpaper_url: null,
+							cover_url: null,
+							theme: null
+						}
+					: x
 			);
 		} catch (e) {
 			error = featuredAdminError(e, errorMessage);
@@ -207,22 +218,16 @@
 						>
 						{#if invalid}<span class="w-full text-xs text-error">{invalid}</span>{/if}
 					</form>
-					<fieldset class="mt-1 flex flex-wrap items-center gap-1" disabled>
-						<input
-							class="input w-44 input-xs"
-							placeholder="Обои (URL)"
-							aria-label="Обои «{c.title}»"
-						/>
-						<input
-							class="input w-44 input-xs"
-							placeholder="Обложка (URL)"
-							aria-label="Обложка «{c.title}»"
-						/>
-						<select class="select w-32 select-xs" aria-label="Тема «{c.title}»"
-							><option>Тема</option></select
-						>
-						<span class="text-xs text-base-content/60">Нужна поддержка бэкенда</span>
-					</fieldset>
+					<details class="mt-1">
+						<summary class="cursor-pointer text-xs text-base-content/70">Оформление</summary>
+						<div class="mt-2">
+							<FeaturedStyleForm
+								collection={c}
+								compact
+								onsaved={(u) => (list = list.map((x) => (x.id === u.id ? u : x)))}
+							/>
+						</div>
+					</details>
 				</div>
 				<a href={buildFeaturedUrl(c)} class="btn btn-ghost btn-xs" target="_blank">Открыть</a>
 				<button

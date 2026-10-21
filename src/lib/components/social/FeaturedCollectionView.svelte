@@ -12,7 +12,11 @@
 		jsonLdScript,
 		truncate
 	} from '#lib/social/featured.ts';
-	import { resolveFeaturedLook } from '#lib/social/featuredThemes.ts';
+	import {
+		collectionCoverUrl,
+		collectionWallpaperUrl,
+		resolveFeaturedHero
+	} from '#lib/social/featuredThemes.ts';
 	import { reviewDate } from '#lib/social/reviews.ts';
 	import Poster from '#lib/components/catalog/Poster.svelte';
 	import type { Snippet } from 'svelte';
@@ -25,9 +29,11 @@
 	const canonical = $derived(origin + buildFeaturedUrl(collection));
 	const title = $derived(`${featuredTitle(collection)} | Nexus`);
 	const description = $derived(featuredDescription(collection));
-	const look = $derived(resolveFeaturedLook(collection));
+	const look = $derived(resolveFeaturedHero(collection));
+	// og:image: обложка → обои → обложка первого произведения.
 	const image = $derived(
-		(look.kind === 'cover' ? look.url : null) ??
+		collectionCoverUrl(collection) ??
+			collectionWallpaperUrl(collection) ??
 			collection.items.find((i) => i.entity.cover_url)?.entity.cover_url ??
 			null
 	);
@@ -47,11 +53,9 @@
 	// Раскрытые описания по id сущности.
 	let expanded = $state<Record<string, boolean>>({});
 	const DESCRIPTION_LIMIT = 600;
-	// Слот под описание сущности: EntityRef пока его не содержит — рендерим, когда бэкенд добавит.
-	const entityDescription = (entity: object): string | null => {
-		const d = (entity as { overview?: unknown }).overview;
-		return typeof d === 'string' && d.trim() ? d.trim() : null;
-	};
+	// Описание произведения: бэкенд отдаёт чистый текст до 1000 символов (уже обрезан).
+	const entityDescription = (overview: string | null | undefined): string | null =>
+		overview?.trim() || null;
 </script>
 
 <svelte:head>
@@ -80,9 +84,18 @@
 		<img
 			src={look.url}
 			alt=""
-			class="absolute inset-0 -z-20 h-full w-full object-cover opacity-30"
+			class="absolute inset-0 -z-30 h-full w-full object-cover"
 			fetchpriority="high"
 		/>
+		<!-- Затемнение слева направо и снизу: текст читается на любых обоях. -->
+		<div
+			class="absolute inset-0 -z-20 bg-linear-to-r from-base-100 via-base-100/80 to-base-100/20"
+			aria-hidden="true"
+		></div>
+		<div
+			class="absolute inset-0 -z-20 bg-linear-to-t from-base-100/70 to-transparent"
+			aria-hidden="true"
+		></div>
 	{:else if look.kind === 'collage'}
 		<div
 			class="absolute inset-y-0 right-0 -z-20 hidden w-1/2 grid-cols-4 gap-2 p-3 opacity-25 sm:grid"
@@ -127,7 +140,7 @@
 		{#each items as { item, rank, kind, href }, i (item.entity.id)}
 			{@const year = yearOf(item.entity.release_date)}
 			{@const kindLabel = kind ? kindByApi(kind)?.one : null}
-			{@const about = entityDescription(item.entity)}
+			{@const about = entityDescription(item.entity.overview)}
 			{@const open = expanded[item.entity.id] ?? false}
 			<li
 				value={rank}
@@ -164,13 +177,6 @@
 							{[year, kindLabel].filter(Boolean).join(' · ')}
 						</p>
 					{/if}
-					{#if about}
-						<p
-							class={['mt-3 text-sm leading-relaxed text-base-content/80', !open && 'line-clamp-6']}
-						>
-							{open ? about : truncate(about, DESCRIPTION_LIMIT)}
-						</p>
-					{/if}
 					{#if item.note}
 						<div class="mt-3">
 							<p class="text-xs font-medium tracking-wide text-base-content/45 uppercase">
@@ -185,6 +191,13 @@
 								{open ? item.note : truncate(item.note, DESCRIPTION_LIMIT)}
 							</p>
 						</div>
+					{/if}
+					{#if about}
+						<p
+							class={['mt-3 text-sm leading-relaxed text-base-content/80', !open && 'line-clamp-6']}
+						>
+							{open ? about : truncate(about, DESCRIPTION_LIMIT)}
+						</p>
 					{/if}
 					{#if (about?.length ?? 0) + (item.note?.length ?? 0) > 280}
 						<button

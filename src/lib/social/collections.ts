@@ -6,7 +6,10 @@ import { ApiError, unwrap } from '#lib/api/errors.ts';
 import type {
 	SchemaCollection,
 	SchemaCollectionBySlug,
-	SchemaCollectionDetail
+	SchemaCollectionDetail,
+	SchemaCollectionItem,
+	SchemaFeatureCollection,
+	SchemaPutCollectionItem
 } from '#lib/api/generated/social.ts';
 
 export const COLLECTION_LIMITS = { title: 200, description: 2000, note: 1000, items: 500 };
@@ -61,18 +64,21 @@ export function isCollectionDetail(r: SchemaCollectionBySlug): r is SchemaCollec
 	return 'id' in r;
 }
 
+export type FeaturedOptions = SchemaFeatureCollection;
+
 /**
- * Админ: сделать коллекцию особой, поменять её позицию и/или адрес (slug).
- * Приватная или неверный slug → 400, slug занят → 409.
+ * Админ: сделать коллекцию особой, поменять позицию, адрес (slug) и/или оформление
+ * (wallpaper_url, cover_url, theme). Не передано — не меняется, null — убрать.
+ * Приватная → 400 collection_private, неверное поле → 400 validation (field), slug занят → 409.
  */
 export function adminSetFeatured(
 	api: Api,
 	id: string,
-	opts: { position?: number; slug?: string } = {}
+	opts: FeaturedOptions = {}
 ): Promise<SchemaCollection> {
-	const body: { position?: number; slug?: string } = {};
-	if (opts.position !== undefined) body.position = opts.position;
-	if (opts.slug !== undefined) body.slug = opts.slug;
+	const body = Object.fromEntries(
+		Object.entries(opts).filter(([, v]) => v !== undefined)
+	) as FeaturedOptions;
 	return unwrap(
 		api.social.PUT('/api/v1/social/admin/collections/{id}/featured', {
 			params: { path: { id } },
@@ -92,7 +98,7 @@ export async function adminUnsetFeatured(api: Api, id: string): Promise<void> {
 
 /** Бэкенд отказал, потому что особая коллекция должна быть публичной. */
 export function isFeaturedMustBePublic(e: unknown): boolean {
-	return e instanceof ApiError && e.status === 400 && /featured/i.test(e.serverMessage ?? '');
+	return e instanceof ApiError && e.code === 'collection_private';
 }
 
 export const FEATURED_PRIVATE_ERROR =
@@ -103,18 +109,66 @@ export function featuredBadge(title: string): string {
 	return /(^|[^\p{L}])(топ|top)([^\p{L}]|$)|лучш/iu.test(title) ? 'Топ' : 'Подборка редакции';
 }
 
-/** Понятный текст ошибки админских действий с подборками (400 — приватная, 403 — нет прав). */
+/** Понятный текст ошибки админских действий с подборками и их составом. */
 export function featuredAdminError(e: unknown, fallback: (e: unknown) => string): string {
 	if (e instanceof ApiError) {
 		if (e.status === 403) return 'Недостаточно прав.';
 		if (e.status === 409) return 'Такой адрес уже занят.';
-		if (e.status === 400) {
-			// У 400 нет отдельного code: приватность узнаём по тексту бэкенда, иначе — общий текст.
-			const raw = `${e.code ?? ''} ${e.serverMessage ?? ''}`.toLowerCase();
-			if (/private|public|приват|публич/.test(raw)) return 'Сначала сделайте коллекцию публичной.';
-			return `Не удалось сохранить: ${e.serverMessage ?? e.message}`;
-		}
+		if (e.code === 'collection_private') return 'Сначала сделайте коллекцию публичной.';
+		if (e.code === 'not_featured') return 'Коллекция не особая.';
 		if (e.status === 404) return 'Коллекция не найдена.';
+		if (e.status === 400) return `Не удалось сохранить: ${e.serverMessage ?? e.message}`;
 	}
 	return fallback(e);
+}
+
+/** Поле, на которое указал бэкенд в 400 validation (slug, wallpaper_url, cover_url, theme). */
+export function validationField(e: unknown): string | null {
+	return e instanceof ApiError && e.code === 'validation' ? e.field : null;
+}
+
+// Состав коллекции. Владелец — обычные пути; админ в чужой особой — /admin/collections/{id}/items/{slug}.
+
+/** Править чужую особую коллекцию через админские пути (владелец — через свои). */
+export function editsAsAdmin(
+	collection: Pick<SchemaCollection, 'is_featured' | 'owner'>,
+	viewer: { id: string; role?: string } | null | undefined
+): boolean {
+	return (
+		!!viewer &&
+		viewer.role === 'admin' &&
+		collection.is_featured &&
+		viewer.id !== collection.owner.id
+	);
+}
+
+/** Добавить произведение или изменить пункт (заметка, позиция). */
+export function putCollectionItem(
+	api: Api,
+	id: string,
+	slug: string,
+	body: SchemaPutCollectionItem,
+	asAdmin: boolean
+): Promise<SchemaCollectionItem> {
+	const params = { path: { id, slug } };
+	return unwrap(
+		asAdmin
+			? api.social.PUT('/api/v1/social/admin/collections/{id}/items/{slug}', { params, body })
+			: api.social.PUT('/api/v1/social/collections/{id}/items/{slug}', { params, body })
+	);
+}
+
+/** Убрать произведение из коллекции. */
+export async function deleteCollectionItem(
+	api: Api,
+	id: string,
+	slug: string,
+	asAdmin: boolean
+): Promise<void> {
+	const params = { path: { id, slug } };
+	await unwrap(
+		asAdmin
+			? api.social.DELETE('/api/v1/social/admin/collections/{id}/items/{slug}', { params })
+			: api.social.DELETE('/api/v1/social/collections/{id}/items/{slug}', { params })
+	);
 }

@@ -7,13 +7,10 @@ import {
 } from '#lib/catalog/themes.ts';
 
 /**
- * Оформление особых коллекций: собственная обложка (cover_url), тематический пресет (theme)
- * или коллаж из обложек preview. Бэкенд полей cover_url/theme пока не отдаёт
- * (docs/backend-tasks/featured-collections.md) — читаем их защитно, как необязательное расширение.
+ * Оформление особых коллекций: обои (wallpaper_url — фон шапки), обложка (cover_url — карточка,
+ * og:image), тематический пресет (theme) или коллаж из обложек preview. Бэкенд принимает любой
+ * theme вида `^[a-z0-9-]{1,32}$`; неизвестный id фронтенд игнорирует.
  */
-
-/** Включить, когда cover_url/theme появятся в generated/social.ts и в PATCH admin/…/featured. */
-export const FEATURED_STYLE_SUPPORTED = false;
 
 export {
 	DEFAULT_THEME,
@@ -24,21 +21,28 @@ export {
 
 const BY_ID = new Map(FEATURED_THEMES.map((t) => [t.id, t]));
 
-/** Поля, которых пока нет в контракте. */
-type StyleExtension = { cover_url?: string | null; theme?: string | null };
+type Style = Pick<SchemaCollection, 'cover_url' | 'wallpaper_url' | 'theme'>;
 
-function ext(c: Pick<SchemaCollection, 'id'>): StyleExtension {
-	return c as unknown as StyleExtension;
+function httpUrl(v: string | null | undefined): string | null {
+	const t = v?.trim();
+	return t && /^https?:\/\//.test(t) ? t : null;
 }
 
-export function collectionCoverUrl(c: Pick<SchemaCollection, 'id'>): string | null {
-	const v = ext(c).cover_url;
-	return typeof v === 'string' && /^https?:\/\//.test(v.trim()) ? v.trim() : null;
+export function collectionCoverUrl(c: Pick<Style, 'cover_url'>): string | null {
+	return httpUrl(c.cover_url);
 }
 
-export function collectionThemeId(c: Pick<SchemaCollection, 'id'>): FeaturedThemeId | null {
-	const v = ext(c).theme;
-	return typeof v === 'string' && BY_ID.has(v as FeaturedThemeId) ? (v as FeaturedThemeId) : null;
+export function collectionWallpaperUrl(c: Pick<Style, 'wallpaper_url'>): string | null {
+	return httpUrl(c.wallpaper_url);
+}
+
+export function collectionThemeId(c: Pick<Style, 'theme'>): FeaturedThemeId | null {
+	const v = c.theme;
+	return v && BY_ID.has(v as FeaturedThemeId) ? (v as FeaturedThemeId) : null;
+}
+
+export function themeById(id: FeaturedThemeId | null): FeaturedTheme {
+	return (id && BY_ID.get(id)) || DEFAULT_THEME;
 }
 
 export type FeaturedLook =
@@ -46,12 +50,31 @@ export type FeaturedLook =
 	| { kind: 'theme'; theme: FeaturedTheme }
 	| { kind: 'collage'; theme: FeaturedTheme };
 
-/** Порядок: cover_url → пресет theme → коллаж из preview (с оформлением по умолчанию). */
-export function resolveFeaturedLook(c: Pick<SchemaCollection, 'id'>): FeaturedLook {
+/** Карточка: cover_url → пресет theme → коллаж из preview (с оформлением по умолчанию). */
+export function resolveFeaturedLook(c: Style): FeaturedLook {
 	const themeId = collectionThemeId(c);
-	const theme = (themeId && BY_ID.get(themeId)) || DEFAULT_THEME;
+	const theme = themeById(themeId);
 	const url = collectionCoverUrl(c);
 	if (url) return { kind: 'cover', url, theme };
 	if (themeId && themeId !== 'default') return { kind: 'theme', theme };
 	return { kind: 'collage', theme };
+}
+
+/** Шапка страницы: wallpaper_url → пресет theme → коллаж. */
+export function resolveFeaturedHero(c: Style): FeaturedLook {
+	const themeId = collectionThemeId(c);
+	const theme = themeById(themeId);
+	const url = collectionWallpaperUrl(c);
+	if (url) return { kind: 'cover', url, theme };
+	if (themeId && themeId !== 'default') return { kind: 'theme', theme };
+	return { kind: 'collage', theme };
+}
+
+/** Клиентская проверка URL оформления (правила бэкенда): null — всё в порядке. */
+export function styleUrlError(v: string): string | null {
+	const t = v.trim();
+	if (!t) return null;
+	if (t.length > 2048) return 'Адрес — не длиннее 2048 символов.';
+	if (!/^https:\/\/[^\s/]+\.[^\s]+$/.test(t)) return 'Нужен адрес вида https://…';
+	return null;
 }

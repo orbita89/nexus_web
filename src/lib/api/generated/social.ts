@@ -64,14 +64,35 @@ export interface paths {
 			cookie?: never;
 		};
 		get?: never;
-		/** Пометить публичную коллекцию особой, поменять её порядок или адрес. */
+		/**
+		 * Пометить публичную коллекцию особой, поменять её порядок, адрес или оформление (обои, обложка,
+		 *     тема).
+		 */
 		put: operations['admin_feature_collection'];
 		post?: never;
 		/**
 		 * Снять с коллекции отметку «особая». slug уходит в историю: старый адрес ведёт на
-		 *     `/collections/{id}`, другой коллекции он не достанется.
+		 *     `/collections/{id}`, другой коллекции он не достанется. Оформление сбрасывается.
 		 */
 		delete: operations['admin_unfeature_collection'];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/social/admin/collections/{id}/items/{slug}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/** Добавить произведение в любую особую коллекцию или изменить его позицию и заметку. */
+		put: operations['admin_put_collection_item'];
+		post?: never;
+		/** Убрать произведение из любой особой коллекции. */
+		delete: operations['admin_delete_collection_item'];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -1080,6 +1101,8 @@ export interface components {
 		Collection: {
 			/** @description Есть ли в коллекции сущность из `?contains=`; без параметра поля нет. */
 			contains?: boolean | null;
+			/** @description Обложка карточки особой (16:9, от 1280 px); у обычной — `null`. */
+			cover_url?: string | null;
 			/** Format: date-time */
 			created_at: string;
 			description?: string | null;
@@ -1108,10 +1131,18 @@ export interface components {
 			 * @example russkiy-top-2021
 			 */
 			slug?: string | null;
+			/**
+			 * @description Тема оформления особой — id пресета фронтенда (`halloween`, `new-year`, ...); неизвестную
+			 *     фронтенд игнорирует. У обычной — `null`.
+			 * @example halloween
+			 */
+			theme?: string | null;
 			/** @example Лучшая фантастика */
 			title: string;
 			/** Format: date-time */
 			updated_at: string;
+			/** @description Обои особой: широкий фон шапки страницы (21:9 или 16:9, от 1920 px); у обычной — `null`. */
+			wallpaper_url?: string | null;
 		};
 		/** @description Ответ `GET /collections/by-slug/{slug}`: коллекция или куда перенаправить (301 на фронтенде). */
 		CollectionBySlug:
@@ -1127,11 +1158,16 @@ export interface components {
 		CollectionDetail: components['schemas']['Collection'] & {
 			items: components['schemas']['CollectionItem'][];
 		};
+		/** @description Сущность в коллекции: ссылка на карточку и краткое описание. */
+		CollectionEntity: components['schemas']['EntityRef'] & {
+			/** @description Краткое описание: без HTML, до 1000 символов; `null` — описания нет. */
+			overview?: string | null;
+		};
 		/** @description Произведение в коллекции. */
 		CollectionItem: {
 			/** Format: date-time */
 			added_at: string;
-			entity: components['schemas']['EntityRef'];
+			entity: components['schemas']['CollectionEntity'];
 			/** @description Комментарий владельца. */
 			note?: string | null;
 			/**
@@ -1272,6 +1308,8 @@ export interface components {
 		};
 		/** @description Пометить коллекцию особой. */
 		FeatureCollection: {
+			/** @description Обложка карточки: https-URL до 2048 символов. Не передано — не меняется, `null` — убрать. */
+			cover_url?: string | null;
 			/**
 			 * Format: int32
 			 * @description Порядок среди особых; без него — в конец (при повторном PUT — не меняется).
@@ -1285,6 +1323,13 @@ export interface components {
 			 * @example russkiy-top-2021
 			 */
 			slug?: string | null;
+			/**
+			 * @description Тема: `^[a-z0-9-]{1,32}$`. Не передано — не меняется, `null` — убрать.
+			 * @example halloween
+			 */
+			theme?: string | null;
+			/** @description Обои: https-URL до 2048 символов. Не передано — не меняется, `null` — убрать. */
+			wallpaper_url?: string | null;
 		};
 		/** @description Запись ленты: заполнено ровно одно из `review`, `thread`, `collection` — по `type`. */
 		FeedItem: {
@@ -1370,6 +1415,8 @@ export interface components {
 			items: {
 				/** @description Есть ли в коллекции сущность из `?contains=`; без параметра поля нет. */
 				contains?: boolean | null;
+				/** @description Обложка карточки особой (16:9, от 1280 px); у обычной — `null`. */
+				cover_url?: string | null;
 				/** Format: date-time */
 				created_at: string;
 				description?: string | null;
@@ -1398,10 +1445,18 @@ export interface components {
 				 * @example russkiy-top-2021
 				 */
 				slug?: string | null;
+				/**
+				 * @description Тема оформления особой — id пресета фронтенда (`halloween`, `new-year`, ...); неизвестную
+				 *     фронтенд игнорирует. У обычной — `null`.
+				 * @example halloween
+				 */
+				theme?: string | null;
 				/** @example Лучшая фантастика */
 				title: string;
 				/** Format: date-time */
 				updated_at: string;
+				/** @description Обои особой: широкий фон шапки страницы (21:9 или 16:9, от 1920 px); у обычной — `null`. */
+				wallpaper_url?: string | null;
 			}[];
 			/**
 			 * Format: int64
@@ -2197,6 +2252,7 @@ export type SchemaChatSummary = components['schemas']['ChatSummary'];
 export type SchemaCollection = components['schemas']['Collection'];
 export type SchemaCollectionBySlug = components['schemas']['CollectionBySlug'];
 export type SchemaCollectionDetail = components['schemas']['CollectionDetail'];
+export type SchemaCollectionEntity = components['schemas']['CollectionEntity'];
 export type SchemaCollectionItem = components['schemas']['CollectionItem'];
 export type SchemaCreateCollection = components['schemas']['CreateCollection'];
 export type SchemaCreatePost = components['schemas']['CreatePost'];
@@ -2509,7 +2565,7 @@ export interface operations {
 					'application/json': components['schemas']['Collection'];
 				};
 			};
-			/** @description Коллекция приватная; неверный slug (формат, UUID, служебное слово) */
+			/** @description Коллекция приватная (`collection_private`); неверные поля (`validation` с `field`): slug — формат, UUID, служебное слово; `wallpaper_url`, `cover_url` — не https-URL или длиннее 2048; `theme` — не `^[a-z0-9-]{1,32}$` */
 			400: {
 				headers: {
 					[name: string]: unknown;
@@ -2594,6 +2650,146 @@ export interface operations {
 				};
 			};
 			/** @description Не найдена */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	admin_put_collection_item: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description id особой коллекции */
+				id: string;
+				/**
+				 * @description slug сущности
+				 * @example dune-2021
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		/** @description Можно не передавать тело: добавить в конец без заметки */
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['PutCollectionItem'];
+			};
+		};
+		responses: {
+			/** @description Изменено */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['CollectionItem'];
+				};
+			};
+			/** @description Добавлено */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['CollectionItem'];
+				};
+			};
+			/** @description Коллекция не особая (`not_featured`), неверные поля или уже 500 произведений */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет коллекции или сущности */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	admin_delete_collection_item: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description id особой коллекции */
+				id: string;
+				/**
+				 * @description slug сущности
+				 * @example dune-2021
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Убрано */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Коллекция не особая (`not_featured`) */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет коллекции, сущности или её нет в коллекции */
 			404: {
 				headers: {
 					[name: string]: unknown;

@@ -11,12 +11,7 @@
 	} from '#lib/social/collections.ts';
 	import { buildFeaturedUrl } from '#lib/social/featured.ts';
 	import { slugError, slugify } from '#lib/social/slug.ts';
-	import {
-		FEATURED_STYLE_SUPPORTED,
-		FEATURED_THEMES,
-		collectionCoverUrl,
-		collectionThemeId
-	} from '#lib/social/featuredThemes.ts';
+	import FeaturedStyleForm from './FeaturedStyleForm.svelte';
 
 	// Админ: пометить коллекцию особой («Подборки») или снять пометку. Видно только роли admin.
 	let {
@@ -27,13 +22,6 @@
 	let featured = $derived(collection.is_featured);
 	let busy = $state(false);
 	let error = $state('');
-
-	// Оформление (тема/обложка): поля появятся на бэкенде — пока форма выключена, запросов нет.
-	let themeId = $derived(collectionThemeId(collection) ?? 'default');
-	let coverUrl = $derived(collectionCoverUrl(collection) ?? '');
-	let wallpaperUrl = $derived(
-		((collection as { wallpaper_url?: string | null }).wallpaper_url as string | null) ?? ''
-	);
 
 	// Адрес /collections/{slug}: пусто — подставляем транслит названия.
 	let slugDraft = $derived(collection.slug ?? slugify(collection.title));
@@ -68,7 +56,15 @@
 		try {
 			if (featured) {
 				await adminUnsetFeatured(api, collection.id);
-				onchange?.({ ...collection, is_featured: false, featured_position: null, slug: null });
+				onchange?.({
+					...collection,
+					is_featured: false,
+					featured_position: null,
+					slug: null,
+					wallpaper_url: null,
+					cover_url: null,
+					theme: null
+				});
 				await syncUrl(`/collections/${collection.id}`);
 			} else {
 				const updated = await adminSetFeatured(api, collection.id);
@@ -134,40 +130,7 @@
 				>
 				{#if slugInvalid}<span class="w-full text-xs text-error">{slugInvalid}</span>{/if}
 			</form>
-			<fieldset
-				class="flex w-full flex-wrap items-end gap-2"
-				disabled={!FEATURED_STYLE_SUPPORTED || busy}
-			>
-				<label class="form-control">
-					<span class="label-text text-xs">Тема оформления</span>
-					<select class="select-bordered select select-sm" bind:value={themeId}>
-						{#each FEATURED_THEMES as t (t.id)}
-							<option value={t.id}>{t.label}</option>
-						{/each}
-					</select>
-				</label>
-				<label class="form-control min-w-56 flex-1">
-					<span class="label-text text-xs">Обои (URL, широкий фон)</span>
-					<input
-						type="url"
-						class="input-bordered input input-sm"
-						placeholder="https://…"
-						bind:value={wallpaperUrl}
-					/>
-				</label>
-				<label class="form-control min-w-56 flex-1">
-					<span class="label-text text-xs">Обложка (URL)</span>
-					<input
-						type="url"
-						class="input-bordered input input-sm"
-						placeholder="https://…"
-						bind:value={coverUrl}
-					/>
-				</label>
-				{#if !FEATURED_STYLE_SUPPORTED}
-					<span class="text-xs text-base-content/60">Нужна поддержка бэкенда</span>
-				{/if}
-			</fieldset>
+			<FeaturedStyleForm {collection} onsaved={(c) => onchange?.(c)} />
 		{/if}
 		{#if error}<span class="text-sm text-error" role="alert">{error}</span>{/if}
 	</div>

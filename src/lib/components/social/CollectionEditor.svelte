@@ -4,7 +4,13 @@
 	import type { SchemaCollectionItem } from '#lib/api/generated/social.ts';
 	import { api } from '#lib/auth/session.svelte.ts';
 	import { asKind, kindByApi } from '#lib/catalog/kinds.ts';
-	import { COLLECTION_LIMITS, moveItem } from '#lib/social/collections.ts';
+	import {
+		COLLECTION_LIMITS,
+		deleteCollectionItem,
+		featuredAdminError,
+		moveItem,
+		putCollectionItem
+	} from '#lib/social/collections.ts';
 	import Alert from '#lib/components/Alert.svelte';
 	import Poster from '#lib/components/catalog/Poster.svelte';
 	import EntityPicker, { type PickedEntity } from './EntityPicker.svelte';
@@ -14,8 +20,15 @@
 	let {
 		collectionId,
 		items,
+		asAdmin = false,
 		onchange
-	}: { collectionId: string; items: SchemaCollectionItem[]; onchange: () => void } = $props();
+	}: {
+		collectionId: string;
+		items: SchemaCollectionItem[];
+		/** Админ правит чужую особую коллекцию — через /admin/collections/{id}/items/{slug}. */
+		asAdmin?: boolean;
+		onchange: () => void;
+	} = $props();
 
 	// Порядок держим локально, чтобы перетаскивание не ждало сервер; новые данные — заново.
 	let order = $derived([...items]);
@@ -41,7 +54,7 @@
 			await action();
 			onchange();
 		} catch (e) {
-			error = errorMessage(e);
+			error = featuredAdminError(e, errorMessage);
 			order = [...items];
 		} finally {
 			busy = false;
@@ -52,6 +65,17 @@
 		if (from === to) return;
 		order = moveItem(order, from, to);
 		const entities = order.map((i) => i.entity.slug);
+		if (asAdmin) {
+			// У админа нет PUT всего порядка: проставляем позиции тем, у кого они сдвинулись.
+			const changed = order.flatMap((item, n) => (item.position === n ? [] : [[item, n] as const]));
+			return run(() =>
+				Promise.all(
+					changed.map(([item, position]) =>
+						putCollectionItem(api, collectionId, item.entity.slug, { position }, true)
+					)
+				)
+			);
+		}
 		return run(() =>
 			unwrap(
 				api.social.PUT('/api/v1/social/collections/{id}/items', {
@@ -63,26 +87,13 @@
 	}
 
 	const remove = (slug: string) =>
-		run(() =>
-			unwrap(
-				api.social.DELETE('/api/v1/social/collections/{id}/items/{slug}', {
-					params: { path: { id: collectionId, slug } }
-				})
-			)
-		);
+		run(() => deleteCollectionItem(api, collectionId, slug, asAdmin));
 
 	function saveNote(event: SubmitEvent, slug: string) {
 		event.preventDefault();
 		const note = noteDraft.trim() || null;
 		noteFor = null;
-		return run(() =>
-			unwrap(
-				api.social.PUT('/api/v1/social/collections/{id}/items/{slug}', {
-					params: { path: { id: collectionId, slug } },
-					body: { note }
-				})
-			)
-		);
+		return run(() => putCollectionItem(api, collectionId, slug, { note }, asAdmin));
 	}
 
 	// Выбранное в поиске сразу добавляется в конец коллекции.
@@ -91,14 +102,7 @@
 		if (!entity) return;
 		picked = [];
 		if (order.some((i) => i.entity.slug === entity.slug)) return;
-		void run(() =>
-			unwrap(
-				api.social.PUT('/api/v1/social/collections/{id}/items/{slug}', {
-					params: { path: { id: collectionId, slug: entity.slug } },
-					body: {}
-				})
-			)
-		);
+		void run(() => putCollectionItem(api, collectionId, entity.slug, {}, asAdmin));
 	});
 </script>
 
