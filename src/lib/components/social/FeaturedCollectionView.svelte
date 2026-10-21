@@ -326,13 +326,13 @@
 				>
 					<span
 						class={[
-							'col-start-1 row-start-1 w-6 pt-0.5 text-right text-xl leading-none font-semibold tabular-nums sm:row-span-2 sm:w-10 sm:text-3xl',
+							'col-start-1 row-start-1 w-6 pt-0.5 text-right text-xl leading-none font-semibold tabular-nums sm:row-[1/span_2] sm:w-10 sm:text-3xl',
 							rank <= 3 ? 'text-(--page-accent)' : 'text-base-content/50'
 						]}
 						aria-hidden="true">{rank}</span
 					>
 					<div
-						class="col-span-2 col-start-2 row-start-2 mt-3 w-[clamp(13rem,62vw,18rem)] overflow-hidden rounded-box shadow-lg sm:col-span-1 sm:row-span-2 sm:row-start-1 sm:mt-0 sm:w-[clamp(12rem,24vw,17rem)]"
+						class="col-span-2 col-start-2 row-start-2 mt-3 w-[clamp(13rem,62vw,18rem)] overflow-hidden rounded-box shadow-lg sm:col-span-1 sm:row-[1/span_2] sm:mt-0 sm:w-[clamp(12rem,24vw,17rem)]"
 					>
 						{#if kind}
 							<Poster
