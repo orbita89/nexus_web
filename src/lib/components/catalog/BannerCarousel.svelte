@@ -80,8 +80,8 @@
 					class={[
 						'relative carousel-item w-full overflow-hidden',
 						banner.kind === 'image' || banner.kind === 'custom'
-							? 'aspect-[5/2] max-sm:aspect-[4/3]'
-							: 'min-h-72 sm:aspect-[5/2] sm:min-h-0'
+							? 'aspect-[2/1] max-sm:aspect-[5/4]'
+							: 'min-h-80 sm:aspect-[2/1] sm:min-h-0'
 					]}
 					role="group"
 					aria-roledescription="slide"

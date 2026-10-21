@@ -514,7 +514,7 @@
 				<img
 					src={draft.image_url.trim()}
 					alt="Превью картинки"
-					class="aspect-[5/2] w-full max-w-2xl rounded-box object-cover ring-1 ring-base-300 md:col-span-2"
+					class="aspect-[2/1] w-full max-w-2xl rounded-box object-cover ring-1 ring-base-300 md:col-span-2"
 				/>
 			{/if}
 		{/if}
@@ -534,7 +534,7 @@
 				<div class="md:col-span-2">
 					<span class="mb-1 block text-sm font-medium">Превью</span>
 					<div
-						class="aspect-[5/2] w-full max-w-3xl overflow-hidden rounded-box ring-1 ring-base-300 max-sm:aspect-[4/3]"
+						class="aspect-[2/1] w-full max-w-3xl overflow-hidden rounded-box ring-1 ring-base-300 max-sm:aspect-[5/4]"
 					>
 						<BannerCustom html={draft.custom_html} title="Превью баннера" eager />
 					</div>
