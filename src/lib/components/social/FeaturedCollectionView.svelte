@@ -103,6 +103,7 @@
 	// Шапка: тематическая, нейтральная (без темы/обоев, страница — по-прежнему с обоями) или без шапки.
 	const hmode = $derived(headerModeOverride ?? headerMode(collection));
 	const accent = $derived(pageAccent(collection));
+	const hasWallpaper = $derived(!!collectionWallpaperUrl(collection));
 	// При mode 'page' обои уже фоном страницы — в шапке их не дублируем.
 	const headerWallpaper = $derived(
 		hmode === 'styled' && look.kind === 'cover' && style.mode === 'header'
@@ -332,7 +333,14 @@
 							/>
 						{/if}
 					</div>
-					<div class="min-w-0 flex-1">
+					<!-- На ярких обоях текст лежит на полупрозрачной подложке, чтобы читался. -->
+					<div
+						class={[
+							'min-w-0 flex-1',
+							hasWallpaper &&
+								'self-start rounded-box bg-base-100/75 p-4 shadow-lg ring-1 ring-base-content/10 backdrop-blur-md sm:p-5'
+						]}
+					>
 						<h2 class="text-lg leading-snug font-bold sm:text-xl">
 							<span class="sr-only">{rank} место. </span>
 							{#if href}
@@ -342,17 +350,17 @@
 							{/if}
 						</h2>
 						{#if year || kindLabel}
-							<p class="mt-1 text-sm text-base-content/55">
+							<p class="mt-1 text-sm text-base-content/70">
 								{[year, kindLabel].filter(Boolean).join(' · ')}
 							</p>
 						{/if}
 						{#if item.note}
-							<p class="mt-3 text-sm leading-relaxed whitespace-pre-line text-base-content/85">
+							<p class="mt-3 text-sm leading-relaxed whitespace-pre-line text-base-content/90">
 								{item.note}
 							</p>
 						{/if}
 						{#if about}
-							<p class="mt-3 text-sm leading-relaxed text-base-content/60">{about}</p>
+							<p class="mt-3 text-sm leading-relaxed text-base-content/80">{about}</p>
 						{/if}
 					</div>
 				</li>
