@@ -104,6 +104,8 @@
 	const hmode = $derived(headerModeOverride ?? headerMode(collection));
 	const accent = $derived(pageAccent(collection));
 	const hasWallpaper = $derived(!!collectionWallpaperUrl(collection));
+	// Раскрытые описания по id сущности (на телефоне описание свёрнуто до 3 строк).
+	let expanded = $state<Record<string, boolean>>({});
 	// При mode 'page' обои уже фоном страницы — в шапке их не дублируем.
 	const headerWallpaper = $derived(
 		hmode === 'styled' && look.kind === 'cover' && style.mode === 'header'
@@ -306,24 +308,30 @@
 	<div class="relative z-30 mb-8">{@render actions?.()}</div>
 
 	{#if items.length}
-		<!-- Строка: номер | постер | текст; блок по центру страницы. Заметка, затем описание целиком. -->
-		<ol class="mx-auto max-w-4xl" reversed aria-label="Рейтинг: от {total}-го места к первому">
+		<!-- Строка: номер | постер | текст. На телефоне заметка и описание уходят под постер на всю
+		     ширину, описание — 3 строки и «Ещё». На обоях текст с тенью, без подложки. -->
+		<ol
+			class={['mx-auto max-w-4xl', hasWallpaper && 'over-wallpaper']}
+			reversed
+			aria-label="Рейтинг: от {total}-го места к первому"
+		>
 			{#each items as { item, rank, kind, href }, i (item.entity.id)}
 				{@const year = yearOf(item.entity.release_date)}
 				{@const kindLabel = kind ? kindByApi(kind)?.one : null}
 				{@const about = entityDescription(item.entity.overview)}
+				{@const open = expanded[item.entity.id] ?? false}
 				<li
 					value={rank}
-					class="flex gap-3 border-t border-base-content/10 py-8 first:border-t-0 first:pt-0 sm:gap-6 sm:py-10"
+					class="grid grid-cols-[auto_auto_minmax(0,1fr)] content-start gap-x-3 border-t border-base-content/10 py-8 first:border-t-0 first:pt-0 sm:gap-x-6 sm:py-10"
 				>
 					<span
 						class={[
-							'w-8 shrink-0 pt-0.5 text-right text-2xl leading-none font-semibold tabular-nums sm:w-10 sm:text-3xl',
-							rank <= 3 ? 'text-(--page-accent)' : 'text-base-content/40'
+							'row-span-2 w-6 pt-0.5 text-right text-xl leading-none font-semibold tabular-nums sm:w-10 sm:text-3xl',
+							rank <= 3 ? 'text-(--page-accent)' : 'text-base-content/50'
 						]}
 						aria-hidden="true">{rank}</span
 					>
-					<div class="w-36 shrink-0 overflow-hidden rounded-box shadow-lg sm:w-48 md:w-56">
+					<div class="w-28 overflow-hidden rounded-box shadow-lg sm:row-span-2 sm:w-48 md:w-56">
 						{#if kind}
 							<Poster
 								title={item.entity.title}
@@ -333,14 +341,7 @@
 							/>
 						{/if}
 					</div>
-					<!-- На ярких обоях текст лежит на полупрозрачной подложке, чтобы читался. -->
-					<div
-						class={[
-							'min-w-0 flex-1',
-							hasWallpaper &&
-								'self-start rounded-box bg-base-100/75 p-4 shadow-lg ring-1 ring-base-content/10 backdrop-blur-md sm:p-5'
-						]}
-					>
+					<div class="min-w-0">
 						<h2 class="text-lg leading-snug font-bold sm:text-xl">
 							<span class="sr-only">{rank} место. </span>
 							{#if href}
@@ -350,19 +351,39 @@
 							{/if}
 						</h2>
 						{#if year || kindLabel}
-							<p class="mt-1 text-sm text-base-content/70">
+							<p class="mt-1 text-sm text-base-content/75">
 								{[year, kindLabel].filter(Boolean).join(' · ')}
 							</p>
 						{/if}
-						{#if item.note}
-							<p class="mt-3 text-sm leading-relaxed whitespace-pre-line text-base-content/90">
-								{item.note}
-							</p>
-						{/if}
-						{#if about}
-							<p class="mt-3 text-sm leading-relaxed text-base-content/80">{about}</p>
-						{/if}
 					</div>
+					{#if item.note || about}
+						<div class="col-span-2 col-start-2 mt-4 min-w-0 sm:col-span-1 sm:col-start-3 sm:mt-3">
+							{#if item.note}
+								<p class="text-sm leading-relaxed whitespace-pre-line text-base-content/95">
+									{item.note}
+								</p>
+							{/if}
+							{#if about}
+								<p
+									class={[
+										'text-sm leading-relaxed text-base-content/85',
+										item.note && 'mt-3',
+										!open && 'line-clamp-3 sm:line-clamp-none'
+									]}
+								>
+									{about}
+								</p>
+								<button
+									type="button"
+									class="mt-1 text-sm text-(--page-accent) hover:underline sm:hidden"
+									aria-expanded={open}
+									onclick={() => (expanded[item.entity.id] = !open)}
+								>
+									{open ? 'Свернуть' : 'Ещё'}
+								</button>
+							{/if}
+						</div>
+					{/if}
 				</li>
 			{/each}
 		</ol>
@@ -370,3 +391,14 @@
 		<p class="text-base-content/60">В подборке пока ничего нет.</p>
 	{/if}
 </div>
+
+<style>
+	/* Текст поверх обоев: мягкая тёмная тень вместо подложки — читается на ярком фоне. */
+	.over-wallpaper :global(h2),
+	.over-wallpaper :global(p) {
+		text-shadow:
+			0 1px 2px rgb(0 0 0 / 0.95),
+			0 0 10px rgb(0 0 0 / 0.75),
+			0 0 22px rgb(0 0 0 / 0.5);
+	}
+</style>
