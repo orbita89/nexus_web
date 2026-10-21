@@ -27,6 +27,7 @@
 	import { reviewDate } from '#lib/social/reviews.ts';
 	import CollectionBackdrop from '#lib/components/social/CollectionBackdrop.svelte';
 	import FeaturedCollectionCard from '#lib/components/social/FeaturedCollectionCard.svelte';
+	import ShareMenu from '#lib/components/social/ShareMenu.svelte';
 	import Poster from '#lib/components/catalog/Poster.svelte';
 	import type { Snippet } from 'svelte';
 
@@ -60,27 +61,6 @@
 	let textError = $state('');
 	let saving = $state(false);
 	const uid = $props.id();
-
-	// «Поделиться»: системный диалог, где он есть; иначе копируем канонический адрес.
-	let copied = $state(false);
-	async function share() {
-		const data = { title: shownTitle, url: canonical };
-		if (typeof navigator.share === 'function') {
-			try {
-				await navigator.share(data);
-				return;
-			} catch (e) {
-				if (e instanceof DOMException && e.name === 'AbortError') return;
-			}
-		}
-		try {
-			await navigator.clipboard.writeText(canonical);
-			copied = true;
-			setTimeout(() => (copied = false), 2500);
-		} catch {
-			copied = false;
-		}
-	}
 
 	function startEdit() {
 		draftTitle = shownTitle;
@@ -214,6 +194,7 @@
 			· {count(collection.items_count, ['произведение', 'произведения', 'произведений'])} ·
 			<time datetime={collection.updated_at}>{reviewDate(collection.updated_at)}</time>
 		</span>
+		<ShareMenu url={canonical} title={shownTitle} compact />
 		{@render editButton()}
 	</div>
 	{#if editing}
@@ -479,22 +460,22 @@
 
 	<!-- Конец страницы: поделиться и другие подборки (обычные ссылки — перелинковка для SEO). -->
 	<footer class="mx-auto mt-10 max-w-4xl border-t border-base-content/10 pt-10">
-		<div class="flex flex-wrap items-center gap-4">
-			<button type="button" class="btn btn-outline btn-sm" onclick={share}>Поделиться</button>
-			<span class="text-sm text-base-content/60" role="status">
-				{copied ? 'Ссылка скопирована' : ''}
-			</span>
-		</div>
+		<ShareMenu url={canonical} title={shownTitle} />
 	</footer>
-	{#if others.length}
-		<section class="mt-10" aria-labelledby="{uid}-others">
-			<h2
-				id="{uid}-others"
-				class="mx-auto mb-6 flex max-w-4xl items-center gap-2 text-xs tracking-wider text-base-content/60 uppercase"
-			>
-				<span class="h-px w-6 bg-(--page-accent)" aria-hidden="true"></span>
-				Другие подборки
-			</h2>
+	<section class="mt-10" aria-labelledby={others.length ? `${uid}-others` : undefined}>
+		<div class="mx-auto mb-6 flex max-w-4xl items-center justify-between gap-4">
+			{#if others.length}
+				<h2
+					id="{uid}-others"
+					class="flex items-center gap-2 text-xs tracking-wider text-base-content/60 uppercase"
+				>
+					<span class="h-px w-6 bg-(--page-accent)" aria-hidden="true"></span>
+					Другие подборки
+				</h2>
+			{/if}
+			<a href="/collections/featured" class="ml-auto link text-sm link-hover">Все подборки →</a>
+		</div>
+		{#if others.length}
 			<!-- Телефон: горизонтальная прокрутка карточек; шире — сетка. -->
 			<ul
 				class="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-6 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-3"
@@ -505,8 +486,8 @@
 					</li>
 				{/each}
 			</ul>
-		</section>
-	{/if}
+		{/if}
+	</section>
 </div>
 
 <style>

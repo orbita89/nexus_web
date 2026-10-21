@@ -13,6 +13,7 @@ export const GET: RequestHandler = async ({ fetch, url }) => {
 	const featured = await getFeaturedCollections(publicApi(fetch, url)).catch(() => []);
 	const urls = [
 		`<url><loc>${escapeXml(`${url.origin}/`)}</loc></url>`,
+		`<url><loc>${escapeXml(`${url.origin}/collections/featured`)}</loc></url>`,
 		...featured.map(
 			(c) =>
 				`<url><loc>${escapeXml(`${url.origin}${buildFeaturedUrl(c)}`)}</loc><lastmod>${escapeXml(c.updated_at)}</lastmod></url>`

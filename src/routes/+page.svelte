@@ -46,6 +46,7 @@
 	<section class="mb-10" aria-labelledby="featured-collections">
 		<div class="mb-3 flex items-baseline justify-between gap-4">
 			<h2 id="featured-collections" class="text-xl font-bold">Подборки</h2>
+			<a href="/collections/featured" class="link text-sm link-primary link-hover">Все →</a>
 		</div>
 		<ul class="grid gap-4 sm:grid-cols-2" aria-label="Подборки">
 			{#each data.featured as collection (collection.id)}
