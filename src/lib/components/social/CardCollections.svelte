@@ -3,6 +3,7 @@
 	import { browserApi, liveQuery, type CardLive } from '#lib/social/card-live.svelte.ts';
 	import LoadError from '#lib/components/catalog/LoadError.svelte';
 	import CollectionCard from './CollectionCard.svelte';
+	import FeaturedCollectionCard from './FeaturedCollectionCard.svelte';
 
 	// «В коллекциях» на карточке: публичные коллекции с этим произведением. Только в браузере
 	// (ClientSection).
@@ -29,7 +30,11 @@
 {:else if result.data.items.length}
 	<ul class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label="В коллекциях">
 		{#each result.data.items as collection (collection.id)}
-			<li><CollectionCard {collection} /></li>
+			<li class={collection.is_featured ? 'sm:col-span-2' : undefined}>
+				{#if collection.is_featured}<FeaturedCollectionCard {collection} />{:else}<CollectionCard
+						{collection}
+					/>{/if}
+			</li>
 		{/each}
 	</ul>
 	{#if result.data.total > LIMIT}

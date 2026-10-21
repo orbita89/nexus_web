@@ -4,6 +4,7 @@ import { KINDS } from '#lib/catalog/kinds.ts';
 import { ratingsFor, settle } from '#lib/catalog/load.ts';
 import { listPage } from '#lib/catalog/search.ts';
 import { DEFAULT_SORT } from '#lib/catalog/sort.ts';
+import { getFeaturedCollections } from '#lib/social/collections.ts';
 import type { PageLoad } from './$types';
 
 const STRIP_SIZE = 12;
@@ -11,7 +12,7 @@ const TOP_TAGS = 16;
 
 export const load: PageLoad = async ({ fetch, url }) => {
 	const api = publicApi(fetch, url);
-	const [sections, tags] = await Promise.all([
+	const [sections, tags, featured] = await Promise.all([
 		Promise.all(
 			KINDS.map(async (k) => ({
 				...k,
@@ -20,7 +21,8 @@ export const load: PageLoad = async ({ fetch, url }) => {
 				)
 			}))
 		),
-		settle(unwrap(api.catalog.GET('/api/v1/catalog/tags')))
+		settle(unwrap(api.catalog.GET('/api/v1/catalog/tags'))),
+		settle(getFeaturedCollections(api))
 	]);
 	// Оценки всех полос — одним запросом.
 	const ratings = await ratingsFor(
@@ -29,6 +31,8 @@ export const load: PageLoad = async ({ fetch, url }) => {
 	);
 	return {
 		sections,
+		// Подборки редакции — порядок как пришёл; ошибка или пусто — блок скрыт.
+		featured: featured.data ?? [],
 		ratings,
 		// Популярные — с наибольшим числом сущностей; пустые теги не показываем.
 		tags: (tags.data ?? [])

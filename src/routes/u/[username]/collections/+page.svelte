@@ -9,6 +9,7 @@
 	import Pagination from '#lib/components/catalog/Pagination.svelte';
 	import Seo from '#lib/components/catalog/Seo.svelte';
 	import CollectionCard from '#lib/components/social/CollectionCard.svelte';
+	import FeaturedCollectionCard from '#lib/components/social/FeaturedCollectionCard.svelte';
 	import NewCollection from '#lib/components/social/NewCollection.svelte';
 	import type { PageProps } from './$types';
 
@@ -42,7 +43,12 @@
 {#if list.items.length}
 	<ul class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label="Коллекции">
 		{#each list.items as collection (collection.id)}
-			<li><CollectionCard {collection} showOwner={false} /></li>
+			<li class={collection.is_featured ? 'sm:col-span-2' : undefined}>
+				{#if collection.is_featured}<FeaturedCollectionCard {collection} />{:else}<CollectionCard
+						{collection}
+						showOwner={false}
+					/>{/if}
+			</li>
 		{/each}
 	</ul>
 	<Pagination total={list.total} limit={list.limit} offset={list.offset} />

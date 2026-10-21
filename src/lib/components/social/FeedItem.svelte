@@ -4,6 +4,7 @@
 	import { refHref } from '#lib/catalog/kinds.ts';
 	import { displayName } from '#lib/social/reviews.ts';
 	import CollectionCard from './CollectionCard.svelte';
+	import FeaturedCollectionCard from './FeaturedCollectionCard.svelte';
 	import ReviewCard from './ReviewCard.svelte';
 	import ThreadItem from './ThreadItem.svelte';
 	import TimeAgo from './TimeAgo.svelte';
@@ -49,6 +50,10 @@
 	{:else if item.thread}
 		<ThreadItem thread={item.thread} />
 	{:else if item.collection}
-		<CollectionCard collection={item.collection} />
+		{#if item.collection.is_featured}
+			<FeaturedCollectionCard collection={item.collection} />
+		{:else}
+			<CollectionCard collection={item.collection} />
+		{/if}
 	{/if}
 </article>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import FeaturedCollectionCard from '#lib/components/social/FeaturedCollectionCard.svelte';
 	import EmptyState from '#lib/components/catalog/EmptyState.svelte';
 	import LoadError from '#lib/components/catalog/LoadError.svelte';
 	import PosterStrip from '#lib/components/catalog/PosterStrip.svelte';
@@ -40,6 +41,19 @@
 		<button class="btn btn-lg btn-primary">Найти</button>
 	</form>
 </section>
+
+{#if data.featured.length}
+	<section class="mb-10" aria-labelledby="featured-collections">
+		<div class="mb-3 flex items-baseline justify-between gap-4">
+			<h2 id="featured-collections" class="text-xl font-bold">Подборки</h2>
+		</div>
+		<ul class="grid gap-4 sm:grid-cols-2" aria-label="Подборки">
+			{#each data.featured as collection (collection.id)}
+				<li><FeaturedCollectionCard {collection} /></li>
+			{/each}
+		</ul>
+	</section>
+{/if}
 
 {#if failed}
 	<div class="mb-8"><LoadError message={failed} /></div>

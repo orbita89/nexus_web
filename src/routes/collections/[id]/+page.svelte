@@ -6,6 +6,7 @@
 	import { api, session } from '#lib/auth/session.svelte.ts';
 	import { asKind } from '#lib/catalog/kinds.ts';
 	import { count, summary } from '#lib/catalog/labels.ts';
+	import { FEATURED_PRIVATE_ERROR, isFeaturedMustBePublic } from '#lib/social/collections.ts';
 	import { displayName, reviewDate } from '#lib/social/reviews.ts';
 	import Alert from '#lib/components/Alert.svelte';
 	import Avatar from '#lib/components/Avatar.svelte';
@@ -14,6 +15,8 @@
 	import Seo from '#lib/components/catalog/Seo.svelte';
 	import CollectionEditor from '#lib/components/social/CollectionEditor.svelte';
 	import CollectionForm from '#lib/components/social/CollectionForm.svelte';
+	import FeaturedCollectionView from '#lib/components/social/FeaturedCollectionView.svelte';
+	import FeaturedAdminControls from '#lib/components/social/FeaturedAdminControls.svelte';
 	import ModerateButton from '#lib/components/social/ModerateButton.svelte';
 	import type { PageProps } from './$types';
 
@@ -52,7 +55,7 @@
 			await invalidateAll();
 			return null;
 		} catch (e) {
-			return errorMessage(e);
+			return isFeaturedMustBePublic(e) ? FEATURED_PRIVATE_ERROR : errorMessage(e);
 		}
 	}
 
@@ -75,51 +78,8 @@
 	{#if !collection}<meta name="robots" content="noindex" />{/if}
 </svelte:head>
 
-{#if !collection}
-	<div class="h-40 skeleton" aria-label="Загрузка коллекции"></div>
-{:else}
-	<Seo
-		title={collection.title}
-		description={summary(collection.description) ||
-			`Коллекция @${collection.owner.username} в Nexus: ${count(collection.items_count, ['произведение', 'произведения', 'произведений'])}.`}
-	/>
-
-	<header class="mb-8">
-		<a href="/collections" class="link text-sm text-primary link-hover">← Коллекции</a>
-		{#if mode === 'edit'}
-			<div class="mt-3 max-w-lg rounded-box bg-base-200 p-4 ring-1 ring-base-300">
-				<CollectionForm
-					title={collection.title}
-					description={collection.description ?? ''}
-					isPublic={collection.is_public}
-					submitLabel="Сохранить"
-					onsubmit={update}
-					oncancel={() => (mode = 'view')}
-				/>
-			</div>
-		{:else}
-			<h1 class="mt-2 text-3xl font-black sm:text-4xl">
-				{collection.title}
-				{#if !collection.is_public}<span class="ml-2 badge badge-ghost align-middle">🔒 личная</span
-					>{/if}
-			</h1>
-			{#if collection.description}
-				<p class="mt-2 max-w-2xl whitespace-pre-line text-base-content/70">
-					{collection.description}
-				</p>
-			{/if}
-		{/if}
-		<div class="mt-4 flex flex-wrap items-center gap-3 text-sm text-base-content/60">
-			<a href="/u/{collection.owner.username}" class="flex items-center gap-2 hover:text-primary">
-				<Avatar user={collection.owner} size="w-7" />
-				<span class="font-semibold text-base-content">{displayName(collection.owner)}</span>
-			</a>
-			<span>·</span>
-			<span>{count(collection.items_count, ['произведение', 'произведения', 'произведений'])}</span>
-			<span>·</span>
-			<span>обновлена {reviewDate(collection.updated_at)}</span>
-		</div>
-
+{#snippet controls()}
+	{#if collection}
 		{#if !own && session.user?.role === 'admin'}
 			<div class="mt-4">
 				<ModerateButton
@@ -160,6 +120,59 @@
 			</div>
 			{#if error}<div class="mt-2"><Alert>{error}</Alert></div>{/if}
 		{/if}
+	{/if}
+{/snippet}
+
+{#if !collection}
+	<div class="h-40 skeleton" aria-label="Загрузка коллекции"></div>
+{:else if collection.is_featured && mode !== 'edit' && mode !== 'items'}
+	<!-- Особая коллекция: свой вид и SEO (см. buildFeaturedUrl — будущий /top/{slug}). -->
+	<FeaturedCollectionView {collection} actions={controls} />
+{:else}
+	<Seo
+		title={collection.title}
+		description={summary(collection.description) ||
+			`Коллекция @${collection.owner.username} в Nexus: ${count(collection.items_count, ['произведение', 'произведения', 'произведений'])}.`}
+	/>
+
+	<header class="mb-8">
+		<a href="/collections" class="link text-sm text-primary link-hover">← Коллекции</a>
+		{#if mode === 'edit'}
+			<div class="mt-3 max-w-lg rounded-box bg-base-200 p-4 ring-1 ring-base-300">
+				<CollectionForm
+					title={collection.title}
+					description={collection.description ?? ''}
+					isPublic={collection.is_public}
+					submitLabel="Сохранить"
+					onsubmit={update}
+					oncancel={() => (mode = 'view')}
+				/>
+			</div>
+		{:else}
+			<h1 class="mt-2 text-3xl font-black sm:text-4xl">
+				{collection.title}
+				{#if !collection.is_public}<span class="ml-2 badge badge-ghost align-middle">🔒 личная</span
+					>{/if}
+			</h1>
+			{#if collection.description}
+				<p class="mt-2 max-w-2xl whitespace-pre-line text-base-content/70">
+					{collection.description}
+				</p>
+			{/if}
+		{/if}
+		<div class="mt-3"><FeaturedAdminControls {collection} onchange={() => invalidateAll()} /></div>
+		<div class="mt-4 flex flex-wrap items-center gap-3 text-sm text-base-content/60">
+			<a href="/u/{collection.owner.username}" class="flex items-center gap-2 hover:text-primary">
+				<Avatar user={collection.owner} size="w-7" />
+				<span class="font-semibold text-base-content">{displayName(collection.owner)}</span>
+			</a>
+			<span>·</span>
+			<span>{count(collection.items_count, ['произведение', 'произведения', 'произведений'])}</span>
+			<span>·</span>
+			<span>обновлена {reviewDate(collection.updated_at)}</span>
+		</div>
+
+		{@render controls()}
 	</header>
 
 	{#if own && mode === 'items'}

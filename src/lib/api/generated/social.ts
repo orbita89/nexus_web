@@ -56,6 +56,24 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/social/admin/collections/{id}/featured': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/** Пометить публичную коллекцию особой или поменять её порядок среди особых. */
+		put: operations['admin_feature_collection'];
+		post?: never;
+		/** Снять с коллекции отметку «особая». */
+		delete: operations['admin_unfeature_collection'];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/social/admin/posts/{id}': {
 		parameters: {
 			query?: never;
@@ -305,6 +323,23 @@ export interface paths {
 		put?: never;
 		/** Создать коллекцию. */
 		post: operations['create_collection'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/social/collections/featured': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Особые коллекции (помечены admin) по порядку — все сразу, их немного. */
+		get: operations['list_featured_collections'];
+		put?: never;
+		post?: never;
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -1024,8 +1059,15 @@ export interface components {
 			/** Format: date-time */
 			created_at: string;
 			description?: string | null;
+			/**
+			 * Format: int32
+			 * @description Порядок среди особых; у обычной — `null`.
+			 */
+			featured_position?: number | null;
 			/** Format: uuid */
 			id: string;
+			/** @description Особая коллекция (помечена admin): показывается на главной и выглядит иначе. */
+			is_featured: boolean;
 			/** @description `false` — видна только владельцу. */
 			is_public: boolean;
 			/**
@@ -1178,11 +1220,25 @@ export interface components {
 			 */
 			error: string;
 			/**
+			 * @description Только для 400 [`AppError::Invalid`]: поле запроса с ошибкой (`content_html`, `slides[1].title`).
+			 * @example content_html
+			 */
+			field?: string | null;
+			/**
 			 * Format: int64
 			 * @description Только для 429: через сколько секунд можно повторить (то же, что заголовок `Retry-After`).
 			 * @example 80
 			 */
 			retry_after?: number | null;
+		};
+		/** @description Пометить коллекцию особой. */
+		FeatureCollection: {
+			/**
+			 * Format: int32
+			 * @description Порядок среди особых; без него — в конец.
+			 * @example 0
+			 */
+			position?: number | null;
 		};
 		/** @description Запись ленты: заполнено ровно одно из `review`, `thread`, `collection` — по `type`. */
 		FeedItem: {
@@ -1271,8 +1327,15 @@ export interface components {
 				/** Format: date-time */
 				created_at: string;
 				description?: string | null;
+				/**
+				 * Format: int32
+				 * @description Порядок среди особых; у обычной — `null`.
+				 */
+				featured_position?: number | null;
 				/** Format: uuid */
 				id: string;
+				/** @description Особая коллекция (помечена admin): показывается на главной и выглядит иначе. */
+				is_featured: boolean;
 				/** @description `false` — видна только владельцу. */
 				is_public: boolean;
 				/**
@@ -2091,6 +2154,7 @@ export type SchemaCreateThread = components['schemas']['CreateThread'];
 export type SchemaCustomRoom = components['schemas']['CustomRoom'];
 export type SchemaEntityRef = components['schemas']['EntityRef'];
 export type SchemaErrorBody = components['schemas']['ErrorBody'];
+export type SchemaFeatureCollection = components['schemas']['FeatureCollection'];
 export type SchemaFeedItem = components['schemas']['FeedItem'];
 export type SchemaFeedItemType = components['schemas']['FeedItemType'];
 export type SchemaFeedPage = components['schemas']['FeedPage'];
@@ -2332,6 +2396,118 @@ export interface operations {
 		requestBody?: never;
 		responses: {
 			/** @description Удалена */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Не найдена */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	admin_feature_collection: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description id коллекции */
+				id: string;
+			};
+			cookie?: never;
+		};
+		/** @description Можно не передавать тело: в конец */
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['FeatureCollection'];
+			};
+		};
+		responses: {
+			/** @description Особая */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Collection'];
+				};
+			};
+			/** @description Коллекция приватная */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Не найдена */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	admin_unfeature_collection: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description id коллекции */
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Больше не особая (повторно — тоже) */
 			204: {
 				headers: {
 					[name: string]: unknown;
@@ -3253,6 +3429,26 @@ export interface operations {
 			};
 		};
 	};
+	list_featured_collections: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Особые коллекции */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Collection'][];
+				};
+			};
+		};
+	};
 	get_collection: {
 		parameters: {
 			query?: never;
@@ -3367,7 +3563,7 @@ export interface operations {
 					'application/json': components['schemas']['CollectionDetail'];
 				};
 			};
-			/** @description Неверные поля */
+			/** @description Неверные поля или особую коллекцию делают приватной */
 			400: {
 				headers: {
 					[name: string]: unknown;
