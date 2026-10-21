@@ -343,56 +343,69 @@
 							/>
 						{/if}
 					</div>
-					<div class="col-span-2 col-start-2 row-start-1 min-w-0 sm:col-span-1 sm:col-start-3">
-						<h2 class="text-lg leading-snug font-bold sm:text-xl">
-							<span class="sr-only">{rank} место. </span>
-							{#if href}
-								<a {href} class="link link-hover hover:text-(--page-accent)">{item.entity.title}</a>
-							{:else}
-								{item.entity.title}
-							{/if}
-						</h2>
-						{#if year || kindLabel}
-							<p class="mt-1 text-sm text-base-content/75">
-								{[year, kindLabel].filter(Boolean).join(' · ')}
-							</p>
-						{/if}
-					</div>
-					{#if item.note || about}
+					<!-- Текст не растягивает строку: на компьютере он ограничен высотой постера (лишнее
+					     плавно скрывается), на телефоне название — 2 строки, заметка — 3. Все строки одной высоты. -->
+					<div class="contents sm:relative sm:col-start-3 sm:row-[1/span_2] sm:block">
 						<div
-							class="col-span-2 col-start-2 row-start-3 mt-4 min-w-0 sm:col-span-1 sm:col-start-3 sm:row-start-2 sm:mt-3"
+							class="contents sm:absolute sm:inset-0 sm:flex sm:flex-col sm:overflow-hidden sm:mask-[linear-gradient(to_bottom,#000_82%,transparent)]"
 						>
-							{#if item.note}
-								<p
-									class="text-sm leading-relaxed font-semibold whitespace-pre-line text-base-content sm:text-base"
+							<div class="col-span-2 col-start-2 row-start-1 min-w-0">
+								<h2
+									class="line-clamp-2 min-h-[2lh] text-lg leading-snug font-bold sm:min-h-0 sm:text-xl"
 								>
-									{item.note}
-								</p>
-							{/if}
-							{#if about}
-								<p
-									class={[
-										'text-sm leading-relaxed font-medium text-base-content/90 sm:text-base',
-										item.note && 'mt-3',
-										!open && 'hidden sm:block'
-									]}
-								>
-									{about}
-								</p>
-								<button
-									type="button"
-									class={[
-										'text-sm font-medium text-(--page-accent) hover:underline sm:hidden',
-										(item.note || open) && 'mt-2'
-									]}
-									aria-expanded={open}
-									onclick={() => (expanded[item.entity.id] = !open)}
-								>
-									{open ? 'Скрыть описание' : 'Описание'}
-								</button>
-							{/if}
+									<span class="sr-only">{rank} место. </span>
+									{#if href}
+										<a {href} class="link link-hover hover:text-(--page-accent)"
+											>{item.entity.title}</a
+										>
+									{:else}
+										{item.entity.title}
+									{/if}
+								</h2>
+								{#if year || kindLabel}
+									<p class="mt-1 text-sm text-base-content/75">
+										{[year, kindLabel].filter(Boolean).join(' · ')}
+									</p>
+								{/if}
+							</div>
+							<div
+								class="col-span-2 col-start-2 row-start-3 mt-4 min-h-[5.5rem] min-w-0 sm:mt-3 sm:min-h-0"
+							>
+								{#if item.note}
+									<p
+										class={[
+											'text-sm leading-relaxed font-semibold whitespace-pre-line text-base-content sm:text-base',
+											!open && 'line-clamp-3 sm:line-clamp-none'
+										]}
+									>
+										{item.note}
+									</p>
+								{/if}
+								{#if about}
+									<p
+										class={[
+											'text-sm leading-relaxed font-medium text-base-content/90 sm:text-base',
+											item.note && 'mt-3',
+											!open && 'hidden sm:block'
+										]}
+									>
+										{about}
+									</p>
+									<button
+										type="button"
+										class={[
+											'text-sm font-medium text-(--page-accent) hover:underline sm:hidden',
+											(item.note || open) && 'mt-2'
+										]}
+										aria-expanded={open}
+										onclick={() => (expanded[item.entity.id] = !open)}
+									>
+										{open ? 'Скрыть описание' : 'Описание'}
+									</button>
+								{/if}
+							</div>
 						</div>
-					{/if}
+					</div>
 				</li>
 			{/each}
 		</ol>
