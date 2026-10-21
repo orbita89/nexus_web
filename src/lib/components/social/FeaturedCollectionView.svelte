@@ -206,11 +206,9 @@
 		Подборка · {count(collection.items_count, ['произведение', 'произведения', 'произведений'])}
 	</p>
 	<div class="mt-2 flex flex-wrap items-center gap-x-2">
-		<h1
-			class="flex items-baseline gap-2 text-3xl leading-tight font-bold tracking-tight sm:text-5xl"
-		>
+		<h1 class="flex items-baseline gap-2 text-xl leading-snug font-semibold sm:text-2xl">
 			<span
-				class="shrink-0 text-2xl font-light text-(--page-accent) sm:text-4xl"
+				class="shrink-0 text-base text-(--page-accent) sm:text-lg"
 				role="img"
 				aria-label={featuredBadge(shownTitle)}
 				title={featuredBadge(shownTitle)}>★</span
