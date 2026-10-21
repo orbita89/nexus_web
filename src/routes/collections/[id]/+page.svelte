@@ -51,6 +51,8 @@
 	const notes = $derived(new Map(collection?.items.map((i) => [i.entity.slug, i.note]) ?? []));
 
 	let mode = $state<'view' | 'edit' | 'items' | 'delete'>('view');
+	// Админ: панель «Оформление» (обои, обложка, тема, адрес) особой коллекции.
+	let styling = $state(false);
 	let error = $state('');
 
 	async function update(form: { title: string; description: string | null; is_public: boolean }) {
@@ -113,6 +115,13 @@
 					onclick={() => (mode = mode === 'items' ? 'view' : 'items')}
 					>{mode === 'items' ? 'Готово' : 'Изменить содержимое'}</button
 				>
+				{#if collection.is_featured && session.user?.role === 'admin'}
+					<button
+						class={['btn btn-sm', styling ? 'btn-primary' : '']}
+						aria-expanded={styling}
+						onclick={() => (styling = !styling)}>Оформление</button
+					>
+				{/if}
 				{#if !own}
 					<span class="text-xs text-base-content/60">Правка состава как администратор</span>
 				{:else}
@@ -133,6 +142,12 @@
 				{/if}
 			</div>
 			{#if error}<div class="mt-2"><Alert>{error}</Alert></div>{/if}
+			{#if styling && collection.is_featured}
+				<div class="mt-3 max-w-2xl rounded-box bg-base-200 p-4 ring-1 ring-base-300">
+					<p class="mb-2 text-sm font-semibold">Оформление: обои, обложка, тема</p>
+					<FeaturedAdminControls {collection} onchange={() => invalidateAll()} />
+				</div>
+			{/if}
 			{#if mode !== 'items'}
 				<CollectionItemSearch
 					collectionId={collection.id}
@@ -158,7 +173,6 @@
 	/>
 
 	<header class="mb-8">
-		<a href="/collections" class="link text-sm text-primary link-hover">← Коллекции</a>
 		{#if mode === 'edit'}
 			<div class="mt-3 max-w-lg rounded-box bg-base-200 p-4 ring-1 ring-base-300">
 				<CollectionForm
@@ -171,7 +185,13 @@
 				/>
 			</div>
 		{:else}
-			<h1 class="mt-2 text-3xl font-black sm:text-4xl">
+			<h1 class="text-3xl font-black sm:text-4xl">
+				<span
+					class="mr-1 align-middle text-2xl text-base-content/50"
+					role="img"
+					aria-label="Коллекция"
+					title="Коллекция">🔖</span
+				>
 				{collection.title}
 				{#if !collection.is_public}<span class="ml-2 badge badge-ghost align-middle">🔒 личная</span
 					>{/if}
@@ -190,9 +210,10 @@
 			</a>
 			<span>·</span>
 			<span>{count(collection.items_count, ['произведение', 'произведения', 'произведений'])}</span>
-			<span>·</span>
-			<span>обновлена {reviewDate(collection.updated_at)}</span>
 		</div>
+		<p class="mt-2 text-right text-xs text-base-content/45">
+			обновлена {reviewDate(collection.updated_at)}
+		</p>
 
 		{@render controls()}
 	</header>

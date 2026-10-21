@@ -86,6 +86,15 @@
 		);
 	}
 
+	/** «Место» (1 — первое): переносим произведение на введённую позицию. */
+	function moveTo(from: number, input: HTMLInputElement) {
+		const place = Math.round(Number(input.value));
+		if (!Number.isFinite(place) || place < 1) return void (input.value = String(from + 1));
+		const to = Math.min(place, order.length) - 1;
+		input.value = String(to + 1);
+		return reorder(from, to);
+	}
+
 	const remove = (slug: string) =>
 		run(() => deleteCollectionItem(api, collectionId, slug, asAdmin));
 
@@ -144,6 +153,21 @@
 					class="cursor-grab self-center px-1 text-base-content/30 select-none"
 					aria-hidden="true">⋮⋮</span
 				>
+				<label
+					class="flex shrink-0 flex-col items-center self-center text-[10px] text-base-content/50"
+				>
+					Место
+					<input
+						type="number"
+						min="1"
+						max={order.length}
+						class="input w-14 text-center tabular-nums input-xs"
+						aria-label="Место: {item.entity.title}"
+						value={i + 1}
+						disabled={busy}
+						onchange={(e) => moveTo(i, e.currentTarget)}
+					/>
+				</label>
 				<div class="w-12 shrink-0">
 					<Poster
 						title={item.entity.title}

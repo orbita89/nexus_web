@@ -28,8 +28,11 @@
 		></div>
 	{/if}
 	<div class="mb-3 flex items-center gap-2">
-		<span class="badge badge-sm font-semibold {look.theme.badge}"
-			>★ {featuredBadge(collection.title)}</span
+		<span
+			class="text-lg leading-none text-warning"
+			role="img"
+			aria-label={featuredBadge(collection.title)}
+			title={featuredBadge(collection.title)}>★</span
 		>
 	</div>
 	{#if look.kind === 'cover'}

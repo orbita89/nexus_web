@@ -23,6 +23,7 @@
 
 	// Особая коллекция («Топ-10»): нумерованный рейтинг и полная SEO-разметка. Не зависит от
 	// маршрута — при переезде на /top/{slug} переносится как есть.
+	// actions — панель под шапкой (вне overflow-hidden, чтобы выпадающий поиск не обрезался).
 	let { collection, actions }: { collection: SchemaCollectionDetail; actions?: Snippet } = $props();
 
 	const origin = $derived(page.url.origin);
@@ -77,8 +78,8 @@
 </svelte:head>
 
 <header
-	class="relative isolate mb-8 overflow-hidden rounded-box bg-linear-to-br p-5 ring-1 sm:p-8 {look
-		.theme.gradient} {look.theme.ring}"
+	class="relative isolate overflow-hidden rounded-box bg-linear-to-br p-5 sm:p-8 {look.theme
+		.gradient}"
 >
 	{#if look.kind === 'cover'}
 		<img
@@ -115,25 +116,26 @@
 			aria-hidden="true"
 		></div>
 	{/if}
-	<nav aria-label="Хлебные крошки" class="text-sm">
-		<a href="/" class="link text-primary link-hover">Главная</a>
-		<span class="text-base-content/40">/</span>
-		<a href="/collections" class="link text-primary link-hover">Коллекции</a>
-	</nav>
-	<span class="mt-3 badge {look.theme.badge}">{featuredBadge(collection.title)}</span>
-	<h1 class="mt-2 text-3xl font-black sm:text-4xl">{collection.title}</h1>
+	<h1 class="flex items-start gap-2 text-3xl font-black sm:text-4xl">
+		<span
+			class="mt-1 shrink-0 text-2xl text-warning sm:text-3xl"
+			role="img"
+			aria-label={featuredBadge(collection.title)}
+			title={featuredBadge(collection.title)}>★</span
+		>
+		<span>{collection.title}</span>
+	</h1>
 	{#if collection.description}
 		<p class="mt-2 max-w-2xl whitespace-pre-line text-base-content/70">{collection.description}</p>
 	{/if}
-	<div class="mt-4 flex flex-wrap items-center gap-3 text-sm text-base-content/60">
-		<span class="font-semibold text-base-content">Редакция</span>
-		<span>·</span>
-		<span>{count(collection.items_count, ['произведение', 'произведения', 'произведений'])}</span>
-		<span>·</span>
-		<span>обновлена {reviewDate(collection.updated_at)}</span>
-	</div>
-	{@render actions?.()}
+	<p class="mt-4 text-sm text-base-content/60">
+		{count(collection.items_count, ['произведение', 'произведения', 'произведений'])}
+	</p>
+	<p class="mt-2 text-right text-xs text-base-content/45">
+		обновлена {reviewDate(collection.updated_at)}
+	</p>
 </header>
+<div class="relative z-30 mb-8">{@render actions?.()}</div>
 
 {#if items.length}
 	<ol class="max-w-4xl" reversed aria-label="Рейтинг: от {total}-го места к первому">
@@ -153,7 +155,7 @@
 					]}
 					aria-hidden="true">{rank}</span
 				>
-				<div class="w-24 shrink-0 overflow-hidden rounded-box sm:w-28 md:w-36">
+				<div class="w-32 shrink-0 overflow-hidden rounded-box sm:w-40 md:w-48">
 					{#if kind}
 						<Poster
 							title={item.entity.title}
@@ -177,26 +179,21 @@
 							{[year, kindLabel].filter(Boolean).join(' · ')}
 						</p>
 					{/if}
-					{#if item.note}
-						<div class="mt-3">
-							<p class="text-xs font-medium tracking-wide text-base-content/45 uppercase">
-								Комментарий редакции
-							</p>
-							<p
-								class={[
-									'mt-1 text-sm leading-relaxed whitespace-pre-line text-base-content/70 italic',
-									!open && 'line-clamp-6'
-								]}
-							>
-								{open ? item.note : truncate(item.note, DESCRIPTION_LIMIT)}
-							</p>
-						</div>
-					{/if}
 					{#if about}
 						<p
 							class={['mt-3 text-sm leading-relaxed text-base-content/80', !open && 'line-clamp-6']}
 						>
 							{open ? about : truncate(about, DESCRIPTION_LIMIT)}
+						</p>
+					{/if}
+					{#if item.note}
+						<p
+							class={[
+								'mt-3 text-sm leading-relaxed whitespace-pre-line text-base-content/70',
+								!open && 'line-clamp-6'
+							]}
+						>
+							{open ? item.note : truncate(item.note, DESCRIPTION_LIMIT)}
 						</p>
 					{/if}
 					{#if (about?.length ?? 0) + (item.note?.length ?? 0) > 280}
