@@ -381,6 +381,14 @@
 		base,
 		{ 'input-error': !!fieldErrors[key] }
 	];
+	async function loadCustomHtml(event: Event) {
+		const input = event.currentTarget as HTMLInputElement;
+		const file = input.files?.[0];
+		if (!file) return;
+		draft.custom_html = await file.text();
+		input.value = '';
+	}
+
 	const previewHtml = $derived(clean(draft.content_html));
 </script>
 
@@ -529,6 +537,16 @@
 					placeholder={'<style>.b{…}</style><div class="b">…</div>'}
 					bind:value={draft.custom_html}></textarea>
 				{@render fieldError('custom_html')}
+			</label>
+			<!-- Вставка из файла: копирование длинных строк из терминала их обрезает. -->
+			<label class="flex items-center gap-2 text-sm md:col-span-2">
+				<span>Загрузить из файла</span>
+				<input
+					type="file"
+					accept=".html,.htm,text/html,text/plain"
+					class="file-input file-input-sm"
+					onchange={loadCustomHtml}
+				/>
 			</label>
 			{#if draft.custom_html.trim()}
 				<div class="md:col-span-2">
