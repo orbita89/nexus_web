@@ -4,7 +4,6 @@
 	import { asKind, kindByApi, refHref } from '#lib/catalog/kinds.ts';
 	import { count, yearOf } from '#lib/catalog/labels.ts';
 	import {
-		BACKEND_NEEDED_HINT,
 		COLLECTION_LIMITS,
 		collectionFormError,
 		featuredBadge
@@ -34,8 +33,7 @@
 	// Особая коллекция («Топ-10»): нумерованный рейтинг и полная SEO-разметка. Не зависит от
 	// маршрута — при переезде на /top/{slug} переносится как есть.
 	// actions — панель под шапкой (вне overflow-hidden, чтобы выпадающий поиск не обрезался).
-	// editText: 'on' — можно править название/описание (onsavetext), 'disabled' — кнопка
-	// с подсказкой (админ без поддержки бэкенда), иначе кнопки нет.
+	// editText — можно править название/описание (onsavetext), иначе кнопки нет.
 	let {
 		collection,
 		actions,
@@ -45,7 +43,7 @@
 	}: {
 		collection: SchemaCollectionDetail;
 		actions?: Snippet;
-		editText?: 'on' | 'disabled';
+		editText?: boolean;
 		onsavetext?: (form: { title: string; description: string }) => Promise<string | null>;
 		headerModeOverride?: 'styled' | 'plain' | 'none';
 	} = $props();
@@ -161,16 +159,13 @@
 		<button
 			type="button"
 			class="btn mt-1 btn-ghost btn-xs"
-			disabled={editText === 'disabled' || saving}
-			title={editText === 'disabled' ? BACKEND_NEEDED_HINT : 'Изменить название и описание'}
+			disabled={saving}
+			title="Изменить название и описание"
 			aria-label="Изменить название и описание"
 			onclick={startEdit}
 		>
 			✎ Изменить
 		</button>
-		{#if editText === 'disabled'}
-			<span class="mt-2 text-xs font-normal text-base-content/50">{BACKEND_NEEDED_HINT}</span>
-		{/if}
 	{/if}
 {/snippet}
 

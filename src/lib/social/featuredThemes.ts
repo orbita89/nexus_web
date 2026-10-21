@@ -174,20 +174,17 @@ export function pageAccent(c: Partial<PageStyleFields>): string {
 	return luminance(own) < 0.12 ? `color-mix(in oklab, ${own} 45%, white)` : own;
 }
 
-// Шапка страницы: header_mode (пока нет в API — см. docs/backend-tasks/featured-collections-header.md).
+// Шапка страницы: header_mode (styled | plain | none; бэкенд по умолчанию — styled).
 
 export type HeaderMode = 'styled' | 'plain' | 'none';
 
 export const HEADER_MODES: readonly HeaderMode[] = ['styled', 'plain', 'none'];
 
-/**
- * Режим шапки: header_mode бэкенда, если он верный; иначе по умолчанию — 'plain' при обоях
- * на всю страницу (шапка без темы, страница с обоями), иначе 'styled'.
- */
-export function headerMode(c: { wallpaper_mode?: string | null }): HeaderMode {
-	const v = (c as { header_mode?: unknown }).header_mode;
-	if (typeof v === 'string' && (HEADER_MODES as readonly string[]).includes(v)) {
-		return v as HeaderMode;
-	}
-	return c.wallpaper_mode === 'page' ? 'plain' : 'styled';
+function isHeaderMode(v: string): v is HeaderMode {
+	return (HEADER_MODES as readonly string[]).includes(v);
+}
+
+/** Режим шапки из header_mode бэкенда; неизвестное значение — 'styled'. */
+export function headerMode(c: { header_mode: string }): HeaderMode {
+	return isHeaderMode(c.header_mode) ? c.header_mode : 'styled';
 }

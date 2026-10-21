@@ -7,8 +7,8 @@
 	import { asKind } from '#lib/catalog/kinds.ts';
 	import { count, summary } from '#lib/catalog/labels.ts';
 	import {
-		ADMIN_EDIT_SUPPORTED,
 		FEATURED_PRIVATE_ERROR,
+		adminUpdateCollection,
 		collectionTextError,
 		editsAsAdmin,
 		updateCollectionText,
@@ -74,16 +74,14 @@
 		}
 	}
 
-	// Название/описание прямо в шапке особой коллекции: владелец — PATCH; админ — когда появится
-	// поддержка бэкенда (ADMIN_EDIT_SUPPORTED), пока кнопка неактивна с подсказкой.
-	const editText = $derived<'on' | 'disabled' | undefined>(
-		own ? 'on' : asAdmin ? (ADMIN_EDIT_SUPPORTED ? 'on' : 'disabled') : undefined
-	);
+	// Название/описание прямо в шапке особой коллекции: владелец — PATCH /collections/{id},
+	// админ (не владелец) — PATCH /admin/collections/{id}.
+	const editText = $derived(own || asAdmin);
 
 	async function saveText(form: { title: string; description: string }) {
-		if (!own) return 'Нужна поддержка бэкенда';
 		try {
-			await updateCollectionText(api, collection!.id, form);
+			if (own) await updateCollectionText(api, collection!.id, form);
+			else await adminUpdateCollection(api, collection!.id, form);
 			await invalidateAll();
 			return null;
 		} catch (e) {

@@ -3,7 +3,6 @@
 	import type { SchemaCollection } from '#lib/api/generated/social.ts';
 	import { api } from '#lib/auth/session.svelte.ts';
 	import {
-		BACKEND_NEEDED_HINT,
 		adminSetFeatured,
 		featuredAdminError,
 		validationField,
@@ -21,9 +20,6 @@
 	} from '#lib/social/featuredThemes.ts';
 	import type { FeaturedThemeId, HeaderMode, WallpaperMode } from '#lib/social/featuredThemes.ts';
 
-	// header_mode пока нет в API (docs/backend-tasks/featured-collections-header.md): радио
-	// показывает режим по умолчанию и неактивно. Когда поле появится — включить и сохранять.
-	const HEADER_MODE_SUPPORTED = false;
 	const HEADER_MODE_LABELS: Record<HeaderMode, string> = {
 		styled: 'Тематическая',
 		plain: 'Нейтральная',
@@ -44,12 +40,19 @@
 
 	type UrlField = 'wallpaper_url' | 'cover_url' | 'theme';
 	type Field =
-		UrlField | 'wallpaper_mode' | 'wallpaper_dim' | 'wallpaper_blur' | 'effects' | 'accent_color';
+		| UrlField
+		| 'wallpaper_mode'
+		| 'header_mode'
+		| 'wallpaper_dim'
+		| 'wallpaper_blur'
+		| 'effects'
+		| 'accent_color';
 	const initial = $derived({
 		wallpaper_url: collection.wallpaper_url ?? '',
 		cover_url: collection.cover_url ?? '',
 		theme: collection.theme ?? '',
 		wallpaper_mode: (collection.wallpaper_mode === 'page' ? 'page' : 'header') as WallpaperMode,
+		header_mode: headerMode(collection),
 		wallpaper_dim: collection.wallpaper_dim ?? null,
 		wallpaper_blur: collection.wallpaper_blur ?? 0,
 		effects: collection.effects !== false,
@@ -60,6 +63,7 @@
 	let cv = $derived(initial.cover_url);
 	let th = $derived(initial.theme);
 	let mode = $derived(initial.wallpaper_mode);
+	let hmode = $derived<HeaderMode>(initial.header_mode);
 	let dim = $derived<number | null>(initial.wallpaper_dim);
 	let blur = $derived(initial.wallpaper_blur);
 	let fx = $derived(initial.effects);
@@ -84,6 +88,7 @@
 			(f) => draft[f].trim() !== initial[f]
 		),
 		...(mode !== initial.wallpaper_mode ? (['wallpaper_mode'] as const) : []),
+		...(hmode !== initial.header_mode ? (['header_mode'] as const) : []),
 		...(dim !== initial.wallpaper_dim ? (['wallpaper_dim'] as const) : []),
 		...(blur !== initial.wallpaper_blur ? (['wallpaper_blur'] as const) : []),
 		...(fx !== initial.effects ? (['effects'] as const) : []),
@@ -92,6 +97,7 @@
 	const hasStyle = $derived(
 		!!(initial.wallpaper_url || initial.cover_url || initial.theme || initial.accent_color) ||
 			initial.wallpaper_mode !== 'header' ||
+			initial.header_mode !== 'styled' ||
 			initial.wallpaper_dim !== null ||
 			initial.wallpaper_blur !== 0 ||
 			!initial.effects
@@ -108,8 +114,6 @@
 			accent_color: accTrim || null
 		})
 	);
-	// Без поля в API режим шапки следует за режимом обоев (resolver headerMode).
-	const hmode = $derived(headerMode({ ...collection, wallpaper_mode: mode }));
 	const themeDim = $derived(themeDefaultDim(knownTheme ? draft.theme : null));
 	const pickerValue = $derived(normalizeAccent(accTrim) ?? '#888888');
 	const wpOk = $derived(draft.wallpaper_url && !local.wallpaper_url ? draft.wallpaper_url : null);
@@ -138,6 +142,7 @@
 			if (f === 'wallpaper_url' || f === 'cover_url' || f === 'theme')
 				body[f] = draft[f].trim() || null;
 			else if (f === 'wallpaper_mode') body.wallpaper_mode = mode;
+			else if (f === 'header_mode') body.header_mode = hmode;
 			else if (f === 'wallpaper_dim') body.wallpaper_dim = dim;
 			else if (f === 'wallpaper_blur') body.wallpaper_blur = blur;
 			else if (f === 'effects') body.effects = fx;
@@ -152,6 +157,7 @@
 			cover_url: null,
 			theme: null,
 			wallpaper_mode: null,
+			header_mode: null,
 			wallpaper_dim: null,
 			wallpaper_blur: null,
 			effects: null,
@@ -227,19 +233,17 @@
 			</div>
 			<span class="text-xs text-error">{fieldErrors.wallpaper_mode ?? ''}</span>
 		</fieldset>
-		<fieldset class="form-control" disabled={busy || !HEADER_MODE_SUPPORTED}>
+		<fieldset class="form-control" disabled={busy}>
 			<legend class="label-text text-xs">Шапка</legend>
 			<div class="flex flex-wrap gap-3 pt-1">
 				{#each Object.entries(HEADER_MODE_LABELS) as [value, label] (value)}
 					<label class="flex items-center gap-1 text-sm">
-						<input type="radio" class="radio radio-xs" {value} checked={hmode === value} />
+						<input type="radio" class="radio radio-xs" {value} bind:group={hmode} />
 						{label}
 					</label>
 				{/each}
 			</div>
-			{#if !HEADER_MODE_SUPPORTED}
-				<span class="text-xs text-base-content/50">{BACKEND_NEEDED_HINT}</span>
-			{/if}
+			<span class="text-xs text-error">{fieldErrors.header_mode ?? ''}</span>
 		</fieldset>
 		<div class="form-control min-w-40 flex-1">
 			<div class="flex items-center justify-between gap-2">

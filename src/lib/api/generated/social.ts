@@ -53,7 +53,11 @@ export interface paths {
 		delete: operations['admin_delete_collection'];
 		options?: never;
 		head?: never;
-		patch?: never;
+		/**
+		 * Изменить название и описание любой коллекции (например, чужой особой). Видимость здесь не
+		 *     меняется: `is_public` в теле — 400.
+		 */
+		patch: operations['admin_update_collection'];
 		trace?: never;
 	};
 	'/api/v1/social/admin/collections/{id}/featured': {
@@ -1001,6 +1005,13 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
 	schemas: {
+		/** @description Админ меняет название и описание любой коллекции (`is_public` здесь не меняется — 400). */
+		AdminUpdateCollection: {
+			/** @description До 2000 символов. Не передано — не меняется, `null` — очищается. */
+			description?: string | null;
+			/** @description 1–200 символов. Не передано — не меняется. */
+			title?: string | null;
+		};
 		/** @description Страница истории: старые сверху, последнее — самое новое. */
 		ChatHistory: {
 			items: components['schemas']['ChatMessage'][];
@@ -1118,6 +1129,12 @@ export interface components {
 			 * @description Порядок среди особых; у обычной — `null`.
 			 */
 			featured_position?: number | null;
+			/**
+			 * @description Шапка страницы особой: `styled` — в теме и с обоями, `plain` — нейтральная, `none` — без
+			 *     шапки (заголовок над списком).
+			 * @example styled
+			 */
+			header_mode: string;
 			/** Format: uuid */
 			id: string;
 			/** @description Особая коллекция (помечена admin): показывается на главной и выглядит иначе. */
@@ -1344,6 +1361,11 @@ export interface components {
 			 */
 			effects?: boolean | null;
 			/**
+			 * @description `styled`, `plain` или `none`; `null` — `styled`. Не передано — не меняется.
+			 * @example plain
+			 */
+			header_mode?: string | null;
+			/**
 			 * Format: int32
 			 * @description Порядок среди особых; без него — в конец (при повторном PUT — не меняется).
 			 * @example 0
@@ -1482,6 +1504,12 @@ export interface components {
 				 * @description Порядок среди особых; у обычной — `null`.
 				 */
 				featured_position?: number | null;
+				/**
+				 * @description Шапка страницы особой: `styled` — в теме и с обоями, `plain` — нейтральная, `none` — без
+				 *     шапки (заголовок над списком).
+				 * @example styled
+				 */
+				header_mode: string;
 				/** Format: uuid */
 				id: string;
 				/** @description Особая коллекция (помечена admin): показывается на главной и выглядит иначе. */
@@ -2316,6 +2344,7 @@ export interface components {
 	headers: never;
 	pathItems: never;
 }
+export type SchemaAdminUpdateCollection = components['schemas']['AdminUpdateCollection'];
 export type SchemaChatHistory = components['schemas']['ChatHistory'];
 export type SchemaChatMessage = components['schemas']['ChatMessage'];
 export type SchemaChatRoomInfo = components['schemas']['ChatRoomInfo'];
@@ -2611,6 +2640,69 @@ export interface operations {
 			};
 		};
 	};
+	admin_update_collection: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description id коллекции */
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['AdminUpdateCollection'];
+			};
+		};
+		responses: {
+			/** @description Изменена */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Collection'];
+				};
+			};
+			/** @description Неверные поля (`validation` с `field`: `title` 1–200, `description` до 2000) или лишнее поле (`is_public`) */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Не найдена */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
 	admin_feature_collection: {
 		parameters: {
 			query?: never;
@@ -2637,7 +2729,7 @@ export interface operations {
 					'application/json': components['schemas']['Collection'];
 				};
 			};
-			/** @description Коллекция приватная (`collection_private`); неверные поля (`validation` с `field`): slug — формат, UUID, служебное слово; `wallpaper_url`, `cover_url` — не https-URL или длиннее 2048; `theme` — не `^[a-z0-9-]{1,32}$`; `wallpaper_mode` — не `header`/`page`; `wallpaper_dim` — не целое 0–100; `wallpaper_blur` — не целое 0–20; `effects` — не boolean; `accent_color` — не `#rrggbb` */
+			/** @description Коллекция приватная (`collection_private`); неверные поля (`validation` с `field`): slug — формат, UUID, служебное слово; `wallpaper_url`, `cover_url` — не https-URL или длиннее 2048; `theme` — не `^[a-z0-9-]{1,32}$`; `wallpaper_mode` — не `header`/`page`; `wallpaper_dim` — не целое 0–100; `wallpaper_blur` — не целое 0–20; `effects` — не boolean; `accent_color` — не `#rrggbb`; `header_mode` — не `styled`/`plain`/`none` */
 			400: {
 				headers: {
 					[name: string]: unknown;
