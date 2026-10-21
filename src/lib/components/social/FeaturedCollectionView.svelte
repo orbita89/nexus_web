@@ -213,7 +213,8 @@
 			<span>{shownTitle}</span>
 		</h1>
 		<span class="text-xs tracking-wider text-base-content/60 uppercase">
-			· Подборка · {count(collection.items_count, ['произведение', 'произведения', 'произведений'])}
+			· Подборка · {count(collection.items_count, ['произведение', 'произведения', 'произведений'])} ·
+			<time datetime={collection.updated_at}>{reviewDate(collection.updated_at)}</time>
 		</span>
 		{@render editButton()}
 	</div>
@@ -225,9 +226,6 @@
 		</p>
 	{/if}
 	{#if textError && !editing}<p class="mt-2 text-sm text-error" role="alert">{textError}</p>{/if}
-	<p class="mt-4 text-xs tracking-wider text-base-content/60 uppercase">
-		обновлена {reviewDate(collection.updated_at)}
-	</p>
 {/snippet}
 
 {#snippet textForm()}
