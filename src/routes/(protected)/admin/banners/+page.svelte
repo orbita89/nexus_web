@@ -349,7 +349,7 @@
 	}
 
 	function targetLabel(t: BannerTarget): string {
-		if (t.type === 'all') return 'Все страницы';
+		if (t.type === 'all') return 'Главные страницы разделов';
 		if (t.type === 'page') return isBannerPage(t.page) ? PAGE_TITLES[t.page] : t.page;
 		return t.pattern;
 	}
@@ -382,7 +382,7 @@
 		onchange={() => applyFilters()}
 	>
 		<option value="">Все цели</option>
-		<option value="all">На всех страницах</option>
+		<option value="all">Главные страницы разделов</option>
 		<option value="page">По странице</option>
 		<option value="path">По пути</option>
 	</select>
@@ -590,7 +590,7 @@
 						aria-label="Тип цели {i + 1}"
 						bind:value={t.type}
 					>
-						<option value="all">Все страницы</option>
+						<option value="all">Главные страницы разделов (/, /films, /books…)</option>
 						<option value="page">Страница</option>
 						<option value="path">Путь</option>
 					</select>

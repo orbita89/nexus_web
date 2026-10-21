@@ -64,9 +64,17 @@ export function getBanners(api: Api, path: string): Promise<Banner[]> {
 }
 
 /** Баннеры для SSR-загрузки: ошибка — пустой список, блок просто не показывается. */
+/** Главные страницы разделов: `/`, `/films`, `/series`, `/books`, `/games`, `/people`. */
+export const isSectionPath = (path: string) =>
+	path === '/' || BANNER_PAGES.some((p) => p !== 'home' && path === `/${p}`);
+
 export async function safeBanners(api: Api, path: string): Promise<Banner[]> {
 	try {
-		return await getBanners(api, path);
+		const banners = await getBanners(api, path);
+		// «Везде» — это главные страницы разделов: на карточках, коллекциях и т. п. такой баннер
+		// не показываем. Там остаются только баннеры с явной целью (страница или шаблон пути).
+		if (isSectionPath(path)) return banners;
+		return banners.filter((b) => b.targets.some((t) => t.type !== 'all'));
 	} catch {
 		return [];
 	}
