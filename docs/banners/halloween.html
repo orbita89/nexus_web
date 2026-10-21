@@ -1,173 +1,400 @@
 <style>
-  .t {
-    position: relative; height: 100%; display: flex; align-items: center;
-    gap: 32px; padding: 28px 44px; overflow: hidden;
-    font-family: system-ui, sans-serif; color: #fff; background: #070303;
-  }
-  .bg {
-    position: absolute; inset: 0;
-    background: url(https://i.pinimg.com/736x/61/10/7f/61107f3a27428df3d1b4b393fafe8c54.jpg)
-      center / cover no-repeat;
-  }
-  .bg::after {
-    content: ""; position: absolute; inset: 0;
-    background: linear-gradient(90deg, rgba(7,3,3,.92) 0%,
-      rgba(7,3,3,.65) 45%, rgba(7,3,3,.2) 100%);
-  }
-  .fog {
-    position: absolute; left: -50%; right: -50%; bottom: -20%; height: 55%;
-    pointer-events: none; filter: blur(8px);
-    background:
-      radial-gradient(40% 60% at 30% 70%, rgba(200,200,210,.16), transparent 70%),
-      radial-gradient(35% 50% at 70% 80%, rgba(200,200,210,.12), transparent 70%);
-    animation: fog 18s linear infinite alternate;
-  }
-  @keyframes fog { from { transform: translateX(-8%) } to { transform: translateX(8%) } }
-  .txt { position: relative; flex: 1; min-width: 0; z-index: 1 }
-  .tag {
-    font-size: 13px; letter-spacing: .2em; text-transform: uppercase;
-    color: #ff8a3d; animation: flicker 4s infinite;
-  }
-  @keyframes flicker {
-    0%, 18%, 22%, 25%, 53%, 57%, 100% { opacity: 1; text-shadow: 0 0 10px #ff6a00 }
-    20%, 24%, 55% { opacity: .35; text-shadow: none }
-  }
-  h2 {
-    position: relative; display: inline-block; margin: 10px 0 22px;
-    font-size: clamp(28px, 4.5vw, 54px); line-height: 1; font-weight: 900;
-    text-shadow: 0 0 22px rgba(255,40,40,.6);
-  }
-  /* Капли крови под заголовком — только CSS */
-  h2::after {
-    content: ""; position: absolute; left: 0; right: 0; bottom: -14px; height: 16px;
-    background:
-      radial-gradient(circle at 50% 100%, #b30000 3px, transparent 4px) 0 0 / 23px 16px,
-      linear-gradient(#b30000, #b30000) 0 0 / 100% 3px no-repeat;
-    -webkit-mask: linear-gradient(#000, #000);
-  }
-  p { margin: 0; max-width: 30em; font-size: 16px; opacity: .9; letter-spacing: .04em }
-  .links { margin-top: 18px; display: flex; gap: 20px; align-items: center; flex-wrap: wrap }
-  .btn {
-    padding: 8px 16px; border-radius: 999px; background: #e11d1d; color: #fff;
-    text-decoration: none; font-size: 14px; font-weight: 600;
-    animation: pulse 2.4s infinite;
-  }
-  @keyframes pulse {
-    0% { box-shadow: 0 0 0 0 rgba(225,29,29,.6) }
-    70%, 100% { box-shadow: 0 0 0 12px rgba(225,29,29,0) }
-  }
-  .btn:hover { background: #ff3030 }
-  .lnk { color: #ffb38a; text-decoration: none; font-size: 14px }
-  .lnk:hover { text-decoration: underline }
-  .posters { position: relative; display: flex; z-index: 1 }
-  .posters a {
-    position: relative; display: block; width: clamp(80px, 13vw, 170px);
-    aspect-ratio: 2 / 3; margin-left: -30px; border-radius: 10px; overflow: hidden;
-    background: #2a0a0a; transition: transform .25s;
-    box-shadow: 0 12px 34px rgba(0,0,0,.75), 0 0 0 1px rgba(255,255,255,.1);
-  }
-  .posters a:first-child { margin-left: 0 }
-  .posters a:nth-child(1) { transform: rotate(-7deg) translateY(12px) }
-  .posters a:nth-child(2) { z-index: 1 }
-  .posters a:nth-child(3) { transform: rotate(7deg) translateY(12px) }
-  .posters a:hover { transform: scale(1.08) rotate(0); z-index: 2 }
-  .posters img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover }
-  /* Декор Хеллоуина: летучие мыши, тыквы, черепа, паутина */
-  .deco { position: absolute; inset: 0; pointer-events: none; z-index: 0 }
-  .deco span { position: absolute; line-height: 1; user-select: none }
-  .bat { font-size: 26px; opacity: .85; animation: fly 9s ease-in-out infinite }
-  .b1 { top: 10%; left: 40%; }
-  .b2 { top: 22%; left: 55%; font-size: 18px; animation-delay: -3s }
-  .b3 { top: 6%; left: 68%; font-size: 14px; animation-delay: -6s }
-  @keyframes fly {
-    0%, 100% { transform: translate(0, 0) rotate(-6deg) }
-    25% { transform: translate(30px, -12px) rotate(8deg) }
-    50% { transform: translate(60px, 6px) rotate(-4deg) }
-    75% { transform: translate(24px, 14px) rotate(6deg) }
-  }
-  .pumpkin {
-    bottom: 6%; font-size: 40px; filter: drop-shadow(0 0 14px rgba(255,120,0,.9));
-    animation: glow 3s ease-in-out infinite;
-  }
-  .p1 { left: 42%; }
-  .p2 { left: 49%; bottom: 4%; font-size: 28px; animation-delay: -1.5s }
-  @keyframes glow {
-    0%, 100% { filter: drop-shadow(0 0 8px rgba(255,120,0,.6)) }
-    50% { filter: drop-shadow(0 0 22px rgba(255,140,0,1)) }
-  }
-  .skull {
-    top: 8%; right: 3%; font-size: 30px; opacity: .8;
-    animation: sway 4s ease-in-out infinite; transform-origin: 50% -40px;
-  }
-  .skull::before {
-    content: ""; position: absolute; left: 50%; bottom: 100%;
-    width: 1px; height: 60px; background: rgba(255,255,255,.35);
-  }
-  @keyframes sway { 0%, 100% { transform: rotate(-8deg) } 50% { transform: rotate(8deg) } }
-  .web {
-    top: -4px; left: -4px; width: 120px; height: 120px; opacity: .25;
-    background:
-      repeating-radial-gradient(circle at 0 0, transparent 0 14px,
-        rgba(255,255,255,.8) 14px 15px),
-      repeating-conic-gradient(from 0deg at 0 0, transparent 0 8deg,
-        rgba(255,255,255,.8) 8deg 9deg, transparent 9deg 18deg);
-    -webkit-mask: radial-gradient(circle at 0 0, #000 60%, transparent 72%);
-    mask: radial-gradient(circle at 0 0, #000 60%, transparent 72%);
-  }
-  .ghost {
-    bottom: 18%; right: 34%; font-size: 30px; opacity: 0;
-    animation: boo 7s ease-in-out infinite;
-  }
-  @keyframes boo {
-    0%, 60%, 100% { opacity: 0; transform: translateY(10px) }
-    70%, 85% { opacity: .7; transform: translateY(-6px) }
-  }
-  @media (max-width: 640px) {
-    .deco .p1, .deco .p2, .deco .ghost, .deco .b3 { display: none }
-    .t { flex-direction: column; align-items: flex-start; padding: 20px; gap: 16px }
-    .posters { order: -1 }
-    .posters a { width: 72px; margin-left: -16px }
-    .bg::after { background: rgba(7,3,3,.72) }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    * { animation: none !important; transition: none !important }
-  }
+	.t {
+		position: relative;
+		height: 100%;
+		display: flex;
+		align-items: center;
+		gap: 32px;
+		padding: 28px 44px;
+		overflow: hidden;
+		font-family: system-ui, sans-serif;
+		color: #fff;
+		background: #070303;
+	}
+	.bg {
+		position: absolute;
+		inset: 0;
+		background: url(https://i.pinimg.com/736x/61/10/7f/61107f3a27428df3d1b4b393fafe8c54.jpg)
+			center / cover no-repeat;
+	}
+	.bg::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		background: linear-gradient(
+			90deg,
+			rgba(7, 3, 3, 0.92) 0%,
+			rgba(7, 3, 3, 0.65) 45%,
+			rgba(7, 3, 3, 0.2) 100%
+		);
+	}
+	.fog {
+		position: absolute;
+		left: -50%;
+		right: -50%;
+		bottom: -20%;
+		height: 55%;
+		pointer-events: none;
+		filter: blur(8px);
+		background:
+			radial-gradient(40% 60% at 30% 70%, rgba(200, 200, 210, 0.16), transparent 70%),
+			radial-gradient(35% 50% at 70% 80%, rgba(200, 200, 210, 0.12), transparent 70%);
+		animation: fog 18s linear infinite alternate;
+	}
+	@keyframes fog {
+		from {
+			transform: translateX(-8%);
+		}
+		to {
+			transform: translateX(8%);
+		}
+	}
+	.txt {
+		position: relative;
+		flex: 1;
+		min-width: 0;
+		z-index: 1;
+	}
+	.tag {
+		font-size: 13px;
+		letter-spacing: 0.2em;
+		text-transform: uppercase;
+		color: #ff8a3d;
+		animation: flicker 4s infinite;
+	}
+	@keyframes flicker {
+		0%,
+		18%,
+		22%,
+		25%,
+		53%,
+		57%,
+		100% {
+			opacity: 1;
+			text-shadow: 0 0 10px #ff6a00;
+		}
+		20%,
+		24%,
+		55% {
+			opacity: 0.35;
+			text-shadow: none;
+		}
+	}
+	h2 {
+		position: relative;
+		display: inline-block;
+		margin: 10px 0 22px;
+		font-size: clamp(28px, 4.5vw, 54px);
+		line-height: 1;
+		font-weight: 900;
+		text-shadow: 0 0 22px rgba(255, 40, 40, 0.6);
+	}
+	/* Капли крови под заголовком — только CSS */
+	h2::after {
+		content: '';
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: -14px;
+		height: 16px;
+		background:
+			radial-gradient(circle at 50% 100%, #b30000 3px, transparent 4px) 0 0 / 23px 16px,
+			linear-gradient(#b30000, #b30000) 0 0 / 100% 3px no-repeat;
+		-webkit-mask: linear-gradient(#000, #000);
+	}
+	p {
+		margin: 0;
+		max-width: 30em;
+		font-size: 16px;
+		opacity: 0.9;
+		letter-spacing: 0.04em;
+	}
+	.links {
+		margin-top: 18px;
+		display: flex;
+		gap: 20px;
+		align-items: center;
+		flex-wrap: wrap;
+	}
+	.btn {
+		padding: 8px 16px;
+		border-radius: 999px;
+		background: #e11d1d;
+		color: #fff;
+		text-decoration: none;
+		font-size: 14px;
+		font-weight: 600;
+		animation: pulse 2.4s infinite;
+	}
+	@keyframes pulse {
+		0% {
+			box-shadow: 0 0 0 0 rgba(225, 29, 29, 0.6);
+		}
+		70%,
+		100% {
+			box-shadow: 0 0 0 12px rgba(225, 29, 29, 0);
+		}
+	}
+	.btn:hover {
+		background: #ff3030;
+	}
+	.lnk {
+		color: #ffb38a;
+		text-decoration: none;
+		font-size: 14px;
+	}
+	.lnk:hover {
+		text-decoration: underline;
+	}
+	.posters {
+		position: relative;
+		display: flex;
+		z-index: 1;
+	}
+	.posters a {
+		position: relative;
+		display: block;
+		width: clamp(80px, 13vw, 170px);
+		aspect-ratio: 2 / 3;
+		margin-left: -30px;
+		border-radius: 10px;
+		overflow: hidden;
+		background: #2a0a0a;
+		transition: transform 0.25s;
+		box-shadow:
+			0 12px 34px rgba(0, 0, 0, 0.75),
+			0 0 0 1px rgba(255, 255, 255, 0.1);
+	}
+	.posters a:first-child {
+		margin-left: 0;
+	}
+	.posters a:nth-child(1) {
+		transform: rotate(-7deg) translateY(12px);
+	}
+	.posters a:nth-child(2) {
+		z-index: 1;
+	}
+	.posters a:nth-child(3) {
+		transform: rotate(7deg) translateY(12px);
+	}
+	.posters a:hover {
+		transform: scale(1.08) rotate(0);
+		z-index: 2;
+	}
+	.posters img {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+	/* Декор Хеллоуина: летучие мыши, тыквы, черепа, паутина */
+	.deco {
+		position: absolute;
+		inset: 0;
+		pointer-events: none;
+		z-index: 0;
+	}
+	.deco span {
+		position: absolute;
+		line-height: 1;
+		user-select: none;
+	}
+	.bat {
+		font-size: 26px;
+		opacity: 0.85;
+		animation: fly 9s ease-in-out infinite;
+	}
+	.b1 {
+		top: 10%;
+		left: 40%;
+	}
+	.b2 {
+		top: 22%;
+		left: 55%;
+		font-size: 18px;
+		animation-delay: -3s;
+	}
+	.b3 {
+		top: 6%;
+		left: 68%;
+		font-size: 14px;
+		animation-delay: -6s;
+	}
+	@keyframes fly {
+		0%,
+		100% {
+			transform: translate(0, 0) rotate(-6deg);
+		}
+		25% {
+			transform: translate(30px, -12px) rotate(8deg);
+		}
+		50% {
+			transform: translate(60px, 6px) rotate(-4deg);
+		}
+		75% {
+			transform: translate(24px, 14px) rotate(6deg);
+		}
+	}
+	.pumpkin {
+		bottom: 6%;
+		font-size: 40px;
+		filter: drop-shadow(0 0 14px rgba(255, 120, 0, 0.9));
+		animation: glow 3s ease-in-out infinite;
+	}
+	.p1 {
+		left: 42%;
+	}
+	.p2 {
+		left: 49%;
+		bottom: 4%;
+		font-size: 28px;
+		animation-delay: -1.5s;
+	}
+	@keyframes glow {
+		0%,
+		100% {
+			filter: drop-shadow(0 0 8px rgba(255, 120, 0, 0.6));
+		}
+		50% {
+			filter: drop-shadow(0 0 22px rgba(255, 140, 0, 1));
+		}
+	}
+	.skull {
+		top: 8%;
+		right: 3%;
+		font-size: 30px;
+		opacity: 0.8;
+		animation: sway 4s ease-in-out infinite;
+		transform-origin: 50% -40px;
+	}
+	.skull::before {
+		content: '';
+		position: absolute;
+		left: 50%;
+		bottom: 100%;
+		width: 1px;
+		height: 60px;
+		background: rgba(255, 255, 255, 0.35);
+	}
+	@keyframes sway {
+		0%,
+		100% {
+			transform: rotate(-8deg);
+		}
+		50% {
+			transform: rotate(8deg);
+		}
+	}
+	.web {
+		top: -4px;
+		left: -4px;
+		width: 120px;
+		height: 120px;
+		opacity: 0.25;
+		background:
+			repeating-radial-gradient(
+				circle at 0 0,
+				transparent 0 14px,
+				rgba(255, 255, 255, 0.8) 14px 15px
+			),
+			repeating-conic-gradient(
+				from 0deg at 0 0,
+				transparent 0 8deg,
+				rgba(255, 255, 255, 0.8) 8deg 9deg,
+				transparent 9deg 18deg
+			);
+		-webkit-mask: radial-gradient(circle at 0 0, #000 60%, transparent 72%);
+		mask: radial-gradient(circle at 0 0, #000 60%, transparent 72%);
+	}
+	.ghost {
+		bottom: 18%;
+		right: 34%;
+		font-size: 30px;
+		opacity: 0;
+		animation: boo 7s ease-in-out infinite;
+	}
+	@keyframes boo {
+		0%,
+		60%,
+		100% {
+			opacity: 0;
+			transform: translateY(10px);
+		}
+		70%,
+		85% {
+			opacity: 0.7;
+			transform: translateY(-6px);
+		}
+	}
+	@media (max-width: 640px) {
+		.deco .p1,
+		.deco .p2,
+		.deco .ghost,
+		.deco .b3 {
+			display: none;
+		}
+		.t {
+			flex-direction: column;
+			align-items: flex-start;
+			padding: 20px;
+			gap: 16px;
+		}
+		.posters {
+			order: -1;
+		}
+		.posters a {
+			width: 72px;
+			margin-left: -16px;
+		}
+		.bg::after {
+			background: rgba(7, 3, 3, 0.72);
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		* {
+			animation: none !important;
+			transition: none !important;
+		}
+	}
 </style>
 <div class="t">
-  <div class="bg"></div>
-  <div class="fog"></div>
-  <div class="deco" aria-hidden="true">
-    <span class="web"></span>
-    <span class="bat b1">🦇</span>
-    <span class="bat b2">🦇</span>
-    <span class="bat b3">🦇</span>
-    <span class="pumpkin p1">🎃</span>
-    <span class="pumpkin p2">🎃</span>
-    <span class="skull">💀</span>
-    <span class="ghost">👻</span>
-  </div>
-  <div class="txt">
-    <div class="tag">Хеллоуин на Nexus</div>
-    <h2>Подборка ужастиков</h2>
-    <p>ОТ НЕИЗБЕЖНОГО НЕ УЙТИ. крррррряк</p>
-    <div class="links">
-      <a class="btn"
-        href="/collections/01a15d5f-31d0-747e-ab81-04e906924d21">Открыть подборку</a>
-      <a class="lnk" href="/films?tag=horror">Ужасы в каталоге →</a>
-    </div>
-  </div>
-  <div class="posters">
-    <a href="/films/obsession-2025">
-      <img alt="Обсессия"
-        src="https://image.tmdb.org/t/p/w780/cdRHtfzxbpjxD5yOyFrRummb0yO.jpg">
-    </a>
-    <a href="/films/terrifier-3-2024">
-      <img alt="Ужасающий 3"
-        src="https://image.tmdb.org/t/p/w780/yXLQ1M7bcJ3DSPIOr1s7YrjlDQb.jpg">
-    </a>
-    <a href="/films/resident-evil-2026">
-      <img alt="Обитель зла"
-        src="https://image.tmdb.org/t/p/w780/vLl5tcuabARqGBefccSsYAYXdgA.jpg">
-    </a>
-  </div>
+	<div class="bg"></div>
+	<div class="fog"></div>
+	<div class="deco" aria-hidden="true">
+		<span class="web"></span>
+		<span class="bat b1">🦇</span>
+		<span class="bat b2">🦇</span>
+		<span class="bat b3">🦇</span>
+		<span class="pumpkin p1">🎃</span>
+		<span class="pumpkin p2">🎃</span>
+		<span class="skull">💀</span>
+		<span class="ghost">👻</span>
+	</div>
+	<div class="txt">
+		<div class="tag">Хеллоуин на Nexus</div>
+		<h2>Подборка ужастиков</h2>
+		<p>ОТ НЕИЗБЕЖНОГО НЕ УЙТИ. крррррряк</p>
+		<div class="links">
+			<a class="btn" href="/collections/01a15d5f-31d0-747e-ab81-04e906924d21">Открыть подборку</a>
+			<a class="lnk" href="/films?tag=horror">Ужасы в каталоге →</a>
+		</div>
+	</div>
+	<div class="posters">
+		<a href="/films/obsession-2025">
+			<img alt="Обсессия" src="https://image.tmdb.org/t/p/w780/cdRHtfzxbpjxD5yOyFrRummb0yO.jpg" />
+		</a>
+		<a href="/films/terrifier-3-2024">
+			<img
+				alt="Ужасающий 3"
+				src="https://image.tmdb.org/t/p/w780/yXLQ1M7bcJ3DSPIOr1s7YrjlDQb.jpg"
+			/>
+		</a>
+		<a href="/films/resident-evil-2026">
+			<img
+				alt="Обитель зла"
+				src="https://image.tmdb.org/t/p/w780/vLl5tcuabARqGBefccSsYAYXdgA.jpg"
+			/>
+		</a>
+	</div>
 </div>
