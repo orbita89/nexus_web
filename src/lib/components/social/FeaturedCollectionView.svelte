@@ -104,6 +104,13 @@
 	const hmode = $derived(headerModeOverride ?? headerMode(collection));
 	const accent = $derived(pageAccent(collection));
 	const hasWallpaper = $derived(!!collectionWallpaperUrl(collection));
+	// Затухание низа текста — только если текст правда не влез (иначе гасится последняя строка зря).
+	const fadeIfOverflow = (el: HTMLElement) => {
+		const check = () => el.toggleAttribute('data-overflow', el.scrollHeight > el.clientHeight + 1);
+		const ro = new ResizeObserver(check);
+		ro.observe(el);
+		return () => ro.disconnect();
+	};
 	// Раскрытые описания по id сущности (на телефоне описание скрыто до клика).
 	let expanded = $state<Record<string, boolean>>({});
 	// При mode 'page' обои уже фоном страницы — в шапке их не дублируем.
@@ -372,7 +379,8 @@
 						<div class="contents sm:relative sm:col-start-3 sm:row-[1/span_2] sm:block">
 							<div class="contents sm:absolute sm:inset-0 sm:flex sm:flex-col">
 								<div
-									class="contents sm:flex sm:min-h-0 sm:shrink sm:flex-col sm:overflow-hidden sm:mask-[linear-gradient(to_bottom,#000_calc(100%-1.75rem),transparent)]"
+									class="contents sm:flex sm:min-h-0 sm:shrink sm:flex-col sm:overflow-hidden data-overflow:sm:mask-[linear-gradient(to_bottom,#000_calc(100%-1.75rem),transparent)]"
+									{@attach fadeIfOverflow}
 								>
 									<div
 										class="col-span-2 col-start-2 row-start-1 flex min-w-0 flex-wrap items-baseline gap-x-2 sm:block"
