@@ -322,7 +322,7 @@
 				{@const open = expanded[item.entity.id] ?? false}
 				<li
 					value={rank}
-					class="grid grid-cols-[auto_auto_minmax(0,1fr)] content-start gap-x-3 border-t border-base-content/10 py-8 first:border-t-0 first:pt-0 sm:gap-x-6 sm:py-10"
+					class="grid grid-cols-[auto_auto_minmax(0,1fr)] content-start gap-x-3 border-t border-base-content/10 py-6 first:border-t-0 first:pt-0 sm:gap-x-6 sm:py-10"
 				>
 					<span
 						class={[
@@ -344,15 +344,13 @@
 						{/if}
 					</div>
 					<!-- Текст не растягивает строку: на компьютере он ограничен высотой постера (лишнее
-					     плавно скрывается), на телефоне название — 2 строки, заметка — 3. Все строки одной высоты. -->
+					     плавно скрывается), на телефоне название — до 2 строк, заметка — до 3, без пустых отступов. -->
 					<div class="contents sm:relative sm:col-start-3 sm:row-[1/span_2] sm:block">
 						<div
 							class="contents sm:absolute sm:inset-0 sm:flex sm:flex-col sm:overflow-hidden sm:mask-[linear-gradient(to_bottom,#000_82%,transparent)]"
 						>
 							<div class="col-span-2 col-start-2 row-start-1 min-w-0">
-								<h2
-									class="line-clamp-2 min-h-[2lh] text-lg leading-snug font-bold sm:min-h-0 sm:text-xl"
-								>
+								<h2 class="line-clamp-2 text-lg leading-snug font-bold sm:text-xl">
 									<span class="sr-only">{rank} место. </span>
 									{#if href}
 										<a {href} class="link link-hover hover:text-(--page-accent)"
@@ -368,9 +366,7 @@
 									</p>
 								{/if}
 							</div>
-							<div
-								class="col-span-2 col-start-2 row-start-3 mt-4 min-h-[5.5rem] min-w-0 sm:mt-3 sm:min-h-0"
-							>
+							<div class="col-span-2 col-start-2 row-start-3 mt-3 min-w-0">
 								{#if item.note}
 									<p
 										class={[
