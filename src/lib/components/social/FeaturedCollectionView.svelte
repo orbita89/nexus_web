@@ -370,7 +370,7 @@
 								{#if item.note}
 									<p
 										class={[
-											'text-sm leading-relaxed font-semibold whitespace-pre-line text-base-content sm:text-base',
+											'text-sm leading-relaxed whitespace-pre-line text-base-content/85',
 											!open && 'line-clamp-3 sm:line-clamp-none'
 										]}
 									>
@@ -380,7 +380,7 @@
 								{#if about}
 									<p
 										class={[
-											'text-sm leading-relaxed font-medium text-base-content/90 sm:text-base',
+											'text-sm leading-relaxed text-base-content/65',
 											item.note && 'mt-3',
 											!open && 'hidden sm:block'
 										]}
