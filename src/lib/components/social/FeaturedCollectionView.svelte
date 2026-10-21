@@ -308,7 +308,7 @@
 	<div class="relative z-30 mb-8">{@render actions?.()}</div>
 
 	{#if items.length}
-		<!-- Строка: номер | постер | текст. На телефоне сверху название и год, ниже крупный постер, под ним заметка и описание на всю
+		<!-- Строка: номер | постер | текст. На телефоне сверху название и год, ниже крупный постер (растёт вместе с шириной экрана), под ним заметка и описание на всю
 		     ширину, описание — по кнопке «Описание»; заметка видна всегда. На обоях текст с тенью, без подложки. -->
 		<ol
 			class={['mx-auto max-w-4xl', hasWallpaper && 'over-wallpaper']}
@@ -332,7 +332,7 @@
 						aria-hidden="true">{rank}</span
 					>
 					<div
-						class="col-span-2 col-start-2 row-start-2 mt-3 w-48 overflow-hidden rounded-box shadow-lg sm:col-span-1 sm:row-span-2 sm:row-start-1 sm:mt-0 sm:w-48 md:w-56"
+						class="col-span-2 col-start-2 row-start-2 mt-3 w-[clamp(13rem,62vw,18rem)] overflow-hidden rounded-box shadow-lg sm:col-span-1 sm:row-span-2 sm:row-start-1 sm:mt-0 sm:w-[clamp(12rem,24vw,17rem)]"
 					>
 						{#if kind}
 							<Poster
