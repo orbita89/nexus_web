@@ -410,7 +410,7 @@
 										{#if about}
 											<p
 												class={[
-													'text-sm leading-relaxed text-base-content/80',
+													'text-sm leading-relaxed text-base-content/70',
 													item.note && 'mt-3',
 													!open && 'hidden sm:block'
 												]}
