@@ -68,7 +68,8 @@ export type FeaturedOptions = SchemaFeatureCollection;
 
 /**
  * Админ: сделать коллекцию особой, поменять позицию, адрес (slug) и/или оформление
- * (wallpaper_url, cover_url, theme). Не передано — не меняется, null — убрать.
+ * (wallpaper_url, cover_url, theme, wallpaper_mode, wallpaper_dim, wallpaper_blur, effects,
+ * accent_color). Не передано — не меняется, null — убрать.
  * Приватная → 400 collection_private, неверное поле → 400 validation (field), slug занят → 409.
  */
 export function adminSetFeatured(
@@ -122,7 +123,8 @@ export function featuredAdminError(e: unknown, fallback: (e: unknown) => string)
 	return fallback(e);
 }
 
-/** Поле, на которое указал бэкенд в 400 validation (slug, wallpaper_url, cover_url, theme). */
+/** Поле, на которое указал бэкенд в 400 validation (slug, wallpaper_url, cover_url, theme,
+ * wallpaper_mode, wallpaper_dim, wallpaper_blur, effects, accent_color). */
 export function validationField(e: unknown): string | null {
 	return e instanceof ApiError && e.code === 'validation' ? e.field : null;
 }

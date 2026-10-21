@@ -1099,6 +1099,11 @@ export interface components {
 		};
 		/** @description Коллекция в списке. */
 		Collection: {
+			/**
+			 * @description Свой акцентный цвет `#rrggbb` поверх цвета темы; `null` — цвет темы.
+			 * @example #b3001b
+			 */
+			accent_color?: string | null;
 			/** @description Есть ли в коллекции сущность из `?contains=`; без параметра поля нет. */
 			contains?: boolean | null;
 			/** @description Обложка карточки особой (16:9, от 1280 px); у обычной — `null`. */
@@ -1106,6 +1111,8 @@ export interface components {
 			/** Format: date-time */
 			created_at: string;
 			description?: string | null;
+			/** @description Декоративные эффекты темы (капли крови, снег…). */
+			effects: boolean;
 			/**
 			 * Format: int32
 			 * @description Порядок среди особых; у обычной — `null`.
@@ -1141,6 +1148,21 @@ export interface components {
 			title: string;
 			/** Format: date-time */
 			updated_at: string;
+			/**
+			 * Format: int32
+			 * @description Размытие обоев, px (0–20).
+			 */
+			wallpaper_blur: number;
+			/**
+			 * Format: int32
+			 * @description Затемнение обоев, % (0–100); `null` — по теме на фронтенде.
+			 */
+			wallpaper_dim?: number | null;
+			/**
+			 * @description Где обои: `header` — только в шапке, `page` — фоном всей страницы.
+			 * @example header
+			 */
+			wallpaper_mode: string;
 			/** @description Обои особой: широкий фон шапки страницы (21:9 или 16:9, от 1920 px); у обычной — `null`. */
 			wallpaper_url?: string | null;
 		};
@@ -1308,8 +1330,19 @@ export interface components {
 		};
 		/** @description Пометить коллекцию особой. */
 		FeatureCollection: {
+			/**
+			 * @description `#rrggbb` (регистр не важен, хранится в нижнем); `null` — цвет темы. Не передано — не
+			 *     меняется.
+			 * @example #b3001b
+			 */
+			accent_color?: string | null;
 			/** @description Обложка карточки: https-URL до 2048 символов. Не передано — не меняется, `null` — убрать. */
 			cover_url?: string | null;
+			/**
+			 * @description Эффекты темы; `null` — `true`. Не передано — не меняется.
+			 * @example true
+			 */
+			effects?: boolean | null;
 			/**
 			 * Format: int32
 			 * @description Порядок среди особых; без него — в конец (при повторном PUT — не меняется).
@@ -1328,6 +1361,23 @@ export interface components {
 			 * @example halloween
 			 */
 			theme?: string | null;
+			/**
+			 * Format: int32
+			 * @description Целое 0–20; `null` — 0. Не передано — не меняется.
+			 * @example 4
+			 */
+			wallpaper_blur?: number | null;
+			/**
+			 * Format: int32
+			 * @description Целое 0–100; `null` — по теме. Не передано — не меняется.
+			 * @example 60
+			 */
+			wallpaper_dim?: number | null;
+			/**
+			 * @description `header` или `page`; `null` — `header`. Не передано — не меняется.
+			 * @example page
+			 */
+			wallpaper_mode?: string | null;
 			/** @description Обои: https-URL до 2048 символов. Не передано — не меняется, `null` — убрать. */
 			wallpaper_url?: string | null;
 		};
@@ -1413,6 +1463,11 @@ export interface components {
 		/** @description Страница списка. */
 		Page_Collection: {
 			items: {
+				/**
+				 * @description Свой акцентный цвет `#rrggbb` поверх цвета темы; `null` — цвет темы.
+				 * @example #b3001b
+				 */
+				accent_color?: string | null;
 				/** @description Есть ли в коллекции сущность из `?contains=`; без параметра поля нет. */
 				contains?: boolean | null;
 				/** @description Обложка карточки особой (16:9, от 1280 px); у обычной — `null`. */
@@ -1420,6 +1475,8 @@ export interface components {
 				/** Format: date-time */
 				created_at: string;
 				description?: string | null;
+				/** @description Декоративные эффекты темы (капли крови, снег…). */
+				effects: boolean;
 				/**
 				 * Format: int32
 				 * @description Порядок среди особых; у обычной — `null`.
@@ -1455,6 +1512,21 @@ export interface components {
 				title: string;
 				/** Format: date-time */
 				updated_at: string;
+				/**
+				 * Format: int32
+				 * @description Размытие обоев, px (0–20).
+				 */
+				wallpaper_blur: number;
+				/**
+				 * Format: int32
+				 * @description Затемнение обоев, % (0–100); `null` — по теме на фронтенде.
+				 */
+				wallpaper_dim?: number | null;
+				/**
+				 * @description Где обои: `header` — только в шапке, `page` — фоном всей страницы.
+				 * @example header
+				 */
+				wallpaper_mode: string;
 				/** @description Обои особой: широкий фон шапки страницы (21:9 или 16:9, от 1920 px); у обычной — `null`. */
 				wallpaper_url?: string | null;
 			}[];
@@ -2565,7 +2637,7 @@ export interface operations {
 					'application/json': components['schemas']['Collection'];
 				};
 			};
-			/** @description Коллекция приватная (`collection_private`); неверные поля (`validation` с `field`): slug — формат, UUID, служебное слово; `wallpaper_url`, `cover_url` — не https-URL или длиннее 2048; `theme` — не `^[a-z0-9-]{1,32}$` */
+			/** @description Коллекция приватная (`collection_private`); неверные поля (`validation` с `field`): slug — формат, UUID, служебное слово; `wallpaper_url`, `cover_url` — не https-URL или длиннее 2048; `theme` — не `^[a-z0-9-]{1,32}$`; `wallpaper_mode` — не `header`/`page`; `wallpaper_dim` — не целое 0–100; `wallpaper_blur` — не целое 0–20; `effects` — не boolean; `accent_color` — не `#rrggbb` */
 			400: {
 				headers: {
 					[name: string]: unknown;

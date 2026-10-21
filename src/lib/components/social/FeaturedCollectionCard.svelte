@@ -4,7 +4,7 @@
 	import { asKind } from '#lib/catalog/kinds.ts';
 	import { count, summary } from '#lib/catalog/labels.ts';
 	import { featuredBadge } from '#lib/social/collections.ts';
-	import { resolveFeaturedLook } from '#lib/social/featuredThemes.ts';
+	import { normalizeAccent, resolveFeaturedLook } from '#lib/social/featuredThemes.ts';
 	import Poster from '#lib/components/catalog/Poster.svelte';
 
 	// Карточка особой коллекции (is_featured): крупнее обычной, акцентная рамка и фон, бейдж
@@ -14,11 +14,14 @@
 
 	let { collection }: { collection: SchemaCollection } = $props();
 	const look = $derived(resolveFeaturedLook(collection));
+	// Свой акцент (accent_color) — бейдж и рамка; иначе цвета темы.
+	const accent = $derived(normalizeAccent(collection.accent_color));
 </script>
 
 <article
 	class="relative isolate flex h-full flex-col overflow-hidden rounded-box bg-linear-to-br p-5 ring-2 transition sm:p-6 {look
 		.theme.gradient} {look.theme.ring}"
+	style:--tw-ring-color={accent}
 >
 	{#if look.theme.pattern}
 		<div
@@ -30,6 +33,7 @@
 	<div class="mb-3 flex items-center gap-2">
 		<span
 			class="text-lg leading-none text-warning"
+			style:color={accent}
 			role="img"
 			aria-label={featuredBadge(collection.title)}
 			title={featuredBadge(collection.title)}>★</span

@@ -16,7 +16,9 @@
 		collectionCoverUrl,
 		collectionThemeId,
 		collectionWallpaperUrl,
-		resolveFeaturedHero
+		pageAccent,
+		resolveFeaturedHero,
+		resolvePageStyle
 	} from '#lib/social/featuredThemes.ts';
 	import { reviewDate } from '#lib/social/reviews.ts';
 	import CollectionBackdrop from '#lib/components/social/CollectionBackdrop.svelte';
@@ -33,6 +35,11 @@
 	const title = $derived(`${featuredTitle(collection)} | Nexus`);
 	const description = $derived(featuredDescription(collection));
 	const look = $derived(resolveFeaturedHero(collection));
+	// Оформление страницы: обои шапкой или фоном, затемнение/размытие, эффекты, свой акцент.
+	const style = $derived(resolvePageStyle(collection));
+	const accent = $derived(pageAccent(collection));
+	// При mode 'page' обои уже фоном страницы — в шапке их не дублируем.
+	const headerWallpaper = $derived(look.kind === 'cover' && style.mode === 'header');
 	// og:image: обложка → обои → обложка первого произведения.
 	const image = $derived(
 		collectionCoverUrl(collection) ??
@@ -82,19 +89,35 @@
 <CollectionBackdrop
 	themeId={collectionThemeId(collection)}
 	wallpaperUrl={collectionWallpaperUrl(collection)}
+	mode={style.mode}
+	dim={style.dim}
+	blur={style.blur}
+	effects={style.effects}
+	accent={style.accent}
 />
-<div class="relative z-10">
+<div class="relative z-10" style:--page-accent={accent}>
 	<header
-		class="relative isolate overflow-hidden rounded-box bg-linear-to-br p-5 sm:p-8 {look.theme
-			.gradient}"
+		class={[
+			'relative isolate overflow-hidden rounded-box p-5 sm:p-8',
+			look.kind === 'cover' && style.mode === 'page'
+				? 'bg-base-100/40 backdrop-blur-sm'
+				: ['bg-linear-to-br', look.theme.gradient]
+		]}
 	>
-		{#if look.kind === 'cover'}
+		{#if headerWallpaper && look.kind === 'cover'}
 			<img
 				src={look.url}
 				alt=""
 				class="absolute inset-0 -z-30 h-full w-full object-cover"
+				class:scale-105={style.blur > 0}
+				style:filter={style.blur ? `blur(${style.blur}px)` : null}
 				fetchpriority="high"
 			/>
+			<div
+				class="absolute inset-0 -z-20 bg-base-100"
+				style:opacity={(style.dim / 100) * 0.6}
+				aria-hidden="true"
+			></div>
 			<!-- Затемнение слева направо и снизу: текст читается на любых обоях. -->
 			<div
 				class="absolute inset-0 -z-20 bg-linear-to-r from-base-100 via-base-100/80 to-base-100/20"
@@ -120,7 +143,7 @@
 				{/each}
 			</div>
 		{/if}
-		{#if look.theme.pattern}
+		{#if look.theme.pattern && style.effects}
 			<div
 				class="pointer-events-none absolute inset-0 -z-10"
 				style:background={look.theme.pattern}
@@ -130,6 +153,7 @@
 		<h1 class="flex items-start gap-2 text-3xl font-black sm:text-4xl">
 			<span
 				class="mt-1 shrink-0 text-2xl text-warning sm:text-3xl"
+				style:color={style.accent}
 				role="img"
 				aria-label={featuredBadge(collection.title)}
 				title={featuredBadge(collection.title)}>★</span
@@ -164,7 +188,7 @@
 					<span
 						class={[
 							'w-8 shrink-0 pt-0.5 text-right text-2xl leading-none font-semibold tabular-nums sm:w-10 sm:text-3xl',
-							rank <= 3 ? 'text-primary' : 'text-base-content/40'
+							rank <= 3 ? 'text-(--page-accent)' : 'text-base-content/40'
 						]}
 						aria-hidden="true">{rank}</span
 					>
@@ -182,7 +206,7 @@
 						<h2 class="text-lg leading-snug font-bold sm:text-xl">
 							<span class="sr-only">{rank} место. </span>
 							{#if href}
-								<a {href} class="link link-hover">{item.entity.title}</a>
+								<a {href} class="link link-hover hover:text-(--page-accent)">{item.entity.title}</a>
 							{:else}
 								{item.entity.title}
 							{/if}
@@ -215,7 +239,7 @@
 						{#if (about?.length ?? 0) + (item.note?.length ?? 0) > 280}
 							<button
 								type="button"
-								class="mt-2 text-sm text-primary hover:underline"
+								class="mt-2 text-sm text-(--page-accent) hover:underline"
 								aria-expanded={open}
 								onclick={() => (expanded[item.entity.id] = !open)}
 							>

@@ -73,7 +73,12 @@
 							slug: null,
 							wallpaper_url: null,
 							cover_url: null,
-							theme: null
+							theme: null,
+							wallpaper_mode: 'header',
+							wallpaper_dim: null,
+							wallpaper_blur: 0,
+							effects: true,
+							accent_color: null
 						}
 					: x
 			);

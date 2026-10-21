@@ -1,45 +1,50 @@
 <script lang="ts">
 	import type { FeaturedThemeId } from '#lib/catalog/themes.ts';
+	import { themeAccent, type WallpaperMode } from '#lib/social/featuredThemes.ts';
 
 	// Тематический фон всей страницы особой коллекции: размытые обои сверху с затуханием и
 	// декоративный слой по theme (кровь, сердечки, снег, звёзды). Только CSS/инлайн-SVG,
 	// анимация — transform/opacity, отключается при prefers-reduced-motion.
 	// preview — уменьшенная копия для формы оформления (absolute внутри родителя).
+	// mode 'page' — обои фиксированным фоном всей страницы (cover, затемнение dim %, размытие blur px);
+	// 'header' — обои только в шапке, здесь лишь мягкий отсвет сверху с затуханием.
+	// effects false — без декоративных слоёв. accent — CSS-цвет акцента (свой или темы).
 	let {
 		themeId,
 		wallpaperUrl = null,
-		preview = false
+		preview = false,
+		mode = 'header',
+		dim = 55,
+		blur = 0,
+		effects = true,
+		accent = null
 	}: {
 		themeId: FeaturedThemeId | null;
 		wallpaperUrl?: string | null;
 		preview?: boolean;
+		mode?: WallpaperMode;
+		dim?: number;
+		blur?: number;
+		effects?: boolean;
+		accent?: string | null;
 	} = $props();
 
 	const decor = $derived(
-		themeId === 'horror' || themeId === 'halloween'
-			? 'blood'
-			: themeId === 'romance'
-				? 'hearts'
-				: themeId === 'new-year'
-					? 'snow'
-					: themeId === 'sci-fi'
-						? 'stars'
-						: 'glow'
+		!effects
+			? 'none'
+			: themeId === 'horror' || themeId === 'halloween'
+				? 'blood'
+				: themeId === 'romance'
+					? 'hearts'
+					: themeId === 'new-year'
+						? 'snow'
+						: themeId === 'sci-fi'
+							? 'stars'
+							: 'glow'
 	);
-	const accent = $derived(
-		(
-			{
-				default: 'var(--color-primary)',
-				halloween: 'var(--color-warning)',
-				romance: 'var(--color-secondary)',
-				'new-year': 'var(--color-info)',
-				horror: 'var(--color-error)',
-				'sci-fi': 'var(--color-accent)',
-				family: 'var(--color-success)',
-				summer: 'var(--color-warning)'
-			} as Record<string, string>
-		)[themeId ?? 'default'] ?? 'var(--color-primary)'
-	);
+	const acc = $derived(accent ?? themeAccent(themeId));
+	// В превью размытие пропорционально меньше.
+	const blurPx = $derived(preview ? blur / 4 : blur);
 
 	const uid = $props.id();
 	// Детерминированные параметры (без случайности — одинаково на SSR и клиенте).
@@ -69,14 +74,23 @@
 		preview ? 'absolute inset-0 -z-10' : 'fixed inset-0 z-0'
 	]}
 	aria-hidden="true"
-	style:--acc={accent}
+	style:--acc={acc}
 >
 	<div
 		class="absolute inset-0"
 		style="background: radial-gradient(120% 60% at 50% 0%, color-mix(in oklab, var(--acc) 16%,
 		transparent), transparent 70%)"
 	></div>
-	{#if wallpaperUrl}
+	{#if wallpaperUrl && mode === 'page'}
+		<img
+			src={wallpaperUrl}
+			alt=""
+			class="absolute inset-0 h-full w-full object-cover"
+			class:scale-105={blurPx > 0}
+			style:filter={blurPx ? `blur(${blurPx}px)` : null}
+		/>
+		<div class="absolute inset-0 bg-base-100" style:opacity={dim / 100}></div>
+	{:else if wallpaperUrl}
 		<img
 			src={wallpaperUrl}
 			alt=""
