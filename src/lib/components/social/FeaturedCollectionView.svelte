@@ -308,7 +308,7 @@
 	<div class="relative z-30 mb-8">{@render actions?.()}</div>
 
 	{#if items.length}
-		<!-- Строка: номер | постер | текст. На телефоне заметка и описание уходят под постер на всю
+		<!-- Строка: номер | постер | текст. На телефоне сверху название и год, ниже крупный постер, под ним заметка и описание на всю
 		     ширину, описание — по кнопке «Описание»; заметка видна всегда. На обоях текст с тенью, без подложки. -->
 		<ol
 			class={['mx-auto max-w-4xl', hasWallpaper && 'over-wallpaper']}
@@ -326,12 +326,14 @@
 				>
 					<span
 						class={[
-							'row-span-2 w-6 pt-0.5 text-right text-xl leading-none font-semibold tabular-nums sm:w-10 sm:text-3xl',
+							'col-start-1 row-start-1 w-6 pt-0.5 text-right text-xl leading-none font-semibold tabular-nums sm:row-span-2 sm:w-10 sm:text-3xl',
 							rank <= 3 ? 'text-(--page-accent)' : 'text-base-content/50'
 						]}
 						aria-hidden="true">{rank}</span
 					>
-					<div class="w-28 overflow-hidden rounded-box shadow-lg sm:row-span-2 sm:w-48 md:w-56">
+					<div
+						class="col-span-2 col-start-2 row-start-2 mt-3 w-48 overflow-hidden rounded-box shadow-lg sm:col-span-1 sm:row-span-2 sm:row-start-1 sm:mt-0 sm:w-48 md:w-56"
+					>
 						{#if kind}
 							<Poster
 								title={item.entity.title}
@@ -341,7 +343,7 @@
 							/>
 						{/if}
 					</div>
-					<div class="min-w-0">
+					<div class="col-span-2 col-start-2 row-start-1 min-w-0 sm:col-span-1 sm:col-start-3">
 						<h2 class="text-lg leading-snug font-bold sm:text-xl">
 							<span class="sr-only">{rank} место. </span>
 							{#if href}
@@ -357,7 +359,9 @@
 						{/if}
 					</div>
 					{#if item.note || about}
-						<div class="col-span-2 col-start-2 mt-4 min-w-0 sm:col-span-1 sm:col-start-3 sm:mt-3">
+						<div
+							class="col-span-2 col-start-2 row-start-3 mt-4 min-w-0 sm:col-span-1 sm:col-start-3 sm:row-start-2 sm:mt-3"
+						>
 							{#if item.note}
 								<p
 									class="text-sm leading-relaxed font-semibold whitespace-pre-line text-base-content sm:text-base"
