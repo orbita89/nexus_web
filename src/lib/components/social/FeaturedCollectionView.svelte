@@ -307,8 +307,8 @@
 	<div class="relative z-30 mb-8">{@render actions?.()}</div>
 
 	{#if items.length}
-		<!-- Постеры крупно по центру; описание скрыто под кнопкой «Описание». -->
-		<ol class="mx-auto max-w-3xl" reversed aria-label="Рейтинг: от {total}-го места к первому">
+		<!-- Строка: номер | постер | текст; блок по центру страницы. Заметка, затем описание в одну строку. -->
+		<ol class="mx-auto max-w-4xl" reversed aria-label="Рейтинг: от {total}-го места к первому">
 			{#each items as { item, rank, kind, href }, i (item.entity.id)}
 				{@const year = yearOf(item.entity.release_date)}
 				{@const kindLabel = kind ? kindByApi(kind)?.one : null}
@@ -316,16 +316,16 @@
 				{@const open = expanded[item.entity.id] ?? false}
 				<li
 					value={rank}
-					class="flex flex-col items-center border-t border-base-content/10 py-10 text-center first:border-t-0 first:pt-0 sm:py-14"
+					class="flex gap-3 border-t border-base-content/10 py-8 first:border-t-0 first:pt-0 sm:gap-6 sm:py-10"
 				>
 					<span
 						class={[
-							'mb-3 text-2xl leading-none font-semibold tabular-nums sm:text-3xl',
+							'w-8 shrink-0 pt-0.5 text-right text-2xl leading-none font-semibold tabular-nums sm:w-10 sm:text-3xl',
 							rank <= 3 ? 'text-(--page-accent)' : 'text-base-content/40'
 						]}
 						aria-hidden="true">{rank}</span
 					>
-					<div class="w-56 overflow-hidden rounded-box shadow-xl sm:w-72 md:w-80">
+					<div class="w-36 shrink-0 overflow-hidden rounded-box shadow-lg sm:w-48 md:w-56">
 						{#if kind}
 							<Poster
 								title={item.entity.title}
@@ -335,37 +335,44 @@
 							/>
 						{/if}
 					</div>
-					<h2 class="mt-5 text-xl leading-snug font-bold sm:text-2xl">
-						<span class="sr-only">{rank} место. </span>
-						{#if href}
-							<a {href} class="link link-hover hover:text-(--page-accent)">{item.entity.title}</a>
-						{:else}
-							{item.entity.title}
+					<div class="min-w-0 flex-1">
+						<h2 class="text-lg leading-snug font-bold sm:text-xl">
+							<span class="sr-only">{rank} место. </span>
+							{#if href}
+								<a {href} class="link link-hover hover:text-(--page-accent)">{item.entity.title}</a>
+							{:else}
+								{item.entity.title}
+							{/if}
+						</h2>
+						{#if year || kindLabel}
+							<p class="mt-1 text-sm text-base-content/55">
+								{[year, kindLabel].filter(Boolean).join(' · ')}
+							</p>
 						{/if}
-					</h2>
-					{#if year || kindLabel}
-						<p class="mt-1 text-sm text-base-content/55">
-							{[year, kindLabel].filter(Boolean).join(' · ')}
-						</p>
-					{/if}
-					{#if about || item.note}
-						<button
-							type="button"
-							class="mt-3 text-sm text-(--page-accent) hover:underline"
-							aria-expanded={open}
-							onclick={() => (expanded[item.entity.id] = !open)}
-						>
-							{open ? 'Скрыть описание' : 'Описание'}
-						</button>
-						{#if open}
-							<div class="mt-3 max-w-2xl text-left text-sm leading-relaxed">
-								{#if about}<p class="text-base-content/80">{about}</p>{/if}
-								{#if item.note}
-									<p class="mt-3 whitespace-pre-line text-base-content/70">{item.note}</p>
-								{/if}
-							</div>
+						{#if item.note}
+							<p class="mt-3 text-sm leading-relaxed whitespace-pre-line text-base-content/85">
+								{item.note}
+							</p>
 						{/if}
-					{/if}
+						{#if about}
+							<p
+								class={[
+									'mt-3 text-sm leading-relaxed text-base-content/60',
+									!open && 'line-clamp-1'
+								]}
+							>
+								{about}
+							</p>
+							<button
+								type="button"
+								class="mt-1 text-sm text-(--page-accent) hover:underline"
+								aria-expanded={open}
+								onclick={() => (expanded[item.entity.id] = !open)}
+							>
+								{open ? 'Свернуть' : 'Ещё'}
+							</button>
+						{/if}
+					</div>
 				</li>
 			{/each}
 		</ol>
