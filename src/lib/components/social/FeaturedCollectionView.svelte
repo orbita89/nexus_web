@@ -349,7 +349,9 @@
 						<div
 							class="contents sm:absolute sm:inset-0 sm:flex sm:flex-col sm:overflow-hidden sm:mask-[linear-gradient(to_bottom,#000_82%,transparent)]"
 						>
-							<div class="col-span-2 col-start-2 row-start-1 min-w-0">
+							<div
+								class="col-span-2 col-start-2 row-start-1 flex min-w-0 flex-wrap items-baseline gap-x-2 sm:block"
+							>
 								<h2 class="line-clamp-2 text-lg leading-snug font-bold sm:text-xl">
 									<span class="sr-only">{rank} место. </span>
 									{#if href}
@@ -361,7 +363,7 @@
 									{/if}
 								</h2>
 								{#if year || kindLabel}
-									<p class="mt-1 text-sm text-base-content/75">
+									<p class="shrink-0 text-sm text-base-content/75 sm:mt-1">
 										{[year, kindLabel].filter(Boolean).join(' · ')}
 									</p>
 								{/if}
