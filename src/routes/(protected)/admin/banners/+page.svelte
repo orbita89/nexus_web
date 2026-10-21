@@ -27,8 +27,9 @@
 	import Alert from '#lib/components/Alert.svelte';
 
 	// Баннеры v2: фильтр (цель, поиск), таблица; форма с видом, темой, приоритетом, HTML с живым
-	// превью (DOMPurify, только в браузере), редакторами слайдов, кнопок, целей и исключений.
-	// 400 с field (`slides[1].image_url`) показываются у нужного поля, без field — в общем алерте.
+	// превью (DOMPurify, только в браузере), редакторами кнопок, целей и исключений.
+	// Несколько слайдов — это несколько баннеров с одной целью: их листает общая карусель.
+	// 400 с field (`buttons[0].url`) показываются у нужного поля, без field — в общем алерте.
 	const PAGE = 20;
 	const PAGE_TITLES: Record<BannerPage, string> = {
 		home: 'Главная',
@@ -41,7 +42,7 @@
 	const KIND_TITLES: Record<BannerKind, string> = {
 		image: 'Картинка',
 		html: 'HTML',
-		slides: 'Слайды'
+		slides: 'Слайды (устарел)'
 	};
 	const STYLE_TITLES: Record<BannerButtonStyle, string> = {
 		primary: 'Основная',
@@ -51,14 +52,6 @@
 	const THEME_TITLES = new Map<string, string>(FEATURED_THEMES.map((t) => [t.id, t.label]));
 	const themeTitle = (id: string | null | undefined) => (id ? (THEME_TITLES.get(id) ?? id) : '—');
 
-	interface SlideDraft {
-		key: number;
-		image_url: string;
-		title: string;
-		subtitle: string;
-		content_html: string;
-		link_url: string;
-	}
 	interface ButtonDraft {
 		key: number;
 		label: string;
@@ -85,7 +78,6 @@
 		is_active: boolean;
 		starts_at: string;
 		ends_at: string;
-		slides: SlideDraft[];
 		buttons: ButtonDraft[];
 		targets: TargetDraft[];
 		exclude_paths: { key: number; pattern: string }[];
@@ -93,14 +85,6 @@
 
 	let seq = 0;
 	const nextKey = () => ++seq;
-	const emptySlide = (): SlideDraft => ({
-		key: nextKey(),
-		image_url: '',
-		title: '',
-		subtitle: '',
-		content_html: '',
-		link_url: ''
-	});
 	const emptyButton = (): ButtonDraft => ({ key: nextKey(), label: '', url: '', style: 'primary' });
 	const emptyTarget = (type: TargetMode = 'all'): TargetDraft => ({
 		key: nextKey(),
@@ -121,7 +105,6 @@
 		is_active: true,
 		starts_at: '',
 		ends_at: '',
-		slides: [],
 		buttons: [],
 		targets: [emptyTarget('all')],
 		exclude_paths: []
@@ -135,11 +118,12 @@
 	let q = $state('');
 	let error = $state('');
 	let formError = $state('');
-	/** Ошибки полей: ключ — путь через точку (`slides.1.image_url`). */
+	/** Ошибки полей: ключ — путь через точку (`buttons.0.url`). */
 	let fieldErrors = $state<Record<string, string>>({});
 	let saving = $state(false);
 	/** null — форма закрыта, 'new' — создание, иначе id редактируемого. */
 	let editing = $state<string | null>(null);
+	let legacySlides = $state(false);
 	let draft = $state<Draft>(emptyDraft());
 	let confirmDelete = $state<string | null>(null);
 
@@ -200,6 +184,7 @@
 	}
 
 	function openNew() {
+		legacySlides = false;
 		draft = emptyDraft();
 		resetErrors();
 		editing = 'new';
@@ -213,8 +198,10 @@
 	}
 
 	function openEdit(b: Banner) {
+		// Устаревший вид «Слайды» открываем как HTML; слайды при сохранении очищаются.
+		legacySlides = b.kind === 'slides';
 		draft = {
-			kind: b.kind,
+			kind: b.kind === 'slides' ? 'html' : b.kind,
 			theme: (BANNER_THEMES as readonly string[]).includes(b.theme ?? '')
 				? (b.theme as BannerTheme)
 				: '',
@@ -228,14 +215,6 @@
 			is_active: b.is_active,
 			starts_at: toLocalInput(b.starts_at),
 			ends_at: toLocalInput(b.ends_at),
-			slides: b.slides.map((s) => ({
-				key: nextKey(),
-				image_url: s.image_url ?? '',
-				title: s.title ?? '',
-				subtitle: s.subtitle ?? '',
-				content_html: s.content_html ?? '',
-				link_url: s.link_url ?? ''
-			})),
 			buttons: b.buttons.map((x) => ({ key: nextKey(), ...x })),
 			targets: b.targets.length ? b.targets.map(targetToDraft) : [emptyTarget('all')],
 			exclude_paths: b.exclude_paths.map((pattern) => ({ key: nextKey(), pattern }))
@@ -268,14 +247,6 @@
 		if (link && !isLink(link)) e.link_url = 'http(s)://… или путь сайта, начинающийся с /.';
 		if (d.kind === 'html' && !d.content_html.trim())
 			e.content_html = 'Для вида «HTML» нужен текст.';
-		if (d.kind === 'slides' && !d.slides.length) e.slides = 'Добавьте хотя бы один слайд.';
-		d.slides.forEach((s, i) => {
-			if (s.image_url.trim() && !isHttp(s.image_url.trim()))
-				e[`slides.${i}.image_url`] = 'Только http(s).';
-			if (s.title.trim().length > 300) e[`slides.${i}.title`] = 'Не длиннее 300 символов.';
-			if (s.link_url.trim() && !isLink(s.link_url.trim()))
-				e[`slides.${i}.link_url`] = 'http(s)://… или путь /….';
-		});
 		d.buttons.forEach((b, i) => {
 			const l = b.label.trim();
 			if (!l || l.length > BANNER_LIMITS.buttonLabel)
@@ -311,13 +282,7 @@
 			is_active: d.is_active,
 			starts_at: toIso(d.starts_at),
 			ends_at: toIso(d.ends_at),
-			slides: d.slides.map((s) => ({
-				image_url: orNull(s.image_url),
-				title: orNull(s.title),
-				subtitle: orNull(s.subtitle),
-				content_html: orNull(s.content_html),
-				link_url: orNull(s.link_url)
-			})),
+			slides: [],
 			buttons: d.buttons.map((b) => ({ label: b.label.trim(), url: b.url.trim(), style: b.style })),
 			targets: d.targets.map((t): BannerTarget => {
 				if (t.type === 'page') return { type: 'page', page: t.page };
@@ -330,7 +295,7 @@
 
 	/** Ключи, у которых в форме есть место для ошибки. */
 	const FIELD_KEY =
-		/^(title|subtitle|image_url|link_url|content_html|position|priority|theme|kind|starts_at|ends_at|slides|buttons|targets|exclude_paths(\.\d+)?|slides\.\d+(\.(image_url|title|subtitle|content_html|link_url))?|buttons\.\d+(\.(label|url|style))?|targets\.\d+(\.(page|pattern|type))?)$/;
+		/^(title|subtitle|image_url|link_url|content_html|position|priority|theme|kind|starts_at|ends_at|buttons|targets|exclude_paths(\.\d+)?|buttons\.\d+(\.(label|url|style))?|targets\.\d+(\.(page|pattern|type))?)$/;
 
 	async function save(event: SubmitEvent) {
 		event.preventDefault();
@@ -451,6 +416,9 @@
 					{#each BANNER_KINDS as k (k)}<option value={k}>{KIND_TITLES[k]}</option>{/each}
 				</select>
 				{@render fieldError('kind')}
+				{#if legacySlides}<span class="text-xs text-warning"
+						>Вид «Слайды» устарел: сохранится как {KIND_TITLES[draft.kind]}, слайды удалятся.</span
+					>{/if}
 			</label>
 			<label class="floating-label">
 				<span>Тема</span>
@@ -545,103 +513,6 @@
 				</div>
 			</div>
 		</div>
-
-		<!-- Слайды -->
-		<fieldset class="rounded-box p-3 ring-1 ring-base-300 md:col-span-2">
-			<legend class="px-1 text-sm font-bold">
-				Слайды ({draft.slides.length}/{BANNER_LIMITS.slides})
-			</legend>
-			{@render fieldError('slides')}
-			{#each draft.slides as s, i (s.key)}
-				<div class="mb-3 grid gap-2 rounded-box bg-base-100 p-3 md:grid-cols-2">
-					<div class="flex items-center gap-1 md:col-span-2">
-						<span class="text-sm font-medium">Слайд {i + 1}</span>
-						<span class="flex-1"></span>
-						<button
-							type="button"
-							class="btn btn-ghost btn-xs"
-							aria-label="Слайд {i + 1} выше"
-							disabled={i === 0}
-							onclick={() => move(draft.slides, i, -1)}>↑</button
-						>
-						<button
-							type="button"
-							class="btn btn-ghost btn-xs"
-							aria-label="Слайд {i + 1} ниже"
-							disabled={i === draft.slides.length - 1}
-							onclick={() => move(draft.slides, i, 1)}>↓</button
-						>
-						<button
-							type="button"
-							class="btn btn-ghost text-error btn-xs"
-							onclick={() => draft.slides.splice(i, 1)}>Удалить</button
-						>
-					</div>
-					<label class="floating-label">
-						<span>Картинка</span>
-						<input
-							class={inputCls(`slides.${i}.image_url`)}
-							type="url"
-							placeholder="Картинка (https://…)"
-							bind:value={s.image_url}
-						/>
-						{@render fieldError(`slides.${i}.image_url`)}
-					</label>
-					<label class="floating-label">
-						<span>Ссылка</span>
-						<input
-							class={inputCls(`slides.${i}.link_url`)}
-							placeholder="Ссылка: https://… или /…"
-							bind:value={s.link_url}
-						/>
-						{@render fieldError(`slides.${i}.link_url`)}
-					</label>
-					<label class="floating-label">
-						<span>Заголовок</span>
-						<input
-							class={inputCls(`slides.${i}.title`)}
-							maxlength="300"
-							placeholder="Заголовок"
-							bind:value={s.title}
-						/>
-						{@render fieldError(`slides.${i}.title`)}
-					</label>
-					<label class="floating-label">
-						<span>Подзаголовок</span>
-						<input
-							class={inputCls(`slides.${i}.subtitle`)}
-							placeholder="Подзаголовок"
-							bind:value={s.subtitle}
-						/>
-						{@render fieldError(`slides.${i}.subtitle`)}
-					</label>
-					<label class="block md:col-span-2">
-						<span class="mb-1 block text-xs">HTML слайда</span>
-						<textarea
-							class={inputCls(
-								`slides.${i}.content_html`,
-								'textarea h-20 w-full font-mono textarea-sm'
-							)}
-							bind:value={s.content_html}></textarea>
-						{@render fieldError(`slides.${i}.content_html`)}
-					</label>
-					{#if s.content_html.trim()}
-						<div
-							class="prose-sm prose max-w-none rounded-box p-2 ring-1 ring-base-300 md:col-span-2"
-						>
-							<!-- eslint-disable-next-line svelte/no-at-html-tags -- очищено DOMPurify -->
-							{@html clean(s.content_html)}
-						</div>
-					{/if}
-				</div>
-			{/each}
-			<button
-				type="button"
-				class="btn btn-sm"
-				disabled={draft.slides.length >= BANNER_LIMITS.slides}
-				onclick={() => draft.slides.push(emptySlide())}>Добавить слайд</button
-			>
-		</fieldset>
 
 		<!-- Кнопки -->
 		<fieldset class="rounded-box p-3 ring-1 ring-base-300 md:col-span-2">

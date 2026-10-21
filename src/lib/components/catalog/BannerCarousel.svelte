@@ -4,12 +4,11 @@
 	import { DEFAULT_THEME, FEATURED_THEMES } from '#lib/catalog/themes.ts';
 	import BannerButtons from './BannerButtons.svelte';
 	import BannerHtml from './BannerHtml.svelte';
-	import BannerSlides from './BannerSlides.svelte';
 
 	// Баннеры страницы (промо, новости) — карусель во всю ширину. Несколько — автопрокрутка
 	// (пауза при наведении, фокусе и prefers-reduced-motion), точки и стрелки; один — без управления.
 	// Пустой список — ничего не рисуем. Виды: image (картинка со ссылкой), html (санитизированный
-	// content_html на фоне картинки или темы), slides (внутренняя карусель); кнопки — btn по style.
+	// content_html на фоне картинки или темы); устаревший slides рисуем как html. Кнопки — btn по style.
 	let { banners }: { banners: Banner[] } = $props();
 
 	const INTERVAL = 6000;
@@ -86,15 +85,7 @@
 					aria-roledescription="slide"
 					aria-label="{i + 1} из {banners.length}"
 				>
-					{#if banner.kind === 'slides' && banner.slides.length}
-						<BannerSlides
-							slides={banner.slides}
-							paused={paused || i !== current}
-							{reducedMotion}
-							themeClass={theme.gradient}
-							pattern={theme.pattern}
-						/>
-					{:else if banner.kind === 'html'}
+					{#if banner.kind !== 'image'}
 						<div
 							class="relative h-full w-full bg-linear-to-br {banner.image_url
 								? ''

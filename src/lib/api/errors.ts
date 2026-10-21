@@ -11,7 +11,7 @@ export class ApiError extends Error {
 	readonly retryAfter: number | null;
 	/** Машинный код бэкенда (`not_found`, `own_review`, …), если он есть. */
 	readonly code: string | null;
-	/** Поле с ошибкой валидации (`slides[1].image_url`), если бэкенд его указал. */
+	/** Поле с ошибкой валидации (`buttons[0].url`), если бэкенд его указал. */
 	readonly field: string | null;
 
 	constructor(

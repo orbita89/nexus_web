@@ -1,4 +1,4 @@
-// Баннеры (промо, новости) v2: виды image / html / slides, кнопки, темы, цели по страницам и путям.
+// Баннеры (промо, новости) v2: виды image / html (slides устарел: несколько баннеров листает общая карусель), кнопки, темы, цели по страницам и путям.
 // Публичный список — без токена, по пути страницы (GET /banners?path=…), уже отфильтрован
 // (активные, в периоде, по targets/exclude_paths) и отсортирован; для /admin* всегда [].
 // Админские вызовы — с токеном admin (api из #lib/auth/session.svelte.ts).
@@ -27,7 +27,8 @@ export type CreateBanner = SchemaCreateBanner;
 export type UpdateBanner = SchemaUpdateBanner;
 export type BannerPageList = SchemaPageBanner;
 
-export const BANNER_KINDS = ['image', 'html', 'slides'] as const satisfies readonly BannerKind[];
+/** Виды, которые можно выбрать в админке; `slides` в контракте остался, но не используется. */
+export const BANNER_KINDS = ['image', 'html'] as const satisfies readonly BannerKind[];
 export const BANNER_BUTTON_STYLES = [
 	'primary',
 	'secondary',
@@ -55,7 +56,7 @@ export type BannerPage = (typeof BANNER_PAGES)[number];
 export const isBannerPage = (value: string): value is BannerPage =>
 	(BANNER_PAGES as readonly string[]).includes(value);
 
-export const BANNER_LIMITS = { slides: 10, buttons: 3, targets: 20, buttonLabel: 60 } as const;
+export const BANNER_LIMITS = { buttons: 3, targets: 20, buttonLabel: 60 } as const;
 
 /** Публичный список баннеров для пути страницы (`/films/dune-2021`). */
 export function getBanners(api: Api, path: string): Promise<Banner[]> {
@@ -107,7 +108,7 @@ export async function deleteBanner(api: Api, id: string): Promise<void> {
 /** Сегмент пути поля: имя или индекс массива. */
 export type FieldPathSegment = string | number;
 
-/** `slides[1].image_url` → ['slides', 1, 'image_url']. Пустая строка → []. */
+/** `buttons[0].url` → ['buttons', 0, 'url']. Пустая строка → []. */
 export function parseFieldPath(field: string): FieldPathSegment[] {
 	const out: FieldPathSegment[] = [];
 	for (const m of field.matchAll(/([^.[\]]+)|\[(\d+)\]/g)) {
