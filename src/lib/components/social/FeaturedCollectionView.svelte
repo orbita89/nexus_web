@@ -135,8 +135,6 @@
 		ro.observe(el);
 		return () => ro.disconnect();
 	};
-	// Раскрытые описания по id сущности (на телефоне описание скрыто до клика).
-	let expanded = $state<Record<string, boolean>>({});
 	// При mode 'page' обои уже фоном страницы — в шапке их не дублируем.
 	const headerWallpaper = $derived(
 		hmode === 'styled' && look.kind === 'cover' && style.mode === 'header'
@@ -370,7 +368,6 @@
 					{@const year = yearOf(item.entity.release_date)}
 					{@const kindLabel = kind ? kindByApi(kind)?.one : null}
 					{@const about = entityDescription(item.entity.overview)}
-					{@const open = expanded[item.entity.id] ?? false}
 					<li
 						value={rank}
 						class="grid grid-cols-[auto_auto_minmax(0,1fr)] content-start gap-x-4 border-t border-base-content/10 py-6 first:border-t-0 first:pt-0 sm:gap-x-6 sm:py-10"
@@ -421,9 +418,7 @@
 									class="contents sm:flex sm:min-h-0 sm:shrink sm:flex-col sm:overflow-hidden data-overflow:sm:mask-[linear-gradient(to_bottom,#000_calc(100%-1.75rem),transparent)]"
 									{@attach fadeIfOverflow}
 								>
-									<div
-										class="col-span-3 col-start-1 row-start-2 mt-4 flex min-w-0 flex-wrap items-baseline gap-x-2 sm:mt-0 sm:block"
-									>
+									<div class="col-span-3 col-start-1 row-start-2 max-sm:sr-only sm:block">
 										<h2 class="line-clamp-2 text-lg leading-snug font-bold sm:text-2xl">
 											<span class="sr-only">{rank} место. </span>
 											{#if href}
@@ -442,13 +437,12 @@
 											</p>
 										{/if}
 									</div>
-									<div class="col-span-3 col-start-1 row-start-3 mt-2 min-w-0 sm:mt-4">
+									<div class="col-span-3 col-start-1 row-start-3 mt-4 min-w-0 empty:hidden">
 										{#if item.note}
 											<!-- Заметка — голос подборки: цитата с акцентной линией. -->
 											<p
 												class={[
-													'border-l-2 border-(--page-accent) pl-4 text-[0.95rem] leading-relaxed font-medium whitespace-pre-line text-base-content',
-													!open && 'line-clamp-3 sm:line-clamp-none'
+													'border-l-2 border-(--page-accent) pl-4 text-[0.95rem] leading-relaxed font-medium whitespace-pre-line text-base-content'
 												]}
 											>
 												{item.note}
@@ -457,24 +451,12 @@
 										{#if about}
 											<p
 												class={[
-													'text-sm leading-relaxed text-base-content/70',
-													item.note && 'mt-4',
-													!open && 'hidden sm:block'
+													'hidden text-sm leading-relaxed text-base-content/70 sm:block',
+													item.note && 'mt-4'
 												]}
 											>
 												{about}
 											</p>
-											<button
-												type="button"
-												class={[
-													'text-sm font-medium text-(--page-accent) hover:underline sm:hidden',
-													(item.note || open) && 'mt-2'
-												]}
-												aria-expanded={open}
-												onclick={() => (expanded[item.entity.id] = !open)}
-											>
-												{open ? 'Скрыть описание' : 'Описание'}
-											</button>
 										{/if}
 									</div>
 								</div>
