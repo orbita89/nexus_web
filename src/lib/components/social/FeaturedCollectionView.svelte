@@ -200,7 +200,7 @@
 {/snippet}
 
 {#snippet heading()}
-	<!-- Одна строка: акцентная линия, ★ и название (h1) на уровне кикера «Подборка · N». -->
+	<!-- Одна строка: акцентная линия, ★ и название (h1) на одном уровне с «N произведений · дата». -->
 	<div class="flex flex-wrap items-center gap-x-2 gap-y-1">
 		<span class="h-px w-6 shrink-0 bg-(--page-accent)" aria-hidden="true"></span>
 		<h1 class="flex items-baseline gap-2 text-base leading-snug font-semibold sm:text-lg">
@@ -213,7 +213,7 @@
 			<span>{shownTitle}</span>
 		</h1>
 		<span class="text-xs tracking-wider text-base-content/60 uppercase">
-			· Подборка · {count(collection.items_count, ['произведение', 'произведения', 'произведений'])} ·
+			· {count(collection.items_count, ['произведение', 'произведения', 'произведений'])} ·
 			<time datetime={collection.updated_at}>{reviewDate(collection.updated_at)}</time>
 		</span>
 		{@render editButton()}
