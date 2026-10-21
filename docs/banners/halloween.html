@@ -83,25 +83,13 @@
 	h2 {
 		position: relative;
 		display: inline-block;
-		margin: 10px 0 22px;
+		margin: 10px 0 12px;
 		font-size: clamp(28px, 4.5vw, 54px);
 		line-height: 1;
 		font-weight: 900;
 		text-shadow: 0 0 22px rgba(255, 40, 40, 0.6);
 	}
 	/* Капли крови под заголовком — только CSS */
-	h2::after {
-		content: '';
-		position: absolute;
-		left: 0;
-		right: 0;
-		bottom: -14px;
-		height: 16px;
-		background:
-			radial-gradient(circle at 50% 100%, #b30000 3px, transparent 4px) 0 0 / 23px 16px,
-			linear-gradient(#b30000, #b30000) 0 0 / 100% 3px no-repeat;
-		-webkit-mask: linear-gradient(#000, #000);
-	}
 	p {
 		margin: 0;
 		max-width: 30em;
@@ -334,18 +322,38 @@
 		.deco .b3 {
 			display: none;
 		}
+		/* Телефон: баннер низкий — постеры прячем, текст компактнее, кнопки внизу */
 		.t {
-			flex-direction: column;
-			align-items: flex-start;
-			padding: 20px;
-			gap: 16px;
+			align-items: flex-end;
+			padding: 16px;
 		}
 		.posters {
-			order: -1;
+			display: none;
 		}
-		.posters a {
-			width: 72px;
-			margin-left: -16px;
+		.tag {
+			font-size: 11px;
+		}
+		h2 {
+			font-size: 24px;
+			margin: 6px 0;
+		}
+		p {
+			font-size: 13px;
+		}
+		.links {
+			margin-top: 10px;
+			gap: 14px;
+		}
+		.btn {
+			padding: 6px 12px;
+			font-size: 13px;
+		}
+		.lnk {
+			font-size: 13px;
+		}
+		.skull {
+			top: 4%;
+			font-size: 22px;
 		}
 		.bg::after {
 			background: rgba(7, 3, 3, 0.72);
