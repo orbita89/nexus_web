@@ -71,7 +71,7 @@
 <div
 	class={[
 		'pointer-events-none overflow-hidden',
-		preview ? 'absolute inset-0 -z-10' : 'fixed inset-0 z-0'
+		preview ? 'absolute inset-0 -z-10' : 'fixed inset-0 -z-10'
 	]}
 	aria-hidden="true"
 	style:--acc={acc}
