@@ -18,10 +18,11 @@ const NOT_FOUND = 'Такой коллекции нет или она лична
 // У особой со slug канонический адрес — /collections/{slug}: с UUID и со старых slug — 301.
 export const load: PageLoad = async ({ fetch, url, params, setHeaders }) => {
 	const cacheFeatured = (collection: SchemaCollectionDetail) => {
-		// Особая коллекция рендерится как для гостя и одинакова для всех — кэшируем на CDN/прокси.
+		// Особая коллекция рендерится как для гостя и одинакова для всех — кэшируем на CDN/прокси;
+		// браузер не кэширует (max-age=0), иначе после правки F5 показывает старую версию.
 		if (!browser && collection.is_featured) {
 			setHeaders({
-				'cache-control': 'public, max-age=60, s-maxage=600, stale-while-revalidate=3600'
+				'cache-control': 'public, max-age=0, s-maxage=600, stale-while-revalidate=3600'
 			});
 		}
 	};
