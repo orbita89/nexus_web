@@ -322,37 +322,46 @@
 				{@const open = expanded[item.entity.id] ?? false}
 				<li
 					value={rank}
-					class="grid grid-cols-[auto_auto_minmax(0,1fr)] content-start gap-x-3 border-t border-base-content/10 py-6 first:border-t-0 first:pt-0 sm:gap-x-6 sm:py-10"
+					class="grid grid-cols-[auto_auto_minmax(0,1fr)] content-start gap-x-4 border-t border-base-content/10 py-6 first:border-t-0 first:pt-0 sm:gap-x-6 sm:py-10"
 				>
+					<!-- Номер — главный элемент топа: крупная тонкая цифра по верху постера. -->
 					<span
 						class={[
-							'col-start-1 row-start-1 w-6 pt-0.5 text-right text-xl leading-none font-semibold tabular-nums sm:row-[1/span_2] sm:w-10 sm:text-3xl',
-							rank <= 3 ? 'text-(--page-accent)' : 'text-base-content/50'
+							'col-start-1 row-start-1 w-9 text-right text-4xl leading-[0.8] font-extralight tracking-tighter tabular-nums sm:row-[1/span_2] sm:w-20 sm:text-7xl',
+							rank <= 3 ? 'text-(--page-accent)' : 'text-base-content/45'
 						]}
 						aria-hidden="true">{rank}</span
 					>
-					<div
-						class="col-span-2 col-start-2 row-start-2 mt-3 w-[clamp(13rem,62vw,18rem)] justify-self-center overflow-hidden rounded-box shadow-lg sm:col-span-1 sm:row-[1/span_2] sm:mt-0 sm:w-[clamp(12rem,24vw,17rem)] sm:justify-self-start"
+					<!-- Постер кликабелен (как название), тонкая светлая рамка отделяет его от тёмного фона. -->
+					<a
+						href={href ?? undefined}
+						tabindex="-1"
+						aria-hidden="true"
+						class="group col-span-2 col-start-2 row-start-2 mt-3 block w-[clamp(13rem,62vw,18rem)] justify-self-center overflow-hidden rounded-box shadow-lg ring-1 ring-white/10 transition duration-300 hover:shadow-2xl hover:ring-(--page-accent)/60 sm:col-span-1 sm:row-[1/span_2] sm:mt-0 sm:w-[clamp(12rem,24vw,17rem)] sm:justify-self-start"
 					>
 						{#if kind}
-							<Poster
-								title={item.entity.title}
-								{kind}
-								coverUrl={item.entity.cover_url}
-								eager={i < 2}
-							/>
+							<div class="transition-transform duration-300 group-hover:scale-[1.03]">
+								<Poster
+									title={item.entity.title}
+									{kind}
+									coverUrl={item.entity.cover_url}
+									eager={i < 2}
+								/>
+							</div>
 						{/if}
-					</div>
+					</a>
 					<!-- Текст не растягивает строку: на компьютере он ограничен высотой постера (лишнее
-					     плавно скрывается), на телефоне название — до 2 строк, заметка — до 3, без пустых отступов. -->
-					<div class="contents sm:relative sm:col-start-3 sm:row-[1/span_2] sm:block">
+					     плавно скрывается), колонка ~65 символов; на телефоне название — до 2 строк, заметка — до 3. -->
+					<div
+						class="contents sm:relative sm:col-start-3 sm:row-[1/span_2] sm:block sm:max-w-[40rem]"
+					>
 						<div
-							class="contents sm:absolute sm:inset-0 sm:flex sm:flex-col sm:overflow-hidden sm:mask-[linear-gradient(to_bottom,#000_82%,transparent)]"
+							class="contents sm:absolute sm:inset-x-0 sm:top-0 sm:bottom-8 sm:flex sm:flex-col sm:overflow-hidden sm:mask-[linear-gradient(to_bottom,#000_82%,transparent)]"
 						>
 							<div
 								class="col-span-2 col-start-2 row-start-1 flex min-w-0 flex-wrap items-baseline gap-x-2 sm:block"
 							>
-								<h2 class="line-clamp-2 text-lg leading-snug font-bold sm:text-xl">
+								<h2 class="line-clamp-2 text-lg leading-snug font-bold sm:text-2xl">
 									<span class="sr-only">{rank} место. </span>
 									{#if href}
 										<a {href} class="link link-hover hover:text-(--page-accent)"
@@ -363,16 +372,19 @@
 									{/if}
 								</h2>
 								{#if year || kindLabel}
-									<p class="shrink-0 text-sm text-base-content/75 sm:mt-1">
+									<p
+										class="shrink-0 text-xs tracking-wider text-base-content/60 uppercase sm:mt-1.5"
+									>
 										{[year, kindLabel].filter(Boolean).join(' · ')}
 									</p>
 								{/if}
 							</div>
-							<div class="col-span-2 col-start-2 row-start-3 mt-3 min-w-0">
+							<div class="col-span-2 col-start-2 row-start-3 mt-3 min-w-0 sm:mt-4">
 								{#if item.note}
+									<!-- Заметка — голос подборки: цитата с акцентной линией. -->
 									<p
 										class={[
-											'text-sm leading-relaxed whitespace-pre-line text-base-content/85',
+											'border-l-2 border-(--page-accent) pl-3 text-[0.95rem] leading-relaxed whitespace-pre-line text-base-content/90 italic',
 											!open && 'line-clamp-3 sm:line-clamp-none'
 										]}
 									>
@@ -403,6 +415,13 @@
 								{/if}
 							</div>
 						</div>
+						{#if href}
+							<a
+								{href}
+								class="hidden text-sm text-base-content/55 transition-colors hover:text-(--page-accent) sm:absolute sm:bottom-0 sm:left-0 sm:block"
+								>Подробнее →</a
+							>
+						{/if}
 					</div>
 				</li>
 			{/each}
@@ -417,8 +436,7 @@
 	.over-wallpaper :global(h2),
 	.over-wallpaper :global(p) {
 		text-shadow:
-			0 1px 2px rgb(0 0 0 / 0.95),
-			0 0 10px rgb(0 0 0 / 0.75),
-			0 0 22px rgb(0 0 0 / 0.5);
+			0 1px 2px rgb(0 0 0 / 0.8),
+			0 0 6px rgb(0 0 0 / 0.45);
 	}
 </style>
