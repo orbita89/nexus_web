@@ -47,7 +47,7 @@
 	const STYLE_TITLES: Record<BannerButtonStyle, string> = {
 		primary: 'Основная',
 		secondary: 'Вторичная',
-		ghost: 'Прозрачная'
+		ghost: 'Ссылка'
 	};
 	const THEME_TITLES = new Map<string, string>(FEATURED_THEMES.map((t) => [t.id, t.label]));
 	const themeTitle = (id: string | null | undefined) => (id ? (THEME_TITLES.get(id) ?? id) : '—');

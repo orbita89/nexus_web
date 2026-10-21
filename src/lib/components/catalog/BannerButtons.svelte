@@ -4,22 +4,21 @@
 
 	let { buttons }: { buttons: BannerButton[] } = $props();
 
+	// Компактно: primary/secondary — маленькие кнопки, ghost — просто ссылка со стрелкой.
 	const STYLE: Record<BannerButton['style'], string> = {
-		primary: 'btn-primary',
-		secondary: 'btn-secondary',
-		ghost: 'btn-ghost border-white/40 text-white hover:bg-white/15'
+		primary: 'btn btn-sm btn-primary',
+		secondary: 'btn btn-sm btn-secondary',
+		ghost: 'link text-sm font-medium link-hover opacity-90 hover:opacity-100 after:content-["_→"]'
 	};
 </script>
 
 {#if buttons.length}
-	<div class="mt-4 flex flex-wrap gap-2">
+	<div class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
 		{#each buttons as b, i (i)}
 			{#if isExternal(b.url)}
-				<a href={b.url} target="_blank" rel="noopener" class="btn btn-sm sm:btn-md {STYLE[b.style]}"
-					>{b.label}</a
-				>
+				<a href={b.url} target="_blank" rel="noopener" class={STYLE[b.style]}>{b.label}</a>
 			{:else}
-				<a href={b.url} class="btn btn-sm sm:btn-md {STYLE[b.style]}">{b.label}</a>
+				<a href={b.url} class={STYLE[b.style]}>{b.label}</a>
 			{/if}
 		{/each}
 	</div>

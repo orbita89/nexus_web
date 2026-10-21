@@ -78,8 +78,8 @@
 					class={[
 						'relative carousel-item w-full overflow-hidden',
 						banner.kind === 'image'
-							? 'aspect-[3/1] max-sm:aspect-[16/9]'
-							: 'min-h-56 sm:aspect-[3/1] sm:min-h-0'
+							? 'aspect-[5/2] max-sm:aspect-[4/3]'
+							: 'min-h-72 sm:aspect-[5/2] sm:min-h-0'
 					]}
 					role="group"
 					aria-roledescription="slide"
@@ -114,7 +114,7 @@
 								]}
 							>
 								{#if banner.title}
-									<h2 class="text-xl leading-tight font-black sm:text-3xl">
+									<h2 class="text-lg leading-tight font-bold sm:text-2xl">
 										{@render linked(banner.link_url, banner.title)}
 									</h2>
 								{/if}
@@ -145,7 +145,7 @@
 								class:pb-10={many}
 								class:sm:pb-12={many}
 							>
-								<h2 class="text-xl leading-tight font-black sm:text-3xl">{banner.title}</h2>
+								<h2 class="text-lg leading-tight font-bold sm:text-2xl">{banner.title}</h2>
 								{#if banner.subtitle}
 									<p class="mt-1 max-w-2xl text-sm text-white/80 sm:text-base">{banner.subtitle}</p>
 								{/if}
