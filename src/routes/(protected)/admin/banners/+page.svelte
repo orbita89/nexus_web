@@ -25,12 +25,14 @@
 	} from '#lib/catalog/banners.ts';
 	import { FEATURED_THEMES } from '#lib/catalog/themes.ts';
 	import Alert from '#lib/components/Alert.svelte';
+	import BannerCustom from '#lib/components/catalog/BannerCustom.svelte';
 
 	// Баннеры v2: фильтр (цель, поиск), таблица; форма с видом, темой, приоритетом, HTML с живым
 	// превью (DOMPurify, только в браузере), редакторами кнопок, целей и исключений.
 	// Несколько слайдов — это несколько баннеров с одной целью: их листает общая карусель.
 	// 400 с field (`buttons[0].url`) показываются у нужного поля, без field — в общем алерте.
 	const PAGE = 20;
+	const CUSTOM_HTML_MAX = 100_000;
 	const PAGE_TITLES: Record<BannerPage, string> = {
 		home: 'Главная',
 		films: 'Фильмы (ровно /films)',
@@ -41,7 +43,8 @@
 	};
 	const KIND_TITLES: Record<BannerKind, string> = {
 		image: 'Картинка',
-		html: 'HTML',
+		html: 'Текст на фоне (HTML)',
+		custom: 'Готовый HTML',
 		slides: 'Слайды (устарел)'
 	};
 	const STYLE_TITLES: Record<BannerButtonStyle, string> = {
@@ -73,6 +76,7 @@
 		image_url: string;
 		link_url: string;
 		content_html: string;
+		custom_html: string;
 		position: number;
 		priority: number;
 		is_active: boolean;
@@ -100,6 +104,7 @@
 		image_url: '',
 		link_url: '',
 		content_html: '',
+		custom_html: '',
 		position: 0,
 		priority: 0,
 		is_active: true,
@@ -210,6 +215,7 @@
 			image_url: b.image_url ?? '',
 			link_url: b.link_url ?? '',
 			content_html: b.content_html ?? '',
+			custom_html: b.custom_html ?? '',
 			position: b.position,
 			priority: b.priority,
 			is_active: b.is_active,
@@ -238,7 +244,7 @@
 	function validate(): Record<string, string> {
 		const e: Record<string, string> = {};
 		const d = draft;
-		if (!d.title.trim()) e.title = 'Введите заголовок.';
+		if (!d.title.trim()) e.title = d.kind === 'html' ? 'Введите заголовок.' : 'Введите название.';
 		else if (d.title.trim().length > 300) e.title = 'Не длиннее 300 символов.';
 		const img = d.image_url.trim();
 		if (d.kind === 'image' && !img) e.image_url = 'Для вида «Картинка» URL обязателен.';
@@ -247,12 +253,18 @@
 		if (link && !isLink(link)) e.link_url = 'http(s)://… или путь сайта, начинающийся с /.';
 		if (d.kind === 'html' && !d.content_html.trim())
 			e.content_html = 'Для вида «HTML» нужен текст.';
-		d.buttons.forEach((b, i) => {
-			const l = b.label.trim();
-			if (!l || l.length > BANNER_LIMITS.buttonLabel)
-				e[`buttons.${i}.label`] = `От 1 до ${BANNER_LIMITS.buttonLabel} символов.`;
-			if (!isLink(b.url.trim())) e[`buttons.${i}.url`] = 'http(s)://… или путь /….';
-		});
+		if (d.kind === 'custom') {
+			if (!d.custom_html.trim()) e.custom_html = 'Вставьте HTML баннера.';
+			else if (d.custom_html.length > CUSTOM_HTML_MAX)
+				e.custom_html = `Не длиннее ${CUSTOM_HTML_MAX.toLocaleString('ru')} символов.`;
+		}
+		if (d.kind === 'html')
+			d.buttons.forEach((b, i) => {
+				const l = b.label.trim();
+				if (!l || l.length > BANNER_LIMITS.buttonLabel)
+					e[`buttons.${i}.label`] = `От 1 до ${BANNER_LIMITS.buttonLabel} символов.`;
+				if (!isLink(b.url.trim())) e[`buttons.${i}.url`] = 'http(s)://… или путь /….';
+			});
 		if (!d.targets.length) e.targets = 'Нужна хотя бы одна цель.';
 		d.targets.forEach((t, i) => {
 			if (t.type === 'path' && !isPattern(t.pattern.trim()))
@@ -267,23 +279,30 @@
 		return e;
 	}
 
+	// Поля, которых нет в форме выбранного вида, отправляем пустыми: у «Картинки» — только
+	// картинка и ссылка, у «Готового HTML» — только custom_html, текст на фоне — всё остальное.
 	function buildBody(): CreateBanner {
 		const d = draft;
+		const html = d.kind === 'html';
+		const custom = d.kind === 'custom';
 		return {
 			kind: d.kind,
-			theme: d.theme || null,
+			theme: html ? d.theme || null : null,
 			title: d.title.trim(),
-			subtitle: orNull(d.subtitle),
-			image_url: orNull(d.image_url),
-			link_url: orNull(d.link_url),
-			content_html: orNull(d.content_html),
+			subtitle: html ? orNull(d.subtitle) : null,
+			image_url: custom ? null : orNull(d.image_url),
+			link_url: custom ? null : orNull(d.link_url),
+			content_html: html ? orNull(d.content_html) : null,
+			custom_html: custom ? orNull(d.custom_html) : null,
 			position: Number(d.position) || 0,
 			priority: Number(d.priority) || 0,
 			is_active: d.is_active,
 			starts_at: toIso(d.starts_at),
 			ends_at: toIso(d.ends_at),
 			slides: [],
-			buttons: d.buttons.map((b) => ({ label: b.label.trim(), url: b.url.trim(), style: b.style })),
+			buttons: html
+				? d.buttons.map((b) => ({ label: b.label.trim(), url: b.url.trim(), style: b.style }))
+				: [],
 			targets: d.targets.map((t): BannerTarget => {
 				if (t.type === 'page') return { type: 'page', page: t.page };
 				if (t.type === 'path') return { type: 'path', pattern: t.pattern.trim() };
@@ -295,7 +314,7 @@
 
 	/** Ключи, у которых в форме есть место для ошибки. */
 	const FIELD_KEY =
-		/^(title|subtitle|image_url|link_url|content_html|position|priority|theme|kind|starts_at|ends_at|buttons|targets|exclude_paths(\.\d+)?|buttons\.\d+(\.(label|url|style))?|targets\.\d+(\.(page|pattern|type))?)$/;
+		/^(title|subtitle|image_url|link_url|content_html|custom_html|position|priority|theme|kind|starts_at|ends_at|buttons|targets|exclude_paths(\.\d+)?|buttons\.\d+(\.(label|url|style))?|targets\.\d+(\.(page|pattern|type))?)$/;
 
 	async function save(event: SubmitEvent) {
 		event.preventDefault();
@@ -420,7 +439,7 @@
 						>Вид «Слайды» устарел: сохранится как {KIND_TITLES[draft.kind]}, слайды удалятся.</span
 					>{/if}
 			</label>
-			<label class="floating-label">
+			<label class="floating-label" class:hidden={draft.kind !== 'html'}>
 				<span>Тема</span>
 				<select class={inputCls('theme', 'select w-full select-sm')} bind:value={draft.theme}>
 					<option value="">Без темы</option>
@@ -451,131 +470,162 @@
 		</div>
 
 		<label class="floating-label md:col-span-2">
-			<span>Заголовок</span>
+			<span>{draft.kind === 'html' ? 'Заголовок' : 'Название (видно только в админке)'}</span>
 			<input
 				class={inputCls('title')}
 				maxlength="300"
-				placeholder="Заголовок"
+				placeholder={draft.kind === 'html' ? 'Заголовок' : 'Название, например «Хеллоуин — постер»'}
 				bind:value={draft.title}
 			/>
 			{@render fieldError('title')}
 		</label>
-		<label class="floating-label md:col-span-2">
-			<span>Подзаголовок</span>
-			<input class={inputCls('subtitle')} placeholder="Подзаголовок" bind:value={draft.subtitle} />
-			{@render fieldError('subtitle')}
-		</label>
-		<label class="floating-label">
-			<span>URL картинки{draft.kind === 'image' ? '' : ' (фон, необязательно)'}</span>
-			<input
-				class={inputCls('image_url')}
-				type="url"
-				placeholder="URL картинки (https://…)"
-				bind:value={draft.image_url}
-			/>
-			{@render fieldError('image_url')}
-		</label>
-		<label class="floating-label">
-			<span>Ссылка</span>
-			<input
-				class={inputCls('link_url')}
-				placeholder="Ссылка: https://… или /films/dune-2021"
-				bind:value={draft.link_url}
-			/>
-			{@render fieldError('link_url')}
-		</label>
-		{#if isHttp(draft.image_url.trim())}
-			<img
-				src={draft.image_url.trim()}
-				alt="Превью картинки"
-				class="aspect-[16/5] w-full max-w-2xl rounded-box object-cover ring-1 ring-base-300 md:col-span-2"
-			/>
+		{#if draft.kind === 'html'}
+			<label class="floating-label md:col-span-2">
+				<span>Подзаголовок</span>
+				<input
+					class={inputCls('subtitle')}
+					placeholder="Подзаголовок"
+					bind:value={draft.subtitle}
+				/>
+				{@render fieldError('subtitle')}
+			</label>
+		{/if}
+		{#if draft.kind !== 'custom'}
+			<label class="floating-label">
+				<span>URL картинки{draft.kind === 'image' ? '' : ' (фон, необязательно)'}</span>
+				<input
+					class={inputCls('image_url')}
+					type="url"
+					placeholder="URL картинки (https://…)"
+					bind:value={draft.image_url}
+				/>
+				{@render fieldError('image_url')}
+			</label>
+			<label class="floating-label">
+				<span>Ссылка</span>
+				<input
+					class={inputCls('link_url')}
+					placeholder="Ссылка: https://… или /films/dune-2021"
+					bind:value={draft.link_url}
+				/>
+				{@render fieldError('link_url')}
+			</label>
+			{#if isHttp(draft.image_url.trim())}
+				<img
+					src={draft.image_url.trim()}
+					alt="Превью картинки"
+					class="aspect-[5/2] w-full max-w-2xl rounded-box object-cover ring-1 ring-base-300 md:col-span-2"
+				/>
+			{/if}
 		{/if}
 
-		<div class="grid gap-3 md:col-span-2 md:grid-cols-2">
-			<label class="block">
+		{#if draft.kind === 'custom'}
+			<label class="block md:col-span-2">
 				<span class="mb-1 block text-sm font-medium">
-					HTML-контент {draft.kind === 'html' ? '' : '(необязательно, текст поверх картинки)'}
+					HTML баннера — своя вёрстка, стили, кнопки и ссылки (скрипты не выполняются)
 				</span>
 				<textarea
-					class={inputCls('content_html', 'textarea h-48 w-full font-mono textarea-sm')}
-					placeholder="<h2>Заголовок</h2><p>Текст…</p>"
-					bind:value={draft.content_html}></textarea>
-				{@render fieldError('content_html')}
+					class={inputCls('custom_html', 'textarea h-64 w-full font-mono textarea-sm')}
+					placeholder={'<style>.b{…}</style><div class="b">…</div>'}
+					bind:value={draft.custom_html}></textarea>
+				{@render fieldError('custom_html')}
 			</label>
-			<div>
-				<span class="mb-1 block text-sm font-medium">Превью (после очистки)</span>
-				<div
-					class="prose-sm prose h-48 max-w-none overflow-auto rounded-box bg-base-100 p-3 ring-1 ring-base-300"
-				>
-					<!-- eslint-disable-next-line svelte/no-at-html-tags -- очищено DOMPurify -->
-					{@html previewHtml}
-				</div>
-			</div>
-		</div>
-
-		<!-- Кнопки -->
-		<fieldset class="rounded-box p-3 ring-1 ring-base-300 md:col-span-2">
-			<legend class="px-1 text-sm font-bold">
-				Кнопки ({draft.buttons.length}/{BANNER_LIMITS.buttons})
-			</legend>
-			{@render fieldError('buttons')}
-			{#each draft.buttons as b, i (b.key)}
-				<div class="mb-2 grid items-start gap-2 sm:grid-cols-[1fr_2fr_10rem_auto]">
-					<label class="floating-label">
-						<span>Текст</span>
-						<input
-							class={inputCls(`buttons.${i}.label`)}
-							maxlength={BANNER_LIMITS.buttonLabel}
-							placeholder="Текст кнопки"
-							bind:value={b.label}
-						/>
-						{@render fieldError(`buttons.${i}.label`)}
-					</label>
-					<label class="floating-label">
-						<span>URL</span>
-						<input
-							class={inputCls(`buttons.${i}.url`)}
-							placeholder="https://… или /collections/…"
-							bind:value={b.url}
-						/>
-						{@render fieldError(`buttons.${i}.url`)}
-					</label>
-					<label class="floating-label">
-						<span>Стиль</span>
-						<select
-							class={inputCls(`buttons.${i}.style`, 'select w-full select-sm')}
-							bind:value={b.style}
-						>
-							{#each BANNER_BUTTON_STYLES as st (st)}<option value={st}>{STYLE_TITLES[st]}</option
-								>{/each}
-						</select>
-						{@render fieldError(`buttons.${i}.style`)}
-					</label>
-					<div class="flex gap-1">
-						<button
-							type="button"
-							class="btn btn-ghost btn-sm"
-							aria-label="Кнопка {i + 1} выше"
-							disabled={i === 0}
-							onclick={() => move(draft.buttons, i, -1)}>↑</button
-						>
-						<button
-							type="button"
-							class="btn btn-ghost text-error btn-sm"
-							aria-label="Удалить кнопку {i + 1}"
-							onclick={() => draft.buttons.splice(i, 1)}>✕</button
-						>
+			{#if draft.custom_html.trim()}
+				<div class="md:col-span-2">
+					<span class="mb-1 block text-sm font-medium">Превью</span>
+					<div
+						class="aspect-[5/2] w-full max-w-3xl overflow-hidden rounded-box ring-1 ring-base-300 max-sm:aspect-[4/3]"
+					>
+						<BannerCustom html={draft.custom_html} title="Превью баннера" eager />
 					</div>
 				</div>
-			{/each}
-			<button
-				type="button"
-				class="btn btn-sm"
-				disabled={draft.buttons.length >= BANNER_LIMITS.buttons}
-				onclick={() => draft.buttons.push(emptyButton())}>Добавить кнопку</button
-			>
-		</fieldset>
+			{/if}
+		{/if}
+
+		{#if draft.kind === 'html'}
+			<div class="grid gap-3 md:col-span-2 md:grid-cols-2">
+				<label class="block">
+					<span class="mb-1 block text-sm font-medium"> HTML-контент </span>
+					<textarea
+						class={inputCls('content_html', 'textarea h-48 w-full font-mono textarea-sm')}
+						placeholder="<h2>Заголовок</h2><p>Текст…</p>"
+						bind:value={draft.content_html}></textarea>
+					{@render fieldError('content_html')}
+				</label>
+				<div>
+					<span class="mb-1 block text-sm font-medium">Превью (после очистки)</span>
+					<div
+						class="prose-sm prose h-48 max-w-none overflow-auto rounded-box bg-base-100 p-3 ring-1 ring-base-300"
+					>
+						<!-- eslint-disable-next-line svelte/no-at-html-tags -- очищено DOMPurify -->
+						{@html previewHtml}
+					</div>
+				</div>
+			</div>
+
+			<!-- Кнопки -->
+			<fieldset class="rounded-box p-3 ring-1 ring-base-300 md:col-span-2">
+				<legend class="px-1 text-sm font-bold">
+					Кнопки ({draft.buttons.length}/{BANNER_LIMITS.buttons})
+				</legend>
+				{@render fieldError('buttons')}
+				{#each draft.buttons as b, i (b.key)}
+					<div class="mb-2 grid items-start gap-2 sm:grid-cols-[1fr_2fr_10rem_auto]">
+						<label class="floating-label">
+							<span>Текст</span>
+							<input
+								class={inputCls(`buttons.${i}.label`)}
+								maxlength={BANNER_LIMITS.buttonLabel}
+								placeholder="Текст кнопки"
+								bind:value={b.label}
+							/>
+							{@render fieldError(`buttons.${i}.label`)}
+						</label>
+						<label class="floating-label">
+							<span>URL</span>
+							<input
+								class={inputCls(`buttons.${i}.url`)}
+								placeholder="https://… или /collections/…"
+								bind:value={b.url}
+							/>
+							{@render fieldError(`buttons.${i}.url`)}
+						</label>
+						<label class="floating-label">
+							<span>Стиль</span>
+							<select
+								class={inputCls(`buttons.${i}.style`, 'select w-full select-sm')}
+								bind:value={b.style}
+							>
+								{#each BANNER_BUTTON_STYLES as st (st)}<option value={st}>{STYLE_TITLES[st]}</option
+									>{/each}
+							</select>
+							{@render fieldError(`buttons.${i}.style`)}
+						</label>
+						<div class="flex gap-1">
+							<button
+								type="button"
+								class="btn btn-ghost btn-sm"
+								aria-label="Кнопка {i + 1} выше"
+								disabled={i === 0}
+								onclick={() => move(draft.buttons, i, -1)}>↑</button
+							>
+							<button
+								type="button"
+								class="btn btn-ghost text-error btn-sm"
+								aria-label="Удалить кнопку {i + 1}"
+								onclick={() => draft.buttons.splice(i, 1)}>✕</button
+							>
+						</div>
+					</div>
+				{/each}
+				<button
+					type="button"
+					class="btn btn-sm"
+					disabled={draft.buttons.length >= BANNER_LIMITS.buttons}
+					onclick={() => draft.buttons.push(emptyButton())}>Добавить кнопку</button
+				>
+			</fieldset>
+		{/if}
 
 		<!-- Цели -->
 		<fieldset class="rounded-box p-3 ring-1 ring-base-300">

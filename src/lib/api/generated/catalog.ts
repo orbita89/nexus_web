@@ -930,6 +930,11 @@ export interface components {
 			content_html?: string | null;
 			/** Format: date-time */
 			created_at: string;
+			/**
+			 * @description Готовая вёрстка при `kind=custom` (мягкая санитизация: свои стили, `<style>`, svg;
+			 *     без скриптов). Фронт показывает в `<iframe sandbox srcdoc>`.
+			 */
+			custom_html?: string | null;
 			/** Format: date-time */
 			ends_at?: string | null;
 			/** @description Шаблоны путей, где баннер не показывать (`/admin/*` исключён всегда). */
@@ -976,7 +981,7 @@ export interface components {
 			url: string;
 		};
 		/** @enum {string} */
-		BannerKind: 'image' | 'html' | 'slides';
+		BannerKind: 'image' | 'html' | 'slides' | 'custom';
 		BannerSlide: {
 			/** @description Санитизируется как `Banner.content_html`. */
 			content_html?: string | null;
@@ -1035,6 +1040,8 @@ export interface components {
 			/** @description 0..3. */
 			buttons?: components['schemas']['BannerButton'][];
 			content_html?: string | null;
+			/** @description Обязателен при `kind=custom` (≤ 100 000 символов, мягкая санитизация). */
+			custom_html?: string | null;
 			/** Format: date-time */
 			ends_at?: string | null;
 			exclude_paths?: string[];
@@ -1524,6 +1531,11 @@ export interface components {
 				content_html?: string | null;
 				/** Format: date-time */
 				created_at: string;
+				/**
+				 * @description Готовая вёрстка при `kind=custom` (мягкая санитизация: свои стили, `<style>`, svg;
+				 *     без скриптов). Фронт показывает в `<iframe sandbox srcdoc>`.
+				 */
+				custom_html?: string | null;
 				/** Format: date-time */
 				ends_at?: string | null;
 				/** @description Шаблоны путей, где баннер не показывать (`/admin/*` исключён всегда). */
@@ -2148,6 +2160,7 @@ export interface components {
 		UpdateBanner: {
 			buttons?: components['schemas']['BannerButton'][] | null;
 			content_html?: string | null;
+			custom_html?: string | null;
 			/** Format: date-time */
 			ends_at?: string | null;
 			exclude_paths?: string[] | null;

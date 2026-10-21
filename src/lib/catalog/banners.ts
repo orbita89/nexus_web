@@ -1,4 +1,4 @@
-// Баннеры (промо, новости) v2: виды image / html (slides устарел: несколько баннеров листает общая карусель), кнопки, темы, цели по страницам и путям.
+// Баннеры (промо, новости) v2: виды image / html / custom (slides устарел: несколько баннеров листает общая карусель), кнопки, темы, цели по страницам и путям.
 // Публичный список — без токена, по пути страницы (GET /banners?path=…), уже отфильтрован
 // (активные, в периоде, по targets/exclude_paths) и отсортирован; для /admin* всегда [].
 // Админские вызовы — с токеном admin (api из #lib/auth/session.svelte.ts).
@@ -28,7 +28,7 @@ export type UpdateBanner = SchemaUpdateBanner;
 export type BannerPageList = SchemaPageBanner;
 
 /** Виды, которые можно выбрать в админке; `slides` в контракте остался, но не используется. */
-export const BANNER_KINDS = ['image', 'html'] as const satisfies readonly BannerKind[];
+export const BANNER_KINDS = ['image', 'html', 'custom'] as const satisfies readonly BannerKind[];
 export const BANNER_BUTTON_STYLES = [
 	'primary',
 	'secondary',
@@ -64,17 +64,10 @@ export function getBanners(api: Api, path: string): Promise<Banner[]> {
 }
 
 /** Баннеры для SSR-загрузки: ошибка — пустой список, блок просто не показывается. */
-/** Главные страницы разделов: `/`, `/films`, `/series`, `/books`, `/games`, `/people`. */
-export const isSectionPath = (path: string) =>
-	path === '/' || BANNER_PAGES.some((p) => p !== 'home' && path === `/${p}`);
-
 export async function safeBanners(api: Api, path: string): Promise<Banner[]> {
 	try {
-		const banners = await getBanners(api, path);
-		// «Везде» — это главные страницы разделов: на карточках, коллекциях и т. п. такой баннер
-		// не показываем. Там остаются только баннеры с явной целью (страница или шаблон пути).
-		if (isSectionPath(path)) return banners;
-		return banners.filter((b) => b.targets.some((t) => t.type !== 'all'));
+		// «Везде» бэкенд сам ограничивает главными страницами разделов.
+		return await getBanners(api, path);
 	} catch {
 		return [];
 	}

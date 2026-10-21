@@ -3,12 +3,14 @@
 	import { isExternal } from '#lib/catalog/bannerHtml.ts';
 	import { DEFAULT_THEME, FEATURED_THEMES } from '#lib/catalog/themes.ts';
 	import BannerButtons from './BannerButtons.svelte';
+	import BannerCustom from './BannerCustom.svelte';
 	import BannerHtml from './BannerHtml.svelte';
 
 	// Баннеры страницы (промо, новости) — карусель во всю ширину. Несколько — автопрокрутка
 	// (пауза при наведении, фокусе и prefers-reduced-motion), точки и стрелки; один — без управления.
-	// Пустой список — ничего не рисуем. Виды: image (картинка со ссылкой), html (санитизированный
-	// content_html на фоне картинки или темы); устаревший slides рисуем как html. Кнопки — btn по style.
+	// Пустой список — ничего не рисуем. Виды: image (только картинка со ссылкой, заголовок — в alt),
+	// html (санитизированный content_html на фоне картинки или темы; устаревший slides — так же),
+	// custom (готовая вёрстка в изолированном iframe). Кнопки — btn по style.
 	let { banners }: { banners: Banner[] } = $props();
 
 	const INTERVAL = 6000;
@@ -77,7 +79,7 @@
 				<div
 					class={[
 						'relative carousel-item w-full overflow-hidden',
-						banner.kind === 'image'
+						banner.kind === 'image' || banner.kind === 'custom'
 							? 'aspect-[5/2] max-sm:aspect-[4/3]'
 							: 'min-h-72 sm:aspect-[5/2] sm:min-h-0'
 					]}
@@ -85,7 +87,9 @@
 					aria-roledescription="slide"
 					aria-label="{i + 1} из {banners.length}"
 				>
-					{#if banner.kind !== 'image'}
+					{#if banner.kind === 'custom'}
+						<BannerCustom html={banner.custom_html ?? ''} title={banner.title} eager={i === 0} />
+					{:else if banner.kind !== 'image'}
 						<div
 							class="relative h-full w-full bg-linear-to-br {banner.image_url
 								? ''
@@ -132,7 +136,7 @@
 							{#if banner.image_url}
 								<img
 									src={banner.image_url}
-									alt=""
+									alt={banner.title}
 									class="absolute inset-0 h-full w-full object-cover"
 									loading={i === 0 ? 'eager' : 'lazy'}
 									decoding="async"
@@ -140,21 +144,11 @@
 							{:else}
 								<div class="absolute inset-0 bg-linear-to-br {theme.gradient}"></div>
 							{/if}
-							<div
-								class="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/80 via-black/40 to-transparent px-5 pt-12 pb-5 text-white sm:px-8 sm:pb-7"
-								class:pb-10={many}
-								class:sm:pb-12={many}
-							>
-								<h2 class="text-lg leading-tight font-bold sm:text-2xl">{banner.title}</h2>
-								{#if banner.subtitle}
-									<p class="mt-1 max-w-2xl text-sm text-white/80 sm:text-base">{banner.subtitle}</p>
-								{/if}
-							</div>
 						{/snippet}
 						{#if banner.buttons.length}
 							<div class="relative h-full w-full">
 								{@render body()}
-								<div class="absolute top-0 right-0 px-5 sm:px-8">
+								<div class="absolute right-0 bottom-0 px-5 pb-5 sm:px-8" class:pb-10={many}>
 									<BannerButtons buttons={banner.buttons} />
 								</div>
 							</div>
