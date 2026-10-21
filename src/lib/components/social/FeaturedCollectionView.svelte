@@ -305,127 +305,145 @@
 			{@render heading()}
 		</header>
 	{/if}
-	<div class="relative z-30 mb-8">{@render actions?.()}</div>
+	<!-- Панель автора/админа одной компактной строкой на тёмной подложке, не «плавает» над обоями. -->
+	<div
+		class={[
+			'relative z-30 mb-8',
+			editText &&
+				'rounded-box bg-base-100/85 px-3 pb-3 ring-1 ring-base-content/10 backdrop-blur-md sm:px-4'
+		]}
+	>
+		{@render actions?.()}
+	</div>
 
 	{#if items.length}
 		<!-- Строка: номер | постер | текст. На телефоне сверху название и год, ниже крупный постер (растёт вместе с шириной экрана), под ним заметка и описание на всю
 		     ширину, описание — по кнопке «Описание»; заметка видна всегда. На обоях текст с тенью, без подложки. -->
-		<ol
-			class={['mx-auto max-w-4xl', hasWallpaper && 'over-wallpaper']}
-			reversed
-			aria-label="Рейтинг: от {total}-го места к первому"
-		>
-			{#each items as { item, rank, kind, href }, i (item.entity.id)}
-				{@const year = yearOf(item.entity.release_date)}
-				{@const kindLabel = kind ? kindByApi(kind)?.one : null}
-				{@const about = entityDescription(item.entity.overview)}
-				{@const open = expanded[item.entity.id] ?? false}
-				<li
-					value={rank}
-					class="grid grid-cols-[auto_auto_minmax(0,1fr)] content-start gap-x-4 border-t border-base-content/10 py-6 first:border-t-0 first:pt-0 sm:gap-x-6 sm:py-10"
-				>
-					<!-- Номер — главный элемент топа: крупная тонкая цифра по верху постера. -->
-					<span
-						class={[
-							'col-start-1 row-start-1 w-9 text-right text-4xl leading-[0.8] font-extralight tracking-tighter tabular-nums sm:row-[1/span_2] sm:w-20 sm:text-7xl',
-							rank <= 3 ? 'text-(--page-accent)' : 'text-base-content/45'
-						]}
-						aria-hidden="true">{rank}</span
+		<div class="relative">
+			{#if hasWallpaper}
+				<!-- Затемнение под колонкой списка: обои видны по краям, за текстом фон спокойнее. -->
+				<div
+					class="pointer-events-none absolute inset-y-0 left-1/2 -z-10 w-[min(100%,72rem)] -translate-x-1/2 bg-linear-to-r from-transparent via-base-100/70 to-transparent"
+					aria-hidden="true"
+				></div>
+			{/if}
+			<ol
+				class={['mx-auto max-w-4xl', hasWallpaper && 'over-wallpaper']}
+				reversed
+				aria-label="Рейтинг: от {total}-го места к первому"
+			>
+				{#each items as { item, rank, kind, href }, i (item.entity.id)}
+					{@const year = yearOf(item.entity.release_date)}
+					{@const kindLabel = kind ? kindByApi(kind)?.one : null}
+					{@const about = entityDescription(item.entity.overview)}
+					{@const open = expanded[item.entity.id] ?? false}
+					<li
+						value={rank}
+						class="grid grid-cols-[auto_auto_minmax(0,1fr)] content-start gap-x-4 border-t border-base-content/10 py-6 first:border-t-0 first:pt-0 sm:gap-x-6 sm:py-10"
 					>
-					<!-- Постер кликабелен (как название), тонкая светлая рамка отделяет его от тёмного фона. -->
-					<a
-						href={href ?? undefined}
-						tabindex="-1"
-						aria-hidden="true"
-						class="group col-span-2 col-start-2 row-start-2 mt-3 block w-[clamp(13rem,62vw,18rem)] justify-self-center overflow-hidden rounded-box shadow-lg ring-1 ring-white/10 transition duration-300 hover:shadow-2xl hover:ring-(--page-accent)/60 sm:col-span-1 sm:row-[1/span_2] sm:mt-0 sm:w-[clamp(12rem,24vw,17rem)] sm:justify-self-start"
-					>
-						{#if kind}
-							<div class="transition-transform duration-300 group-hover:scale-[1.03]">
-								<Poster
-									title={item.entity.title}
-									{kind}
-									coverUrl={item.entity.cover_url}
-									eager={i < 2}
-								/>
-							</div>
-						{/if}
-					</a>
-					<!-- Текст не растягивает строку: на компьютере он ограничен высотой постера (лишнее
-					     плавно скрывается), колонка ~65 символов; на телефоне название — до 2 строк, заметка — до 3. -->
-					<div
-						class="contents sm:relative sm:col-start-3 sm:row-[1/span_2] sm:block sm:max-w-[40rem]"
-					>
-						<div
-							class="contents sm:absolute sm:inset-x-0 sm:top-0 sm:bottom-8 sm:flex sm:flex-col sm:overflow-hidden sm:mask-[linear-gradient(to_bottom,#000_82%,transparent)]"
+						<!-- Номер — главный элемент топа: крупная тонкая цифра по верху постера. -->
+						<span
+							class={[
+								'col-start-1 row-start-1 w-9 text-right text-4xl leading-[0.8] font-light tracking-tighter tabular-nums sm:row-[1/span_2] sm:w-20 sm:text-7xl',
+								rank <= 3 ? 'text-(--page-accent)' : 'text-base-content/65'
+							]}
+							aria-hidden="true">{rank}</span
 						>
-							<div
-								class="col-span-2 col-start-2 row-start-1 flex min-w-0 flex-wrap items-baseline gap-x-2 sm:block"
-							>
-								<h2 class="line-clamp-2 text-lg leading-snug font-bold sm:text-2xl">
-									<span class="sr-only">{rank} место. </span>
-									{#if href}
-										<a {href} class="link link-hover hover:text-(--page-accent)"
-											>{item.entity.title}</a
-										>
-									{:else}
-										{item.entity.title}
-									{/if}
-								</h2>
-								{#if year || kindLabel}
-									<p
-										class="shrink-0 text-xs tracking-wider text-base-content/60 uppercase sm:mt-1.5"
+						<!-- Постер кликабелен (как название), тонкая светлая рамка отделяет его от тёмного фона. -->
+						<a
+							href={href ?? undefined}
+							tabindex="-1"
+							aria-hidden="true"
+							class="group col-span-2 col-start-2 row-start-2 mt-3 block w-[clamp(13rem,62vw,18rem)] justify-self-center overflow-hidden rounded-box shadow-lg ring-1 ring-white/10 transition duration-300 hover:shadow-2xl hover:ring-(--page-accent)/60 sm:col-span-1 sm:row-[1/span_2] sm:mt-0 sm:w-[clamp(12rem,24vw,17rem)] sm:justify-self-start"
+						>
+							{#if kind}
+								<div class="transition-transform duration-300 group-hover:scale-[1.03]">
+									<Poster
+										title={item.entity.title}
+										{kind}
+										coverUrl={item.entity.cover_url}
+										eager={i < 2}
+									/>
+								</div>
+							{/if}
+						</a>
+						<!-- Текст не растягивает строку: на компьютере он ограничен высотой постера (лишнее
+					     плавно скрывается), колонка ~65 символов; на телефоне название — до 2 строк, заметка — до 3. -->
+						<div class="contents sm:relative sm:col-start-3 sm:row-[1/span_2] sm:block">
+							<div class="contents sm:absolute sm:inset-0 sm:flex sm:flex-col">
+								<div
+									class="contents sm:flex sm:min-h-0 sm:shrink sm:flex-col sm:overflow-hidden sm:mask-[linear-gradient(to_bottom,#000_calc(100%-1.75rem),transparent)]"
+								>
+									<div
+										class="col-span-2 col-start-2 row-start-1 flex min-w-0 flex-wrap items-baseline gap-x-2 sm:block"
 									>
-										{[year, kindLabel].filter(Boolean).join(' · ')}
-									</p>
-								{/if}
-							</div>
-							<div class="col-span-2 col-start-2 row-start-3 mt-3 min-w-0 sm:mt-4">
-								{#if item.note}
-									<!-- Заметка — голос подборки: цитата с акцентной линией. -->
-									<p
-										class={[
-											'border-l-2 border-(--page-accent) pl-3 text-[0.95rem] leading-relaxed whitespace-pre-line text-base-content/90 italic',
-											!open && 'line-clamp-3 sm:line-clamp-none'
-										]}
+										<h2 class="line-clamp-2 text-lg leading-snug font-bold sm:text-2xl">
+											<span class="sr-only">{rank} место. </span>
+											{#if href}
+												<a {href} class="link link-hover hover:text-(--page-accent)"
+													>{item.entity.title}</a
+												>
+											{:else}
+												{item.entity.title}
+											{/if}
+										</h2>
+										{#if year || kindLabel}
+											<p
+												class="shrink-0 text-xs tracking-wider text-base-content/60 uppercase sm:mt-1.5"
+											>
+												{[year, kindLabel].filter(Boolean).join(' · ')}
+											</p>
+										{/if}
+									</div>
+									<div class="col-span-2 col-start-2 row-start-3 mt-3 min-w-0 sm:mt-4">
+										{#if item.note}
+											<!-- Заметка — голос подборки: цитата с акцентной линией. -->
+											<p
+												class={[
+													'border-l-2 border-(--page-accent) pl-3 text-[0.95rem] leading-relaxed font-medium whitespace-pre-line text-base-content',
+													!open && 'line-clamp-3 sm:line-clamp-none'
+												]}
+											>
+												{item.note}
+											</p>
+										{/if}
+										{#if about}
+											<p
+												class={[
+													'text-sm leading-relaxed text-base-content/80',
+													item.note && 'mt-3',
+													!open && 'hidden sm:block'
+												]}
+											>
+												{about}
+											</p>
+											<button
+												type="button"
+												class={[
+													'text-sm font-medium text-(--page-accent) hover:underline sm:hidden',
+													(item.note || open) && 'mt-2'
+												]}
+												aria-expanded={open}
+												onclick={() => (expanded[item.entity.id] = !open)}
+											>
+												{open ? 'Скрыть описание' : 'Описание'}
+											</button>
+										{/if}
+									</div>
+								</div>
+								{#if href}
+									<a
+										{href}
+										class="hidden shrink-0 self-start pt-3 text-sm text-base-content/60 transition-colors hover:text-(--page-accent) sm:block"
+										>Подробнее →</a
 									>
-										{item.note}
-									</p>
-								{/if}
-								{#if about}
-									<p
-										class={[
-											'text-sm leading-relaxed text-base-content/65',
-											item.note && 'mt-3',
-											!open && 'hidden sm:block'
-										]}
-									>
-										{about}
-									</p>
-									<button
-										type="button"
-										class={[
-											'text-sm font-medium text-(--page-accent) hover:underline sm:hidden',
-											(item.note || open) && 'mt-2'
-										]}
-										aria-expanded={open}
-										onclick={() => (expanded[item.entity.id] = !open)}
-									>
-										{open ? 'Скрыть описание' : 'Описание'}
-									</button>
 								{/if}
 							</div>
 						</div>
-						{#if href}
-							<a
-								{href}
-								class="hidden text-sm text-base-content/55 transition-colors hover:text-(--page-accent) sm:absolute sm:bottom-0 sm:left-0 sm:block"
-								>Подробнее →</a
-							>
-						{/if}
-					</div>
-				</li>
-			{/each}
-		</ol>
+					</li>
+				{/each}
+			</ol>
+		</div>
 	{:else}
 		<p class="text-base-content/60">В подборке пока ничего нет.</p>
 	{/if}
@@ -435,8 +453,6 @@
 	/* Текст поверх обоев: мягкая тёмная тень вместо подложки — читается на ярком фоне. */
 	.over-wallpaper :global(h2),
 	.over-wallpaper :global(p) {
-		text-shadow:
-			0 1px 2px rgb(0 0 0 / 0.8),
-			0 0 6px rgb(0 0 0 / 0.45);
+		text-shadow: 0 1px 2px rgb(0 0 0 / 0.7);
 	}
 </style>
