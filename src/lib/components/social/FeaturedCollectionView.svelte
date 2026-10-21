@@ -127,8 +127,6 @@
 			}))
 			.reverse()
 	);
-	// Раскрытые описания по id сущности.
-	let expanded = $state<Record<string, boolean>>({});
 	// Описание произведения: бэкенд отдаёт чистый текст до 1000 символов (уже обрезан).
 	const entityDescription = (overview: string | null | undefined): string | null =>
 		overview?.trim() || null;
@@ -307,13 +305,12 @@
 	<div class="relative z-30 mb-8">{@render actions?.()}</div>
 
 	{#if items.length}
-		<!-- Строка: номер | постер | текст; блок по центру страницы. Заметка, затем описание в одну строку. -->
+		<!-- Строка: номер | постер | текст; блок по центру страницы. Заметка, затем описание целиком. -->
 		<ol class="mx-auto max-w-4xl" reversed aria-label="Рейтинг: от {total}-го места к первому">
 			{#each items as { item, rank, kind, href }, i (item.entity.id)}
 				{@const year = yearOf(item.entity.release_date)}
 				{@const kindLabel = kind ? kindByApi(kind)?.one : null}
 				{@const about = entityDescription(item.entity.overview)}
-				{@const open = expanded[item.entity.id] ?? false}
 				<li
 					value={rank}
 					class="flex gap-3 border-t border-base-content/10 py-8 first:border-t-0 first:pt-0 sm:gap-6 sm:py-10"
@@ -355,22 +352,7 @@
 							</p>
 						{/if}
 						{#if about}
-							<p
-								class={[
-									'mt-3 text-sm leading-relaxed text-base-content/60',
-									!open && 'line-clamp-1'
-								]}
-							>
-								{about}
-							</p>
-							<button
-								type="button"
-								class="mt-1 text-sm text-(--page-accent) hover:underline"
-								aria-expanded={open}
-								onclick={() => (expanded[item.entity.id] = !open)}
-							>
-								{open ? 'Свернуть' : 'Ещё'}
-							</button>
+							<p class="mt-3 text-sm leading-relaxed text-base-content/60">{about}</p>
 						{/if}
 					</div>
 				</li>
