@@ -200,21 +200,21 @@
 {/snippet}
 
 {#snippet heading()}
-	<!-- Кикер в стиле меты списка с тонкой акцентной линией: шапка и рейтинг — одна система. -->
-	<p class="flex items-center gap-2 text-xs tracking-wider text-base-content/60 uppercase">
-		<span class="h-px w-6 bg-(--page-accent)" aria-hidden="true"></span>
-		Подборка · {count(collection.items_count, ['произведение', 'произведения', 'произведений'])}
-	</p>
-	<div class="mt-2 flex flex-wrap items-center gap-x-2">
-		<h1 class="flex items-baseline gap-2 text-xl leading-snug font-semibold sm:text-2xl">
+	<!-- Одна строка: акцентная линия, ★ и название (h1) на уровне кикера «Подборка · N». -->
+	<div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+		<span class="h-px w-6 shrink-0 bg-(--page-accent)" aria-hidden="true"></span>
+		<h1 class="flex items-baseline gap-2 text-base leading-snug font-semibold sm:text-lg">
 			<span
-				class="shrink-0 text-base text-(--page-accent) sm:text-lg"
+				class="shrink-0 text-sm text-(--page-accent)"
 				role="img"
 				aria-label={featuredBadge(shownTitle)}
 				title={featuredBadge(shownTitle)}>★</span
 			>
 			<span>{shownTitle}</span>
 		</h1>
+		<span class="text-xs tracking-wider text-base-content/60 uppercase">
+			· Подборка · {count(collection.items_count, ['произведение', 'произведения', 'произведений'])}
+		</span>
 		{@render editButton()}
 	</div>
 	{#if editing}
