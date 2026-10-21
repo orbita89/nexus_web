@@ -182,7 +182,13 @@
 	<div class="h-40 skeleton" aria-label="Загрузка коллекции"></div>
 {:else if collection.is_featured && mode !== 'edit' && mode !== 'items'}
 	<!-- Особая коллекция: свой вид и SEO (см. buildFeaturedUrl — будущий /top/{slug}). -->
-	<FeaturedCollectionView {collection} actions={controls} {editText} onsavetext={saveText} />
+	<FeaturedCollectionView
+		{collection}
+		others={data.others}
+		actions={controls}
+		{editText}
+		onsavetext={saveText}
+	/>
 {:else}
 	<Seo
 		title={collection.title}

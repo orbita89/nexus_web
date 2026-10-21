@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import type { SchemaCollectionDetail } from '#lib/api/generated/social.ts';
+	import type { SchemaCollection, SchemaCollectionDetail } from '#lib/api/generated/social.ts';
 	import { asKind, kindByApi, refHref } from '#lib/catalog/kinds.ts';
 	import { count, yearOf } from '#lib/catalog/labels.ts';
 	import {
@@ -26,6 +26,7 @@
 	} from '#lib/social/featuredThemes.ts';
 	import { reviewDate } from '#lib/social/reviews.ts';
 	import CollectionBackdrop from '#lib/components/social/CollectionBackdrop.svelte';
+	import FeaturedCollectionCard from '#lib/components/social/FeaturedCollectionCard.svelte';
 	import Poster from '#lib/components/catalog/Poster.svelte';
 	import type { Snippet } from 'svelte';
 
@@ -35,12 +36,14 @@
 	// editText — можно править название/описание (onsavetext), иначе кнопки нет.
 	let {
 		collection,
+		others = [],
 		actions,
 		editText,
 		onsavetext,
 		headerModeOverride
 	}: {
 		collection: SchemaCollectionDetail;
+		others?: SchemaCollection[];
 		actions?: Snippet;
 		editText?: boolean;
 		onsavetext?: (form: { title: string; description: string }) => Promise<string | null>;
@@ -57,6 +60,27 @@
 	let textError = $state('');
 	let saving = $state(false);
 	const uid = $props.id();
+
+	// «Поделиться»: системный диалог, где он есть; иначе копируем канонический адрес.
+	let copied = $state(false);
+	async function share() {
+		const data = { title: shownTitle, url: canonical };
+		if (typeof navigator.share === 'function') {
+			try {
+				await navigator.share(data);
+				return;
+			} catch (e) {
+				if (e instanceof DOMException && e.name === 'AbortError') return;
+			}
+		}
+		try {
+			await navigator.clipboard.writeText(canonical);
+			copied = true;
+			setTimeout(() => (copied = false), 2500);
+		} catch {
+			copied = false;
+		}
+	}
 
 	function startEdit() {
 		draftTitle = shownTitle;
@@ -164,7 +188,7 @@
 	{#if editText && !editing}
 		<button
 			type="button"
-			class="btn mt-1 btn-ghost btn-xs"
+			class="btn btn-ghost btn-xs"
 			disabled={saving}
 			title="Изменить название и описание"
 			aria-label="Изменить название и описание"
@@ -176,11 +200,17 @@
 {/snippet}
 
 {#snippet heading()}
-	<div class="flex flex-wrap items-start gap-x-2">
-		<h1 class="flex items-start gap-2 text-3xl font-black sm:text-4xl">
+	<!-- Кикер в стиле меты списка с тонкой акцентной линией: шапка и рейтинг — одна система. -->
+	<p class="flex items-center gap-2 text-xs tracking-wider text-base-content/60 uppercase">
+		<span class="h-px w-6 bg-(--page-accent)" aria-hidden="true"></span>
+		Подборка · {count(collection.items_count, ['произведение', 'произведения', 'произведений'])}
+	</p>
+	<div class="mt-2 flex flex-wrap items-center gap-x-2">
+		<h1
+			class="flex items-baseline gap-2 text-3xl leading-tight font-bold tracking-tight sm:text-5xl"
+		>
 			<span
-				class="mt-1 shrink-0 text-2xl text-warning sm:text-3xl"
-				style:color={style.accent}
+				class="shrink-0 text-2xl font-light text-(--page-accent) sm:text-4xl"
 				role="img"
 				aria-label={featuredBadge(shownTitle)}
 				title={featuredBadge(shownTitle)}>★</span
@@ -192,21 +222,18 @@
 	{#if editing}
 		{@render textForm()}
 	{:else if shownDescription}
-		<p class="mt-2 max-w-2xl whitespace-pre-line text-base-content/70">
+		<p class="mt-4 max-w-2xl leading-relaxed whitespace-pre-line text-base-content/70">
 			{shownDescription}
 		</p>
 	{/if}
 	{#if textError && !editing}<p class="mt-2 text-sm text-error" role="alert">{textError}</p>{/if}
-	<p class="mt-4 text-sm text-base-content/60">
-		{count(collection.items_count, ['произведение', 'произведения', 'произведений'])}
-	</p>
-	<p class="mt-2 text-right text-xs text-base-content/45">
+	<p class="mt-4 text-xs tracking-wider text-base-content/60 uppercase">
 		обновлена {reviewDate(collection.updated_at)}
 	</p>
 {/snippet}
 
 {#snippet textForm()}
-	<form class="mt-3 flex max-w-2xl flex-col gap-2" onsubmit={saveText}>
+	<form class="mt-4 flex max-w-2xl flex-col gap-2" onsubmit={saveText}>
 		<label class="form-control">
 			<span class="label-text text-xs">Название</span>
 			<input
@@ -245,82 +272,86 @@
 	accent={style.accent}
 />
 <div class="relative z-10" style:--page-accent={accent}>
-	{#if hmode === 'none'}
-		<!-- Без шапки: только заголовок, описание и мета (SSR, h1 = название). -->
-		<div class="mb-2">
-			{@render heading()}
-		</div>
-	{:else}
-		<header
+	<!-- Шапка, панель и список — в одной колонке max-w-4xl: левый край заголовка совпадает со списком
+	     (на широком экране подложка шапки выступает за колонку на свой отступ). -->
+	<div class="mx-auto max-w-4xl">
+		{#if hmode === 'none'}
+			<!-- Без шапки: только заголовок, описание и мета (SSR, h1 = название). -->
+			<div class="mb-6">
+				{@render heading()}
+			</div>
+		{:else}
+			<header
+				class={[
+					'relative isolate mb-6 overflow-hidden rounded-box p-6 sm:p-10 xl:-mx-10',
+					hmode === 'plain'
+						? 'bg-base-100/85 ring-1 ring-base-content/10 backdrop-blur-sm'
+						: look.kind === 'cover' && style.mode === 'page'
+							? 'bg-base-100/40 backdrop-blur-sm'
+							: ['bg-linear-to-br', look.theme.gradient]
+				]}
+			>
+				{#if hmode === 'styled'}
+					{#if headerWallpaper && look.kind === 'cover'}
+						<img
+							src={look.url}
+							alt=""
+							class="absolute inset-0 -z-30 h-full w-full object-cover"
+							class:scale-105={style.blur > 0}
+							style:filter={style.blur ? `blur(${style.blur}px)` : null}
+							fetchpriority="high"
+						/>
+						<div
+							class="absolute inset-0 -z-20 bg-base-100"
+							style:opacity={(style.dim / 100) * 0.6}
+							aria-hidden="true"
+						></div>
+						<!-- Затемнение слева направо и снизу: текст читается на любых обоях. -->
+						<div
+							class="absolute inset-0 -z-20 bg-linear-to-r from-base-100 via-base-100/80 to-base-100/20"
+							aria-hidden="true"
+						></div>
+						<div
+							class="absolute inset-0 -z-20 bg-linear-to-t from-base-100/70 to-transparent"
+							aria-hidden="true"
+						></div>
+					{:else if look.kind === 'collage'}
+						<div
+							class="absolute inset-y-0 right-0 -z-20 hidden w-1/2 grid-cols-4 gap-2 p-4 opacity-25 sm:grid"
+							aria-hidden="true"
+						>
+							{#each collection.items.slice(0, 4) as item (item.entity.id)}
+								{#if item.entity.cover_url}
+									<img
+										src={item.entity.cover_url}
+										alt=""
+										class="h-full w-full rounded-box object-cover"
+									/>
+								{/if}
+							{/each}
+						</div>
+					{/if}
+					{#if look.theme.pattern && style.effects}
+						<div
+							class="pointer-events-none absolute inset-0 -z-10"
+							style:background={look.theme.pattern}
+							aria-hidden="true"
+						></div>
+					{/if}
+				{/if}
+				{@render heading()}
+			</header>
+		{/if}
+		<!-- Панель автора/админа одной компактной строкой на тёмной подложке, не «плавает» над обоями. -->
+		<div
 			class={[
-				'relative isolate overflow-hidden rounded-box p-5 sm:p-8',
-				hmode === 'plain'
-					? 'bg-base-100/85 ring-1 ring-base-content/10 backdrop-blur-sm'
-					: look.kind === 'cover' && style.mode === 'page'
-						? 'bg-base-100/40 backdrop-blur-sm'
-						: ['bg-linear-to-br', look.theme.gradient]
+				'relative z-30 mb-10',
+				editText &&
+					'rounded-box bg-base-100/85 px-4 pb-4 ring-1 ring-base-content/10 backdrop-blur-md xl:-mx-10 xl:px-10'
 			]}
 		>
-			{#if hmode === 'styled'}
-				{#if headerWallpaper && look.kind === 'cover'}
-					<img
-						src={look.url}
-						alt=""
-						class="absolute inset-0 -z-30 h-full w-full object-cover"
-						class:scale-105={style.blur > 0}
-						style:filter={style.blur ? `blur(${style.blur}px)` : null}
-						fetchpriority="high"
-					/>
-					<div
-						class="absolute inset-0 -z-20 bg-base-100"
-						style:opacity={(style.dim / 100) * 0.6}
-						aria-hidden="true"
-					></div>
-					<!-- Затемнение слева направо и снизу: текст читается на любых обоях. -->
-					<div
-						class="absolute inset-0 -z-20 bg-linear-to-r from-base-100 via-base-100/80 to-base-100/20"
-						aria-hidden="true"
-					></div>
-					<div
-						class="absolute inset-0 -z-20 bg-linear-to-t from-base-100/70 to-transparent"
-						aria-hidden="true"
-					></div>
-				{:else if look.kind === 'collage'}
-					<div
-						class="absolute inset-y-0 right-0 -z-20 hidden w-1/2 grid-cols-4 gap-2 p-3 opacity-25 sm:grid"
-						aria-hidden="true"
-					>
-						{#each collection.items.slice(0, 4) as item (item.entity.id)}
-							{#if item.entity.cover_url}
-								<img
-									src={item.entity.cover_url}
-									alt=""
-									class="h-full w-full rounded-box object-cover"
-								/>
-							{/if}
-						{/each}
-					</div>
-				{/if}
-				{#if look.theme.pattern && style.effects}
-					<div
-						class="pointer-events-none absolute inset-0 -z-10"
-						style:background={look.theme.pattern}
-						aria-hidden="true"
-					></div>
-				{/if}
-			{/if}
-			{@render heading()}
-		</header>
-	{/if}
-	<!-- Панель автора/админа одной компактной строкой на тёмной подложке, не «плавает» над обоями. -->
-	<div
-		class={[
-			'relative z-30 mb-8',
-			editText &&
-				'rounded-box bg-base-100/85 px-3 pb-3 ring-1 ring-base-content/10 backdrop-blur-md sm:px-4'
-		]}
-	>
-		{@render actions?.()}
+			{@render actions?.()}
+		</div>
 	</div>
 
 	{#if items.length}
@@ -361,7 +392,7 @@
 							href={href ?? undefined}
 							tabindex="-1"
 							aria-hidden="true"
-							class="group col-span-2 col-start-2 row-start-2 mt-3 block w-[clamp(13rem,62vw,18rem)] justify-self-center overflow-hidden rounded-box shadow-lg ring-1 ring-white/10 transition duration-300 hover:shadow-2xl hover:ring-(--page-accent)/60 sm:col-span-1 sm:row-[1/span_2] sm:mt-0 sm:w-[clamp(12rem,24vw,17rem)] sm:justify-self-start"
+							class="group col-span-2 col-start-2 row-start-2 mt-4 block w-[clamp(13rem,62vw,18rem)] justify-self-center overflow-hidden rounded-box shadow-lg ring-1 ring-white/10 transition duration-300 hover:shadow-2xl hover:ring-(--page-accent)/60 sm:col-span-1 sm:row-[1/span_2] sm:mt-0 sm:w-[clamp(12rem,24vw,17rem)] sm:justify-self-start"
 						>
 							{#if kind}
 								<div class="transition-transform duration-300 group-hover:scale-[1.03]">
@@ -397,18 +428,18 @@
 										</h2>
 										{#if year || kindLabel}
 											<p
-												class="shrink-0 text-xs tracking-wider text-base-content/60 uppercase sm:mt-1.5"
+												class="shrink-0 text-xs tracking-wider text-base-content/60 uppercase sm:mt-2"
 											>
 												{[year, kindLabel].filter(Boolean).join(' · ')}
 											</p>
 										{/if}
 									</div>
-									<div class="col-span-2 col-start-2 row-start-3 mt-3 min-w-0 sm:mt-4">
+									<div class="col-span-2 col-start-2 row-start-3 mt-4 min-w-0">
 										{#if item.note}
 											<!-- Заметка — голос подборки: цитата с акцентной линией. -->
 											<p
 												class={[
-													'border-l-2 border-(--page-accent) pl-3 text-[0.95rem] leading-relaxed font-medium whitespace-pre-line text-base-content',
+													'border-l-2 border-(--page-accent) pl-4 text-[0.95rem] leading-relaxed font-medium whitespace-pre-line text-base-content',
 													!open && 'line-clamp-3 sm:line-clamp-none'
 												]}
 											>
@@ -419,7 +450,7 @@
 											<p
 												class={[
 													'text-sm leading-relaxed text-base-content/70',
-													item.note && 'mt-3',
+													item.note && 'mt-4',
 													!open && 'hidden sm:block'
 												]}
 											>
@@ -442,7 +473,7 @@
 								{#if href}
 									<a
 										{href}
-										class="hidden shrink-0 self-start pt-3 text-sm text-base-content/60 transition-colors hover:text-(--page-accent) sm:block"
+										class="hidden shrink-0 self-start pt-4 text-sm text-base-content/60 transition-colors hover:text-(--page-accent) sm:block"
 										>Подробнее →</a
 									>
 								{/if}
@@ -453,7 +484,38 @@
 			</ol>
 		</div>
 	{:else}
-		<p class="text-base-content/60">В подборке пока ничего нет.</p>
+		<p class="mx-auto max-w-4xl text-base-content/60">В подборке пока ничего нет.</p>
+	{/if}
+
+	<!-- Конец страницы: поделиться и другие подборки (обычные ссылки — перелинковка для SEO). -->
+	<footer class="mx-auto mt-10 max-w-4xl border-t border-base-content/10 pt-10">
+		<div class="flex flex-wrap items-center gap-4">
+			<button type="button" class="btn btn-outline btn-sm" onclick={share}>Поделиться</button>
+			<span class="text-sm text-base-content/60" role="status">
+				{copied ? 'Ссылка скопирована' : ''}
+			</span>
+		</div>
+	</footer>
+	{#if others.length}
+		<section class="mt-10" aria-labelledby="{uid}-others">
+			<h2
+				id="{uid}-others"
+				class="mx-auto mb-6 flex max-w-4xl items-center gap-2 text-xs tracking-wider text-base-content/60 uppercase"
+			>
+				<span class="h-px w-6 bg-(--page-accent)" aria-hidden="true"></span>
+				Другие подборки
+			</h2>
+			<!-- Телефон: горизонтальная прокрутка карточек; шире — сетка. -->
+			<ul
+				class="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-6 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-3"
+			>
+				{#each others as other (other.id)}
+					<li class="w-[80vw] max-w-sm shrink-0 snap-start sm:w-auto sm:max-w-none">
+						<FeaturedCollectionCard collection={other} />
+					</li>
+				{/each}
+			</ul>
+		</section>
 	{/if}
 </div>
 

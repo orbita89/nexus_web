@@ -5,7 +5,12 @@ import { ApiError, unwrap } from '#lib/api/errors.ts';
 import type { SchemaCollectionDetail } from '#lib/api/generated/social.ts';
 import { api, ensureSession } from '#lib/auth/session.svelte.ts';
 import { orError } from '#lib/catalog/load.ts';
-import { getCollectionBySlug, isCollectionDetail } from '#lib/social/collections.ts';
+import type { SchemaCollection } from '#lib/api/generated/social.ts';
+import {
+	getCollectionBySlug,
+	getFeaturedCollections,
+	isCollectionDetail
+} from '#lib/social/collections.ts';
 import { buildFeaturedUrl } from '#lib/social/featured.ts';
 import { isUuid } from '#lib/social/slug.ts';
 import type { PageLoad } from './$types';
@@ -27,8 +32,16 @@ export const load: PageLoad = async ({ fetch, url, params, setHeaders }) => {
 		}
 	};
 
+	// «Другие подборки» внизу особой коллекции (перелинковка для SEO). Сбой — пустой список, секция скрыта.
+	const featuredList = (): Promise<SchemaCollection[]> =>
+		getFeaturedCollections(publicApi(fetch, url)).catch(() => []);
+	const othersOf = (list: SchemaCollection[], collection: SchemaCollectionDetail) =>
+		collection.is_featured ? list.filter((c) => c.id !== collection.id).slice(0, 6) : [];
+
 	if (!isUuid(params.id)) {
 		const client = browser ? api : publicApi(fetch, url);
+		// Особая со slug — список подборок грузим параллельно с ней.
+		const listing = featuredList();
 		if (browser) await ensureSession();
 		const res = await orError(getCollectionBySlug(client, params.id), NOT_FOUND);
 		if (!isCollectionDetail(res)) {
@@ -41,7 +54,7 @@ export const load: PageLoad = async ({ fetch, url, params, setHeaders }) => {
 		}
 		if (res.slug && res.slug !== params.id) redirect(301, buildFeaturedUrl(res));
 		cacheFeatured(res);
-		return { collection: res };
+		return { collection: res, others: othersOf(await listing, res) };
 	}
 
 	const path = { id: params.id };
@@ -52,7 +65,8 @@ export const load: PageLoad = async ({ fetch, url, params, setHeaders }) => {
 			NOT_FOUND
 		);
 		if (collection.is_featured && collection.slug) redirect(301, buildFeaturedUrl(collection));
-		return { collection };
+		const others = collection.is_featured ? othersOf(await featuredList(), collection) : [];
+		return { collection, others };
 	}
 	try {
 		const collection = await unwrap(
@@ -60,9 +74,10 @@ export const load: PageLoad = async ({ fetch, url, params, setHeaders }) => {
 		);
 		if (collection.is_featured && collection.slug) redirect(301, buildFeaturedUrl(collection));
 		cacheFeatured(collection);
-		return { collection };
+		const others = collection.is_featured ? othersOf(await featuredList(), collection) : [];
+		return { collection, others };
 	} catch (e) {
-		if (e instanceof ApiError && e.status === 404) return { collection: null };
+		if (e instanceof ApiError && e.status === 404) return { collection: null, others: [] };
 		throw e;
 	}
 };
