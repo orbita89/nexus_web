@@ -11,6 +11,7 @@ test('комната: сообщение и переход в профиль а�
 		.getByRole('listitem')
 		.filter({ has: page.getByRole('heading') })
 		.first();
+	// Комната открывается поверх вкладки — с кнопкой «Назад».
 	test.skip((await room.count()) === 0, 'В базе нет ни одной комнаты');
 	const title = await room.getByRole('heading').innerText();
 	await room.getByRole('button', { name: 'Открыть' }).click();
@@ -30,18 +31,24 @@ test('комната: сообщение и переход в профиль а�
 	await expect(panel.getByLabel('Сообщение')).toBeVisible();
 });
 
-test('панель: вкладка «Каталог» и подсказка живых комнат гостю', async ({ page }) => {
+test('панель: вкладка — это сам чат, а не список чатов', async ({ page }) => {
 	await page.goto('/');
 	await page.getByRole('button', { name: 'Чат', exact: true }).first().click();
-
 	const panel = page.getByRole('complementary', { name: 'Чат' });
-	await panel.getByRole('tab', { name: 'Каталог' }).click();
-	// Под вкладкой «Каталог» — чипы по типам произведений.
-	const chips = panel.getByRole('group', { name: 'Тип произведения' });
-	await expect(chips.getByRole('button', { name: 'Фильмы' })).toBeVisible();
-	await expect(chips.getByRole('button', { name: 'Книги' })).toBeVisible();
 
-	// Гостю — ссылка на вход, а не пустой экран без выхода.
-	await panel.getByRole('tab', { name: 'Все' }).click();
+	// «Общий» открывает ленту сразу: есть поле ввода (или приглашение войти), выбирать нечего.
+	await panel.getByRole('tab', { name: 'Общий' }).click();
+	await expect(panel.getByText('Войдите').or(panel.getByLabel('Сообщение'))).toBeVisible();
+
+	// «Каталог» — чипы разделов, каждый тоже сразу лента.
+	await panel.getByRole('tab', { name: 'Каталог' }).click();
+	const chips = panel.getByRole('group', { name: 'Раздел каталога' });
+	await expect(chips.getByRole('button', { name: 'Кино' })).toBeVisible();
+	await chips.getByRole('button', { name: 'Книги' }).click();
+	await expect(panel.getByText('Войдите').or(panel.getByLabel('Сообщение'))).toBeVisible();
+
+	// Список остаётся только у комнат.
+	await panel.getByRole('tab', { name: 'Комнаты' }).click();
+	await expect(panel.getByLabel('Найти комнату')).toBeVisible();
 	await expect(panel.getByRole('link', { name: 'Каталог комнат' }).last()).toBeVisible();
 });

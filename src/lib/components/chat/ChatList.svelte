@@ -2,94 +2,60 @@
 	import { page } from '$app/state';
 	import { session } from '#lib/auth/session.svelte.ts';
 	import { chat } from '#lib/chat/chat.svelte.ts';
-	import { KINDS, kindByApi } from '#lib/catalog/kinds.ts';
 	import { count } from '#lib/catalog/labels.ts';
 	import {
 		activityLabel,
 		authorName,
-		isPinned,
-		ROOM_KINDS,
+		isSystemRoom,
 		roomMeta,
 		shortTime,
-		unreadLabel,
-		type RoomKind
+		unreadLabel
 	} from '#lib/chat/rooms.ts';
 	import { loginUrl } from '#lib/utils/redirect.ts';
 	import RoomIcon from './RoomIcon.svelte';
 
-	// «Мои чаты»: фильтр по виду, поиск по названию, строки — порядок бэкенда (свежие сверху).
-	// Вкладка «Каталог» — все сущности разом, чипы под ней сужают до типа.
+	// Вкладка «Комнаты» — единственный список в панели: мои комнаты и живые из каталога.
+	// Общий чат и чаты разделов — отдельные вкладки, чат карточки — кнопка на самой карточке.
 	let query = $state('');
 
-	const tabs: { kind: RoomKind | null; title: string }[] = [
-		{ kind: null, title: 'Все' },
-		{ kind: 'entity', title: 'Каталог' },
-		{ kind: 'person', title: 'Люди' },
-		{ kind: 'tag', title: 'Темы' },
-		{ kind: 'room', title: 'Комнаты' }
-	];
+	const matches = (title: string) => title.toLowerCase().includes(query.trim().toLowerCase());
 
-	const shown = $derived(
+	const mine = $derived(
 		(chat.chats ?? [])
-			.filter((c) => !chat.filter || c.kind === chat.filter)
-			.filter((c) => !chat.entityKind || c.entity?.kind === chat.entityKind)
-			.map((c) => ({ chat: c, meta: roomMeta(c), pinned: isPinned(c) }))
-			.filter(({ meta }) => meta.title.toLowerCase().includes(query.trim().toLowerCase()))
+			.filter((c) => c.kind === 'room' && !isSystemRoom(c.room))
+			.map((c) => ({ chat: c, meta: roomMeta(c) }))
+			.filter(({ meta }) => matches(meta.title))
 	);
+
+	// Куда ещё можно зайти: активные комнаты, в которых я не состою.
+	$effect(() => {
+		void chat.chats;
+		void chat.loadSuggested();
+	});
+	const suggested = $derived(
+		(chat.suggested ?? [])
+			.filter((r) => !isSystemRoom(`room:${r.slug}`))
+			.filter((r) => !mine.some(({ chat: c }) => c.custom?.slug === r.slug))
+			.filter((r) => matches(r.title))
+	);
+
 	const roomMetaOf = (room: { slug: string; title: string }) => ({
 		room: `room:${room.slug}`,
 		title: room.title,
 		href: '/chat',
 		image: null
 	});
-	const heading = $derived(
-		chat.entityKind
-			? kindByApi(chat.entityKind).title
-			: (ROOM_KINDS.find((k) => k.kind === chat.filter)?.title ?? 'Мои чаты')
-	);
-
-	// Чатов нет — вместо инструкции показываем живые комнаты.
-	$effect(() => {
-		if (chat.chats?.length === 0 || session.status === 'guest') void chat.loadSuggested();
-	});
-	const suggested = $derived(chat.suggested ?? []);
 </script>
 
 <div class="flex min-h-0 flex-1 flex-col">
-	<div class="px-4 pt-1">
-		<div class="flex rounded-full bg-base-300/60 p-1" role="tablist" aria-label="Вид чатов">
-			{#each tabs as tab (tab.title)}
-				<button
-					role="tab"
-					aria-selected={chat.filter === tab.kind}
-					class={[
-						'flex-1 rounded-full px-1.5 py-1 text-[0.65rem] font-bold tracking-wider uppercase transition',
-						chat.filter === tab.kind
-							? 'bg-base-100 text-base-content shadow-sm'
-							: 'text-base-content/50 hover:text-base-content'
-					]}
-					onclick={() => chat.setFilter(tab.kind)}>{tab.title}</button
-				>
-			{/each}
-		</div>
-		{#if chat.filter === 'entity'}
-			<div class="mt-2 flex flex-wrap gap-1" role="group" aria-label="Тип произведения">
-				<button
-					class={['badge badge-sm', chat.entityKind ? 'badge-ghost' : 'badge-primary']}
-					aria-pressed={!chat.entityKind}
-					onclick={() => (chat.entityKind = null)}>Все</button
-				>
-				{#each KINDS as k (k.kind)}
-					<button
-						class={['badge badge-sm', chat.entityKind === k.kind ? 'badge-primary' : 'badge-ghost']}
-						aria-pressed={chat.entityKind === k.kind}
-						onclick={() => (chat.entityKind = k.kind)}>{k.title}</button
-					>
-				{/each}
-			</div>
-		{/if}
-		<label class="input mt-3 w-full input-sm">
-			<input type="search" placeholder="Найти чат" bind:value={query} aria-label="Найти чат" />
+	<div class="px-4 pt-2">
+		<label class="input w-full input-sm">
+			<input
+				type="search"
+				placeholder="Найти комнату"
+				bind:value={query}
+				aria-label="Найти комнату"
+			/>
 			<svg
 				class="size-4 opacity-50"
 				viewBox="0 0 24 24"
@@ -101,39 +67,29 @@
 		</label>
 	</div>
 
-	<p class="px-4 pt-4 pb-1 text-[0.65rem] font-bold tracking-widest text-base-content/50 uppercase">
-		{heading}{#if chat.chats}&nbsp;({shown.length}){/if}
-	</p>
-
-	<div class="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
-		{#if session.status === 'guest'}
-			{@render live()}
-			<p class="px-2 py-4 text-xs text-base-content/50">
-				<a href={loginUrl(page.url)} class="link link-primary">Войдите</a>, чтобы видеть чаты своих
-				интересов и писать самому.
-			</p>
-		{:else if chat.chatsError}
+	<div class="min-h-0 flex-1 overflow-y-auto px-2 pt-2 pb-2">
+		{#if chat.chatsError}
 			<p role="alert" class="px-2 py-4 text-sm text-error">
 				{chat.chatsError}
 				<button class="link" onclick={() => chat.loadChats()}>Повторить</button>
 			</p>
-		{:else if !chat.chats}
-			{#each [1, 2, 3, 4, 5] as i (i)}
+		{/if}
+
+		{#if session.status === 'authed' && !chat.chats}
+			{#each [1, 2, 3] as i (i)}
 				<div class="flex items-center gap-3 px-2 py-2">
 					<span class="size-10 skeleton rounded-full"></span>
 					<span class="h-8 flex-1 skeleton"></span>
 				</div>
 			{/each}
-		{:else if !chat.chats.length}
-			{@render live()}
-			<p class="px-2 py-4 text-xs text-base-content/50">
-				Добавьте фильмы, людей или темы в интересы — их чаты появятся здесь.
+		{:else if mine.length}
+			<p
+				class="px-2 pt-2 pb-1 text-[0.65rem] font-bold tracking-widest text-base-content/50 uppercase"
+			>
+				Мои комнаты&nbsp;({mine.length})
 			</p>
-		{:else if !shown.length}
-			<p class="px-2 py-6 text-sm text-base-content/60">Ничего не нашлось.</p>
-		{:else}
 			<ul>
-				{#each shown as { chat: c, meta, pinned } (c.room)}
+				{#each mine as { chat: c, meta } (c.room)}
 					{@const last = c.last_message}
 					<li>
 						<button
@@ -151,9 +107,6 @@
 							<span class="min-w-0 flex-1">
 								<span class="flex items-baseline gap-2">
 									<span class="truncate text-sm font-bold">{meta.title}</span>
-									{#if pinned}
-										<span class="badge shrink-0 badge-ghost badge-xs">общий</span>
-									{/if}
 									{#if c.muted}
 										<svg
 											class="size-3.5 shrink-0 opacity-50"
@@ -200,46 +153,55 @@
 				{/each}
 			</ul>
 		{/if}
+
+		{#if chat.suggested === null}
+			{#each [1, 2] as i (i)}
+				<div class="flex items-center gap-3 px-2 py-2">
+					<span class="size-10 skeleton rounded-full"></span>
+					<span class="h-8 flex-1 skeleton"></span>
+				</div>
+			{/each}
+		{:else if suggested.length}
+			<p
+				class="px-2 pt-4 pb-1 text-[0.65rem] font-bold tracking-widest text-base-content/50 uppercase"
+			>
+				Сейчас обсуждают
+			</p>
+			<ul>
+				{#each suggested as room (room.id)}
+					{@const meta = roomMetaOf(room)}
+					{@const activity = activityLabel(room)}
+					<li>
+						<button
+							class="flex w-full items-center gap-3 rounded-box px-2 py-2 text-left transition hover:bg-base-300/60"
+							onclick={() => chat.open(meta)}
+						>
+							<RoomIcon {meta} />
+							<span class="min-w-0 flex-1">
+								<span class="block truncate text-sm font-bold">{room.title}</span>
+								<span class="block truncate text-xs text-base-content/50">
+									{activity ?? count(room.members_count, ['участник', 'участника', 'участников'])}
+								</span>
+							</span>
+						</button>
+					</li>
+				{/each}
+			</ul>
+		{:else if !mine.length}
+			<p class="px-2 py-6 text-sm text-base-content/60">
+				{query.trim() ? 'Ничего не нашлось.' : 'Комнат пока нет.'}
+			</p>
+		{/if}
+
+		{#if session.status === 'guest'}
+			<p class="px-2 py-4 text-xs text-base-content/50">
+				<a href={loginUrl(page.url)} class="link link-primary">Войдите</a>, чтобы вступать в комнаты
+				и писать.
+			</p>
+		{/if}
 	</div>
 
 	<p class="border-t border-base-300 px-4 py-3 text-xs text-base-content/60">
-		<a href="/chat" class="link link-primary">Каталог комнат</a> — вступайте в общие комнаты Nexus.
+		<a href="/chat" class="link link-primary">Каталог комнат</a> — все комнаты Nexus.
 	</p>
 </div>
-
-{#snippet live()}
-	{#if chat.suggested === null}
-		{#each [1, 2, 3] as i (i)}
-			<div class="flex items-center gap-3 px-2 py-2">
-				<span class="size-10 skeleton rounded-full"></span>
-				<span class="h-8 flex-1 skeleton"></span>
-			</div>
-		{/each}
-	{:else if suggested.length}
-		<p
-			class="px-2 pt-4 pb-1 text-[0.65rem] font-bold tracking-widest text-base-content/50 uppercase"
-		>
-			Сейчас обсуждают
-		</p>
-		<ul>
-			{#each suggested as room (room.id)}
-				{@const meta = roomMetaOf(room)}
-				{@const activity = activityLabel(room)}
-				<li>
-					<button
-						class="flex w-full items-center gap-3 rounded-box px-2 py-2 text-left transition hover:bg-base-300/60"
-						onclick={() => chat.open(meta)}
-					>
-						<RoomIcon {meta} />
-						<span class="min-w-0 flex-1">
-							<span class="block truncate text-sm font-bold">{room.title}</span>
-							<span class="block truncate text-xs text-base-content/50">
-								{activity ?? count(room.members_count, ['участник', 'участника', 'участников'])}
-							</span>
-						</span>
-					</button>
-				</li>
-			{/each}
-		</ul>
-	{/if}
-{/snippet}

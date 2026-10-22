@@ -7,7 +7,6 @@
 // - прочитано — chat.read с задержкой, когда последнее сообщение видно (seen);
 // - свёрнута ли панель и открытая комната — в localStorage.
 import { browser } from '$app/env';
-import type { SchemaEntityKind } from '#lib/api/generated/catalog.ts';
 import type {
 	SchemaChatMessage,
 	SchemaChatRoomInfo,
@@ -19,9 +18,21 @@ import { errorMessage, unwrap } from '#lib/api/errors.ts';
 import { api, guestApi, session } from '#lib/auth/session.svelte.ts';
 import type { RealtimeEvent, ReplyMessage } from '#lib/realtime/client.ts';
 import { sendRealtime } from '#lib/realtime/realtime.svelte.ts';
-import { isPinned, roomMeta, sendError, splitRoom, type RoomKind, type RoomMeta } from './rooms.ts';
+import {
+	GENERAL,
+	roomMeta,
+	sendError,
+	splitRoom,
+	systemMeta,
+	topicOf,
+	type RoomMeta,
+	type Topic
+} from './rooms.ts';
 
 export type Message = SchemaChatMessage;
+
+/** Вкладка панели: два системных чата и список комнат. */
+export type Tab = 'general' | 'catalog' | 'rooms';
 
 /** Сообщение в ленте; своё неотправленное — с client_id и состоянием. */
 export type Item = Message & {
@@ -56,9 +67,12 @@ class Chat {
 	collapsed = $state(false);
 	/** Лист открыт (мобильная ширина). */
 	sheet = $state(false);
-	filter = $state<RoomKind | null>(null);
-	/** Под-фильтр вкладки «Каталог»: фильмы, сериалы, книги, игры. */
-	entityKind = $state<SchemaEntityKind | null>(null);
+	/** Вкладка панели. «Общий» и «Каталог» — сами чаты, «Комнаты» — список. */
+	tab = $state<Tab>('general');
+	/** Какой из чатов «Каталога» открыт. */
+	topic = $state<Topic>('movies');
+	/** Комната, открытая поверх вкладки: с карточки, из списка комнат, из уведомления. */
+	adhoc = $state<RoomMeta | null>(null);
 
 	/** null — гость или ещё не загружен. */
 	chats = $state<SchemaChatSummary[] | null>(null);
@@ -92,10 +106,26 @@ class Chat {
 		return (this.chats ?? []).reduce((sum, c) => sum + (c.muted ? 0 : c.unread), 0);
 	}
 
-	/** Вкладка списка; под-фильтр по типу сущности живёт только внутри «Каталога». */
-	setFilter(kind: RoomKind | null) {
-		this.filter = kind;
-		if (kind !== 'entity') this.entityKind = null;
+	/** Вкладка: «Общий» и «Каталог» сразу показывают ленту, «Комнаты» — список. */
+	setTab(tab: Tab) {
+		this.tab = tab;
+		this.adhoc = null;
+		if (tab === 'general') this.#enter(systemMeta(GENERAL));
+		else if (tab === 'catalog') this.#enter(systemMeta(this.topic));
+		else this.#leave();
+	}
+
+	setTopic(topic: Topic) {
+		this.topic = topic;
+		this.tab = 'catalog';
+		this.adhoc = null;
+		this.#enter(systemMeta(topic));
+	}
+
+	/** Назад из комнаты, открытой поверх вкладки. */
+	back() {
+		this.adhoc = null;
+		this.setTab(this.tab);
 	}
 
 	/** Кого подсказывать по «@»: те, чьи сообщения уже в ленте. */
@@ -127,9 +157,13 @@ class Chat {
 		try {
 			const saved = JSON.parse(localStorage.getItem(STORAGE) ?? '{}');
 			this.collapsed = !!saved.collapsed;
+			this.topic = topicOf(saved.topic);
+			this.tab = saved.tab === 'catalog' || saved.tab === 'rooms' ? saved.tab : 'general';
 			if (saved.open?.room) this.open(saved.open, { show: false });
+			else this.setTab(this.tab);
 		} catch {
 			// localStorage недоступен — панель по умолчанию
+			this.setTab('general');
 		}
 	}
 
@@ -137,7 +171,12 @@ class Chat {
 		try {
 			localStorage.setItem(
 				STORAGE,
-				JSON.stringify({ collapsed: this.collapsed, open: this.current && { ...this.current } })
+				JSON.stringify({
+					collapsed: this.collapsed,
+					tab: this.tab,
+					topic: this.topic,
+					open: this.adhoc && { ...this.adhoc }
+				})
 			);
 		} catch {
 			// не сохранили — не страшно
@@ -156,8 +195,13 @@ class Chat {
 		this.#save();
 	}
 
-	/** Открыть комнату в панели (из списка, с карточки, из уведомления). */
+	/** Открыть комнату поверх вкладки: с карточки, из списка комнат, из уведомления. */
 	open(meta: RoomMeta, { show = true } = {}) {
+		this.adhoc = meta;
+		this.#enter(meta, show);
+	}
+
+	#enter(meta: RoomMeta, show = false) {
 		if (show) {
 			this.collapsed = false;
 			this.sheet = true;
@@ -196,8 +240,13 @@ class Chat {
 		}
 	}
 
-	/** Назад к списку. */
+	/** Закрыть открытую комнату (вкладка «Комнаты» — к списку). */
 	close() {
+		this.adhoc = null;
+		this.#leave();
+	}
+
+	#leave() {
 		this.info = null;
 		this.readMark = null;
 		this.current = null;
@@ -213,9 +262,7 @@ class Chat {
 		}
 		this.chatsLoading = true;
 		try {
-			const chats = await unwrap(api.social.GET('/api/v1/social/chats'));
-			// Общий чат всегда первым; остальной порядок — бэкенда (свежие сверху).
-			this.chats = [...chats.filter(isPinned), ...chats.filter((c) => !isPinned(c))];
+			this.chats = await unwrap(api.social.GET('/api/v1/social/chats'));
 			this.chatsError = '';
 		} catch (e) {
 			this.chatsError = errorMessage(e);

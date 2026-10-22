@@ -3,7 +3,7 @@
 	import { page } from '$app/state';
 	import { session } from '#lib/auth/session.svelte.ts';
 	import { chat } from '#lib/chat/chat.svelte.ts';
-	import { authorName, MAX_BODY, type RoomMeta } from '#lib/chat/rooms.ts';
+	import { authorName, isSystemRoom, MAX_BODY, type RoomMeta } from '#lib/chat/rooms.ts';
 	import { loginUrl } from '#lib/utils/redirect.ts';
 	import ChatMessage from './ChatMessage.svelte';
 	import EntitySearchPopover from './EntitySearchPopover.svelte';
@@ -162,11 +162,11 @@
 
 <div class="flex min-h-0 flex-1 flex-col">
 	<header class="flex items-center gap-2 border-b border-base-300 px-2 pb-2">
-		<button
-			class="btn btn-square btn-ghost btn-sm"
-			aria-label="К списку чатов"
-			onclick={() => chat.close()}>‹</button
-		>
+		{#if chat.adhoc}
+			<button class="btn btn-square btn-ghost btn-sm" aria-label="Назад" onclick={() => chat.back()}
+				>‹</button
+			>
+		{/if}
 		<RoomIcon {meta} size="size-8" />
 		<div class="min-w-0 flex-1">
 			{#if meta.href}
@@ -176,7 +176,7 @@
 				<p class="truncate text-sm font-bold">{meta.title}</p>
 			{/if}
 		</div>
-		{#if chat.info?.me && chat.info.room === meta.room}
+		{#if chat.info?.me && chat.info.room === meta.room && !isSystemRoom(meta.room)}
 			{@const room = meta.room.startsWith('room:')}
 			<button
 				class={['btn rounded-full btn-xs', chat.info.me.member ? 'btn-ghost' : 'btn-primary']}

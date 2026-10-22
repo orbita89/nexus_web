@@ -10,16 +10,34 @@ import { KINDS, kindBySlug, refHref } from '#lib/catalog/kinds.ts';
 
 export type RoomKind = 'entity' | 'person' | 'tag' | 'room';
 
-/** Общий чат: заведён на бэкенде, у всех первым в списке. */
-export const GENERAL_ROOM = 'room:general';
+// Системные чаты. Вкладка панели — сам чат, а не список чатов: «Общий» открывает ленту
+// сразу, «Каталог» переключает между лентами по разделам. Заведены на бэкенде, участие
+// у всех по умолчанию.
+export const GENERAL = 'general';
 
-/** Группы панели «Мои чаты» по виду комнаты. */
-export const ROOM_KINDS: readonly { kind: RoomKind; title: string }[] = [
-	{ kind: 'entity', title: 'Каталог' },
-	{ kind: 'person', title: 'Люди' },
-	{ kind: 'tag', title: 'Темы' },
-	{ kind: 'room', title: 'Комнаты' }
-];
+/** Чипы вкладки «Каталог»: по одному чату на раздел каталога. */
+export const TOPICS = [
+	{ slug: 'movies', title: 'Кино' },
+	{ slug: 'series', title: 'Сериалы' },
+	{ slug: 'books', title: 'Книги' },
+	{ slug: 'games', title: 'Игры' }
+] as const;
+
+export type Topic = (typeof TOPICS)[number]['slug'];
+
+export const topicOf = (value: string | null | undefined): Topic =>
+	TOPICS.find((t) => t.slug === value)?.slug ?? 'movies';
+
+const SYSTEM = [{ slug: GENERAL, title: 'Общий чат' }, ...TOPICS];
+
+/** Шапка системного чата: ссылки на карточку у него нет. */
+export function systemMeta(slug: string): RoomMeta {
+	const room = SYSTEM.find((r) => r.slug === slug);
+	return { room: `room:${slug}`, title: room?.title ?? slug, href: null, image: null };
+}
+
+/** Системная комната — у неё своя вкладка, поэтому в списке комнат её не показываем. */
+export const isSystemRoom = (room: string) => SYSTEM.some((r) => `room:${r.slug}` === room);
 
 /** То, что панели нужно для шапки комнаты: открыть её можно и не из списка (кнопка на карточке). */
 export interface RoomMeta {
@@ -87,13 +105,6 @@ export function shortTime(iso: string, now = Date.now()): string {
 /** Имя автора сообщения. */
 export const authorName = (author: { username: string; display_name?: string | null }) =>
 	author.display_name || author.username;
-
-/** Системная комната (общий чат) — наверху списка. Пока бэкенд не отдаёт `system`, узнаём по слагу. */
-export function isPinned(chat: SchemaChatSummary): boolean {
-	const custom = chat.custom as (SchemaChatSummary['custom'] & { system?: boolean }) | null;
-	if (!custom) return false;
-	return custom.system === true || chat.room === GENERAL_ROOM;
-}
 
 /** Активность комнаты из полей каталога; null — тихо или бэкенд ещё не отдаёт счётчик. */
 export function activityLabel(

@@ -3,7 +3,8 @@
 	import { afterNavigate } from '$app/navigation';
 	import { session } from '#lib/auth/session.svelte.ts';
 	import { chat } from '#lib/chat/chat.svelte.ts';
-	import { authorName, roomMeta, unreadLabel } from '#lib/chat/rooms.ts';
+	import { authorName, roomMeta, TOPICS, unreadLabel } from '#lib/chat/rooms.ts';
+	import type { Tab } from '#lib/chat/chat.svelte.ts';
 	import { useRealtime, useRealtimeReplies } from '#lib/realtime/realtime.svelte.ts';
 	import ChatList from './ChatList.svelte';
 	import ChatRoom from './ChatRoom.svelte';
@@ -36,7 +37,14 @@
 	// Мобильный лист закрывается переходом по ссылке (на карточку из шапки комнаты).
 	afterNavigate(() => (chat.sheet = false));
 
-	const strip = $derived((chat.chats ?? []).slice(0, 8));
+	// Свёрнутая полоса — только комнаты: чаты карточек открываются с самих карточек.
+	const strip = $derived((chat.chats ?? []).filter((c) => c.kind === 'room').slice(0, 8));
+
+	const tabs: { tab: Tab; title: string }[] = [
+		{ tab: 'general', title: 'Общий' },
+		{ tab: 'catalog', title: 'Каталог' },
+		{ tab: 'rooms', title: 'Комнаты' }
+	];
 </script>
 
 <svelte:window onkeydown={(e) => e.key === 'Escape' && chat.sheet && (chat.sheet = false)} />
@@ -115,6 +123,36 @@
 				onclick={() => (chat.sheet = false)}>✕</button
 			>
 		</div>
+		<!-- Вкладка — это сам чат: «Общий» и «Каталог» сразу показывают ленту. -->
+		<div class="px-4 pb-1">
+			<div class="flex rounded-full bg-base-300/60 p-1" role="tablist" aria-label="Разделы чата">
+				{#each tabs as t (t.tab)}
+					<button
+						role="tab"
+						aria-selected={chat.tab === t.tab && !chat.adhoc}
+						class={[
+							'flex-1 rounded-full px-1.5 py-1 text-[0.65rem] font-bold tracking-wider uppercase transition',
+							chat.tab === t.tab && !chat.adhoc
+								? 'bg-base-100 text-base-content shadow-sm'
+								: 'text-base-content/50 hover:text-base-content'
+						]}
+						onclick={() => chat.setTab(t.tab)}>{t.title}</button
+					>
+				{/each}
+			</div>
+			{#if chat.tab === 'catalog' && !chat.adhoc}
+				<div class="mt-2 flex flex-wrap gap-1" role="group" aria-label="Раздел каталога">
+					{#each TOPICS as t (t.slug)}
+						<button
+							class={['badge badge-sm', chat.topic === t.slug ? 'badge-primary' : 'badge-ghost']}
+							aria-pressed={chat.topic === t.slug}
+							onclick={() => chat.setTopic(t.slug)}>{t.title}</button
+						>
+					{/each}
+				</div>
+			{/if}
+		</div>
+
 		{#if chat.current}
 			<ChatRoom meta={chat.current} />
 		{:else}
