@@ -61,28 +61,8 @@
 	]}
 >
 	{#if chat.collapsed}
-		<!-- Свёрнута (только десктоп): развернуть, общий счётчик и последние комнаты. -->
+		<!-- Свёрнута (только десктоп): последние комнаты. Развернуть — кнопкой чата в шапке. -->
 		<div class="hidden flex-1 flex-col items-center gap-2 overflow-y-auto py-3 lg:flex">
-			<button
-				class="btn indicator btn-square btn-ghost"
-				aria-label="Развернуть чат"
-				title="Развернуть чат"
-				onclick={() => chat.toggleCollapsed()}
-			>
-				{#if chat.unread}<span class="indicator-item badge badge-xs badge-primary"
-						>{unreadLabel(chat.unread)}</span
-					>{/if}
-				<svg
-					class="size-5"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2"
-					aria-hidden="true"
-					><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg
-				>
-			</button>
-			<div class="h-px w-8 bg-base-300"></div>
 			{#each strip as c (c.room)}
 				{@const meta = roomMeta(c)}
 				<button

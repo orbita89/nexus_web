@@ -8,8 +8,10 @@
 	import Avatar from './Avatar.svelte';
 	import TitleSearch from './catalog/TitleSearch.svelte';
 
+	// Фильмы, сериалы, книги и игры — один пункт «Каталог», иначе шапка не влезает
+	// в узкий экран и при смене ширины всё съезжает.
+	const catalog = KINDS.map((k) => ({ href: `/${k.slug}`, title: k.title }));
 	const sections = [
-		...KINDS.map((k) => ({ href: `/${k.slug}`, title: k.title })),
 		{ href: '/people', title: 'Люди' },
 		{ href: '/collections', title: 'Коллекции' },
 		{ href: '/feed', title: 'Лента' },
@@ -18,6 +20,7 @@
 
 	const isActive = (href: string) =>
 		page.url.pathname === href || page.url.pathname.startsWith(`${href}/`);
+	const catalogActive = $derived(catalog.some((c) => isActive(c.href)));
 
 	const next = $derived(
 		page.url.pathname.startsWith('/auth/')
@@ -37,11 +40,23 @@
 </script>
 
 <header class="sticky top-0 z-20 border-b border-base-300 bg-base-100/85 backdrop-blur-md">
-	<nav class="navbar mx-auto max-w-6xl gap-2 px-4" aria-label="Основная навигация">
+	<nav class="navbar w-full gap-2 px-4" aria-label="Основная навигация">
 		<div class="navbar-start w-auto gap-1">
-			<details class="dropdown lg:hidden" bind:open={menuOpen}>
+			<details class="dropdown md:hidden" bind:open={menuOpen}>
 				<summary class="btn btn-square btn-ghost btn-sm" aria-label="Меню">☰</summary>
 				<ul class="menu dropdown-content z-10 mt-2 w-48 rounded-box bg-base-200 shadow-sm">
+					<li>
+						<details open={catalogActive}>
+							<summary class={{ 'menu-active': catalogActive }}>Каталог</summary>
+							<ul>
+								{#each catalog as c (c.href)}
+									<li>
+										<a href={c.href} class={{ 'menu-active': isActive(c.href) }}>{c.title}</a>
+									</li>
+								{/each}
+							</ul>
+						</details>
+					</li>
 					{#each sections as s (s.href)}
 						<li><a href={s.href} class={{ 'menu-active': isActive(s.href) }}>{s.title}</a></li>
 					{/each}
@@ -52,7 +67,17 @@
 			>
 		</div>
 
-		<ul class="menu menu-horizontal hidden gap-1 menu-sm lg:flex">
+		<ul class="menu menu-horizontal hidden gap-1 menu-sm md:flex">
+			<li>
+				<details>
+					<summary class={{ 'menu-active': catalogActive }}>Каталог</summary>
+					<ul class="z-10 w-40 rounded-box bg-base-200 shadow-sm">
+						{#each catalog as c (c.href)}
+							<li><a href={c.href} class={{ 'menu-active': isActive(c.href) }}>{c.title}</a></li>
+						{/each}
+					</ul>
+				</details>
+			</li>
 			{#each sections as s (s.href)}
 				<li><a href={s.href} class={{ 'menu-active': isActive(s.href) }}>{s.title}</a></li>
 			{/each}
@@ -69,11 +94,12 @@
 				/>
 			</form>
 
-			<!-- Чат на узком экране — выезжающий лист; на десктопе панель всегда справа. -->
+			<!-- Кнопка чата есть на любой ширине (иначе при смене ширины шапка дёргается):
+			     на десктопе сворачивает правую панель, уже — открывает лист. -->
 			<button
-				class="btn indicator btn-circle btn-ghost btn-sm lg:hidden"
+				class="btn indicator btn-circle btn-ghost btn-sm"
 				aria-label="Чат"
-				onclick={() => (chat.sheet = true)}
+				onclick={() => chat.toggle()}
 			>
 				{#if chat.unread}<span class="indicator-item badge badge-xs badge-primary"
 						>{unreadLabel(chat.unread)}</span

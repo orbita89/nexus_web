@@ -121,6 +121,13 @@ class Chat {
 		}
 	}
 
+	/** Кнопка в шапке: на десктопе сворачивает панель, уже — открывает лист. */
+	toggle() {
+		const mobile = typeof matchMedia !== 'undefined' && !matchMedia('(min-width: 64rem)').matches;
+		if (mobile) this.sheet = !this.sheet;
+		else this.toggleCollapsed();
+	}
+
 	toggleCollapsed() {
 		this.collapsed = !this.collapsed;
 		this.#save();
