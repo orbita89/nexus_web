@@ -28,9 +28,8 @@
 	} from '#lib/social/featuredThemes.ts';
 	import { reviewDate } from '#lib/social/reviews.ts';
 	import CollectionBackdrop from '#lib/components/social/CollectionBackdrop.svelte';
-	import FeaturedCollectionCard from '#lib/components/social/FeaturedCollectionCard.svelte';
 	import ShareMenu from '#lib/components/social/ShareMenu.svelte';
-	import CollectionComments from '#lib/components/social/CollectionComments.svelte';
+	import CollectionEnd from '#lib/components/social/CollectionEnd.svelte';
 	import SaveCollectionButton from '#lib/components/social/SaveCollectionButton.svelte';
 	import Poster from '#lib/components/catalog/Poster.svelte';
 	import type { Snippet } from 'svelte';
@@ -468,44 +467,7 @@
 		<p class="mx-auto max-w-4xl text-base-content/60">В подборке пока ничего нет.</p>
 	{/if}
 
-	<!-- Конец страницы: поделиться и похожие подборки (обычные ссылки — перелинковка для SEO). -->
-	<footer class="mx-auto mt-10 flex max-w-4xl justify-center border-t border-base-content/10 pt-10">
-		<ShareMenu url={canonical} title={shownTitle} />
-	</footer>
-	<section class="mt-10" aria-labelledby={others.length ? `${uid}-others` : undefined}>
-		<div class="mx-auto mb-6 flex max-w-4xl items-center justify-between gap-4">
-			{#if others.length}
-				<h2
-					id="{uid}-others"
-					class="flex items-center gap-2 text-xs tracking-wider text-base-content/60 uppercase"
-				>
-					<span class="h-px w-6 bg-(--page-accent)" aria-hidden="true"></span>
-					Похожие подборки
-				</h2>
-			{/if}
-			<a href="/collections/featured" class="ml-auto link text-xs link-hover">Все подборки →</a>
-		</div>
-		{#if others.length}
-			<!-- Телефон: горизонтальная прокрутка карточек; шире — сетка. -->
-			<ul
-				class="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-6 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-3"
-			>
-				{#each others as other (other.id)}
-					<li class="w-[80vw] max-w-sm shrink-0 snap-start sm:w-auto sm:max-w-none">
-						<FeaturedCollectionCard collection={other} />
-					</li>
-				{/each}
-			</ul>
-		{/if}
-	</section>
-	{#key collection.id}
-		<CollectionComments
-			collectionId={collection.id}
-			ownerId={collection.owner.id}
-			count={collection.comments_count}
-			locked={collection.comments_locked}
-		/>
-	{/key}
+	<CollectionEnd {collection} {others} shareUrl={canonical} shareTitle={shownTitle} />
 </div>
 
 <style>

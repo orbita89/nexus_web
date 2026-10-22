@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { goto, invalidateAll } from '$app/navigation';
+	import { page } from '$app/state';
+	import { buildFeaturedUrl } from '#lib/social/featured.ts';
 	import { onMount } from 'svelte';
 	import { errorMessage, unwrap } from '#lib/api/errors.ts';
 	import type { SchemaEntitySummary } from '#lib/api/generated/catalog.ts';
@@ -20,7 +22,7 @@
 	import EmptyState from '#lib/components/catalog/EmptyState.svelte';
 	import EntityGrid from '#lib/components/catalog/EntityGrid.svelte';
 	import Seo from '#lib/components/catalog/Seo.svelte';
-	import CollectionComments from '#lib/components/social/CollectionComments.svelte';
+	import CollectionEnd from '#lib/components/social/CollectionEnd.svelte';
 	import CollectionEditor from '#lib/components/social/CollectionEditor.svelte';
 	import CollectionItemSearch from '#lib/components/social/CollectionItemSearch.svelte';
 	import CollectionForm from '#lib/components/social/CollectionForm.svelte';
@@ -284,13 +286,11 @@
 		</EmptyState>
 	{/if}
 	{#if mode !== 'items'}
-		{#key collection.id}
-			<CollectionComments
-				collectionId={collection.id}
-				ownerId={collection.owner.id}
-				count={collection.comments_count}
-				locked={collection.comments_locked}
-			/>
-		{/key}
+		<CollectionEnd
+			{collection}
+			others={data.others}
+			shareUrl={page.url.origin + buildFeaturedUrl(collection)}
+			shareTitle={collection.title}
+		/>
 	{/if}
 {/if}
