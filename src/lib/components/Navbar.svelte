@@ -29,8 +29,14 @@
 	);
 
 	let menuOpen = $state(false);
+	// «Каталог» на десктопе: сам по себе <details> остаётся открытым — закрываем
+	// после перехода и по клику мимо.
+	let catalogOpen = $state(false);
+	let catalogEl: HTMLDetailsElement | undefined = $state();
+	let menuEl: HTMLDetailsElement | undefined = $state();
 	afterNavigate(() => {
 		menuOpen = false;
+		catalogOpen = false;
 	});
 
 	async function signOut() {
@@ -39,10 +45,18 @@
 	}
 </script>
 
+<svelte:window
+	onclick={(e) => {
+		if (catalogOpen && !catalogEl?.contains(e.target as Node)) catalogOpen = false;
+		if (menuOpen && !menuEl?.contains(e.target as Node)) menuOpen = false;
+	}}
+	onkeydown={(e) => e.key === 'Escape' && ((catalogOpen = false), (menuOpen = false))}
+/>
+
 <header class="sticky top-0 z-20 border-b border-base-300 bg-base-100/85 backdrop-blur-md">
 	<nav class="navbar w-full gap-2 px-4" aria-label="Основная навигация">
 		<div class="navbar-start w-auto gap-1">
-			<details class="dropdown md:hidden" bind:open={menuOpen}>
+			<details class="dropdown md:hidden" bind:this={menuEl} bind:open={menuOpen}>
 				<summary class="btn btn-square btn-ghost btn-sm" aria-label="Меню">☰</summary>
 				<ul class="menu dropdown-content z-10 mt-2 w-48 rounded-box bg-base-200 shadow-sm">
 					<li>
@@ -69,7 +83,7 @@
 
 		<ul class="menu menu-horizontal hidden gap-1 menu-sm md:flex">
 			<li>
-				<details>
+				<details bind:this={catalogEl} bind:open={catalogOpen}>
 					<summary class={{ 'menu-active': catalogActive }}>Каталог</summary>
 					<ul class="z-10 w-40 rounded-box bg-base-200 shadow-sm">
 						{#each catalog as c (c.href)}
