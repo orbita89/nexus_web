@@ -20,11 +20,13 @@
 	import EmptyState from '#lib/components/catalog/EmptyState.svelte';
 	import EntityGrid from '#lib/components/catalog/EntityGrid.svelte';
 	import Seo from '#lib/components/catalog/Seo.svelte';
+	import CollectionComments from '#lib/components/social/CollectionComments.svelte';
 	import CollectionEditor from '#lib/components/social/CollectionEditor.svelte';
 	import CollectionItemSearch from '#lib/components/social/CollectionItemSearch.svelte';
 	import CollectionForm from '#lib/components/social/CollectionForm.svelte';
 	import FeaturedCollectionView from '#lib/components/social/FeaturedCollectionView.svelte';
 	import FeaturedAdminControls from '#lib/components/social/FeaturedAdminControls.svelte';
+	import RelatedCollectionsEditor from '#lib/components/social/RelatedCollectionsEditor.svelte';
 	import ModerateButton from '#lib/components/social/ModerateButton.svelte';
 	import type { PageProps } from './$types';
 
@@ -133,7 +135,7 @@
 					onclick={() => (mode = mode === 'items' ? 'view' : 'items')}
 					>{mode === 'items' ? 'Готово' : 'Изменить содержимое'}</button
 				>
-				{#if collection.is_featured && session.user?.role === 'admin'}
+				{#if (collection.is_featured || collection.is_public) && session.user?.role === 'admin'}
 					<button
 						class={['btn btn-sm', styling ? 'btn-primary' : '']}
 						aria-expanded={styling}
@@ -160,10 +162,23 @@
 				{/if}
 			</div>
 			{#if error}<div class="mt-2"><Alert>{error}</Alert></div>{/if}
-			{#if styling && collection.is_featured}
-				<div class="mt-3 max-w-2xl rounded-box bg-base-200 p-4 ring-1 ring-base-300">
-					<p class="mb-2 text-sm font-semibold">Оформление: обои, обложка, тема</p>
-					<FeaturedAdminControls {collection} onchange={() => invalidateAll()} />
+			{#if styling && (collection.is_featured || collection.is_public)}
+				<div class="mt-3 max-w-2xl space-y-4 rounded-box bg-base-200 p-4 ring-1 ring-base-300">
+					{#if collection.is_featured}
+						<div>
+							<p class="mb-2 text-sm font-semibold">Оформление: обои, обложка, тема</p>
+							<FeaturedAdminControls {collection} onchange={() => invalidateAll()} />
+						</div>
+					{/if}
+					{#if collection.is_public}
+						<div>
+							<p class="mb-2 text-sm font-semibold">Связанные подборки</p>
+							<RelatedCollectionsEditor
+								collectionId={collection.id}
+								onchange={() => invalidateAll()}
+							/>
+						</div>
+					{/if}
 				</div>
 			{/if}
 			{#if mode !== 'items'}
@@ -258,5 +273,15 @@
 			{#if own}Нажмите «Изменить содержимое», чтобы добавить произведения.{:else}Здесь пока ничего
 				нет.{/if}
 		</EmptyState>
+	{/if}
+	{#if mode !== 'items'}
+		{#key collection.id}
+			<CollectionComments
+				collectionId={collection.id}
+				ownerId={collection.owner.id}
+				count={collection.comments_count}
+				locked={collection.comments_locked}
+			/>
+		{/key}
 	{/if}
 {/if}

@@ -30,6 +30,7 @@
 	import CollectionBackdrop from '#lib/components/social/CollectionBackdrop.svelte';
 	import FeaturedCollectionCard from '#lib/components/social/FeaturedCollectionCard.svelte';
 	import ShareMenu from '#lib/components/social/ShareMenu.svelte';
+	import CollectionComments from '#lib/components/social/CollectionComments.svelte';
 	import SaveCollectionButton from '#lib/components/social/SaveCollectionButton.svelte';
 	import Poster from '#lib/components/catalog/Poster.svelte';
 	import type { Snippet } from 'svelte';
@@ -494,6 +495,14 @@
 			</ul>
 		{/if}
 	</section>
+	{#key collection.id}
+		<CollectionComments
+			collectionId={collection.id}
+			ownerId={collection.owner.id}
+			count={collection.comments_count}
+			locked={collection.comments_locked}
+		/>
+	{/key}
 </div>
 
 <style>

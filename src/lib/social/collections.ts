@@ -6,9 +6,11 @@ import { ApiError, unwrap } from '#lib/api/errors.ts';
 import type {
 	SchemaCollection,
 	SchemaCollectionBySlug,
+	SchemaCollectionComment,
 	SchemaCollectionDetail,
 	SchemaCollectionItem,
 	SchemaFeatureCollection,
+	SchemaPageCollectionComment,
 	SchemaPutCollectionItem
 } from '#lib/api/generated/social.ts';
 
@@ -240,4 +242,154 @@ export function setCollectionSaved(api: Api, id: string, saved: boolean): Promis
 	const path = '/api/v1/social/collections/{id}/save';
 	const init = { params: { path: { id } } };
 	return unwrap(saved ? social.PUT(path, init) : social.DELETE(path, init));
+}
+
+// Обсуждение коллекции. Список плоский, старые сверху; ответы — с parent_id (ответ на ответ
+// бэкенд привязывает к корню). Удаление корня убирает и ответы.
+
+export const COMMENT_MAX = 2000;
+
+/** Страница комментариев (limit 1–100, offset с 0). */
+export function listCollectionComments(
+	api: Api,
+	id: string,
+	page: { limit?: number; offset?: number } = {}
+): Promise<SchemaPageCollectionComment> {
+	return unwrap(
+		api.social.GET('/api/v1/social/collections/{id}/comments', {
+			params: { path: { id }, query: page }
+		})
+	);
+}
+
+/** Написать комментарий или ответ (parentId — id любого комментария этой коллекции). */
+export function postCollectionComment(
+	api: Api,
+	id: string,
+	body: string,
+	parentId: string | null = null
+): Promise<SchemaCollectionComment> {
+	return unwrap(
+		api.social.POST('/api/v1/social/collections/{id}/comments', {
+			params: { path: { id } },
+			body: { body: body.trim(), parent_id: parentId }
+		})
+	);
+}
+
+/** Удалить свой комментарий (204). */
+export async function deleteCollectionComment(api: Api, commentId: string): Promise<void> {
+	await unwrap(
+		api.social.DELETE('/api/v1/social/collection-comments/{id}', {
+			params: { path: { id: commentId } }
+		})
+	);
+}
+
+/** Админ: удалить любой комментарий (204). */
+export async function adminDeleteCollectionComment(api: Api, commentId: string): Promise<void> {
+	await unwrap(
+		api.social.DELETE('/api/v1/social/admin/collection-comments/{id}', {
+			params: { path: { id: commentId } }
+		})
+	);
+}
+
+/** Закрыть/открыть обсуждение: владелец — PATCH /collections/{id}, админ — /admin/collections/{id}. */
+export function setCommentsLocked(
+	api: Api,
+	id: string,
+	locked: boolean,
+	asAdmin: boolean
+): Promise<SchemaCollection> {
+	const init = { params: { path: { id } }, body: { comments_locked: locked } };
+	return unwrap(
+		asAdmin
+			? api.social.PATCH('/api/v1/social/admin/collections/{id}', init)
+			: api.social.PATCH('/api/v1/social/collections/{id}', init)
+	);
+}
+
+export const COMMENTS_LOCKED_ERROR = 'Обсуждение закрыто';
+
+/** Бэкенд отказал: обсуждение закрыто. */
+export function isCommentsLocked(e: unknown): boolean {
+	return e instanceof ApiError && e.code === 'comments_locked';
+}
+
+/** Понятный текст ошибки комментариев (429 с Retry-After, закрытое обсуждение, валидация). */
+export function collectionCommentError(e: unknown, fallback: (e: unknown) => string): string {
+	if (e instanceof ApiError) {
+		if (e.status === 429)
+			return e.retryAfter != null
+				? `Слишком часто. Попробуйте через ${Math.max(1, Math.ceil(e.retryAfter))} с.`
+				: 'Слишком часто. Попробуйте чуть позже.';
+		if (e.code === 'comments_locked') return COMMENTS_LOCKED_ERROR;
+		if (e.status === 403) return 'Недостаточно прав.';
+		if (e.status === 404) return 'Комментарий или коллекция не найдены.';
+		if (e.code === 'validation' && e.field === 'body')
+			return `Комментарий — от 1 до ${COMMENT_MAX} символов.`;
+		if (e.code === 'validation' && e.field === 'parent_id')
+			return 'Комментарий, на который вы отвечаете, удалён.';
+	}
+	return fallback(e);
+}
+
+// Похожие подборки, заданные вручную (максимум 12, порядок с 0 подряд).
+
+export const RELATED_MAX = 12;
+
+/** Связанные подборки по порядку (только публичные). */
+export function getRelatedCollections(api: Api, id: string): Promise<SchemaCollection[]> {
+	return unwrap(
+		api.social.GET('/api/v1/social/collections/{id}/related', { params: { path: { id } } })
+	);
+}
+
+/** Админ: заменить список связей целиком. */
+export function adminSetRelated(api: Api, id: string, ids: string[]): Promise<SchemaCollection[]> {
+	return unwrap(
+		api.social.PUT('/api/v1/social/admin/collections/{id}/related', {
+			params: { path: { id } },
+			body: { ids }
+		})
+	);
+}
+
+/** Админ: добавить одну связь (идемпотентно — существующая не сдвигается). */
+export function adminAddRelated(
+	api: Api,
+	id: string,
+	relatedId: string,
+	position?: number
+): Promise<SchemaCollection[]> {
+	return unwrap(
+		api.social.PUT('/api/v1/social/admin/collections/{id}/related/{related_id}', {
+			params: { path: { id, related_id: relatedId } },
+			body: position === undefined ? {} : { position }
+		})
+	);
+}
+
+/** Админ: убрать связь (204). */
+export async function adminRemoveRelated(api: Api, id: string, relatedId: string): Promise<void> {
+	await unwrap(
+		api.social.DELETE('/api/v1/social/admin/collections/{id}/related/{related_id}', {
+			params: { path: { id, related_id: relatedId } }
+		})
+	);
+}
+
+/** Понятный текст ошибки правки связанных подборок. */
+export function relatedAdminError(e: unknown, fallback: (e: unknown) => string): string {
+	if (e instanceof ApiError) {
+		if (e.code === 'collection_private') return 'Связать можно только публичную коллекцию.';
+		if (e.code === 'validation' && e.field === 'related_id')
+			return 'Нельзя связать коллекцию саму с собой.';
+		if (e.code === 'validation' && e.field === 'ids')
+			return `Не больше ${RELATED_MAX} связанных подборок, без повторов.`;
+		if (e.status === 403) return 'Недостаточно прав.';
+		if (e.status === 404) return 'Коллекция не найдена.';
+	}
+	return fallback(e);
 }

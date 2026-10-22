@@ -39,6 +39,23 @@ export interface paths {
 		patch: operations['admin_update_chat_room'];
 		trace?: never;
 	};
+	'/api/v1/social/admin/collection-comments/{id}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		post?: never;
+		/** Удалить любой комментарий в обсуждении коллекции (с ответами, если он корневой). */
+		delete: operations['admin_delete_collection_comment'];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/social/admin/collections/{id}': {
 		parameters: {
 			query?: never;
@@ -54,7 +71,8 @@ export interface paths {
 		options?: never;
 		head?: never;
 		/**
-		 * Изменить название и описание любой коллекции (например, чужой особой). Видимость здесь не
+		 * Изменить название и описание любой коллекции (например, чужой особой), закрыть или открыть
+		 *     её обсуждение. Видимость здесь не
 		 *     меняется: `is_public` в теле — 400.
 		 */
 		patch: operations['admin_update_collection'];
@@ -97,6 +115,41 @@ export interface paths {
 		post?: never;
 		/** Убрать произведение из любой особой коллекции. */
 		delete: operations['admin_delete_collection_item'];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/social/admin/collections/{id}/related': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/** Заменить весь список связей: порядок в `ids` — порядок показа (перетаскивание в админке). */
+		put: operations['admin_set_related_collections'];
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/social/admin/collections/{id}/related/{related_id}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/** Добавить одну связь: в конец или на `position` со сдвигом остальных. Уже есть — не меняется. */
+		put: operations['admin_add_related_collection'];
+		post?: never;
+		/** Убрать связь → 204 (даже если её не было). */
+		delete: operations['admin_remove_related_collection'];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -339,6 +392,23 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/social/collection-comments/{id}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		post?: never;
+		/** Удалить свой комментарий (с ответами, если он корневой). */
+		delete: operations['delete_collection_comment'];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/social/collections': {
 		parameters: {
 			query?: never;
@@ -414,6 +484,24 @@ export interface paths {
 		patch: operations['update_collection'];
 		trace?: never;
 	};
+	'/api/v1/social/collections/{id}/comments': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Обсуждение коллекции по времени: старые сверху, ответы — в той же ленте с `parent_id`. */
+		get: operations['list_collection_comments'];
+		put?: never;
+		/** Написать в обсуждение коллекции или ответить на комментарий. */
+		post: operations['create_collection_comment'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/social/collections/{id}/items': {
 		parameters: {
 			query?: never;
@@ -444,6 +532,26 @@ export interface paths {
 		post?: never;
 		/** Убрать произведение из своей коллекции. */
 		delete: operations['delete_item'];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/social/collections/{id}/related': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Связанные подборки коллекции по порядку: только публичные; связей нет — `[]`. Публичную
+		 *     коллекцию кэширует CDN (`s-maxage=600`).
+		 */
+		get: operations['list_related_collections'];
+		put?: never;
+		post?: never;
+		delete?: never;
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -1005,8 +1113,19 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
 	schemas: {
+		/** @description Добавить связанную подборку. */
+		AddRelated: {
+			/**
+			 * Format: int32
+			 * @description Куда вставить (со сдвигом остальных); без него — в конец.
+			 * @example 0
+			 */
+			position?: number | null;
+		};
 		/** @description Админ меняет название и описание любой коллекции (`is_public` здесь не меняется — 400). */
 		AdminUpdateCollection: {
+			/** @description Закрыть (`true`) или открыть обсуждение. Не передано — не меняется. */
+			comments_locked?: boolean | null;
 			/** @description До 2000 символов. Не передано — не меняется, `null` — очищается. */
 			description?: string | null;
 			/** @description 1–200 символов. Не передано — не меняется. */
@@ -1115,6 +1234,13 @@ export interface components {
 			 * @example #b3001b
 			 */
 			accent_color?: string | null;
+			/**
+			 * Format: int64
+			 * @description Комментариев в обсуждении (без удалённых).
+			 */
+			comments_count: number;
+			/** @description Обсуждение закрыто: читать можно, писать — только admin. */
+			comments_locked: boolean;
 			/** @description Есть ли в коллекции сущность из `?contains=`; без параметра поля нет. */
 			contains?: boolean | null;
 			/** @description Обложка карточки особой (16:9, от 1280 px); у обычной — `null`. */
@@ -1193,9 +1319,30 @@ export interface components {
 					/** Format: uuid */
 					redirect_id: string;
 			  };
+		/** @description Комментарий в обсуждении коллекции. Ответ — `parent_id` корневого комментария (один уровень). */
+		CollectionComment: {
+			author: components['schemas']['UserRef'];
+			/** @example Добавьте «Бегущего по лезвию»! */
+			body: string;
+			/** Format: uuid */
+			collection_id: string;
+			/** Format: date-time */
+			created_at: string;
+			/** Format: uuid */
+			id: string;
+			/**
+			 * Format: uuid
+			 * @description Корневой комментарий, на который это ответ; `null` — сам корневой.
+			 */
+			parent_id?: string | null;
+			/** Format: date-time */
+			updated_at: string;
+		};
 		/** @description Коллекция с содержимым по порядку. */
 		CollectionDetail: components['schemas']['Collection'] & {
 			items: components['schemas']['CollectionItem'][];
+			/** @description Связанные подборки (задаёт admin) по порядку, только публичные; `[]` — связей нет. */
+			related: components['schemas']['Collection'][];
 		};
 		/** @description Сущность в коллекции: ссылка на карточку и краткое описание. */
 		CollectionEntity: components['schemas']['EntityRef'] & {
@@ -1225,6 +1372,19 @@ export interface components {
 			 * @example Лучшая фантастика
 			 */
 			title: string;
+		};
+		/** @description Написать в обсуждение коллекции. */
+		CreateCollectionComment: {
+			/**
+			 * @description 1–2000 символов после обрезки пробелов.
+			 * @example Добавьте «Бегущего по лезвию»!
+			 */
+			body: string;
+			/**
+			 * Format: uuid
+			 * @description Ответ на комментарий этой коллекции; ответ на ответ привязывается к его корню.
+			 */
+			parent_id?: string | null;
 		};
 		/** @description Новое сообщение в теме. */
 		CreatePost: {
@@ -1490,6 +1650,13 @@ export interface components {
 				 * @example #b3001b
 				 */
 				accent_color?: string | null;
+				/**
+				 * Format: int64
+				 * @description Комментариев в обсуждении (без удалённых).
+				 */
+				comments_count: number;
+				/** @description Обсуждение закрыто: читать можно, писать — только admin. */
+				comments_locked: boolean;
 				/** @description Есть ли в коллекции сущность из `?contains=`; без параметра поля нет. */
 				contains?: boolean | null;
 				/** @description Обложка карточки особой (16:9, от 1280 px); у обычной — `null`. */
@@ -1557,6 +1724,43 @@ export interface components {
 				wallpaper_mode: string;
 				/** @description Обои особой: широкий фон шапки страницы (21:9 или 16:9, от 1920 px); у обычной — `null`. */
 				wallpaper_url?: string | null;
+			}[];
+			/**
+			 * Format: int64
+			 * @example 20
+			 */
+			limit: number;
+			/**
+			 * Format: int64
+			 * @example 0
+			 */
+			offset: number;
+			/**
+			 * Format: int64
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @example 137
+			 */
+			total: number;
+		};
+		/** @description Страница списка. */
+		Page_CollectionComment: {
+			items: {
+				author: components['schemas']['UserRef'];
+				/** @example Добавьте «Бегущего по лезвию»! */
+				body: string;
+				/** Format: uuid */
+				collection_id: string;
+				/** Format: date-time */
+				created_at: string;
+				/** Format: uuid */
+				id: string;
+				/**
+				 * Format: uuid
+				 * @description Корневой комментарий, на который это ответ; `null` — сам корневой.
+				 */
+				parent_id?: string | null;
+				/** Format: date-time */
+				updated_at: string;
 			}[];
 			/**
 			 * Format: int64
@@ -2171,6 +2375,11 @@ export interface components {
 		 * @enum {string}
 		 */
 		ReviewSort: 'new' | 'rating_desc' | 'rating_asc';
+		/** @description Заменить список связанных подборок. */
+		SetRelated: {
+			/** @description id публичных коллекций, до 12, без повторов и без самой коллекции; порядок — порядок показа. */
+			ids: string[];
+		};
 		/** @description Социальный профиль пользователя. */
 		SocialProfile: {
 			/**
@@ -2281,6 +2490,8 @@ export interface components {
 		};
 		/** @description Изменение коллекции: переданные поля заменяются, `null` очищает описание. */
 		UpdateCollection: {
+			/** @description Закрыть (`true`) или открыть обсуждение. */
+			comments_locked?: boolean | null;
 			description?: string | null;
 			is_public?: boolean | null;
 			title?: string | null;
@@ -2344,6 +2555,7 @@ export interface components {
 	headers: never;
 	pathItems: never;
 }
+export type SchemaAddRelated = components['schemas']['AddRelated'];
 export type SchemaAdminUpdateCollection = components['schemas']['AdminUpdateCollection'];
 export type SchemaChatHistory = components['schemas']['ChatHistory'];
 export type SchemaChatMessage = components['schemas']['ChatMessage'];
@@ -2352,10 +2564,12 @@ export type SchemaChatRoomMe = components['schemas']['ChatRoomMe'];
 export type SchemaChatSummary = components['schemas']['ChatSummary'];
 export type SchemaCollection = components['schemas']['Collection'];
 export type SchemaCollectionBySlug = components['schemas']['CollectionBySlug'];
+export type SchemaCollectionComment = components['schemas']['CollectionComment'];
 export type SchemaCollectionDetail = components['schemas']['CollectionDetail'];
 export type SchemaCollectionEntity = components['schemas']['CollectionEntity'];
 export type SchemaCollectionItem = components['schemas']['CollectionItem'];
 export type SchemaCreateCollection = components['schemas']['CreateCollection'];
+export type SchemaCreateCollectionComment = components['schemas']['CreateCollectionComment'];
 export type SchemaCreatePost = components['schemas']['CreatePost'];
 export type SchemaCreateReviewComment = components['schemas']['CreateReviewComment'];
 export type SchemaCreateRoom = components['schemas']['CreateRoom'];
@@ -2374,6 +2588,7 @@ export type SchemaMark = components['schemas']['Mark'];
 export type SchemaMarkKind = components['schemas']['MarkKind'];
 export type SchemaMarkedEntity = components['schemas']['MarkedEntity'];
 export type SchemaPageCollection = components['schemas']['Page_Collection'];
+export type SchemaPageCollectionComment = components['schemas']['Page_CollectionComment'];
 export type SchemaPageCustomRoom = components['schemas']['Page_CustomRoom'];
 export type SchemaPageFollow = components['schemas']['Page_Follow'];
 export type SchemaPageInterest = components['schemas']['Page_Interest'];
@@ -2400,6 +2615,7 @@ export type SchemaReorderItems = components['schemas']['ReorderItems'];
 export type SchemaReview = components['schemas']['Review'];
 export type SchemaReviewComment = components['schemas']['ReviewComment'];
 export type SchemaReviewSort = components['schemas']['ReviewSort'];
+export type SchemaSetRelated = components['schemas']['SetRelated'];
 export type SchemaSocialProfile = components['schemas']['SocialProfile'];
 export type SchemaTagInterest = components['schemas']['TagInterest'];
 export type SchemaTagRef = components['schemas']['TagRef'];
@@ -2582,6 +2798,54 @@ export interface operations {
 				};
 			};
 			/** @description Нет такой комнаты */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	admin_delete_collection_comment: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description id комментария */
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Удалён */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет или уже удалён */
 			404: {
 				headers: {
 					[name: string]: unknown;
@@ -2954,6 +3218,185 @@ export interface operations {
 				};
 			};
 			/** @description Нет коллекции, сущности или её нет в коллекции */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	admin_set_related_collections: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description id коллекции */
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['SetRelated'];
+			};
+		};
+		responses: {
+			/** @description Актуальный список */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Collection'][];
+				};
+			};
+			/** @description `validation` с `field: ids` — сама коллекция, повтор, больше 12; `collection_private` — связываемая приватная */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет коллекции или одной из связываемых */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	admin_add_related_collection: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description id коллекции */
+				id: string;
+				/** @description id связываемой коллекции */
+				related_id: string;
+			};
+			cookie?: never;
+		};
+		/** @description Можно не передавать тело: в конец */
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['AddRelated'];
+			};
+		};
+		responses: {
+			/** @description Актуальный список */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Collection'][];
+				};
+			};
+			/** @description `validation`: `field: related_id` — сама коллекция, `field: ids` — уже 12 связей; `collection_private` — связываемая приватная */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет коллекции или связываемой */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	admin_remove_related_collection: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description id коллекции */
+				id: string;
+				/** @description id связанной коллекции */
+				related_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Связи нет */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет коллекции */
 			404: {
 				headers: {
 					[name: string]: unknown;
@@ -3783,6 +4226,54 @@ export interface operations {
 			};
 		};
 	};
+	delete_collection_comment: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description id комментария */
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Удалён */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Чужой комментарий */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет или уже удалён */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
 	list_public: {
 		parameters: {
 			query?: {
@@ -4057,6 +4548,133 @@ export interface operations {
 			};
 		};
 	};
+	list_collection_comments: {
+		parameters: {
+			query?: {
+				/** @description 1–100, по умолчанию 20. */
+				limit?: number;
+				/** @description С 0. */
+				offset?: number;
+			};
+			header?: never;
+			path: {
+				/** @description id коллекции */
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Страница комментариев */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Page_CollectionComment'];
+				};
+			};
+			/** @description Неверный параметр */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Неверный токен */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет коллекции или она чужая приватная */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	create_collection_comment: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description id коллекции */
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['CreateCollectionComment'];
+			};
+		};
+		responses: {
+			/** @description Создан */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['CollectionComment'];
+				};
+			};
+			/** @description `validation` с `field`: `body` — пусто или длиннее 2000; `parent_id` — нет такого (неудалённого) комментария в этой коллекции */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Обсуждение закрыто (`comments_locked`) */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет коллекции или она чужая приватная */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Больше 5 комментариев в минуту (`Retry-After`) */
+			429: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
 	reorder: {
 		parameters: {
 			query?: never;
@@ -4241,6 +4859,47 @@ export interface operations {
 				};
 			};
 			/** @description Нет коллекции, сущности или её нет в коллекции */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	list_related_collections: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description id коллекции */
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Связанные коллекции */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Collection'][];
+				};
+			};
+			/** @description Неверный токен */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет коллекции или она чужая приватная */
 			404: {
 				headers: {
 					[name: string]: unknown;

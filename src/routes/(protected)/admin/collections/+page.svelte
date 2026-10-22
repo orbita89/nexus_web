@@ -4,6 +4,7 @@
 	import { api } from '#lib/auth/session.svelte.ts';
 	import Alert from '#lib/components/Alert.svelte';
 	import FeaturedStyleForm from '#lib/components/social/FeaturedStyleForm.svelte';
+	import RelatedCollectionsEditor from '#lib/components/social/RelatedCollectionsEditor.svelte';
 	import {
 		adminSetFeatured,
 		adminUnsetFeatured,
@@ -21,6 +22,8 @@
 	let busy = $state(false);
 	let error = $state('');
 	let dragFrom = $state<number | null>(null);
+	// Раскрытые «Связи» (редактор грузит связи только при открытии).
+	let relOpen = $state<Record<string, boolean>>({});
 
 	// Черновики адресов по id коллекции; нет черновика — текущий slug (или транслит названия).
 	let slugDrafts = $state<Record<string, string>>({});
@@ -233,6 +236,12 @@
 							/>
 						</div>
 					</details>
+					<details class="mt-1" ontoggle={(e) => (relOpen[c.id] = e.currentTarget.open)}>
+						<summary class="cursor-pointer text-xs text-base-content/70">Связи</summary>
+						{#if relOpen[c.id]}
+							<div class="mt-2"><RelatedCollectionsEditor collectionId={c.id} /></div>
+						{/if}
+					</details>
 				</div>
 				<a href={buildFeaturedUrl(c)} class="btn btn-ghost btn-xs" target="_blank">Открыть</a>
 				<button
@@ -270,6 +279,12 @@
 					>{c.title}</a
 				>
 				<span class="text-xs text-base-content/60">@{c.owner.username}</span>
+				<details class="mt-1" ontoggle={(e) => (relOpen['b' + c.id] = e.currentTarget.open)}>
+					<summary class="cursor-pointer text-xs text-base-content/70">Связи</summary>
+					{#if relOpen['b' + c.id]}
+						<div class="mt-2"><RelatedCollectionsEditor collectionId={c.id} /></div>
+					{/if}
+				</details>
 			</div>
 			{#if c.is_featured || list.some((x) => x.id === c.id)}
 				<span class="badge badge-sm badge-primary">Особая</span>

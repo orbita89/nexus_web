@@ -9,6 +9,7 @@ import type { SchemaCollection } from '#lib/api/generated/social.ts';
 import {
 	getCollectionBySlug,
 	getFeaturedCollections,
+	getRelatedCollections,
 	isCollectionDetail
 } from '#lib/social/collections.ts';
 import { buildFeaturedUrl, rankSimilar } from '#lib/social/featured.ts';
@@ -35,8 +36,19 @@ export const load: PageLoad = async ({ fetch, url, params, setHeaders }) => {
 	// «Похожие подборки» внизу особой коллекции (перелинковка для SEO). Сбой — пустой список, секция скрыта.
 	const featuredList = (): Promise<SchemaCollection[]> =>
 		getFeaturedCollections(publicApi(fetch, url)).catch(() => []);
-	const othersOf = (list: SchemaCollection[], collection: SchemaCollectionDetail) =>
-		collection.is_featured ? rankSimilar(collection, list) : [];
+	// Сначала связи, заданные админом (поле related детали, иначе GET /related); пусто — ранжируем сами.
+	const othersOf = async (
+		listing: Promise<SchemaCollection[]>,
+		collection: SchemaCollectionDetail,
+		client: Parameters<typeof getRelatedCollections>[0]
+	): Promise<SchemaCollection[]> => {
+		if (!collection.is_featured) return [];
+		const related: SchemaCollection[] | undefined = (collection as { related?: SchemaCollection[] })
+			.related;
+		const manual = related ?? (await getRelatedCollections(client, collection.id).catch(() => []));
+		if (manual.length) return manual;
+		return rankSimilar(collection, await listing);
+	};
 
 	if (!isUuid(params.id)) {
 		const client = browser ? api : publicApi(fetch, url);
@@ -54,7 +66,7 @@ export const load: PageLoad = async ({ fetch, url, params, setHeaders }) => {
 		}
 		if (res.slug && res.slug !== params.id) redirect(301, buildFeaturedUrl(res));
 		cacheFeatured(res);
-		return { collection: res, others: othersOf(await listing, res) };
+		return { collection: res, others: await othersOf(listing, res, client) };
 	}
 
 	const path = { id: params.id };
@@ -65,7 +77,9 @@ export const load: PageLoad = async ({ fetch, url, params, setHeaders }) => {
 			NOT_FOUND
 		);
 		if (collection.is_featured && collection.slug) redirect(301, buildFeaturedUrl(collection));
-		const others = collection.is_featured ? othersOf(await featuredList(), collection) : [];
+		const others = collection.is_featured
+			? await othersOf(featuredList(), collection, publicApi(fetch, url))
+			: [];
 		return { collection, others };
 	}
 	try {
@@ -74,7 +88,9 @@ export const load: PageLoad = async ({ fetch, url, params, setHeaders }) => {
 		);
 		if (collection.is_featured && collection.slug) redirect(301, buildFeaturedUrl(collection));
 		cacheFeatured(collection);
-		const others = collection.is_featured ? othersOf(await featuredList(), collection) : [];
+		const others = collection.is_featured
+			? await othersOf(featuredList(), collection, publicApi(fetch, url))
+			: [];
 		return { collection, others };
 	} catch (e) {
 		if (e instanceof ApiError && e.status === 404) return { collection: null, others: [] };
