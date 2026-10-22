@@ -58,6 +58,8 @@
 	let mode = $state<'view' | 'edit' | 'items' | 'delete'>('view');
 	// Админ: панель «Оформление» (обои, обложка, тема, адрес) особой коллекции.
 	let styling = $state(false);
+	// Админ: панель «Связанные подборки» (ручные связи для блока «Похожие подборки»).
+	let linking = $state(false);
 	let error = $state('');
 
 	async function update(form: { title: string; description: string | null; is_public: boolean }) {
@@ -135,11 +137,21 @@
 					onclick={() => (mode = mode === 'items' ? 'view' : 'items')}
 					>{mode === 'items' ? 'Готово' : 'Изменить содержимое'}</button
 				>
-				{#if (collection.is_featured || collection.is_public) && session.user?.role === 'admin'}
+				{#if collection.is_featured && session.user?.role === 'admin'}
 					<button
 						class={['btn btn-sm', styling ? 'btn-primary' : '']}
 						aria-expanded={styling}
 						onclick={() => (styling = !styling)}>Оформление</button
+					>
+				{/if}
+				{#if collection.is_public && session.user?.role === 'admin'}
+					<button
+						class={['btn btn-sm', linking ? 'btn-primary' : '']}
+						aria-expanded={linking}
+						onclick={() => (linking = !linking)}
+						>Связанные подборки{collection.related?.length
+							? ` (${collection.related.length})`
+							: ''}</button
 					>
 				{/if}
 				{#if !own}
@@ -162,21 +174,18 @@
 				{/if}
 			</div>
 			{#if error}<div class="mt-2"><Alert>{error}</Alert></div>{/if}
-			{#if styling && (collection.is_featured || collection.is_public)}
+			{#if linking && collection.is_public}
+				<div class="mt-3 max-w-2xl rounded-box bg-base-200 p-4 ring-1 ring-base-300">
+					<p class="mb-2 text-sm font-semibold">Связанные подборки</p>
+					<RelatedCollectionsEditor collectionId={collection.id} onchange={() => invalidateAll()} />
+				</div>
+			{/if}
+			{#if styling && collection.is_featured}
 				<div class="mt-3 max-w-2xl space-y-4 rounded-box bg-base-200 p-4 ring-1 ring-base-300">
 					{#if collection.is_featured}
 						<div>
 							<p class="mb-2 text-sm font-semibold">Оформление: обои, обложка, тема</p>
 							<FeaturedAdminControls {collection} onchange={() => invalidateAll()} />
-						</div>
-					{/if}
-					{#if collection.is_public}
-						<div>
-							<p class="mb-2 text-sm font-semibold">Связанные подборки</p>
-							<RelatedCollectionsEditor
-								collectionId={collection.id}
-								onchange={() => invalidateAll()}
-							/>
 						</div>
 					{/if}
 				</div>
