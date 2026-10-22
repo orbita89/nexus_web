@@ -9,11 +9,12 @@
 		adminRemoveRelated,
 		adminSetRelated,
 		getRelatedCollections,
-		listPublicCollections,
 		moveItem,
 		relatedAdminError
 	} from '#lib/social/collections.ts';
 	import { buildFeaturedUrl } from '#lib/social/featured.ts';
+	import { CollectionSearch } from '#lib/social/collection-search.svelte.ts';
+	import { onDestroy } from 'svelte';
 
 	// Админ: «Похожие подборки», заданные вручную. Порядок — PUT {ids} целиком,
 	// удаление — DELETE, добавление — PUT одной связи (и, по галочке, обратной).
@@ -91,42 +92,19 @@
 		});
 	}
 
-	// Поиска коллекций в API нет — листаем публичные страницами и фильтруем по названию.
-	const PAGE = 20;
-	let browse = $state<SchemaCollection[]>([]);
-	let browseMore = $state(false);
-	let browseLoading = $state(false);
+	// Поиск публичных коллекций на сервере; текущая и уже связанные скрыты.
+	const search = new CollectionSearch({ public: true, limit: 20 });
+	onDestroy(() => search.destroy());
 	let picking = $state(false);
-	let query = $state('');
-
-	async function loadBrowse() {
-		browseLoading = true;
-		try {
-			const items = await listPublicCollections(api, browse.length, PAGE);
-			const seen = new Set(browse.map((c) => c.id));
-			browse = [...browse, ...items.filter((c) => !seen.has(c.id))];
-			browseMore = items.length === PAGE;
-		} catch (e) {
-			fail(e);
-		} finally {
-			browseLoading = false;
-		}
-	}
 
 	function openPicker() {
 		picking = !picking;
-		if (picking && !browse.length) void loadBrowse();
+		if (picking && !search.loaded && !search.loading) void search.reload();
 	}
 
 	const candidates = $derived.by(() => {
-		const q = query.trim().toLowerCase();
 		const linked = new Set(list.map((c) => c.id));
-		return browse.filter(
-			(c) =>
-				c.id !== collectionId &&
-				!linked.has(c.id) &&
-				(!q || c.title.toLowerCase().includes(q) || c.owner.username.toLowerCase().includes(q))
-		);
+		return search.items.filter((c) => c.id !== collectionId && !linked.has(c.id));
 	});
 	const full = $derived(list.length >= RELATED_MAX);
 </script>
@@ -208,15 +186,19 @@
 		<input
 			class="input w-full max-w-sm input-sm"
 			type="search"
-			placeholder="Название или @автор среди загруженных"
+			placeholder="Название коллекции"
 			aria-label="Найти публичную коллекцию"
-			bind:value={query}
+			maxlength="200"
+			value={search.query}
+			oninput={(e) => search.setQuery(e.currentTarget.value)}
 		/>
-		<ul class="max-h-64 space-y-1 overflow-y-auto">
+		{#if search.error}<p class="text-xs text-error">{search.error}</p>{/if}
+		<ul class="max-h-64 space-y-1 overflow-y-auto" aria-busy={search.loading}>
 			{#each candidates as c (c.id)}
 				<li class="flex items-center gap-2 text-sm">
 					<span class="min-w-0 flex-1 truncate"
-						>{c.title} <span class="text-xs text-base-content/60">@{c.owner.username}</span></span
+						>{c.title} <span class="text-xs text-base-content/60">@{c.owner.username}</span>
+						{#if c.is_featured}<span class="badge badge-xs badge-primary">Особая</span>{/if}</span
 					>
 					<button
 						type="button"
@@ -227,13 +209,13 @@
 				</li>
 			{/each}
 		</ul>
-		{#if browseLoading}
+		{#if search.loading}
 			<span class="loading loading-sm loading-spinner"></span>
-		{:else if browseMore}
-			<button type="button" class="btn btn-ghost btn-xs" onclick={loadBrowse}
-				>Загрузить ещё коллекции</button
+		{:else if search.more}
+			<button type="button" class="btn btn-ghost btn-xs" onclick={() => search.loadMore()}
+				>Показать ещё</button
 			>
-		{:else if !candidates.length}
+		{:else if search.loaded && !candidates.length}
 			<p class="text-xs text-base-content/60">Ничего не найдено.</p>
 		{/if}
 	{/if}

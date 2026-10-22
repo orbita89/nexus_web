@@ -10,11 +10,12 @@
 		adminUnsetFeatured,
 		featuredAdminError,
 		getFeaturedCollections,
-		listPublicCollections,
 		moveItem
 	} from '#lib/social/collections.ts';
 	import { buildFeaturedUrl } from '#lib/social/featured.ts';
 	import { slugError, slugify } from '#lib/social/slug.ts';
+	import { CollectionSearch } from '#lib/social/collection-search.svelte.ts';
+	import { onDestroy } from 'svelte';
 
 	// Подборки (особые коллекции): порядок на главной. Каждое изменение — отдельный PUT с position.
 	let list = $state<SchemaCollection[]>([]);
@@ -67,24 +68,22 @@
 		try {
 			await adminUnsetFeatured(api, c.id);
 			list = list.filter((x) => x.id !== c.id);
-			browse = browse.map((x) =>
-				x.id === c.id
-					? {
-							...x,
-							is_featured: false,
-							featured_position: null,
-							slug: null,
-							wallpaper_url: null,
-							cover_url: null,
-							theme: null,
-							wallpaper_mode: 'header',
-							wallpaper_dim: null,
-							wallpaper_blur: 0,
-							effects: true,
-							accent_color: null
-						}
-					: x
-			);
+			const prev = search.items.find((x) => x.id === c.id);
+			if (prev)
+				search.replace({
+					...prev,
+					is_featured: false,
+					featured_position: null,
+					slug: null,
+					wallpaper_url: null,
+					cover_url: null,
+					theme: null,
+					wallpaper_mode: 'header',
+					wallpaper_dim: null,
+					wallpaper_blur: 0,
+					effects: true,
+					accent_color: null
+				});
 		} catch (e) {
 			error = featuredAdminError(e, errorMessage);
 		} finally {
@@ -108,34 +107,17 @@
 		}
 	}
 
-	// Публичные коллекции (новые первыми): отсюда можно сделать коллекцию особой.
-	// Поиска по коллекциям в API нет — листаем страницами.
-	const PAGE = 20;
-	let browse = $state<SchemaCollection[]>([]);
-	let browseMore = $state(false);
-	let browseLoading = $state(false);
-
-	async function loadBrowse() {
-		browseLoading = true;
-		try {
-			const items = await listPublicCollections(api, browse.length, PAGE);
-			const seen = new Set(browse.map((c) => c.id));
-			browse = [...browse, ...items.filter((c) => !seen.has(c.id))];
-			browseMore = items.length === PAGE;
-		} catch (e) {
-			error = featuredAdminError(e, errorMessage);
-		} finally {
-			browseLoading = false;
-		}
-	}
-	void loadBrowse();
+	// Публичные коллекции: поиск на сервере; отсюда можно сделать коллекцию особой.
+	const search = new CollectionSearch({ public: true, limit: 20 });
+	onDestroy(() => search.destroy());
+	void search.reload();
 
 	async function makeFeatured(c: SchemaCollection) {
 		busy = true;
 		error = '';
 		try {
 			const updated = await adminSetFeatured(api, c.id);
-			browse = browse.map((x) => (x.id === c.id ? updated : x));
+			search.replace(updated);
 			await load();
 		} catch (e) {
 			error = featuredAdminError(e, errorMessage);
@@ -270,9 +252,18 @@
 {/if}
 
 <h2 class="mt-8 mb-2 text-xl font-bold">Публичные коллекции</h2>
-<p class="mb-3 text-sm text-base-content/70">Новые первыми.</p>
-<ul class="space-y-2">
-	{#each browse as c (c.id)}
+<input
+	class="input mb-3 w-full max-w-sm input-sm"
+	type="search"
+	placeholder="Название коллекции"
+	aria-label="Найти публичную коллекцию"
+	maxlength="200"
+	value={search.query}
+	oninput={(e) => search.setQuery(e.currentTarget.value)}
+/>
+{#if search.error}<div class="mb-3"><Alert>{search.error}</Alert></div>{/if}
+<ul class="space-y-2" aria-busy={search.loading}>
+	{#each search.items as c (c.id)}
 		<li class="flex items-center gap-3 rounded-box bg-base-100 p-3 ring-1 ring-base-300">
 			<div class="min-w-0 flex-1">
 				<a href={buildFeaturedUrl(c)} class="block truncate font-semibold hover:text-primary"
@@ -299,10 +290,14 @@
 		</li>
 	{/each}
 </ul>
-{#if browseLoading}
+{#if search.loading}
 	<span class="loading mt-3 loading-spinner"></span>
-{:else if browseMore}
-	<button type="button" class="btn mt-3 btn-sm" onclick={loadBrowse}>Ещё</button>
-{:else if !browse.length}
-	<p class="text-base-content/60">Публичных коллекций нет.</p>
+{:else if search.more}
+	<button type="button" class="btn mt-3 btn-sm" onclick={() => search.loadMore()}
+		>Показать ещё</button
+	>
+{:else if search.loaded && !search.items.length}
+	<p class="text-base-content/60">
+		{search.query.trim() ? 'Ничего не найдено.' : 'Публичных коллекций нет.'}
+	</p>
 {/if}

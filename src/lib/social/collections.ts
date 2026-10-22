@@ -10,6 +10,7 @@ import type {
 	SchemaCollectionDetail,
 	SchemaCollectionItem,
 	SchemaFeatureCollection,
+	SchemaPageCollection,
 	SchemaPageCollectionComment,
 	SchemaPutCollectionItem
 } from '#lib/api/generated/social.ts';
@@ -52,6 +53,39 @@ export function listPublicCollections(
 	return unwrap(
 		api.social.GET('/api/v1/social/collections', { params: { query: { offset, limit } } })
 	).then((page) => page.items);
+}
+
+export interface AdminCollectionSearch {
+	/** Подстрока названия (до 200 символов); пусто — все. */
+	q?: string;
+	public?: boolean;
+	featured?: boolean;
+	limit?: number;
+	offset?: number;
+}
+
+/**
+ * Админ: поиск любых коллекций (в том числе приватных) по названию. Сверху точное совпадение,
+ * затем начинающиеся с запроса, затем больше произведений и новее. 403 — не админ,
+ * 400 validation (field q) — запрос длиннее 200 символов.
+ */
+export function adminSearchCollections(
+	api: Api,
+	opts: AdminCollectionSearch = {}
+): Promise<SchemaPageCollection> {
+	const query: AdminCollectionSearch = { ...opts };
+	if (!query.q?.trim()) delete query.q;
+	else query.q = query.q.trim();
+	return unwrap(api.social.GET('/api/v1/social/admin/collections', { params: { query } }));
+}
+
+/** Текст ошибки поиска коллекций админом. */
+export function adminSearchError(e: unknown, fallback: (e: unknown) => string): string {
+	if (e instanceof ApiError) {
+		if (e.status === 403) return 'Недостаточно прав.';
+		if (e.status === 400 && e.field === 'q') return 'Слишком длинный запрос.';
+	}
+	return fallback(e);
 }
 
 /** Особая коллекция по slug: сама коллекция, либо куда перенаправить. 404 — ApiError. */

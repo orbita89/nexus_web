@@ -56,6 +56,27 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/social/admin/collections': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Поиск любых коллекций (в том числе приватных) по подстроке названия: редактор связанных
+		 *     подборок, «Подборки». Сверху — точное совпадение названия, затем начинающиеся с запроса, затем
+		 *     больше произведений, новее.
+		 */
+		get: operations['admin_search_collections'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/social/admin/collections/{id}': {
 		parameters: {
 			query?: never;
@@ -2847,6 +2868,64 @@ export interface operations {
 			};
 			/** @description Нет или уже удалён */
 			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	admin_search_collections: {
+		parameters: {
+			query?: {
+				/** @description Подстрока названия, без учёта регистра, до 200 символов; пусто — все. */
+				q?: string;
+				/** @description Только публичные (`true`) или только приватные (`false`). */
+				public?: boolean;
+				/** @description Только особые (`true`) или только обычные (`false`). */
+				featured?: boolean;
+				/** @description 1–100, по умолчанию 20. */
+				limit?: number;
+				/** @description С 0. */
+				offset?: number;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Страница коллекций */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Page_Collection'];
+				};
+			};
+			/** @description `q` длиннее 200 (`validation`, `field: q`), неверный параметр */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
 				headers: {
 					[name: string]: unknown;
 				};
