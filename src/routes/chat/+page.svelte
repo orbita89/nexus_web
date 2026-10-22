@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { errorMessage, unwrap } from '#lib/api/errors.ts';
+	import { invalidateAll } from '$app/navigation';
+	import { ApiError, errorMessage, unwrap } from '#lib/api/errors.ts';
+	import { slugError, slugify } from '#lib/admin/slug.ts';
 	import type { SchemaCustomRoom } from '#lib/api/generated/social.ts';
 	import { api, session } from '#lib/auth/session.svelte.ts';
 	import { chat } from '#lib/chat/chat.svelte.ts';
@@ -40,6 +42,51 @@
 		rooms.some((r) => (r as { messages_24h?: number }).messages_24h !== undefined)
 	);
 
+	// Своя комната: создаёт любой вошедший. slug подставляется из названия, но правится руками —
+	// он навсегда, это адрес канала room:<slug>.
+	let creating = $state(false);
+	let draft = $state({ title: '', slug: '', description: '' });
+	let slugTouched = $state(false);
+	let createError = $state('');
+	let saving = $state(false);
+
+	function invalid() {
+		const title = draft.title.trim();
+		if (!title) return 'Введите название.';
+		if (title.length > 100) return 'Название — не длиннее 100 символов.';
+		if (draft.description.trim().length > 500) return 'Описание — не длиннее 500 символов.';
+		if (draft.slug.trim().length > 80) return 'slug — не длиннее 80 символов.';
+		return slugError(draft.slug.trim()) ?? '';
+	}
+
+	async function create(event: SubmitEvent) {
+		event.preventDefault();
+		createError = invalid();
+		if (createError) return;
+		const body = {
+			title: draft.title.trim(),
+			slug: draft.slug.trim(),
+			description: draft.description.trim() || null
+		};
+		saving = true;
+		try {
+			const room = await unwrap(
+				api.social.POST('/api/v1/social/chat/rooms' as '/api/v1/social/admin/chat/rooms', { body })
+			);
+			draft = { title: '', slug: '', description: '' };
+			slugTouched = false;
+			creating = false;
+			await invalidateAll();
+			void chat.loadChats();
+			chat.open({ room: `room:${room.slug}`, title: room.title, href: '/chat', image: null });
+		} catch (e) {
+			createError =
+				e instanceof ApiError && e.status === 409 ? 'Такой slug уже занят.' : errorMessage(e);
+		} finally {
+			saving = false;
+		}
+	}
+
 	/** Вступил ли: joined из каталога, после «Вступить / Выйти» — локально. */
 	const toggled = $state<Record<string, boolean>>({});
 	const member = (slug: string) =>
@@ -70,10 +117,72 @@
 	description="Общие комнаты чата Nexus: обсуждайте фильмы, книги и игры."
 />
 
-<h1 class="mb-2 text-3xl font-black sm:text-4xl">Комнаты</h1>
-<p class="mb-8 text-base-content/60">
-	Общие чаты Nexus. Чаты фильмов, людей и тем открываются кнопкой «Открыть чат» на их страницах.
+<div class="mb-2 flex flex-wrap items-center gap-3">
+	<h1 class="text-3xl font-black sm:text-4xl">Комнаты</h1>
+	{#if session.status === 'authed'}
+		<button
+			class="btn ml-auto rounded-full btn-primary btn-sm"
+			aria-expanded={creating}
+			onclick={() => (creating = !creating)}>{creating ? 'Отмена' : 'Создать комнату'}</button
+		>
+	{:else if session.status === 'guest'}
+		<a href={loginUrl(page.url)} class="btn ml-auto rounded-full btn-sm">Войти, чтобы создать</a>
+	{/if}
+</div>
+<p class="mb-6 text-base-content/60">
+	Общие чаты Nexus. Комнату может завести любой — она сразу появится здесь. Чаты фильмов, людей и
+	тем открываются кнопкой «Открыть чат» на их страницах.
 </p>
+
+{#if creating}
+	<form
+		class="mb-8 flex flex-col gap-3 rounded-box bg-base-200 p-4 ring-1 ring-base-300"
+		onsubmit={create}
+		aria-label="Новая комната"
+	>
+		<div class="flex flex-wrap gap-3">
+			<label class="floating-label flex-1">
+				<span>Название</span>
+				<input
+					class="input w-full"
+					placeholder="Классическая литература"
+					maxlength="100"
+					bind:value={draft.title}
+					oninput={() => !slugTouched && (draft.slug = slugify(draft.title).slice(0, 80))}
+				/>
+			</label>
+			<label class="floating-label flex-1">
+				<span>Адрес (slug)</span>
+				<input
+					class="input w-full"
+					placeholder="classic-literature"
+					maxlength="80"
+					bind:value={draft.slug}
+					oninput={() => (slugTouched = true)}
+				/>
+			</label>
+		</div>
+		<label class="floating-label">
+			<span>Описание — о чём комната</span>
+			<input
+				class="input w-full"
+				placeholder="О чём комната"
+				maxlength="500"
+				bind:value={draft.description}
+			/>
+		</label>
+		<p class="text-xs text-base-content/50">
+			Адрес потом не изменить — это постоянная ссылка комнаты. Вы станете её участником сразу.
+		</p>
+		{#if createError}<p role="alert" class="text-sm text-error">{createError}</p>{/if}
+		<div class="flex gap-2">
+			<button class="btn btn-primary btn-sm" disabled={saving}>Создать</button>
+			<button type="button" class="btn btn-ghost btn-sm" onclick={() => (creating = false)}
+				>Отмена</button
+			>
+		</div>
+	</form>
+{/if}
 
 {#if hasActivity}
 	<div class="mb-6 flex gap-2" role="group" aria-label="Порядок комнат">
