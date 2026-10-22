@@ -241,13 +241,19 @@
 		{:else if chat.messages.length}
 			<p class="py-2 text-center text-xs text-base-content/40">Начало чата</p>
 		{/if}
-		{#if chat.historyError}
+		{#if chat.missing}
+			<p class="px-4 py-10 text-center text-sm text-base-content/50">
+				{isSystemRoom(meta.room)
+					? 'Этот чат ещё не создан. Администратор заводит его в админке чата.'
+					: 'Чат не найден — возможно, его удалили.'}
+			</p>
+		{:else if chat.historyError}
 			<p role="alert" class="px-3 py-2 text-sm text-error">
 				{chat.historyError}
 				<button class="link" onclick={() => chat.loadHistory()}>Повторить</button>
 			</p>
 		{/if}
-		{#if !chat.historyLoading && !chat.historyError && !chat.messages.length}
+		{#if !chat.historyLoading && !chat.historyError && !chat.missing && !chat.messages.length}
 			<p class="px-4 py-10 text-center text-sm text-base-content/50">
 				Сообщений пока нет — начните разговор.
 			</p>
@@ -266,7 +272,9 @@
 		{/each}
 	</div>
 
-	{#if session.status === 'authed'}
+	{#if chat.missing}
+		<!-- Писать некуда: комнаты нет. -->
+	{:else if session.status === 'authed'}
 		<form
 			class="border-t border-base-300 p-2"
 			onsubmit={(e) => {

@@ -14,7 +14,7 @@ import type {
 	SchemaCustomRoom,
 	SchemaUserRef
 } from '#lib/api/generated/social.ts';
-import { errorMessage, unwrap } from '#lib/api/errors.ts';
+import { ApiError, errorMessage, unwrap } from '#lib/api/errors.ts';
 import { api, guestApi, session } from '#lib/auth/session.svelte.ts';
 import type { RealtimeEvent, ReplyMessage } from '#lib/realtime/client.ts';
 import { sendRealtime } from '#lib/realtime/realtime.svelte.ts';
@@ -31,10 +31,10 @@ import {
 
 export type Message = SchemaChatMessage;
 
-/** Вкладка панели: два системных чата и два списка — чаты интересов и комнаты. */
-export type Tab = 'general' | 'catalog' | 'mine' | 'rooms';
+/** Вкладка панели: два системных чата и список всего, где я состою. */
+export type Tab = 'general' | 'catalog' | 'chats';
 
-const TABS: Tab[] = ['general', 'catalog', 'mine', 'rooms'];
+const TABS: Tab[] = ['general', 'catalog', 'chats'];
 
 /** Сообщение в ленте; своё неотправленное — с client_id и состоянием. */
 export type Item = Message & {
@@ -95,6 +95,8 @@ class Chat {
 	nextBefore = $state<string | null>(null);
 	historyLoading = $state(false);
 	historyError = $state('');
+	/** Комнаты нет на бэкенде (404): системный чат ещё не заведён — об этом и пишем. */
+	missing = $state(false);
 	replyTo = $state<Message | null>(null);
 
 	toasts = $state<Toast[]>([]);
@@ -215,6 +217,7 @@ class Chat {
 			this.replyTo = null;
 			this.info = null;
 			this.readMark = null;
+			this.missing = false;
 			void this.loadInfo();
 			void this.loadHistory();
 		}
@@ -316,7 +319,11 @@ class Chat {
 			}
 			this.nextBefore = page.next_before ?? null;
 		} catch (e) {
-			if (this.current?.room === meta.room) this.historyError = errorMessage(e);
+			if (this.current?.room === meta.room) {
+				// 404 — комнаты просто нет: «Повторить» не поможет, нужен другой текст.
+				if (e instanceof ApiError && e.status === 404) this.missing = true;
+				else this.historyError = errorMessage(e);
+			}
 		} finally {
 			if (this.current?.room === meta.room) this.historyLoading = false;
 		}

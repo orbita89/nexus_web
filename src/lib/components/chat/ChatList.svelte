@@ -14,18 +14,16 @@
 	import { loginUrl } from '#lib/utils/redirect.ts';
 	import RoomIcon from './RoomIcon.svelte';
 
-	// Два списка панели: «Мои» — чаты интересов (фильмы, люди, темы), «Комнаты» — комнаты
-	// Nexus и живые из каталога. Общий чат и чаты разделов — отдельные вкладки, они не списки.
-	let { mine = false }: { mine?: boolean } = $props();
-
+	// «Мои чаты» — единственный список панели: всё, где я состою, вперемешку — чаты фильмов,
+	// людей и тем из интересов и комнаты, в которые я вступил. Ниже — живые комнаты, куда
+	// можно зайти. Общий чат и чаты разделов — отдельные вкладки, они не списки.
 	let query = $state('');
 
-	const search = $derived(mine ? 'Найти чат' : 'Найти комнату');
 	const matches = (title: string) => title.toLowerCase().includes(query.trim().toLowerCase());
 
 	const rows = $derived(
 		(chat.chats ?? [])
-			.filter((c) => (mine ? c.kind !== 'room' : c.kind === 'room' && !isSystemRoom(c.room)))
+			.filter((c) => !isSystemRoom(c.room))
 			.map((c) => ({ chat: c, meta: roomMeta(c) }))
 			.filter(({ meta }) => matches(meta.title))
 	);
@@ -33,15 +31,13 @@
 	// Куда ещё можно зайти: активные комнаты, в которых я не состою.
 	$effect(() => {
 		void chat.chats;
-		if (!mine) void chat.loadSuggested();
+		void chat.loadSuggested();
 	});
 	const suggested = $derived(
-		mine
-			? []
-			: (chat.suggested ?? [])
-					.filter((r) => !isSystemRoom(`room:${r.slug}`))
-					.filter((r) => !rows.some(({ chat: c }) => c.custom?.slug === r.slug))
-					.filter((r) => matches(r.title))
+		(chat.suggested ?? [])
+			.filter((r) => !isSystemRoom(`room:${r.slug}`))
+			.filter((r) => !rows.some(({ chat: c }) => c.custom?.slug === r.slug))
+			.filter((r) => matches(r.title))
 	);
 
 	const roomMetaOf = (room: { slug: string; title: string }) => ({
@@ -55,7 +51,7 @@
 <div class="flex min-h-0 flex-1 flex-col">
 	<div class="px-4 pt-2">
 		<label class="input w-full input-sm">
-			<input type="search" placeholder={search} bind:value={query} aria-label={search} />
+			<input type="search" placeholder="Найти чат" bind:value={query} aria-label="Найти чат" />
 			<svg
 				class="size-4 opacity-50"
 				viewBox="0 0 24 24"
@@ -86,7 +82,7 @@
 			<p
 				class="px-2 pt-2 pb-1 text-[0.65rem] font-bold tracking-widest text-base-content/50 uppercase"
 			>
-				{mine ? 'Мои чаты' : 'Мои комнаты'}&nbsp;({rows.length})
+				Мои чаты&nbsp;({rows.length})
 			</p>
 			<ul>
 				{#each rows as { chat: c, meta } (c.room)}
@@ -154,15 +150,7 @@
 			</ul>
 		{/if}
 
-		{#if mine}
-			{#if !rows.length && chat.chats}
-				<p class="px-2 py-6 text-sm text-base-content/60">
-					{query.trim()
-						? 'Ничего не нашлось.'
-						: 'Добавьте фильмы, людей или темы в интересы — их чаты появятся здесь.'}
-				</p>
-			{/if}
-		{:else if chat.suggested === null}
+		{#if chat.suggested === null}
 			{#each [1, 2] as i (i)}
 				<div class="flex items-center gap-3 px-2 py-2">
 					<span class="size-10 skeleton rounded-full"></span>
@@ -197,21 +185,21 @@
 			</ul>
 		{:else if !rows.length}
 			<p class="px-2 py-6 text-sm text-base-content/60">
-				{query.trim() ? 'Ничего не нашлось.' : 'Комнат пока нет.'}
+				{query.trim()
+					? 'Ничего не нашлось.'
+					: 'Добавьте фильмы, людей или темы в интересы, вступите в комнату — чаты появятся здесь.'}
 			</p>
 		{/if}
 
 		{#if session.status === 'guest'}
 			<p class="px-2 py-4 text-xs text-base-content/50">
-				<a href={loginUrl(page.url)} class="link link-primary">Войдите</a>, чтобы
-				{mine ? 'видеть чаты своих интересов' : 'вступать в комнаты'} и писать.
+				<a href={loginUrl(page.url)} class="link link-primary">Войдите</a>, чтобы видеть свои чаты,
+				вступать в комнаты и писать.
 			</p>
 		{/if}
 	</div>
 
-	{#if !mine}
-		<p class="border-t border-base-300 px-4 py-3 text-xs text-base-content/60">
-			<a href="/chat" class="link link-primary">Каталог комнат</a> — все комнаты Nexus.
-		</p>
-	{/if}
+	<p class="border-t border-base-300 px-4 py-3 text-xs text-base-content/60">
+		<a href="/chat" class="link link-primary">Каталог комнат</a> — все комнаты Nexus.
+	</p>
 </div>

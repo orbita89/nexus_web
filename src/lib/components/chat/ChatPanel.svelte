@@ -43,8 +43,7 @@
 	const tabs: { tab: Tab; title: string }[] = [
 		{ tab: 'general', title: 'Общий' },
 		{ tab: 'catalog', title: 'Каталог' },
-		{ tab: 'mine', title: 'Мои' },
-		{ tab: 'rooms', title: 'Комнаты' }
+		{ tab: 'chats', title: 'Мои чаты' }
 	];
 </script>
 
@@ -157,7 +156,7 @@
 		{#if chat.current}
 			<ChatRoom meta={chat.current} />
 		{:else}
-			<ChatList mine={chat.tab === 'mine'} />
+			<ChatList />
 		{/if}
 	</div>
 </aside>
