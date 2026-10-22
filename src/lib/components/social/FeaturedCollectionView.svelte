@@ -6,7 +6,9 @@
 	import {
 		COLLECTION_LIMITS,
 		collectionFormError,
-		featuredBadge
+		featuredBadge,
+		isSaved,
+		SAVES_SUPPORTED
 	} from '#lib/social/collections.ts';
 	import {
 		buildFeaturedUrl,
@@ -28,6 +30,7 @@
 	import CollectionBackdrop from '#lib/components/social/CollectionBackdrop.svelte';
 	import FeaturedCollectionCard from '#lib/components/social/FeaturedCollectionCard.svelte';
 	import ShareMenu from '#lib/components/social/ShareMenu.svelte';
+	import SaveCollectionButton from '#lib/components/social/SaveCollectionButton.svelte';
 	import Poster from '#lib/components/catalog/Poster.svelte';
 	import type { Snippet } from 'svelte';
 
@@ -195,6 +198,9 @@
 			<time datetime={collection.updated_at}>{reviewDate(collection.updated_at)}</time>
 		</span>
 		<ShareMenu url={canonical} title={shownTitle} compact />
+		{#if SAVES_SUPPORTED}
+			<SaveCollectionButton id={collection.id} saved={isSaved(collection)} />
+		{/if}
 		{@render editButton()}
 	</div>
 	{#if editing}
@@ -458,7 +464,7 @@
 		<p class="mx-auto max-w-4xl text-base-content/60">В подборке пока ничего нет.</p>
 	{/if}
 
-	<!-- Конец страницы: поделиться и другие подборки (обычные ссылки — перелинковка для SEO). -->
+	<!-- Конец страницы: поделиться и похожие подборки (обычные ссылки — перелинковка для SEO). -->
 	<footer class="mx-auto mt-10 max-w-4xl border-t border-base-content/10 pt-10">
 		<ShareMenu url={canonical} title={shownTitle} />
 	</footer>
@@ -470,10 +476,10 @@
 					class="flex items-center gap-2 text-xs tracking-wider text-base-content/60 uppercase"
 				>
 					<span class="h-px w-6 bg-(--page-accent)" aria-hidden="true"></span>
-					Другие подборки
+					Похожие подборки
 				</h2>
 			{/if}
-			<a href="/collections/featured" class="ml-auto link text-sm link-hover">Все подборки →</a>
+			<a href="/collections/featured" class="ml-auto link text-xs link-hover">Все подборки →</a>
 		</div>
 		{#if others.length}
 			<!-- Телефон: горизонтальная прокрутка карточек; шире — сетка. -->

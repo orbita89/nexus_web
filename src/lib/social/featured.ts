@@ -77,3 +77,26 @@ export function truncate(text: string, limit = FEATURED_TEXT_LIMIT): string {
 	const space = cut.lastIndexOf(' ');
 	return `${(space > limit * 0.6 ? cut.slice(0, space) : cut).replace(/[\s.,;:—-]+$/, '')}…`;
 }
+
+/**
+ * «Похожие подборки», пока у бэкенда нет GET /collections/{id}/similar
+ * (docs/backend-tasks/collection-saves-similar.md): общие произведения из превью другой подборки
+ * с пунктами текущей ×3 + та же тема ×1. При равенстве — порядок API. Сама коллекция исключается.
+ */
+export function rankSimilar(
+	current: Pick<SchemaCollectionDetail, 'id' | 'theme' | 'items'>,
+	list: readonly SchemaCollection[],
+	limit = 6
+): SchemaCollection[] {
+	const ids = new Set(current.items.map((i) => i.entity.id));
+	return list
+		.filter((c) => c.id !== current.id)
+		.map((c, index) => {
+			const shared = c.preview.filter((e) => ids.has(e.id)).length;
+			const theme = current.theme && c.theme === current.theme ? 1 : 0;
+			return { c, index, score: shared * 3 + theme };
+		})
+		.sort((a, b) => b.score - a.score || a.index - b.index)
+		.slice(0, limit)
+		.map((x) => x.c);
+}

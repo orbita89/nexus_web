@@ -216,3 +216,28 @@ export function collectionTextError(e: unknown, fallback: (e: unknown) => string
 	}
 	return fallback(e);
 }
+
+// Избранные подборки («Добавить в избранное»).
+// TODO: бэкенд ещё не умеет — docs/backend-tasks/collection-saves-similar.md. После реализации:
+// перегенерировать типы, включить флаг, убрать приведения типов ниже и в SaveCollectionButton.
+export const SAVES_SUPPORTED = false;
+
+/** `is_saved` из планируемого API (для гостя и до реализации — false). */
+export function isSaved(collection: SchemaCollection): boolean {
+	return (collection as SchemaCollection & { is_saved?: boolean }).is_saved === true;
+}
+
+/** Нет в сгенерированных типах, пока бэкенд не добавил эндпоинт: свободно типизированный вызов. */
+type LooseCall = (
+	path: string,
+	init: { params: { path: { id: string } } }
+) => Promise<{ data?: unknown; error?: unknown; response: Response }>;
+type LooseSocial = { PUT: LooseCall; DELETE: LooseCall };
+
+/** PUT/DELETE /collections/{id}/save — идемпотентно, 204. */
+export function setCollectionSaved(api: Api, id: string, saved: boolean): Promise<unknown> {
+	const social = api.social as unknown as LooseSocial;
+	const path = '/api/v1/social/collections/{id}/save';
+	const init = { params: { path: { id } } };
+	return unwrap(saved ? social.PUT(path, init) : social.DELETE(path, init));
+}

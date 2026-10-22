@@ -11,7 +11,7 @@ import {
 	getFeaturedCollections,
 	isCollectionDetail
 } from '#lib/social/collections.ts';
-import { buildFeaturedUrl } from '#lib/social/featured.ts';
+import { buildFeaturedUrl, rankSimilar } from '#lib/social/featured.ts';
 import { isUuid } from '#lib/social/slug.ts';
 import type { PageLoad } from './$types';
 
@@ -32,11 +32,11 @@ export const load: PageLoad = async ({ fetch, url, params, setHeaders }) => {
 		}
 	};
 
-	// «Другие подборки» внизу особой коллекции (перелинковка для SEO). Сбой — пустой список, секция скрыта.
+	// «Похожие подборки» внизу особой коллекции (перелинковка для SEO). Сбой — пустой список, секция скрыта.
 	const featuredList = (): Promise<SchemaCollection[]> =>
 		getFeaturedCollections(publicApi(fetch, url)).catch(() => []);
 	const othersOf = (list: SchemaCollection[], collection: SchemaCollectionDetail) =>
-		collection.is_featured ? list.filter((c) => c.id !== collection.id).slice(0, 6) : [];
+		collection.is_featured ? rankSimilar(collection, list) : [];
 
 	if (!isUuid(params.id)) {
 		const client = browser ? api : publicApi(fetch, url);
