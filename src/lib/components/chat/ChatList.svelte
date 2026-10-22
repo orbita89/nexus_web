@@ -14,15 +14,18 @@
 	import { loginUrl } from '#lib/utils/redirect.ts';
 	import RoomIcon from './RoomIcon.svelte';
 
-	// Вкладка «Комнаты» — единственный список в панели: мои комнаты и живые из каталога.
-	// Общий чат и чаты разделов — отдельные вкладки, чат карточки — кнопка на самой карточке.
+	// Два списка панели: «Мои» — чаты интересов (фильмы, люди, темы), «Комнаты» — комнаты
+	// Nexus и живые из каталога. Общий чат и чаты разделов — отдельные вкладки, они не списки.
+	let { mine = false }: { mine?: boolean } = $props();
+
 	let query = $state('');
 
+	const search = $derived(mine ? 'Найти чат' : 'Найти комнату');
 	const matches = (title: string) => title.toLowerCase().includes(query.trim().toLowerCase());
 
-	const mine = $derived(
+	const rows = $derived(
 		(chat.chats ?? [])
-			.filter((c) => c.kind === 'room' && !isSystemRoom(c.room))
+			.filter((c) => (mine ? c.kind !== 'room' : c.kind === 'room' && !isSystemRoom(c.room)))
 			.map((c) => ({ chat: c, meta: roomMeta(c) }))
 			.filter(({ meta }) => matches(meta.title))
 	);
@@ -30,13 +33,15 @@
 	// Куда ещё можно зайти: активные комнаты, в которых я не состою.
 	$effect(() => {
 		void chat.chats;
-		void chat.loadSuggested();
+		if (!mine) void chat.loadSuggested();
 	});
 	const suggested = $derived(
-		(chat.suggested ?? [])
-			.filter((r) => !isSystemRoom(`room:${r.slug}`))
-			.filter((r) => !mine.some(({ chat: c }) => c.custom?.slug === r.slug))
-			.filter((r) => matches(r.title))
+		mine
+			? []
+			: (chat.suggested ?? [])
+					.filter((r) => !isSystemRoom(`room:${r.slug}`))
+					.filter((r) => !rows.some(({ chat: c }) => c.custom?.slug === r.slug))
+					.filter((r) => matches(r.title))
 	);
 
 	const roomMetaOf = (room: { slug: string; title: string }) => ({
@@ -50,12 +55,7 @@
 <div class="flex min-h-0 flex-1 flex-col">
 	<div class="px-4 pt-2">
 		<label class="input w-full input-sm">
-			<input
-				type="search"
-				placeholder="Найти комнату"
-				bind:value={query}
-				aria-label="Найти комнату"
-			/>
+			<input type="search" placeholder={search} bind:value={query} aria-label={search} />
 			<svg
 				class="size-4 opacity-50"
 				viewBox="0 0 24 24"
@@ -82,14 +82,14 @@
 					<span class="h-8 flex-1 skeleton"></span>
 				</div>
 			{/each}
-		{:else if mine.length}
+		{:else if rows.length}
 			<p
 				class="px-2 pt-2 pb-1 text-[0.65rem] font-bold tracking-widest text-base-content/50 uppercase"
 			>
-				Мои комнаты&nbsp;({mine.length})
+				{mine ? 'Мои чаты' : 'Мои комнаты'}&nbsp;({rows.length})
 			</p>
 			<ul>
-				{#each mine as { chat: c, meta } (c.room)}
+				{#each rows as { chat: c, meta } (c.room)}
 					{@const last = c.last_message}
 					<li>
 						<button
@@ -154,7 +154,15 @@
 			</ul>
 		{/if}
 
-		{#if chat.suggested === null}
+		{#if mine}
+			{#if !rows.length && chat.chats}
+				<p class="px-2 py-6 text-sm text-base-content/60">
+					{query.trim()
+						? 'Ничего не нашлось.'
+						: 'Добавьте фильмы, людей или темы в интересы — их чаты появятся здесь.'}
+				</p>
+			{/if}
+		{:else if chat.suggested === null}
 			{#each [1, 2] as i (i)}
 				<div class="flex items-center gap-3 px-2 py-2">
 					<span class="size-10 skeleton rounded-full"></span>
@@ -187,7 +195,7 @@
 					</li>
 				{/each}
 			</ul>
-		{:else if !mine.length}
+		{:else if !rows.length}
 			<p class="px-2 py-6 text-sm text-base-content/60">
 				{query.trim() ? 'Ничего не нашлось.' : 'Комнат пока нет.'}
 			</p>
@@ -195,13 +203,15 @@
 
 		{#if session.status === 'guest'}
 			<p class="px-2 py-4 text-xs text-base-content/50">
-				<a href={loginUrl(page.url)} class="link link-primary">Войдите</a>, чтобы вступать в комнаты
-				и писать.
+				<a href={loginUrl(page.url)} class="link link-primary">Войдите</a>, чтобы
+				{mine ? 'видеть чаты своих интересов' : 'вступать в комнаты'} и писать.
 			</p>
 		{/if}
 	</div>
 
-	<p class="border-t border-base-300 px-4 py-3 text-xs text-base-content/60">
-		<a href="/chat" class="link link-primary">Каталог комнат</a> — все комнаты Nexus.
-	</p>
+	{#if !mine}
+		<p class="border-t border-base-300 px-4 py-3 text-xs text-base-content/60">
+			<a href="/chat" class="link link-primary">Каталог комнат</a> — все комнаты Nexus.
+		</p>
+	{/if}
 </div>

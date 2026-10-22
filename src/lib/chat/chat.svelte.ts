@@ -31,8 +31,10 @@ import {
 
 export type Message = SchemaChatMessage;
 
-/** Вкладка панели: два системных чата и список комнат. */
-export type Tab = 'general' | 'catalog' | 'rooms';
+/** Вкладка панели: два системных чата и два списка — чаты интересов и комнаты. */
+export type Tab = 'general' | 'catalog' | 'mine' | 'rooms';
+
+const TABS: Tab[] = ['general', 'catalog', 'mine', 'rooms'];
 
 /** Сообщение в ленте; своё неотправленное — с client_id и состоянием. */
 export type Item = Message & {
@@ -158,7 +160,7 @@ class Chat {
 			const saved = JSON.parse(localStorage.getItem(STORAGE) ?? '{}');
 			this.collapsed = !!saved.collapsed;
 			this.topic = topicOf(saved.topic);
-			this.tab = saved.tab === 'catalog' || saved.tab === 'rooms' ? saved.tab : 'general';
+			this.tab = TABS.includes(saved.tab) ? saved.tab : 'general';
 			if (saved.open?.room) this.open(saved.open, { show: false });
 			else this.setTab(this.tab);
 		} catch {

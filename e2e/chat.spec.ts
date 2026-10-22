@@ -47,7 +47,10 @@ test('панель: вкладка — это сам чат, а не списо�
 	await chips.getByRole('button', { name: 'Книги' }).click();
 	await expect(panel.getByText('Войдите').or(panel.getByLabel('Сообщение'))).toBeVisible();
 
-	// Список остаётся только у комнат.
+	// Списки — только у «Моих» (чаты интересов) и «Комнат».
+	await panel.getByRole('tab', { name: 'Мои' }).click();
+	await expect(panel.getByLabel('Найти чат')).toBeVisible();
+
 	await panel.getByRole('tab', { name: 'Комнаты' }).click();
 	await expect(panel.getByLabel('Найти комнату')).toBeVisible();
 	await expect(panel.getByRole('link', { name: 'Каталог комнат' }).last()).toBeVisible();
