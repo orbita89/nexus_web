@@ -73,7 +73,7 @@
 {/snippet}
 
 <div class="inline-flex items-center gap-3">
-	<div class="dropdown">
+	<div class={['dropdown', !compact && 'dropdown-center']}>
 		<div
 			tabindex="0"
 			role="button"

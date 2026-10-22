@@ -265,7 +265,7 @@
 		{:else}
 			<header
 				class={[
-					'relative isolate mb-6 overflow-hidden rounded-box p-6 sm:p-10 xl:-mx-10',
+					'relative isolate z-40 mb-6 rounded-box p-6 sm:p-10 xl:-mx-10',
 					hmode === 'plain'
 						? 'bg-base-100/85 ring-1 ring-base-content/10 backdrop-blur-sm'
 						: look.kind === 'cover' && style.mode === 'page'
@@ -273,53 +273,56 @@
 							: ['bg-linear-to-br', look.theme.gradient]
 				]}
 			>
+				<!-- Фон шапки обрезается своим слоем, а не самой шапкой: иначе обрезалось бы меню «Поделиться». -->
 				{#if hmode === 'styled'}
-					{#if headerWallpaper && look.kind === 'cover'}
-						<img
-							src={look.url}
-							alt=""
-							class="absolute inset-0 -z-30 h-full w-full object-cover"
-							class:scale-105={style.blur > 0}
-							style:filter={style.blur ? `blur(${style.blur}px)` : null}
-							fetchpriority="high"
-						/>
-						<div
-							class="absolute inset-0 -z-20 bg-base-100"
-							style:opacity={(style.dim / 100) * 0.6}
-							aria-hidden="true"
-						></div>
-						<!-- Затемнение слева направо и снизу: текст читается на любых обоях. -->
-						<div
-							class="absolute inset-0 -z-20 bg-linear-to-r from-base-100 via-base-100/80 to-base-100/20"
-							aria-hidden="true"
-						></div>
-						<div
-							class="absolute inset-0 -z-20 bg-linear-to-t from-base-100/70 to-transparent"
-							aria-hidden="true"
-						></div>
-					{:else if look.kind === 'collage'}
-						<div
-							class="absolute inset-y-0 right-0 -z-20 hidden w-1/2 grid-cols-4 gap-2 p-4 opacity-25 sm:grid"
-							aria-hidden="true"
-						>
-							{#each collection.items.slice(0, 4) as item (item.entity.id)}
-								{#if item.entity.cover_url}
-									<img
-										src={item.entity.cover_url}
-										alt=""
-										class="h-full w-full rounded-box object-cover"
-									/>
-								{/if}
-							{/each}
-						</div>
-					{/if}
-					{#if look.theme.pattern && style.effects}
-						<div
-							class="pointer-events-none absolute inset-0 -z-10"
-							style:background={look.theme.pattern}
-							aria-hidden="true"
-						></div>
-					{/if}
+					<div class="absolute inset-0 -z-10 overflow-hidden rounded-box" aria-hidden="true">
+						{#if headerWallpaper && look.kind === 'cover'}
+							<img
+								src={look.url}
+								alt=""
+								class="absolute inset-0 -z-30 h-full w-full object-cover"
+								class:scale-105={style.blur > 0}
+								style:filter={style.blur ? `blur(${style.blur}px)` : null}
+								fetchpriority="high"
+							/>
+							<div
+								class="absolute inset-0 -z-20 bg-base-100"
+								style:opacity={(style.dim / 100) * 0.6}
+								aria-hidden="true"
+							></div>
+							<!-- Затемнение слева направо и снизу: текст читается на любых обоях. -->
+							<div
+								class="absolute inset-0 -z-20 bg-linear-to-r from-base-100 via-base-100/80 to-base-100/20"
+								aria-hidden="true"
+							></div>
+							<div
+								class="absolute inset-0 -z-20 bg-linear-to-t from-base-100/70 to-transparent"
+								aria-hidden="true"
+							></div>
+						{:else if look.kind === 'collage'}
+							<div
+								class="absolute inset-y-0 right-0 -z-20 hidden w-1/2 grid-cols-4 gap-2 p-4 opacity-25 sm:grid"
+								aria-hidden="true"
+							>
+								{#each collection.items.slice(0, 4) as item (item.entity.id)}
+									{#if item.entity.cover_url}
+										<img
+											src={item.entity.cover_url}
+											alt=""
+											class="h-full w-full rounded-box object-cover"
+										/>
+									{/if}
+								{/each}
+							</div>
+						{/if}
+						{#if look.theme.pattern && style.effects}
+							<div
+								class="pointer-events-none absolute inset-0 -z-10"
+								style:background={look.theme.pattern}
+								aria-hidden="true"
+							></div>
+						{/if}
+					</div>
 				{/if}
 				{@render heading()}
 			</header>
@@ -466,7 +469,7 @@
 	{/if}
 
 	<!-- Конец страницы: поделиться и похожие подборки (обычные ссылки — перелинковка для SEO). -->
-	<footer class="mx-auto mt-10 max-w-4xl border-t border-base-content/10 pt-10">
+	<footer class="mx-auto mt-10 flex max-w-4xl justify-center border-t border-base-content/10 pt-10">
 		<ShareMenu url={canonical} title={shownTitle} />
 	</footer>
 	<section class="mt-10" aria-labelledby={others.length ? `${uid}-others` : undefined}>
