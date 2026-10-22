@@ -73,7 +73,7 @@
 {/snippet}
 
 <div class="inline-flex items-center gap-3">
-	<div class={['dropdown', !compact && 'dropdown-center']}>
+	<div class={['dropdown', !compact && 'dropdown-center dropdown-top']}>
 		<div
 			tabindex="0"
 			role="button"
@@ -86,7 +86,9 @@
 		</div>
 		<ul
 			tabindex="-1"
-			class="menu dropdown-content z-40 mt-1 w-56 rounded-box bg-base-100 p-2 shadow-lg ring-1 ring-base-content/10"
+			class="{compact
+				? 'mt-1'
+				: 'mb-1'} menu dropdown-content z-40 w-56 rounded-box bg-base-100 p-2 shadow-lg ring-1 ring-base-content/10"
 		>
 			{#each targets as t (t.name)}
 				<li>
