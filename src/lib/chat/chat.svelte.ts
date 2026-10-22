@@ -7,16 +7,19 @@
 // - прочитано — chat.read с задержкой, когда последнее сообщение видно (seen);
 // - свёрнута ли панель и открытая комната — в localStorage.
 import { browser } from '$app/env';
+import type { SchemaEntityKind } from '#lib/api/generated/catalog.ts';
 import type {
 	SchemaChatMessage,
 	SchemaChatRoomInfo,
-	SchemaChatSummary
+	SchemaChatSummary,
+	SchemaCustomRoom,
+	SchemaUserRef
 } from '#lib/api/generated/social.ts';
 import { errorMessage, unwrap } from '#lib/api/errors.ts';
 import { api, guestApi, session } from '#lib/auth/session.svelte.ts';
 import type { RealtimeEvent, ReplyMessage } from '#lib/realtime/client.ts';
 import { sendRealtime } from '#lib/realtime/realtime.svelte.ts';
-import { roomMeta, sendError, splitRoom, type RoomKind, type RoomMeta } from './rooms.ts';
+import { isPinned, roomMeta, sendError, splitRoom, type RoomKind, type RoomMeta } from './rooms.ts';
 
 export type Message = SchemaChatMessage;
 
@@ -54,11 +57,17 @@ class Chat {
 	/** Лист открыт (мобильная ширина). */
 	sheet = $state(false);
 	filter = $state<RoomKind | null>(null);
+	/** Под-фильтр вкладки «Каталог»: фильмы, сериалы, книги, игры. */
+	entityKind = $state<SchemaEntityKind | null>(null);
 
 	/** null — гость или ещё не загружен. */
 	chats = $state<SchemaChatSummary[] | null>(null);
 	chatsLoading = $state(false);
 	chatsError = $state('');
+
+	/** Живые комнаты для пустого списка; null — ещё не запрашивали. */
+	suggested = $state<SchemaCustomRoom[] | null>(null);
+	#suggesting = false;
 
 	current = $state<RoomMeta | null>(null);
 	/** Состояние открытой комнаты для меня (GET /chat/{kind}/{slug}); me — null у гостя. */
@@ -81,6 +90,20 @@ class Chat {
 
 	get unread(): number {
 		return (this.chats ?? []).reduce((sum, c) => sum + (c.muted ? 0 : c.unread), 0);
+	}
+
+	/** Вкладка списка; под-фильтр по типу сущности живёт только внутри «Каталога». */
+	setFilter(kind: RoomKind | null) {
+		this.filter = kind;
+		if (kind !== 'entity') this.entityKind = null;
+	}
+
+	/** Кого подсказывать по «@»: те, чьи сообщения уже в ленте. */
+	get participants(): SchemaUserRef[] {
+		const seen: SchemaUserRef[] = [];
+		for (const m of this.messages)
+			if (m.author && !seen.some((u) => u.id === m.author!.id)) seen.push(m.author);
+		return seen;
 	}
 
 	summary(room: string) {
@@ -190,12 +213,32 @@ class Chat {
 		}
 		this.chatsLoading = true;
 		try {
-			this.chats = await unwrap(api.social.GET('/api/v1/social/chats'));
+			const chats = await unwrap(api.social.GET('/api/v1/social/chats'));
+			// Общий чат всегда первым; остальной порядок — бэкенда (свежие сверху).
+			this.chats = [...chats.filter(isPinned), ...chats.filter((c) => !isPinned(c))];
 			this.chatsError = '';
 		} catch (e) {
 			this.chatsError = errorMessage(e);
 		} finally {
 			this.chatsLoading = false;
+		}
+	}
+
+	/** Чатов нет — показываем, где сейчас говорят. Один запрос на вкладку. */
+	async loadSuggested() {
+		if (this.suggested || this.#suggesting) return;
+		this.#suggesting = true;
+		try {
+			const page = await unwrap(
+				guestApi.social.GET('/api/v1/social/chat/rooms', {
+					params: { query: { limit: 5, sort: 'active' } as { limit: number } }
+				})
+			);
+			this.suggested = page.items;
+		} catch {
+			this.suggested = [];
+		} finally {
+			this.#suggesting = false;
 		}
 	}
 

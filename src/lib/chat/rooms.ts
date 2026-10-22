@@ -1,13 +1,21 @@
 // Имена комнат чата и их подписи — без Svelte, чтобы проверялось unit-тестами.
 // Комната — строка `<kind>:<slug>`, одна и та же в WebSocket, событиях и GET /chats.
-import type { SchemaChatRoomInfo, SchemaChatSummary } from '#lib/api/generated/social.ts';
-import { refHref } from '#lib/catalog/kinds.ts';
+import type { SchemaEntityKind } from '#lib/api/generated/catalog.ts';
+import type {
+	SchemaChatRoomInfo,
+	SchemaChatSummary,
+	SchemaCustomRoom
+} from '#lib/api/generated/social.ts';
+import { KINDS, kindBySlug, refHref } from '#lib/catalog/kinds.ts';
 
 export type RoomKind = 'entity' | 'person' | 'tag' | 'room';
 
+/** Общий чат: заведён на бэкенде, у всех первым в списке. */
+export const GENERAL_ROOM = 'room:general';
+
 /** Группы панели «Мои чаты» по виду комнаты. */
 export const ROOM_KINDS: readonly { kind: RoomKind; title: string }[] = [
-	{ kind: 'entity', title: 'Фильмы и книги' },
+	{ kind: 'entity', title: 'Каталог' },
 	{ kind: 'person', title: 'Люди' },
 	{ kind: 'tag', title: 'Темы' },
 	{ kind: 'room', title: 'Комнаты' }
@@ -79,3 +87,69 @@ export function shortTime(iso: string, now = Date.now()): string {
 /** Имя автора сообщения. */
 export const authorName = (author: { username: string; display_name?: string | null }) =>
 	author.display_name || author.username;
+
+/** Системная комната (общий чат) — наверху списка. Пока бэкенд не отдаёт `system`, узнаём по слагу. */
+export function isPinned(chat: SchemaChatSummary): boolean {
+	const custom = chat.custom as (SchemaChatSummary['custom'] & { system?: boolean }) | null;
+	if (!custom) return false;
+	return custom.system === true || chat.room === GENERAL_ROOM;
+}
+
+/** Активность комнаты из полей каталога; null — тихо или бэкенд ещё не отдаёт счётчик. */
+export function activityLabel(
+	room: SchemaCustomRoom | { messages_24h?: number | null; last_message_at?: string | null },
+	now = Date.now()
+): string | null {
+	const { messages_24h, last_message_at } = room as {
+		messages_24h?: number | null;
+		last_message_at?: string | null;
+	};
+	const count = messages_24h ?? 0;
+	if (!count) return null;
+	const last = last_message_at ? Date.parse(last_message_at) : NaN;
+	if (!Number.isNaN(last) && now - last < 60 * 60 * 1000) return 'сейчас пишут';
+	return `${count} за сутки`;
+}
+
+/** Порядок каталога комнат: активные за сутки, по участникам, новые. */
+export const ROOM_SORTS = [
+	{ value: 'active', title: 'Активные' },
+	{ value: 'members', title: 'Популярные' },
+	{ value: 'new', title: 'Новые' }
+] as const;
+
+export type RoomSort = (typeof ROOM_SORTS)[number]['value'];
+
+export const roomSort = (value: string | null): RoomSort =>
+	ROOM_SORTS.find((s) => s.value === value)?.value ?? 'active';
+
+export type BodyPart = { t: 'text'; v: string } | { t: 'mention'; v: string };
+
+/** Имя пользователя в сообщении: @user. Границей считаем не букву, не цифру и не «_». */
+const MENTION = /(^|[^\w@])@([a-zA-Z0-9_]{1,32})/g;
+
+/** Тело сообщения как части: текст и упоминания — чтобы отрисовать ссылки без innerHTML. */
+export function parseBody(body: string): BodyPart[] {
+	const parts: BodyPart[] = [];
+	let at = 0;
+	for (const m of body.matchAll(MENTION)) {
+		const start = m.index + m[1].length;
+		if (start > at) parts.push({ t: 'text', v: body.slice(at, start) });
+		parts.push({ t: 'mention', v: m[2] });
+		at = start + m[2].length + 1;
+	}
+	if (at < body.length) parts.push({ t: 'text', v: body.slice(at) });
+	return parts;
+}
+
+/** Ссылка на карточку внутри сообщения: /films/dune-2021 — чтобы показать превью. */
+const ENTITY_LINK = new RegExp(
+	`(?:^|\\s|\\()(?:https?://[^\\s/]+)?/(${KINDS.map((k) => k.slug).join('|')})/([a-z0-9][a-z0-9-]*)`,
+	'i'
+);
+
+export function entityLink(body: string): { kind: SchemaEntityKind; slug: string } | null {
+	const m = ENTITY_LINK.exec(body);
+	const kind = m && kindBySlug(m[1].toLowerCase());
+	return kind ? { kind: kind.kind, slug: m[2].toLowerCase() } : null;
+}

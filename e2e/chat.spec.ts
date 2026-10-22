@@ -1,0 +1,47 @@
+import { expect, test } from '@playwright/test';
+import { registerAndSignIn } from './users';
+
+// Чат: каталог комнат → комната в панели → сообщение → профиль автора.
+// Один вход на файл (лимит входов на аккаунт), поэтому всё одним сценарием.
+test('комната: сообщение и переход в профиль автора', async ({ page, request }) => {
+	const { username } = await registerAndSignIn(page, request, 'chat');
+
+	await page.goto('/chat');
+	const room = page
+		.getByRole('listitem')
+		.filter({ has: page.getByRole('heading') })
+		.first();
+	test.skip((await room.count()) === 0, 'В базе нет ни одной комнаты');
+	const title = await room.getByRole('heading').innerText();
+	await room.getByRole('button', { name: 'Открыть' }).click();
+
+	const panel = page.getByRole('complementary', { name: 'Чат' });
+	await expect(panel.getByRole('link', { name: title }).or(panel.getByText(title))).toBeVisible();
+
+	const body = `e2e ${Date.now().toString(36)}`;
+	await panel.getByLabel('Сообщение').fill(body);
+	await panel.getByRole('button', { name: 'Отправить' }).click();
+	const sent = panel.getByText(body, { exact: true });
+	await expect(sent).toBeVisible();
+
+	// Имя автора — ссылка на его профиль; панель при переходе остаётся открытой.
+	await panel.getByRole('link', { name: username }).first().click();
+	await expect(page).toHaveURL(`/u/${username}`);
+	await expect(panel.getByLabel('Сообщение')).toBeVisible();
+});
+
+test('панель: вкладка «Каталог» и подсказка живых комнат гостю', async ({ page }) => {
+	await page.goto('/');
+	await page.getByRole('button', { name: 'Чат', exact: true }).first().click();
+
+	const panel = page.getByRole('complementary', { name: 'Чат' });
+	await panel.getByRole('tab', { name: 'Каталог' }).click();
+	// Под вкладкой «Каталог» — чипы по типам произведений.
+	const chips = panel.getByRole('group', { name: 'Тип произведения' });
+	await expect(chips.getByRole('button', { name: 'Фильмы' })).toBeVisible();
+	await expect(chips.getByRole('button', { name: 'Книги' })).toBeVisible();
+
+	// Гостю — ссылка на вход, а не пустой экран без выхода.
+	await panel.getByRole('tab', { name: 'Все' }).click();
+	await expect(panel.getByRole('link', { name: 'Каталог комнат' }).last()).toBeVisible();
+});

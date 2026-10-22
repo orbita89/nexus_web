@@ -2,8 +2,9 @@
 	import { errorMessage } from '#lib/api/errors.ts';
 	import { session } from '#lib/auth/session.svelte.ts';
 	import { chat, type Item, type Message } from '#lib/chat/chat.svelte.ts';
-	import { authorName, MAX_BODY, shortTime } from '#lib/chat/rooms.ts';
+	import { authorName, entityLink, MAX_BODY, parseBody, shortTime } from '#lib/chat/rooms.ts';
 	import Avatar from '#lib/components/Avatar.svelte';
+	import MessageCard from './MessageCard.svelte';
 
 	// Сообщение ленты: цитата ответа, «изменено», своё — правка и удаление, неотправленное —
 	// «повторить». Админ может удалить любое.
@@ -13,6 +14,10 @@
 	const canDelete = $derived(
 		!item.clientId && !item.deleted && (mine || session.user?.role === 'admin')
 	);
+	/** Карточка, на которую ссылается сообщение; если кроме ссылки ничего нет — текст не рисуем. */
+	const card = $derived(item.body && !item.deleted ? entityLink(item.body) : null);
+	const parts = $derived(parseBody(item.body ?? ''));
+	const onlyLink = $derived(!!card && parts.length === 1 && !!item.body?.trim().match(/^\S+$/));
 	let editing = $state(false);
 	let draft = $state('');
 	let error = $state('');
@@ -51,14 +56,24 @@
 </script>
 
 <article class={['group flex gap-2 px-3 py-1.5', { 'opacity-60': item.status === 'sending' }]}>
-	{#if item.author}
+	{#if item.author && !item.clientId}
+		<a href="/u/{item.author.username}" class="shrink-0" aria-label={authorName(item.author)}>
+			<Avatar user={item.author} />
+		</a>
+	{:else if item.author}
 		<Avatar user={item.author} />
 	{:else}
 		<span class="size-8 shrink-0 rounded-full bg-base-300" aria-hidden="true"></span>
 	{/if}
 	<div class="min-w-0 flex-1">
 		<p class="flex items-baseline gap-2 text-xs">
-			<span class="truncate font-bold">{item.author ? authorName(item.author) : 'Удалено'}</span>
+			{#if item.author && !item.clientId}
+				<a href="/u/{item.author.username}" class="truncate font-bold link-hover"
+					>{authorName(item.author)}</a
+				>
+			{:else}
+				<span class="truncate font-bold">{item.author ? authorName(item.author) : 'Удалено'}</span>
+			{/if}
 			<time class="text-base-content/40" datetime={item.created_at}
 				>{shortTime(item.created_at)}</time
 			>
@@ -68,7 +83,12 @@
 		{#if item.reply_to}
 			<p class="mt-0.5 truncate border-l-2 border-primary/60 pl-2 text-xs text-base-content/50">
 				{#if quoted && !quoted.deleted}
-					<b>{quoted.author ? authorName(quoted.author) : ''}</b> {quoted.body}
+					{#if quoted.author}
+						<a href="/u/{quoted.author.username}" class="font-bold link-hover"
+							>{authorName(quoted.author)}</a
+						>
+					{/if}
+					{quoted.body}
 				{:else if quoted}
 					Сообщение удалено
 				{:else}
@@ -108,7 +128,20 @@
 				</div>
 			</form>
 		{:else}
-			<p class="text-sm break-words whitespace-pre-wrap">{item.body}</p>
+			{#if !onlyLink}
+				<p class="text-sm break-words whitespace-pre-wrap">
+					{#each parts as part, i (i)}{#if part.t === 'mention'}<a
+								href="/u/{part.v}"
+								class={[
+									'link link-primary',
+									{ 'rounded bg-primary/15 px-0.5': part.v === session.user?.username }
+								]}>@{part.v}</a
+							>{:else}{part.v}{/if}{/each}
+				</p>
+			{/if}
+			{#if card}
+				<MessageCard link={card} />
+			{/if}
 		{/if}
 
 		{#if item.status === 'failed'}

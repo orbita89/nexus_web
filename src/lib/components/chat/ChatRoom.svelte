@@ -6,6 +6,7 @@
 	import { authorName, MAX_BODY, type RoomMeta } from '#lib/chat/rooms.ts';
 	import { loginUrl } from '#lib/utils/redirect.ts';
 	import ChatMessage from './ChatMessage.svelte';
+	import EntitySearchPopover from './EntitySearchPopover.svelte';
 	import RoomIcon from './RoomIcon.svelte';
 
 	// Открытая комната: шапка, лента (вверх — старые), поле ввода. Лента прилипает к низу, пока
@@ -86,6 +87,75 @@
 	$effect(() => {
 		if (chat.replyTo) input?.focus();
 	});
+
+	// Подсказка по «@»: берём тех, кто уже писал в комнате.
+	let caret = $state(0);
+	let picked = $state(0);
+	let attaching = $state(false);
+
+	/** Незавершённое «@имя» слева от курсора — иначе подсказывать нечего. */
+	const typing = $derived.by(() => {
+		const left = text.slice(0, caret);
+		const m = /(^|[^\w@])@([a-zA-Z0-9_]{0,32})$/.exec(left);
+		return m ? { prefix: m[2].toLowerCase(), at: caret - m[2].length - 1 } : null;
+	});
+	const hints = $derived(
+		typing
+			? chat.participants
+					.filter(
+						(u) =>
+							u.id !== session.user?.id &&
+							(u.username.toLowerCase().startsWith(typing.prefix) ||
+								(u.display_name ?? '').toLowerCase().startsWith(typing.prefix))
+					)
+					.slice(0, 6)
+			: []
+	);
+	$effect(() => {
+		void typing?.prefix;
+		picked = 0;
+	});
+
+	function mention(username: string) {
+		if (!typing) return;
+		const before = text.slice(0, typing.at);
+		const after = text.slice(caret);
+		text = `${before}@${username} ${after.startsWith(' ') ? after.slice(1) : after}`;
+		const at = typing.at + username.length + 2;
+		void tick().then(() => input?.setSelectionRange(at, at));
+		input?.focus();
+	}
+
+	function attach(href: string) {
+		text = text.trim() ? `${text.trim()} ${href}` : href;
+		attaching = false;
+		input?.focus();
+	}
+
+	/** Enter и стрелки сначала достаются списку подсказок. */
+	function onKeydown(e: KeyboardEvent) {
+		if (hints.length) {
+			if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+				e.preventDefault();
+				picked = (picked + (e.key === 'ArrowDown' ? 1 : hints.length - 1)) % hints.length;
+				return;
+			}
+			if (e.key === 'Enter' || e.key === 'Tab') {
+				e.preventDefault();
+				mention(hints[picked].username);
+				return;
+			}
+			if (e.key === 'Escape') {
+				e.preventDefault();
+				caret = 0;
+				return;
+			}
+		}
+		if (e.key === 'Enter' && !e.shiftKey) {
+			e.preventDefault();
+			submit();
+		}
+	}
 </script>
 
 <svelte:document onvisibilitychange={() => (pageVisible = !document.hidden)} />
@@ -218,7 +288,50 @@
 					>
 				</div>
 			{/if}
+			{#if attaching}
+				<EntitySearchPopover onpick={attach} onclose={() => (attaching = false)} />
+			{/if}
+			{#if hints.length}
+				<ul class="mb-1 rounded-box bg-base-300/60 p-1" aria-label="Кого упомянуть">
+					{#each hints as user, i (user.id)}
+						<li>
+							<button
+								type="button"
+								class={[
+									'w-full truncate rounded px-2 py-1 text-left text-xs',
+									i === picked ? 'bg-base-100 font-bold' : 'hover:bg-base-100'
+								]}
+								onclick={() => mention(user.username)}
+								>@{user.username}
+								{#if user.display_name}<span class="text-base-content/50"
+										>· {user.display_name}</span
+									>{/if}</button
+							>
+						</li>
+					{/each}
+				</ul>
+			{/if}
 			<div class="flex items-end gap-2">
+				<button
+					type="button"
+					class={['btn btn-square btn-ghost btn-sm', { 'text-primary': attaching }]}
+					aria-label="Прикрепить карточку"
+					title="Прикрепить карточку"
+					aria-pressed={attaching}
+					onclick={() => (attaching = !attaching)}
+				>
+					<svg
+						class="size-4"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						aria-hidden="true"
+						><path
+							d="M21.4 11.1 12.3 20a5 5 0 0 1-7.1-7.1l9.2-9.2a3.3 3.3 0 1 1 4.7 4.7l-9.2 9.2a1.7 1.7 0 0 1-2.4-2.4l8.5-8.5"
+						/></svg
+					>
+				</button>
 				<textarea
 					bind:this={input}
 					bind:value={text}
@@ -227,12 +340,11 @@
 					maxlength={MAX_BODY}
 					placeholder="Сообщение"
 					aria-label="Сообщение"
-					onkeydown={(e) => {
-						if (e.key === 'Enter' && !e.shiftKey) {
-							e.preventDefault();
-							submit();
-						}
-					}}></textarea>
+					onkeydown={onKeydown}
+					onkeyup={(e) => (caret = e.currentTarget.selectionStart)}
+					onclick={(e) => (caret = e.currentTarget.selectionStart)}
+					oninput={(e) => (caret = e.currentTarget.selectionStart)}
+					onblur={() => setTimeout(() => (caret = 0), 150)}></textarea>
 				<button class="btn btn-primary btn-sm" disabled={!text.trim()}>Отправить</button>
 			</div>
 		</form>

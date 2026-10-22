@@ -10,6 +10,7 @@
 	import Seo from '#lib/components/catalog/Seo.svelte';
 	import RoomIcon from '#lib/components/chat/RoomIcon.svelte';
 	import { HERO_GLASS } from '#lib/components/card/buttons.ts';
+	import { activityLabel, ROOM_SORTS } from '#lib/chat/rooms.ts';
 	import { loginUrl } from '#lib/utils/redirect.ts';
 	import type { PageProps } from './$types';
 
@@ -24,11 +25,20 @@
 	let mine = $state<SchemaCustomRoom[] | null>(null);
 	$effect(() => {
 		if (session.status !== 'authed') return;
-		unwrap(api.social.GET('/api/v1/social/chat/rooms', { params: { query: { limit: 100 } } }))
+		const sort = data.sort;
+		unwrap(
+			api.social.GET('/api/v1/social/chat/rooms', {
+				params: { query: { limit: 100, sort } as { limit: number } }
+			})
+		)
 			.then((page) => (mine = page.items))
 			.catch(() => {});
 	});
 	const rooms = $derived(mine ?? data.rooms.data?.items ?? []);
+	/** Бэкенд ещё не отдаёт активность — порядок один, переключатель не нужен. */
+	const hasActivity = $derived(
+		rooms.some((r) => (r as { messages_24h?: number }).messages_24h !== undefined)
+	);
 
 	/** Вступил ли: joined из каталога, после «Вступить / Выйти» — локально. */
 	const toggled = $state<Record<string, boolean>>({});
@@ -65,6 +75,20 @@
 	Общие чаты Nexus. Чаты фильмов, людей и тем открываются кнопкой «Открыть чат» на их страницах.
 </p>
 
+{#if hasActivity}
+	<div class="mb-6 flex gap-2" role="group" aria-label="Порядок комнат">
+		{#each ROOM_SORTS as s (s.value)}
+			<a
+				href="/chat?sort={s.value}"
+				data-sveltekit-noscroll
+				aria-current={data.sort === s.value ? 'page' : undefined}
+				class={['btn rounded-full btn-sm', data.sort === s.value ? 'btn-primary' : 'btn-ghost']}
+				>{s.title}</a
+			>
+		{/each}
+	</div>
+{/if}
+
 {#if error}<p role="alert" class="mb-4 text-error">{error}</p>{/if}
 
 {#if data.rooms.error}
@@ -85,6 +109,9 @@
 					<p class="mt-1 text-xs text-base-content/50">
 						{count(room.members_count, ['участник', 'участника', 'участников'])} ·
 						{count(room.messages_count, ['сообщение', 'сообщения', 'сообщений'])}
+						{#if activityLabel(room)}
+							· <span class="font-bold text-success">{activityLabel(room)}</span>
+						{/if}
 					</p>
 					<div class="mt-3 flex flex-wrap gap-2">
 						<button class="{HERO_GLASS} btn-sm" onclick={() => chat.open(meta)}>Открыть</button>
