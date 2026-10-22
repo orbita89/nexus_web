@@ -77,7 +77,7 @@
 		<div
 			tabindex="0"
 			role="button"
-			class={compact ? 'btn btn-square btn-ghost btn-xs' : 'btn btn-outline btn-sm'}
+			class={compact ? 'btn btn-square btn-ghost btn-xs' : 'btn btn-ghost btn-sm'}
 			aria-label="Поделиться"
 			title="Поделиться"
 		>

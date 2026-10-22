@@ -19,30 +19,50 @@
 	} = $props();
 
 	const base = $derived(buildFeaturedUrl(collection));
-	const next = $derived(others[0]);
+	// «Далее» — первая непустая из похожих (пустую подборку следующей не предлагаем).
+	const next = $derived(others.find((o) => o.items_count > 0));
 	const works = (n: number) => count(n, ['произведение', 'произведения', 'произведений']);
 </script>
 
-<footer class="mx-auto mt-10 max-w-4xl space-y-8 border-t border-base-content/10 pt-10">
-	{#if next}
-		<a href={buildFeaturedUrl(next)} class="group block">
-			<span class="flex items-center gap-2 text-xs tracking-wider text-base-content/60 uppercase">
-				<span class="h-px w-6 bg-(--page-accent,var(--color-primary))" aria-hidden="true"></span>
-				Далее
-			</span>
-			<span class="mt-1 block text-lg font-semibold group-hover:text-primary">
-				{next.title}
-				<span class="font-normal text-base-content/60">· {works(next.items_count)} →</span>
-			</span>
-		</a>
-	{/if}
-	<div class="flex flex-wrap items-center justify-center gap-3">
+<!-- Одна строка: слева действия, справа «Далее» (на телефоне «Далее» сверху на всю ширину). -->
+<footer
+	class="mx-auto mt-10 flex max-w-4xl flex-col gap-4 border-t border-base-content/10 pt-8 sm:flex-row sm:items-center sm:justify-between"
+>
+	<div class="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
 		<ShareMenu url={shareUrl} title={shareTitle} />
-		<a href="{base}/discussion" class="btn btn-outline btn-sm"
-			>Обсуждение ({collection.comments_count ?? 0})</a
-		>
+		<a href="{base}/discussion" class="btn gap-2 btn-ghost btn-sm">
+			Обсуждение
+			{#if collection.comments_count}
+				<span class="text-base-content/50 tabular-nums">{collection.comments_count}</span>
+			{/if}
+		</a>
 		{#if others.length}
-			<a href="{base}/similar" class="btn btn-outline btn-sm">Все похожие ({others.length})</a>
+			<a href="{base}/similar" class="btn gap-2 btn-ghost btn-sm">
+				Похожие
+				<span class="text-base-content/50 tabular-nums">{others.length}</span>
+			</a>
 		{/if}
 	</div>
+	{#if next}
+		<a
+			href={buildFeaturedUrl(next)}
+			class="group order-first flex items-center justify-between gap-3 rounded-box px-3 py-2 ring-1 ring-base-content/10 transition-colors hover:ring-(--page-accent,var(--color-primary)) sm:order-none sm:justify-end sm:px-0 sm:py-0 sm:ring-0 sm:hover:ring-0"
+			title="{next.title} · {works(next.items_count)}"
+		>
+			<span class="flex min-w-0 flex-col leading-tight sm:items-end">
+				<span class="text-[0.65rem] tracking-wider text-base-content/50 uppercase">
+					Далее · {works(next.items_count)}
+				</span>
+				<span
+					class="max-w-[16rem] truncate text-sm font-semibold transition-colors group-hover:text-(--page-accent,var(--color-primary))"
+				>
+					{next.title}
+				</span>
+			</span>
+			<span
+				class="grid size-8 shrink-0 place-items-center rounded-full ring-1 ring-base-content/20 transition-colors group-hover:bg-(--page-accent,var(--color-primary)) group-hover:text-base-100 group-hover:ring-transparent"
+				aria-hidden="true">→</span
+			>
+		</a>
+	{/if}
 </footer>
