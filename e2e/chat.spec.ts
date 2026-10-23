@@ -50,6 +50,27 @@ test('системный чат: сообщение и переход в про�
 	await expect(panel.getByLabel('Сообщение')).toBeVisible();
 });
 
+test('слежу за карточкой — её чат появляется в панели и в свёрнутой полосе', async ({
+	page,
+	request
+}) => {
+	await registerAndSignIn(page, request, 'watch');
+	const panel = panelOf(page);
+
+	await page.goto('/films/dune-2021');
+	await page.getByRole('button', { name: 'Открыть чат' }).click();
+	await panel.getByRole('button', { name: 'Следить', exact: true }).click();
+	await expect(panel.getByRole('button', { name: 'Вы следите' })).toBeVisible();
+
+	// Чат интереса — в списке «Мои чаты», а не только в открытой комнате.
+	await panel.getByRole('tab', { name: 'Чаты' }).click();
+	await expect(panel.getByRole('button', { name: /Дюна/ })).toBeVisible();
+
+	// И в свёрнутой полосе: системные комнаты её оттуда не вытесняют.
+	await page.getByRole('button', { name: 'Чат', exact: true }).first().click();
+	await expect(panel.getByRole('button', { name: 'Дюна' })).toBeVisible();
+});
+
 test('своя комната: создание, открытие и удаление', async ({ page, request }) => {
 	await registerAndSignIn(page, request, 'room');
 	const panel = panelOf(page);

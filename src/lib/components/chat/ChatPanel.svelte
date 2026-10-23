@@ -42,8 +42,9 @@
 	// Мобильный лист закрывается переходом по ссылке (на карточку из шапки комнаты).
 	afterNavigate(() => (chat.sheet = false));
 
-	// Свёрнутая полоса — только комнаты: чаты карточек открываются с самих карточек.
-	const strip = $derived((chat.chats ?? []).filter((c) => c.kind === 'room').slice(0, 8));
+	// Свёрнутая полоса — свои чаты: фильмы и люди, за которыми следишь, и свои комнаты.
+	// Системные в неё не идут: они и так вкладками, дублировать их нечем.
+	const strip = $derived((chat.chats ?? []).filter((c) => !c.custom?.system).slice(0, 8));
 
 	const tabs: { tab: Tab; title: string }[] = [
 		{ tab: 'general', title: 'Общий' },
