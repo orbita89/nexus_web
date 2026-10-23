@@ -479,10 +479,11 @@ class Chat {
 				void this.#refetch(String(data.message_id));
 				break;
 			case 'chat.read': {
+				// Прочитано здесь или на другом устройстве — уведомления снимаем везде.
 				const chat = this.chats?.find(
 					(c) => c.kind === data.kind && targetId(c) === data.target_id
 				);
-				if (chat) chat.unread = 0;
+				if (chat) this.#markRead(chat.room);
 				break;
 			}
 			case 'chat.mention': {
@@ -576,6 +577,13 @@ class Chat {
 			if (c.last_message?.id === message.id) c.last_message = message;
 	}
 
+	/** Комната прочитана: счётчик обнуляем и убираем её уведомления — они уже не новости. */
+	#markRead(room: string) {
+		const chat = this.summary(room);
+		if (chat) chat.unread = 0;
+		this.toasts = this.toasts.filter((t) => t.meta.room !== room);
+	}
+
 	/** Последнее сообщение комнаты видно: через паузу — chat.read и unread = 0. */
 	seen(messageId: string) {
 		const room = this.current?.room;
@@ -588,8 +596,7 @@ class Chat {
 			if (this.current?.room !== room || !this.watching) return;
 			if (sendRealtime({ type: 'chat.read', room, message_id: messageId })) {
 				this.#readSent.set(room, messageId);
-				const chat = this.summary(room);
-				if (chat) chat.unread = 0;
+				this.#markRead(room);
 			}
 		}, READ_DELAY_MS);
 	}
