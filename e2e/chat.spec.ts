@@ -66,8 +66,9 @@ test('слежу за карточкой — её чат появляется в
 	await panel.getByRole('tab', { name: 'Чаты' }).click();
 	await expect(panel.getByRole('button', { name: /^Дюна/ })).toBeVisible();
 
-	// И в свёрнутой полосе: системные комнаты её оттуда не вытесняют.
+	// И в свёрнутой полосе — вместе с общими чатами, которые идут первыми.
 	await page.getByRole('button', { name: 'Чат', exact: true }).first().click();
+	await expect(panel.getByRole('button', { name: 'Общий чат', exact: true })).toBeVisible();
 	await expect(panel.getByRole('button', { name: 'Дюна', exact: true })).toBeVisible();
 });
 
