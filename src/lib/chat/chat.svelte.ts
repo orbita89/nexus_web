@@ -82,6 +82,11 @@ class Chat {
 	topic = $state<Topic>('movies');
 	/** Вкладка «Чаты»: мои или те, где сейчас обсуждают. */
 	listView = $state<ListView>('mine');
+	/**
+	 * Общие чаты, убранные из списка. Выйти из них нельзя — в них состоят все, — но держать
+	 * их в «Моих чатах» никто не обязан: открываются вкладками. Пока хранится на устройстве.
+	 */
+	hidden = $state<string[]>([]);
 	/** Комната, открытая поверх вкладки: с карточки, из списка комнат, из уведомления. */
 	adhoc = $state<RoomMeta | null>(null);
 
@@ -200,6 +205,9 @@ class Chat {
 			this.topic = topicOf(saved.topic);
 			this.tab = TABS.includes(saved.tab) ? saved.tab : 'general';
 			this.listView = saved.list === 'live' ? 'live' : 'mine';
+			this.hidden = Array.isArray(saved.hidden)
+				? saved.hidden.filter((r: unknown) => typeof r === 'string')
+				: [];
 			if (saved.open?.room) this.open(saved.open, { show: false });
 			else this.setTab(this.tab);
 		} catch {
@@ -217,6 +225,7 @@ class Chat {
 					tab: this.tab,
 					topic: this.topic,
 					list: this.listView,
+					hidden: [...this.hidden],
 					open: this.adhoc && { ...this.adhoc }
 				})
 			);
@@ -669,6 +678,18 @@ class Chat {
 	/** Крестик в списке: перестать следить за карточкой, человеком, темой или выйти из комнаты. */
 	async leave(room: string) {
 		await this.#setMember(room, false);
+	}
+
+	/** Убрать общий чат из списка: сам чат остаётся, открывается вкладкой. */
+	hide(room: string) {
+		if (!this.hidden.includes(room)) this.hidden = [...this.hidden, room];
+		this.#save();
+	}
+
+	/** Вернуть все убранные общие чаты. */
+	unhideAll() {
+		this.hidden = [];
+		this.#save();
 	}
 
 	/**

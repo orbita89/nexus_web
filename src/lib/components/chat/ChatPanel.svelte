@@ -44,7 +44,7 @@
 
 	// Свёрнутая полоса — все чаты подряд: общие сверху (их так отдаёт бэкенд), дальше свои.
 	// Без ограничения по числу: полоса прокручивается, и обрезать её — терять чаты из виду.
-	const strip = $derived(chat.chats ?? []);
+	const strip = $derived((chat.chats ?? []).filter((c) => !chat.hidden.includes(c.room)));
 
 	const tabs: { tab: Tab; title: string }[] = [
 		{ tab: 'general', title: 'Общий' },

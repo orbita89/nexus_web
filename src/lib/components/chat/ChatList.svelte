@@ -21,6 +21,7 @@
 	// первыми, поэтому и в списке они сверху.
 	const rows = $derived(
 		(chat.chats ?? [])
+			.filter((c) => !chat.hidden.includes(c.room))
 			.map((c) => ({ chat: c, meta: roomMeta(c), system: !!c.custom?.system }))
 			.filter(({ meta }) => matches(meta.title))
 	);
@@ -220,23 +221,34 @@
 								{/if}
 							</svg>
 						</button>
-						{#if !system}
-							<button
-								class="btn btn-square shrink-0 btn-ghost opacity-0 transition btn-xs group-hover:opacity-60 hover:!opacity-100 focus-visible:opacity-100"
-								aria-label={c.kind === 'room'
+						<button
+							class="btn btn-square shrink-0 btn-ghost opacity-0 transition btn-xs group-hover:opacity-60 hover:!opacity-100 focus-visible:opacity-100"
+							aria-label={system
+								? `Убрать из списка: ${meta.title}`
+								: c.kind === 'room'
 									? `Выйти: ${meta.title}`
 									: `Не следить: ${meta.title}`}
-								title={c.kind === 'room' ? 'Выйти из комнаты' : 'Не следить'}
-								disabled={leaving === c.room}
-								onclick={() => remove(c.room)}>✕</button
-							>
-						{/if}
+							title={system
+								? 'Убрать из списка'
+								: c.kind === 'room'
+									? 'Выйти из комнаты'
+									: 'Не следить'}
+							disabled={leaving === c.room}
+							onclick={() => (system ? chat.hide(c.room) : remove(c.room))}>✕</button
+						>
 					</li>
 				{/each}
 			</ul>
 		{:else if !query.trim()}
 			<p class="px-2 py-6 text-sm text-base-content/60">
 				Добавьте фильмы, людей или темы в интересы, вступите в комнату — чаты появятся здесь.
+			</p>
+		{/if}
+
+		{#if !live && chat.hidden.length}
+			<p class="px-2 pt-2 pb-1 text-xs text-base-content/50">
+				Общих чатов скрыто: {chat.hidden.length}.
+				<button class="link link-primary" onclick={() => chat.unhideAll()}>Вернуть</button>
 			</p>
 		{/if}
 
