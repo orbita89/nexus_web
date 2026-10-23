@@ -17,10 +17,11 @@
 
 	const matches = (title: string) => title.toLowerCase().includes(query.trim().toLowerCase());
 
+	// Общий чат и чаты разделов тоже здесь: это такие же чаты, просто пошире. Бэкенд отдаёт их
+	// первыми, поэтому и в списке они сверху.
 	const rows = $derived(
 		(chat.chats ?? [])
-			.filter((c) => !c.custom?.system)
-			.map((c) => ({ chat: c, meta: roomMeta(c) }))
+			.map((c) => ({ chat: c, meta: roomMeta(c), system: !!c.custom?.system }))
 			.filter(({ meta }) => matches(meta.title))
 	);
 
@@ -111,7 +112,7 @@
 			{/each}
 		{:else if rows.length}
 			<ul>
-				{#each rows as { chat: c, meta } (c.room)}
+				{#each rows as { chat: c, meta, system } (c.room)}
 					{@const last = c.last_message}
 					<li class="group flex items-center rounded-box pr-1 transition hover:bg-base-300/60">
 						<button
@@ -129,6 +130,9 @@
 							<span class="min-w-0 flex-1">
 								<span class="flex items-baseline gap-2">
 									<span class="truncate text-sm font-bold">{meta.title}</span>
+									{#if system}
+										<span class="badge shrink-0 badge-ghost badge-xs">общий</span>
+									{/if}
 									{#if c.muted}
 										<svg
 											class="size-3.5 shrink-0 opacity-50"
@@ -171,13 +175,18 @@
 								</span>
 							</span>
 						</button>
-						<button
-							class="btn btn-square shrink-0 btn-ghost opacity-0 transition btn-xs group-hover:opacity-60 hover:!opacity-100 focus-visible:opacity-100"
-							aria-label={c.kind === 'room' ? `Выйти: ${meta.title}` : `Не следить: ${meta.title}`}
-							title={c.kind === 'room' ? 'Выйти из комнаты' : 'Не следить'}
-							disabled={leaving === c.room}
-							onclick={() => remove(c.room)}>✕</button
-						>
+						{#if !system}
+							<!-- Из общего чата выйти нельзя: в нём состоят все. -->
+							<button
+								class="btn btn-square shrink-0 btn-ghost opacity-0 transition btn-xs group-hover:opacity-60 hover:!opacity-100 focus-visible:opacity-100"
+								aria-label={c.kind === 'room'
+									? `Выйти: ${meta.title}`
+									: `Не следить: ${meta.title}`}
+								title={c.kind === 'room' ? 'Выйти из комнаты' : 'Не следить'}
+								disabled={leaving === c.room}
+								onclick={() => remove(c.room)}>✕</button
+							>
+						{/if}
 					</li>
 				{/each}
 			</ul>
