@@ -621,8 +621,9 @@ class Chat {
 		}, READ_DELAY_MS);
 	}
 
-	async toggleMute() {
-		const room = this.current?.room;
+	/** Заглушить или вернуть уведомления: открытой комнаты или любой строки списка. */
+	async toggleMute(target?: string) {
+		const room = target ?? this.current?.room;
 		if (!room) return;
 		const next = !this.muted(room);
 		const params = { path: splitRoom(room) };

@@ -44,6 +44,13 @@ test('системный чат: сообщение и переход в про�
 	await panel.getByRole('button', { name: 'Отправить' }).click();
 	await expect(panel.getByText(body, { exact: true })).toBeVisible();
 
+	// Выйти из общего чата нельзя, но можно заглушить — прямо из строки списка.
+	await panel.getByRole('tab', { name: 'Чаты' }).click();
+	await expect(panel.getByRole('button', { name: /^Выйти: Общий чат/ })).toHaveCount(0);
+	await panel.getByRole('button', { name: 'Заглушить: Общий чат' }).click();
+	await expect(panel.getByRole('button', { name: 'Вернуть уведомления: Общий чат' })).toBeVisible();
+	await panel.getByRole('tab', { name: 'Общий' }).click();
+
 	// Имя автора — ссылка на профиль; панель при переходе остаётся на месте.
 	await panel.getByRole('link', { name: username }).first().click();
 	await expect(page).toHaveURL(`/u/${username}`);
