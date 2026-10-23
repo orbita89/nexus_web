@@ -140,9 +140,6 @@
 							<span class="min-w-0 flex-1">
 								<span class="flex items-baseline gap-2">
 									<span class="truncate text-sm font-bold">{meta.title}</span>
-									{#if system}
-										<span class="badge shrink-0 badge-ghost badge-xs">общий</span>
-									{/if}
 									{#if c.muted}
 										<svg
 											class="size-3.5 shrink-0 opacity-50"
@@ -242,13 +239,6 @@
 		{:else if !query.trim()}
 			<p class="px-2 py-6 text-sm text-base-content/60">
 				Добавьте фильмы, людей или темы в интересы, вступите в комнату — чаты появятся здесь.
-			</p>
-		{/if}
-
-		{#if !live && chat.hidden.length}
-			<p class="px-2 pt-2 pb-1 text-xs text-base-content/50">
-				Общих чатов скрыто: {chat.hidden.length}.
-				<button class="link link-primary" onclick={() => chat.unhideAll()}>Вернуть</button>
 			</p>
 		{/if}
 

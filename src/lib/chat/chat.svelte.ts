@@ -701,9 +701,10 @@ class Chat {
 		this.#save();
 	}
 
-	/** Вернуть все убранные общие чаты. */
-	unhideAll() {
-		this.hidden = [];
+	/** Вернуть убранный чат в список. */
+	#unhide(room: string) {
+		if (!this.hidden.includes(room)) return;
+		this.hidden = this.hidden.filter((r) => r !== room);
 		this.#save();
 	}
 
@@ -712,6 +713,8 @@ class Chat {
 	 * и считает непрочитанное. Иначе разговор теряется, как только закроешь комнату.
 	 */
 	#joinAfterWriting(room: string) {
+		// Убранный чат возвращается в список тем же правилом: написал — значит он твой.
+		this.#unhide(room);
 		const info = this.info;
 		if (!info || info.room !== room || !info.me || info.me.member) return;
 		void this.#setMember(room, true);

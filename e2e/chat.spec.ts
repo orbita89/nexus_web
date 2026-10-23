@@ -51,7 +51,12 @@ test('системный чат: сообщение и переход в про�
 
 	await panel.getByRole('button', { name: 'Убрать из списка: Общий чат' }).click();
 	await expect(panel.getByRole('button', { name: /^Общий чат/ })).toHaveCount(0);
-	await panel.getByRole('button', { name: 'Вернуть', exact: true }).click();
+
+	// Возвращается тем же правилом, что и любой другой чат: написал — значит он твой.
+	await panel.getByRole('tab', { name: 'Общий' }).click();
+	await panel.getByLabel('Сообщение').fill(`e2e ${Date.now().toString(36)}`);
+	await panel.getByRole('button', { name: 'Отправить' }).click();
+	await panel.getByRole('tab', { name: 'Чаты' }).click();
 	await expect(panel.getByRole('button', { name: /^Общий чат/ })).toBeVisible();
 
 	await panel.getByRole('tab', { name: 'Общий' }).click();
