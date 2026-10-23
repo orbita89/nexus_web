@@ -606,6 +606,21 @@ class Chat {
 			if (c.last_message?.id === message.id) c.last_message = message;
 	}
 
+	/**
+	 * «Прочитать всё»: системные чаты у всех общие, и в них копится история, которую человек
+	 * не открывал. Отмечаем прочитанным последнее сообщение каждого чата со счётчиком.
+	 */
+	readAll() {
+		for (const c of this.chats ?? []) {
+			const id = c.last_message?.id;
+			if (!c.unread || !id) continue;
+			if (sendRealtime({ type: 'chat.read', room: c.room, message_id: id })) {
+				this.#readSent.set(c.room, id);
+				this.#markRead(c.room);
+			}
+		}
+	}
+
 	/** Комната прочитана: счётчик обнуляем и убираем её уведомления — они уже не новости. */
 	#markRead(room: string) {
 		const chat = this.summary(room);

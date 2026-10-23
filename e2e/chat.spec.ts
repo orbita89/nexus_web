@@ -108,6 +108,46 @@ test('написал в чужой чат — он сам становится �
 	await expect(panel.getByRole('button', { name: /Вильнёв/ })).toHaveCount(0);
 });
 
+test('непрочитанное снимается, когда сообщение прочитали', async ({ browser, request }) => {
+	// Нужны двое: свои сообщения непрочитанными не считаются.
+	const readerContext = await browser.newContext();
+	const reader = await readerContext.newPage();
+	const writerContext = await browser.newContext();
+	const writer = await writerContext.newPage();
+	try {
+		await registerAndSignIn(reader, request, 'rdr');
+		await registerAndSignIn(writer, request, 'wrt');
+
+		// Читатель смотрит в другую вкладку панели — иначе прочитает сразу.
+		const panel = panelOf(reader);
+		await panel.getByRole('tab', { name: 'Чаты' }).click();
+
+		const body = `e2e ${Date.now().toString(36)}`;
+		const writerPanel = panelOf(writer);
+		await writerPanel.getByRole('tab', { name: 'Общий' }).click();
+		await writerPanel.getByLabel('Сообщение').fill(body);
+		await writerPanel.getByRole('button', { name: 'Отправить' }).click();
+		await expect(writerPanel.getByText(body, { exact: true })).toBeVisible();
+
+		// У читателя — значок непрочитанного на вкладке «Общий».
+		const generalTab = panel.getByRole('tab', { name: /^Общий/ });
+		await expect(generalTab.getByLabel(/^Непрочитанных: /)).toBeVisible();
+
+		// Открыл, прочитал — значок этой вкладки пропал.
+		await generalTab.click();
+		await expect(panel.getByText(body, { exact: true })).toBeVisible();
+		await expect(generalTab.getByLabel(/^Непрочитанных: /)).toHaveCount(0);
+
+		// Остальное непрочитанное (другие общие чаты) снимается одной кнопкой.
+		await panel.getByRole('button', { name: 'Прочитать всё' }).click();
+		await expect(panel.getByLabel(/^Непрочитанных: /)).toHaveCount(0);
+		await expect(panel.getByRole('button', { name: 'Прочитать всё' })).toHaveCount(0);
+	} finally {
+		await readerContext.close();
+		await writerContext.close();
+	}
+});
+
 test('своя комната: создание, открытие и удаление', async ({ page, request }) => {
 	await registerAndSignIn(page, request, 'room');
 	const panel = panelOf(page);

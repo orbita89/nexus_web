@@ -99,6 +99,24 @@
 			<p class="mr-auto pl-2 text-xs font-bold tracking-widest text-base-content/60 uppercase">
 				Чат
 			</p>
+			{#if chat.unread}
+				<!-- Непрочитанное копится в общих чатах, которые человек не открывал. -->
+				<button
+					class="btn btn-square btn-ghost btn-sm"
+					title="Прочитать всё"
+					aria-label="Прочитать всё"
+					onclick={() => chat.readAll()}
+				>
+					<svg
+						class="size-4"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						aria-hidden="true"><path d="m1 13 4 4L13 7M11 15l2 2L23 7" /></svg
+					>
+				</button>
+			{/if}
 			<a
 				href="/chat"
 				class="btn btn-square btn-ghost btn-sm"
