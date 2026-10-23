@@ -26,6 +26,11 @@
 		(event) => chat.onEvent(event),
 		() => chat.resync()
 	);
+	// Канал общего списка комнат: новая комната появляется в «Обсуждается» без перезагрузки.
+	useRealtime(
+		() => ['rooms'],
+		(event) => chat.onEvent(event)
+	);
 	// Открытая комната не из интересов (и у гостя) — подписать её канал.
 	useRealtime(
 		() => (chat.current && !chat.member ? [chat.current.room] : []),
@@ -169,7 +174,12 @@
 				<button class="flex min-w-0 items-center gap-3 text-left" onclick={() => chat.open(t.meta)}>
 					<RoomIcon meta={t.meta} size="size-8" />
 					<span class="min-w-0">
-						<span class="block truncate text-xs font-bold">{t.meta.title}</span>
+						<span class="flex items-center gap-1">
+							{#if t.mention}
+								<span class="badge shrink-0 badge-xs badge-primary">вас упомянули</span>
+							{/if}
+							<span class="truncate text-xs font-bold">{t.meta.title}</span>
+						</span>
 						<span class="block truncate text-xs text-base-content/70"
 							>{t.message.author ? `${authorName(t.message.author)}: ` : ''}{t.message.body}</span
 						>

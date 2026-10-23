@@ -24,18 +24,26 @@
 			.filter(({ meta }) => matches(meta.title))
 	);
 
-	// Куда ещё можно зайти: активные комнаты, в которых я не состою.
+	// «Обсуждается» — поиск по комнатам на сервере, «Мои чаты» — по сообщениям.
+	// Своя строка чатов фильтруется на месте: она уже загружена целиком.
+	let timer: ReturnType<typeof setTimeout> | undefined;
 	$effect(() => {
-		void chat.chats;
-		void chat.loadSuggested();
+		const q = query.trim();
+		const mode = chat.listView;
+		clearTimeout(timer);
+		timer = setTimeout(
+			() => {
+				if (mode === 'live') void chat.loadSuggested(q);
+				else void chat.searchMessages(q.length >= 2 ? q : '');
+			},
+			q ? 300 : 0
+		);
+		return () => clearTimeout(timer);
 	});
 	/** Свои комнаты — независимо от поиска, иначе при вводе они полезут в «Обсуждается». */
 	const joined = $derived((chat.chats ?? []).map((c) => c.custom?.slug).filter(Boolean));
 	const suggested = $derived(
-		(chat.suggested ?? [])
-			.filter((r) => !r.system)
-			.filter((r) => !joined.includes(r.slug))
-			.filter((r) => matches(r.title))
+		(chat.suggested ?? []).filter((r) => !r.system).filter((r) => !joined.includes(r.slug))
 	);
 
 	const roomMetaOf = (room: { slug: string; title: string }) => ({
@@ -155,12 +163,49 @@
 					</li>
 				{/each}
 			</ul>
-		{:else}
+		{:else if !query.trim()}
 			<p class="px-2 py-6 text-sm text-base-content/60">
-				{query.trim()
-					? 'Ничего не нашлось.'
-					: 'Добавьте фильмы, людей или темы в интересы, вступите в комнату — чаты появятся здесь.'}
+				Добавьте фильмы, людей или темы в интересы, вступите в комнату — чаты появятся здесь.
 			</p>
+		{/if}
+
+		<!-- Поиск по сообщениям моих чатов: отдельным блоком под списком. -->
+		{#if !live && query.trim().length >= 2}
+			<p
+				class="px-2 pt-4 pb-1 text-[0.65rem] font-bold tracking-widest text-base-content/50 uppercase"
+			>
+				Сообщения{#if chat.searching}&nbsp;<span class="loading loading-xs loading-spinner"
+					></span>{/if}
+			</p>
+			{#if chat.found?.length}
+				<ul>
+					{#each chat.found as hit (hit.message.id)}
+						{@const meta = chat.metaFor(hit.room)}
+						<li>
+							<button
+								class="flex w-full items-center gap-3 rounded-box px-2 py-2 text-left transition hover:bg-base-300/60"
+								onclick={() => chat.open(meta)}
+							>
+								<RoomIcon {meta} />
+								<span class="min-w-0 flex-1">
+									<span class="flex items-baseline gap-2">
+										<span class="truncate text-sm font-bold">{meta.title}</span>
+										<span class="ml-auto shrink-0 text-xs text-base-content/40"
+											>{shortTime(hit.message.created_at)}</span
+										>
+									</span>
+									<span class="block truncate text-xs text-base-content/50">
+										{hit.message.author ? `${authorName(hit.message.author)}: ` : ''}{hit.message
+											.body}
+									</span>
+								</span>
+							</button>
+						</li>
+					{/each}
+				</ul>
+			{:else if !chat.searching}
+				<p class="px-2 py-3 text-sm text-base-content/60">Ничего не нашлось.</p>
+			{/if}
 		{/if}
 
 		{#if !live}
@@ -193,9 +238,9 @@
 					</li>
 				{/each}
 			</ul>
-		{:else}
+		{:else if live}
 			<p class="px-2 py-6 text-sm text-base-content/60">
-				{query.trim() ? 'Ничего не нашлось.' : 'Сейчас нигде не обсуждают — загляните позже.'}
+				{query.trim() ? 'Комнат не нашлось.' : 'Сейчас нигде не обсуждают — загляните позже.'}
 			</p>
 		{/if}
 

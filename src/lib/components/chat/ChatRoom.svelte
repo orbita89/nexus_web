@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import { page } from '$app/state';
-	import { session } from '#lib/auth/session.svelte.ts';
+	import type { SchemaUserRef } from '#lib/api/generated/social.ts';
+	import { unwrap } from '#lib/api/errors.ts';
+	import { guestApi, session } from '#lib/auth/session.svelte.ts';
 	import { chat } from '#lib/chat/chat.svelte.ts';
 	import { authorName, isSystemRoom, MAX_BODY, type RoomMeta } from '#lib/chat/rooms.ts';
 	import { loginUrl } from '#lib/utils/redirect.ts';
@@ -89,10 +91,12 @@
 		if (chat.replyTo) input?.focus();
 	});
 
-	// Подсказка по «@»: берём тех, кто уже писал в комнате.
+	// Подсказка по «@»: сначала те, кто писал в комнате, следом — поиск по всем пользователям.
 	let caret = $state(0);
 	let picked = $state(0);
 	let attaching = $state(false);
+	let searched = $state<SchemaUserRef[]>([]);
+	let searchTimer: ReturnType<typeof setTimeout> | undefined;
 
 	/** Незавершённое «@имя» слева от курсора — иначе подсказывать нечего. */
 	const typing = $derived.by(() => {
@@ -100,21 +104,42 @@
 		const m = /(^|[^\w@])@([a-zA-Z0-9_]{0,32})$/.exec(left);
 		return m ? { prefix: m[2].toLowerCase(), at: caret - m[2].length - 1 } : null;
 	});
-	const hints = $derived(
-		typing
-			? chat.participants
-					.filter(
-						(u) =>
-							u.id !== session.user?.id &&
-							(u.username.toLowerCase().startsWith(typing.prefix) ||
-								(u.display_name ?? '').toLowerCase().startsWith(typing.prefix))
-					)
-					.slice(0, 6)
-			: []
-	);
+	const matching = (u: SchemaUserRef, prefix: string) =>
+		u.id !== session.user?.id &&
+		(u.username.toLowerCase().startsWith(prefix) ||
+			(u.display_name ?? '').toLowerCase().startsWith(prefix));
+
+	const hints = $derived.by(() => {
+		if (!typing) return [];
+		const local = chat.participants.filter((u) => matching(u, typing.prefix));
+		const rest = searched.filter(
+			(u) => matching(u, typing.prefix) && !local.some((l) => l.id === u.id)
+		);
+		return [...local, ...rest].slice(0, 6);
+	});
+
+	// Кто писал в комнате — сразу, остальных ищем на сервере.
 	$effect(() => {
-		void typing?.prefix;
+		const prefix = typing?.prefix;
 		picked = 0;
+		clearTimeout(searchTimer);
+		if (prefix === undefined || prefix.length < 1) {
+			searched = [];
+			return;
+		}
+		searchTimer = setTimeout(async () => {
+			try {
+				const users = await unwrap(
+					guestApi.social.GET('/api/v1/social/users', {
+						params: { query: { q: prefix, limit: 8 } }
+					})
+				);
+				if (typing?.prefix === prefix) searched = users;
+			} catch {
+				// без подсказок по всем — останутся те, кто писал в комнате
+			}
+		}, 250);
+		return () => clearTimeout(searchTimer);
 	});
 
 	function mention(username: string) {

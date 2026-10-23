@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { invalidateAll } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
 	import { ApiError, errorMessage, unwrap } from '#lib/api/errors.ts';
 	import { slugError, slugify } from '#lib/admin/slug.ts';
 	import type { SchemaCustomRoom } from '#lib/api/generated/social.ts';
@@ -27,16 +27,29 @@
 	let mine = $state<SchemaCustomRoom[] | null>(null);
 	$effect(() => {
 		if (session.status !== 'authed') return;
-		void data.sort;
-		unwrap(api.social.GET('/api/v1/social/chat/rooms', { params: { query: { limit: 100 } } }))
+		const { sort, q } = data;
+		unwrap(
+			api.social.GET('/api/v1/social/chat/rooms', {
+				params: { query: { limit: 100, sort, q: q || undefined } }
+			})
+		)
 			.then((page) => (mine = page.items))
 			.catch(() => {});
 	});
 	const rooms = $derived(mine ?? data.rooms.data?.items ?? []);
-	/** Бэкенд ещё не отдаёт активность — порядок один, переключатель не нужен. */
-	const hasActivity = $derived(
-		rooms.some((r) => (r as { messages_24h?: number }).messages_24h !== undefined)
-	);
+
+	// Поиск по комнатам — на сервере: в адресе, чтобы ссылка на выдачу работала.
+	let search = $derived(data.q);
+	let searchTimer: ReturnType<typeof setTimeout> | undefined;
+	function onSearch() {
+		clearTimeout(searchTimer);
+		const q = search.trim();
+		const sort = data.sort;
+		searchTimer = setTimeout(() => {
+			const query = q ? `?q=${encodeURIComponent(q)}` : sort !== 'active' ? `?sort=${sort}` : '';
+			void goto(`/chat${query}`);
+		}, 300);
+	}
 
 	// Своя комната: создаёт любой вошедший. slug подставляется из названия, но правится руками —
 	// он навсегда, это адрес канала room:<slug>.
@@ -266,26 +279,46 @@
 	</form>
 {/if}
 
-{#if hasActivity}
-	<div class="mb-6 flex gap-2" role="group" aria-label="Порядок комнат">
-		{#each ROOM_SORTS as s (s.value)}
-			<a
-				href="/chat?sort={s.value}"
-				data-sveltekit-noscroll
-				aria-current={data.sort === s.value ? 'page' : undefined}
-				class={['btn rounded-full btn-sm', data.sort === s.value ? 'btn-primary' : 'btn-ghost']}
-				>{s.title}</a
-			>
-		{/each}
-	</div>
-{/if}
+<div class="mb-6 flex flex-wrap items-center gap-3">
+	<label class="input min-w-56 flex-1 input-sm">
+		<input
+			type="search"
+			placeholder="Найти комнату"
+			aria-label="Найти комнату"
+			bind:value={search}
+			oninput={onSearch}
+		/>
+		<svg
+			class="size-4 opacity-50"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			stroke-width="2"
+			aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg
+		>
+	</label>
+	{#if !data.q}
+		<!-- При поиске порядок задаёт близость к запросу — переключатель не действует. -->
+		<div class="flex gap-2" role="group" aria-label="Порядок комнат">
+			{#each ROOM_SORTS as s (s.value)}
+				<a
+					href="/chat?sort={s.value}"
+					data-sveltekit-noscroll
+					aria-current={data.sort === s.value ? 'page' : undefined}
+					class={['btn rounded-full btn-sm', data.sort === s.value ? 'btn-primary' : 'btn-ghost']}
+					>{s.title}</a
+				>
+			{/each}
+		</div>
+	{/if}
+</div>
 
 {#if error}<p role="alert" class="mb-4 text-error">{error}</p>{/if}
 
 {#if data.rooms.error}
 	<LoadError message={data.rooms.error} />
 {:else if !rooms.length}
-	<EmptyState title="Комнат пока нет" />
+	<EmptyState title={data.q ? 'Ничего не нашлось' : 'Комнат пока нет'} />
 {:else}
 	<ul class="grid gap-3 sm:grid-cols-2">
 		{#each rooms as room (room.id)}

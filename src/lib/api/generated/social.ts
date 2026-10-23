@@ -305,7 +305,7 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** Комнаты: системные сверху, дальше — где больше участников. Вошедшему — `joined` (вступил ли). */
+		/** Комнаты: системные сверху, дальше — по `?sort`. Вошедшему — `joined` (вступил ли). */
 		get: operations['list_chat_rooms'];
 		put?: never;
 		/** Завести свою комнату: автор становится владельцем и участником. */
@@ -370,6 +370,27 @@ export interface paths {
 		 *     дубля не создаёт.
 		 */
 		post: operations['report_chat_room'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/social/chat/search': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Поиск по сообщениям: по словам тела, с русской морфологией (`websearch_to_tsquery`, индекс
+		 *     `chat_messages_body_fts`). Без `room` — по всем моим чатам, поэтому нужен вход; с `room` —
+		 *     по одной комнате, и это доступно гостю, как и её история. Удалённые не находятся.
+		 */
+		get: operations['search_chat_messages'];
+		put?: never;
+		post?: never;
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -1030,6 +1051,26 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/social/users': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Поиск пользователей по username и имени — автодополнение «@» в чате. Отдаёт только
+		 *     активных; данные — через `UserDirectory` (таблица `users` принадлежит `auth`).
+		 */
+		get: operations['search_users'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/social/users/me/marks': {
 		parameters: {
 			query?: never;
@@ -1265,6 +1306,23 @@ export interface components {
 			 * @description Непрочитанные чужие сообщения, не больше 100.
 			 */
 			unread: number;
+		};
+		/** @description Найденное сообщение вместе с комнатой: по `room` фронтенд её открывает. */
+		ChatSearchHit: {
+			message: components['schemas']['ChatMessage'];
+			/**
+			 * @description Имя комнаты: `entity:<slug>`, `person:<slug>`, `tag:<slug>` или `room:<slug>`.
+			 * @example entity:dune-2021
+			 */
+			room: string;
+		};
+		ChatSearchPage: {
+			items: components['schemas']['ChatSearchHit'][];
+			/**
+			 * Format: uuid
+			 * @description Курсор дальше в прошлое; `null` — найдено всё.
+			 */
+			next_before?: string | null;
 		};
 		/**
 		 * @description Комната в списке «мои чаты». Заполнено ровно одно из `entity`, `person`, `tag`, `custom` —
@@ -1519,10 +1577,20 @@ export interface components {
 			/** @description Вступил ли текущий пользователь; `null` — гость. В системной — всегда `true`. */
 			joined?: boolean | null;
 			/**
+			 * Format: date-time
+			 * @description Когда написали в последний раз; `null` — сообщений не было.
+			 */
+			last_message_at?: string | null;
+			/**
 			 * Format: int64
 			 * @description Участников. У системной комнаты — все пользователи сайта.
 			 */
 			members_count: number;
+			/**
+			 * Format: int64
+			 * @description Сообщений за последние сутки — «насколько комната жива сейчас».
+			 */
+			messages_24h: number;
 			/** Format: int32 */
 			messages_count: number;
 			owner?: components['schemas']['UserRef'] | null;
@@ -1863,10 +1931,20 @@ export interface components {
 				/** @description Вступил ли текущий пользователь; `null` — гость. В системной — всегда `true`. */
 				joined?: boolean | null;
 				/**
+				 * Format: date-time
+				 * @description Когда написали в последний раз; `null` — сообщений не было.
+				 */
+				last_message_at?: string | null;
+				/**
 				 * Format: int64
 				 * @description Участников. У системной комнаты — все пользователи сайта.
 				 */
 				members_count: number;
+				/**
+				 * Format: int64
+				 * @description Сообщений за последние сутки — «насколько комната жива сейчас».
+				 */
+				messages_24h: number;
 				/** Format: int32 */
 				messages_count: number;
 				owner?: components['schemas']['UserRef'] | null;
@@ -2495,6 +2573,11 @@ export interface components {
 		 * @enum {string}
 		 */
 		ReviewSort: 'new' | 'rating_desc' | 'rating_asc';
+		/**
+		 * @description Порядок каталога комнат. Системные всегда первыми — это вкладки панели.
+		 * @enum {string}
+		 */
+		RoomSort: 'active' | 'members' | 'new';
 		/** @description Заменить список связанных подборок. */
 		SetRelated: {
 			/** @description id публичных коллекций, до 12, без повторов и без самой коллекции; порядок — порядок показа. */
@@ -2681,6 +2764,8 @@ export type SchemaChatHistory = components['schemas']['ChatHistory'];
 export type SchemaChatMessage = components['schemas']['ChatMessage'];
 export type SchemaChatRoomInfo = components['schemas']['ChatRoomInfo'];
 export type SchemaChatRoomMe = components['schemas']['ChatRoomMe'];
+export type SchemaChatSearchHit = components['schemas']['ChatSearchHit'];
+export type SchemaChatSearchPage = components['schemas']['ChatSearchPage'];
 export type SchemaChatSummary = components['schemas']['ChatSummary'];
 export type SchemaCollection = components['schemas']['Collection'];
 export type SchemaCollectionBySlug = components['schemas']['CollectionBySlug'];
@@ -2738,6 +2823,7 @@ export type SchemaReportedRoom = components['schemas']['ReportedRoom'];
 export type SchemaReview = components['schemas']['Review'];
 export type SchemaReviewComment = components['schemas']['ReviewComment'];
 export type SchemaReviewSort = components['schemas']['ReviewSort'];
+export type SchemaRoomSort = components['schemas']['RoomSort'];
 export type SchemaSetRelated = components['schemas']['SetRelated'];
 export type SchemaSocialProfile = components['schemas']['SocialProfile'];
 export type SchemaTagInterest = components['schemas']['TagInterest'];
@@ -4069,6 +4155,13 @@ export interface operations {
 				limit?: number;
 				/** @description С 0. */
 				offset?: number;
+				/**
+				 * @description `active` (по умолчанию), `members` или `new`. При `q` не действует: там порядок по
+				 *     близости к запросу.
+				 */
+				sort?: components['schemas']['RoomSort'];
+				/** @description Поиск по названию и описанию, до 100 символов. Пустой — как без него. */
+				q?: string;
 			};
 			header?: never;
 			path?: never;
@@ -4456,6 +4549,68 @@ export interface operations {
 			};
 			/** @description На системную комнату жаловаться нечего */
 			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такой комнаты */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	search_chat_messages: {
+		parameters: {
+			query: {
+				/**
+				 * @description Слова для поиска, 1–100 символов.
+				 * @example дюна
+				 */
+				q: string;
+				/**
+				 * @description Комната вида `entity:dune-2021`, `person:<slug>`, `tag:<slug>` или `room:<slug>`.
+				 *     Без неё — по всем моим чатам (нужен вход).
+				 */
+				room?: string;
+				/** @description 1–100, по умолчанию 50. */
+				limit?: number;
+				/** @description Сообщения старше этого id (курсор `next_before`). */
+				before?: string;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Найденные сообщения, новые сверху */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ChatSearchPage'];
+				};
+			};
+			/** @description Пустой или слишком длинный `q`, неверный `limit` или `room` */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Без `room` нужен вход */
+			401: {
 				headers: {
 					[name: string]: unknown;
 				};
@@ -7347,6 +7502,43 @@ export interface operations {
 			};
 			/** @description Тема не найдена */
 			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	search_users: {
+		parameters: {
+			query: {
+				/**
+				 * @description Начало username или имени, 1–50 символов.
+				 * @example ali
+				 */
+				q: string;
+				/** @description 1–50, по умолчанию 8. */
+				limit?: number;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Найденные пользователи */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['UserRef'][];
+				};
+			};
+			/** @description Пустой или слишком длинный `q`, неверный `limit` */
+			400: {
 				headers: {
 					[name: string]: unknown;
 				};

@@ -10,6 +10,7 @@ import { browser } from '$app/env';
 import type {
 	SchemaChatMessage,
 	SchemaChatRoomInfo,
+	SchemaChatSearchHit,
 	SchemaChatSummary,
 	SchemaCustomRoom,
 	SchemaUserRef
@@ -58,6 +59,8 @@ export interface Toast {
 	id: string;
 	meta: RoomMeta;
 	message: Message;
+	/** Вас упомянули: показываем даже в заглушённой комнате и помечаем. */
+	mention?: boolean;
 }
 
 /** id сущности, человека, тега или комнаты — как target_id в событиях. */
@@ -86,9 +89,13 @@ class Chat {
 	chatsLoading = $state(false);
 	chatsError = $state('');
 
-	/** Живые комнаты для пустого списка; null — ещё не запрашивали. */
+	/** Комнаты вкладки «Обсуждается»; null — ещё не запрашивали. */
 	suggested = $state<SchemaCustomRoom[] | null>(null);
-	#suggesting = false;
+	#suggesting = '';
+
+	/** Найденные сообщения (GET /chat/search); null — не искали. */
+	found = $state<SchemaChatSearchHit[] | null>(null);
+	searching = $state(false);
 
 	current = $state<RoomMeta | null>(null);
 	/** Состояние открытой комнаты для меня (GET /chat/{kind}/{slug}); me — null у гостя. */
@@ -288,21 +295,51 @@ class Chat {
 		}
 	}
 
-	/** Чатов нет — показываем, где сейчас говорят. Один запрос на вкладку. */
-	async loadSuggested() {
-		if (this.suggested || this.#suggesting) return;
-		this.#suggesting = true;
+	/** Вкладка «Обсуждается»: активные комнаты, при запросе — поиск по названию и описанию. */
+	async loadSuggested(q = '') {
+		if (this.#suggesting === `q:${q}`) return;
+		this.#suggesting = `q:${q}`;
 		try {
-			// sort бэкенд пока не поддерживает: берём первые из его порядка (системные сверху).
 			const page = await unwrap(
-				guestApi.social.GET('/api/v1/social/chat/rooms', { params: { query: { limit: 8 } } })
+				guestApi.social.GET('/api/v1/social/chat/rooms', {
+					params: { query: { limit: 20, sort: 'active', q: q || undefined } }
+				})
 			);
-			this.suggested = page.items;
+			if (this.#suggesting === `q:${q}`) this.suggested = page.items;
 		} catch {
-			this.suggested = [];
+			if (this.#suggesting === `q:${q}`) this.suggested = [];
 		} finally {
-			this.#suggesting = false;
+			if (this.#suggesting === `q:${q}`) this.#suggesting = '';
 		}
+	}
+
+	/** Поиск по сообщениям моих чатов. Пустой запрос — сбросить выдачу. */
+	async searchMessages(q: string) {
+		const query = q.trim();
+		if (!query || session.status !== 'authed') {
+			this.found = null;
+			this.searching = false;
+			return;
+		}
+		this.searching = true;
+		try {
+			const page = await unwrap(
+				api.social.GET('/api/v1/social/chat/search', { params: { query: { q: query, limit: 20 } } })
+			);
+			this.found = page.items;
+		} catch {
+			this.found = [];
+		} finally {
+			this.searching = false;
+		}
+	}
+
+	/** Шапка комнаты по её имени: из «моих чатов», иначе — хотя бы slug. */
+	metaFor(room: string): RoomMeta {
+		const summary = this.summary(room);
+		if (summary) return roomMeta(summary);
+		const { kind, slug } = splitRoom(room);
+		return { room, title: slug, href: kind === 'room' ? '/chat' : null, image: null };
 	}
 
 	/** История: без older — заново (последние), с older — страница старше уже показанных. */
@@ -448,6 +485,22 @@ class Chat {
 				if (chat) chat.unread = 0;
 				break;
 			}
+			case 'chat.mention': {
+				// В личном канале имени комнаты нет — ищем её по kind и target_id.
+				const summary = this.chats?.find(
+					(c) => c.kind === data.kind && targetId(c) === data.target_id
+				);
+				const message = data.message as Message;
+				if (!summary || this.current?.room === summary.room) return;
+				// Упоминание — личное: показываем даже в заглушённой комнате.
+				this.#toast(summary.room, message, true);
+				break;
+			}
+			case 'chat.room.created':
+				// Канал rooms: каталог «Обсуждается» перечитываем, список своих чатов не меняется.
+				this.suggested = null;
+				void this.loadSuggested();
+				break;
 			case 'chat.room.deleted': {
 				const gone = this.chats?.find((c) => c.custom?.id === data.room_id);
 				if (gone && this.current?.room === gone.room) this.close();
@@ -490,11 +543,11 @@ class Chat {
 		this.chats = [chat, ...this.chats.filter((c) => c !== chat)];
 	}
 
-	#toast(room: string, message: Message) {
+	#toast(room: string, message: Message, mention = false) {
 		const chat = this.summary(room);
 		const meta = chat ? roomMeta(chat) : this.current?.room === room ? this.current : null;
 		if (!meta) return;
-		const toast = { id: message.id, meta, message };
+		const toast = { id: message.id, meta, message, mention };
 		this.toasts = [...this.toasts.slice(-2), toast];
 		setTimeout(() => (this.toasts = this.toasts.filter((t) => t !== toast)), TOAST_MS);
 	}
