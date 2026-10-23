@@ -31,10 +31,13 @@ import {
 
 export type Message = SchemaChatMessage;
 
-/** Вкладка панели: два системных чата и список всего, где я состою. */
+/** Вкладка панели: два системных чата и списки. */
 export type Tab = 'general' | 'catalog' | 'chats';
 
 const TABS: Tab[] = ['general', 'catalog', 'chats'];
+
+/** Что показывает вкладка «Чаты»: где я состою или где сейчас говорят. */
+export type ListView = 'mine' | 'live';
 
 /** Сообщение в ленте; своё неотправленное — с client_id и состоянием. */
 export type Item = Message & {
@@ -73,6 +76,8 @@ class Chat {
 	tab = $state<Tab>('general');
 	/** Какой из чатов «Каталога» открыт. */
 	topic = $state<Topic>('movies');
+	/** Вкладка «Чаты»: мои или те, где сейчас обсуждают. */
+	listView = $state<ListView>('mine');
 	/** Комната, открытая поверх вкладки: с карточки, из списка комнат, из уведомления. */
 	adhoc = $state<RoomMeta | null>(null);
 
@@ -126,6 +131,11 @@ class Chat {
 		this.#enter(systemMeta(topic));
 	}
 
+	setListView(view: ListView) {
+		this.listView = view;
+		this.#save();
+	}
+
 	/** Назад из комнаты, открытой поверх вкладки. */
 	back() {
 		this.adhoc = null;
@@ -163,6 +173,7 @@ class Chat {
 			this.collapsed = !!saved.collapsed;
 			this.topic = topicOf(saved.topic);
 			this.tab = TABS.includes(saved.tab) ? saved.tab : 'general';
+			this.listView = saved.list === 'live' ? 'live' : 'mine';
 			if (saved.open?.room) this.open(saved.open, { show: false });
 			else this.setTab(this.tab);
 		} catch {
@@ -179,6 +190,7 @@ class Chat {
 					collapsed: this.collapsed,
 					tab: this.tab,
 					topic: this.topic,
+					list: this.listView,
 					open: this.adhoc && { ...this.adhoc }
 				})
 			);

@@ -43,7 +43,7 @@
 	const tabs: { tab: Tab; title: string }[] = [
 		{ tab: 'general', title: 'Общий' },
 		{ tab: 'catalog', title: 'Каталог' },
-		{ tab: 'chats', title: 'Мои чаты' }
+		{ tab: 'chats', title: 'Чаты' }
 	];
 </script>
 

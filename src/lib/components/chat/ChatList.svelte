@@ -7,10 +7,13 @@
 	import { loginUrl } from '#lib/utils/redirect.ts';
 	import RoomIcon from './RoomIcon.svelte';
 
-	// «Мои чаты» — единственный список панели: всё, где я состою, вперемешку — чаты фильмов,
-	// людей и тем из интересов и комнаты, в которые я вступил. Ниже — живые комнаты, куда
-	// можно зайти. Общий чат и чаты разделов — отдельные вкладки, они не списки.
+	// Вкладка «Чаты» с переключателем: «Мои» — всё, где я состою (чаты фильмов, людей и тем
+	// из интересов и комнаты, куда вступил), «Обсуждается» — живые комнаты, куда можно зайти.
+	// Общий чат и чаты разделов — отдельные вкладки, они не списки.
 	let query = $state('');
+
+	const live = $derived(chat.listView === 'live');
+	const searchLabel = $derived(live ? 'Найти комнату' : 'Найти чат');
 
 	const matches = (title: string) => title.toLowerCase().includes(query.trim().toLowerCase());
 
@@ -26,10 +29,12 @@
 		void chat.chats;
 		void chat.loadSuggested();
 	});
+	/** Свои комнаты — независимо от поиска, иначе при вводе они полезут в «Обсуждается». */
+	const joined = $derived((chat.chats ?? []).map((c) => c.custom?.slug).filter(Boolean));
 	const suggested = $derived(
 		(chat.suggested ?? [])
 			.filter((r) => !r.system)
-			.filter((r) => !rows.some(({ chat: c }) => c.custom?.slug === r.slug))
+			.filter((r) => !joined.includes(r.slug))
 			.filter((r) => matches(r.title))
 	);
 
@@ -43,8 +48,20 @@
 
 <div class="flex min-h-0 flex-1 flex-col">
 	<div class="px-4 pt-2">
-		<label class="input w-full input-sm">
-			<input type="search" placeholder="Найти чат" bind:value={query} aria-label="Найти чат" />
+		<div class="flex gap-1" role="group" aria-label="Какие чаты показывать">
+			<button
+				class={['btn flex-1 rounded-full btn-xs', live ? 'btn-ghost' : 'btn-primary']}
+				aria-pressed={!live}
+				onclick={() => chat.setListView('mine')}>Мои чаты</button
+			>
+			<button
+				class={['btn flex-1 rounded-full btn-xs', live ? 'btn-primary' : 'btn-ghost']}
+				aria-pressed={live}
+				onclick={() => chat.setListView('live')}>Обсуждается</button
+			>
+		</div>
+		<label class="input mt-2 w-full input-sm">
+			<input type="search" placeholder={searchLabel} bind:value={query} aria-label={searchLabel} />
 			<svg
 				class="size-4 opacity-50"
 				viewBox="0 0 24 24"
@@ -64,7 +81,9 @@
 			</p>
 		{/if}
 
-		{#if session.status === 'authed' && !chat.chats}
+		{#if live}
+			<!-- Второй режим — живые комнаты, он ниже. -->
+		{:else if session.status === 'authed' && !chat.chats}
 			{#each [1, 2, 3] as i (i)}
 				<div class="flex items-center gap-3 px-2 py-2">
 					<span class="size-10 skeleton rounded-full"></span>
@@ -72,11 +91,6 @@
 				</div>
 			{/each}
 		{:else if rows.length}
-			<p
-				class="px-2 pt-2 pb-1 text-[0.65rem] font-bold tracking-widest text-base-content/50 uppercase"
-			>
-				Мои чаты&nbsp;({rows.length})
-			</p>
 			<ul>
 				{#each rows as { chat: c, meta } (c.room)}
 					{@const last = c.last_message}
@@ -141,21 +155,24 @@
 					</li>
 				{/each}
 			</ul>
+		{:else}
+			<p class="px-2 py-6 text-sm text-base-content/60">
+				{query.trim()
+					? 'Ничего не нашлось.'
+					: 'Добавьте фильмы, людей или темы в интересы, вступите в комнату — чаты появятся здесь.'}
+			</p>
 		{/if}
 
-		{#if chat.suggested === null}
-			{#each [1, 2] as i (i)}
+		{#if !live}
+			<!-- Мои чаты уже показаны выше. -->
+		{:else if chat.suggested === null}
+			{#each [1, 2, 3] as i (i)}
 				<div class="flex items-center gap-3 px-2 py-2">
 					<span class="size-10 skeleton rounded-full"></span>
 					<span class="h-8 flex-1 skeleton"></span>
 				</div>
 			{/each}
 		{:else if suggested.length}
-			<p
-				class="px-2 pt-4 pb-1 text-[0.65rem] font-bold tracking-widest text-base-content/50 uppercase"
-			>
-				Сейчас обсуждают
-			</p>
 			<ul>
 				{#each suggested as room (room.id)}
 					{@const meta = roomMetaOf(room)}
@@ -176,11 +193,9 @@
 					</li>
 				{/each}
 			</ul>
-		{:else if !rows.length}
+		{:else}
 			<p class="px-2 py-6 text-sm text-base-content/60">
-				{query.trim()
-					? 'Ничего не нашлось.'
-					: 'Добавьте фильмы, людей или темы в интересы, вступите в комнату — чаты появятся здесь.'}
+				{query.trim() ? 'Ничего не нашлось.' : 'Сейчас нигде не обсуждают — загляните позже.'}
 			</p>
 		{/if}
 
