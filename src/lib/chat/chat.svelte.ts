@@ -26,6 +26,7 @@ import {
 	splitRoom,
 	systemMeta,
 	topicOf,
+	TOPICS,
 	type RoomMeta,
 	type Topic
 } from './rooms.ts';
@@ -120,6 +121,24 @@ class Chat {
 
 	get unread(): number {
 		return (this.chats ?? []).reduce((sum, c) => sum + (c.muted ? 0 : c.unread), 0);
+	}
+
+	/** Непрочитанное одной комнаты; заглушённая — ноль, как и в общем счётчике. */
+	unreadOf(room: string): number {
+		const chat = this.summary(room);
+		return !chat || chat.muted ? 0 : chat.unread;
+	}
+
+	/** Непрочитанное по вкладкам: иначе общий счётчик указывает в никуда. */
+	get unreadByTab(): Record<Tab, number> {
+		return {
+			general: this.unreadOf(systemMeta(GENERAL).room),
+			catalog: TOPICS.reduce((sum, t) => sum + this.unreadOf(systemMeta(t.slug).room), 0),
+			chats: (this.chats ?? []).reduce(
+				(sum, c) => sum + (c.custom?.system || c.muted ? 0 : c.unread),
+				0
+			)
+		};
 	}
 
 	/** Вкладка: «Общий» и «Каталог» сразу показывают ленту, «Комнаты» — список. */

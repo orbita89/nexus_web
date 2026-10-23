@@ -133,26 +133,36 @@
 		<div class="px-4 pb-1">
 			<div class="flex rounded-full bg-base-300/60 p-1" role="tablist" aria-label="Разделы чата">
 				{#each tabs as t (t.tab)}
+					{@const unread = chat.unreadByTab[t.tab]}
 					<button
 						role="tab"
 						aria-selected={chat.tab === t.tab && !chat.adhoc}
 						class={[
-							'flex-1 rounded-full px-1.5 py-1 text-[0.65rem] font-bold tracking-wider uppercase transition',
+							'flex flex-1 items-center justify-center gap-1 rounded-full px-1.5 py-1 text-[0.65rem] font-bold tracking-wider uppercase transition',
 							chat.tab === t.tab && !chat.adhoc
 								? 'bg-base-100 text-base-content shadow-sm'
 								: 'text-base-content/50 hover:text-base-content'
 						]}
-						onclick={() => chat.setTab(t.tab)}>{t.title}</button
+						onclick={() => chat.setTab(t.tab)}
+						>{t.title}{#if unread}<span
+								class="badge badge-xs badge-primary"
+								aria-label="Непрочитанных: {unread}">{unreadLabel(unread)}</span
+							>{/if}</button
 					>
 				{/each}
 			</div>
 			{#if chat.tab === 'catalog' && !chat.adhoc}
 				<div class="mt-2 flex flex-wrap gap-1" role="group" aria-label="Раздел каталога">
 					{#each TOPICS as t (t.slug)}
+						{@const unread = chat.unreadOf(`room:${t.slug}`)}
 						<button
 							class={['badge badge-sm', chat.topic === t.slug ? 'badge-primary' : 'badge-ghost']}
 							aria-pressed={chat.topic === t.slug}
-							onclick={() => chat.setTopic(t.slug)}>{t.title}</button
+							onclick={() => chat.setTopic(t.slug)}
+							>{t.title}{#if unread}&nbsp;<span
+									class={['font-bold', chat.topic === t.slug ? '' : 'text-primary']}
+									aria-label="Непрочитанных: {unread}">{unreadLabel(unread)}</span
+								>{/if}</button
 						>
 					{/each}
 				</div>
