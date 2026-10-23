@@ -452,6 +452,7 @@ class Chat {
 					: this.messages.map((m) => (m.clientId === clientId ? message : m));
 			}
 			this.#bump(room, message, false);
+			this.#joinAfterWriting(room);
 		} else if (reply.type === 'error' && clientId) {
 			const retry = typeof reply.retry_after === 'number' ? reply.retry_after : undefined;
 			this.#fail(clientId, sendError(String(reply.error)), retry);
@@ -624,8 +625,11 @@ class Chat {
 	async toggleMember() {
 		const info = this.info;
 		if (!info?.me || this.current?.room !== info.room) return;
-		const next = !info.me.member;
-		const { kind, slug } = splitRoom(info.room);
+		await this.#setMember(info.room, !info.me.member);
+	}
+
+	async #setMember(room: string, next: boolean) {
+		const { kind, slug } = splitRoom(room);
 		const params = { path: { slug } };
 		// Пути интересов и участия устроены одинаково: PUT / DELETE, 204.
 		const path = (
@@ -635,11 +639,21 @@ class Chat {
 		) as '/api/v1/social/entities/{slug}/interest';
 		try {
 			await unwrap(next ? api.social.PUT(path, { params }) : api.social.DELETE(path, { params }));
-			info.me.member = next;
+			if (this.info?.room === room && this.info.me) this.info.me.member = next;
 			void this.loadChats();
 		} catch (e) {
 			this.historyError = errorMessage(e);
 		}
+	}
+
+	/**
+	 * Написал в чужой чат — он становится своим: попадает в панель, подписывается на события
+	 * и считает непрочитанное. Иначе разговор теряется, как только закроешь комнату.
+	 */
+	#joinAfterWriting(room: string) {
+		const info = this.info;
+		if (!info || info.room !== room || !info.me || info.me.member) return;
+		void this.#setMember(room, true);
 	}
 
 	/** Правка своего сообщения. Ошибка — исключение: форма правки покажет её. */

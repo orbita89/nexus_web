@@ -71,6 +71,22 @@ test('слежу за карточкой — её чат появляется в
 	await expect(panel.getByRole('button', { name: 'Дюна' })).toBeVisible();
 });
 
+test('написал в чужой чат — он сам становится своим', async ({ page, request }) => {
+	await registerAndSignIn(page, request, 'write');
+	const panel = panelOf(page);
+
+	await page.goto('/people/denis-villeneuve');
+	await page.getByRole('button', { name: 'Открыть чат' }).click();
+	// «Следить» не нажимаем — достаточно написать.
+	await expect(panel.getByRole('button', { name: 'Следить', exact: true })).toBeVisible();
+	await panel.getByLabel('Сообщение').fill(`e2e ${Date.now().toString(36)}`);
+	await panel.getByRole('button', { name: 'Отправить' }).click();
+
+	await expect(panel.getByRole('button', { name: 'Вы следите' })).toBeVisible();
+	await panel.getByRole('tab', { name: 'Чаты' }).click();
+	await expect(panel.getByRole('button', { name: /Вильнёв/ })).toBeVisible();
+});
+
 test('своя комната: создание, открытие и удаление', async ({ page, request }) => {
 	await registerAndSignIn(page, request, 'room');
 	const panel = panelOf(page);
