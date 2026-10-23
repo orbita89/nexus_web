@@ -27,12 +27,8 @@
 	let mine = $state<SchemaCustomRoom[] | null>(null);
 	$effect(() => {
 		if (session.status !== 'authed') return;
-		const sort = data.sort;
-		unwrap(
-			api.social.GET('/api/v1/social/chat/rooms', {
-				params: { query: { limit: 100, sort } as { limit: number } }
-			})
-		)
+		void data.sort;
+		unwrap(api.social.GET('/api/v1/social/chat/rooms', { params: { query: { limit: 100 } } }))
 			.then((page) => (mine = page.items))
 			.catch(() => {});
 	});
@@ -70,9 +66,7 @@
 		};
 		saving = true;
 		try {
-			const room = await unwrap(
-				api.social.POST('/api/v1/social/chat/rooms' as '/api/v1/social/admin/chat/rooms', { body })
-			);
+			const room = await unwrap(api.social.POST('/api/v1/social/chat/rooms', { body }));
 			draft = { title: '', slug: '', description: '' };
 			slugTouched = false;
 			creating = false;
@@ -80,10 +74,98 @@
 			void chat.loadChats();
 			chat.open({ room: `room:${room.slug}`, title: room.title, href: '/chat', image: null });
 		} catch (e) {
-			createError =
-				e instanceof ApiError && e.status === 409 ? 'Такой slug уже занят.' : errorMessage(e);
+			createError = createMessage(e);
 		} finally {
 			saving = false;
+		}
+	}
+
+	/** Два разных 409: занятый адрес чинится правкой поля, лимит комнат — только удалением. */
+	function createMessage(e: unknown): string {
+		if (!(e instanceof ApiError)) return errorMessage(e);
+		if (e.code === 'slug_taken') return 'Этот адрес занят или зарезервирован — придумайте другой.';
+		if (e.code === 'room_limit')
+			return 'У вас уже 5 своих комнат. Удалите одну, чтобы завести новую.';
+		return errorMessage(e);
+	}
+
+	// Своя комната: правит и удаляет владелец, а также админ. Системную не трогает никто.
+	let editing = $state<string | null>(null);
+	let editDraft = $state({ title: '', description: '' });
+	let confirmDelete = $state<string | null>(null);
+	let reporting = $state<string | null>(null);
+	let reason = $state('');
+	const reported = $state<Record<string, boolean>>({});
+
+	const canManage = (room: SchemaCustomRoom) =>
+		!room.system &&
+		session.status === 'authed' &&
+		(room.owner?.id === session.user?.id || session.user?.role === 'admin');
+
+	async function run(slug: string, action: () => Promise<unknown>) {
+		busy = slug;
+		error = '';
+		try {
+			await action();
+			return true;
+		} catch (e) {
+			error =
+				e instanceof ApiError && e.code === 'room_is_system'
+					? 'Это общая комната — её нельзя менять.'
+					: errorMessage(e);
+			return false;
+		} finally {
+			busy = '';
+		}
+	}
+
+	async function save(event: SubmitEvent, slug: string) {
+		event.preventDefault();
+		const title = editDraft.title.trim();
+		if (!title || title.length > 100) {
+			error = 'Название — от 1 до 100 символов.';
+			return;
+		}
+		const ok = await run(slug, () =>
+			unwrap(
+				api.social.PATCH('/api/v1/social/chat/rooms/{slug}', {
+					params: { path: { slug } },
+					body: { title, description: editDraft.description.trim() || null }
+				})
+			)
+		);
+		if (ok) {
+			editing = null;
+			await invalidateAll();
+			void chat.loadChats();
+		}
+	}
+
+	async function remove(slug: string) {
+		const ok = await run(slug, () =>
+			unwrap(api.social.DELETE('/api/v1/social/chat/rooms/{slug}', { params: { path: { slug } } }))
+		);
+		if (ok) {
+			confirmDelete = null;
+			await invalidateAll();
+			void chat.loadChats();
+		}
+	}
+
+	async function report(event: SubmitEvent, slug: string) {
+		event.preventDefault();
+		const ok = await run(slug, () =>
+			unwrap(
+				api.social.POST('/api/v1/social/chat/rooms/{slug}/report', {
+					params: { path: { slug } },
+					body: { reason: reason.trim() }
+				})
+			)
+		);
+		if (ok) {
+			reported[slug] = true;
+			reporting = null;
+			reason = '';
 		}
 	}
 
@@ -211,9 +293,21 @@
 			<li class="flex items-start gap-4 rounded-box bg-base-200 p-4 ring-1 ring-base-300">
 				<RoomIcon {meta} size="size-12" />
 				<div class="min-w-0 flex-1">
-					<h2 class="truncate font-bold">{room.title}</h2>
+					<h2 class="flex items-center gap-2 font-bold">
+						<span class="truncate">{room.title}</span>
+						{#if room.system}
+							<span class="badge shrink-0 badge-ghost badge-sm">общая</span>
+						{/if}
+					</h2>
 					{#if room.description}
 						<p class="mt-1 line-clamp-2 text-sm text-base-content/70">{room.description}</p>
+					{/if}
+					{#if room.owner}
+						<p class="mt-1 text-xs text-base-content/50">
+							Создал <a href="/u/{room.owner.username}" class="link link-hover"
+								>{room.owner.display_name || room.owner.username}</a
+							>
+						</p>
 					{/if}
 					<p class="mt-1 text-xs text-base-content/50">
 						{count(room.members_count, ['участник', 'участника', 'участников'])} ·
@@ -222,18 +316,108 @@
 							· <span class="font-bold text-success">{activityLabel(room)}</span>
 						{/if}
 					</p>
-					<div class="mt-3 flex flex-wrap gap-2">
-						<button class="{HERO_GLASS} btn-sm" onclick={() => chat.open(meta)}>Открыть</button>
-						{#if session.status === 'authed'}
-							<button
-								class={['btn rounded-full btn-sm', member(room.slug) ? 'btn-ghost' : 'btn-primary']}
-								disabled={busy === room.slug || (!mine && !(room.slug in toggled))}
-								onclick={() => toggle(room.slug)}>{member(room.slug) ? 'Выйти' : 'Вступить'}</button
-							>
-						{:else if session.status === 'guest'}
-							<a href={loginUrl(page.url)} class="btn rounded-full btn-primary btn-sm">Вступить</a>
+					{#if editing === room.slug}
+						<!-- Правка своей комнаты: адрес не меняется, он постоянный. -->
+						<form class="mt-3 flex flex-col gap-2" onsubmit={(e) => save(e, room.slug)}>
+							<label class="sr-only" for="title-{room.id}">Название</label>
+							<input
+								id="title-{room.id}"
+								class="input input-sm"
+								maxlength="100"
+								bind:value={editDraft.title}
+							/>
+							<label class="sr-only" for="desc-{room.id}">Описание</label>
+							<input
+								id="desc-{room.id}"
+								class="input input-sm"
+								placeholder="Описание"
+								maxlength="500"
+								bind:value={editDraft.description}
+							/>
+							<div class="flex gap-2">
+								<button class="btn btn-primary btn-xs" disabled={busy === room.slug}
+									>Сохранить</button
+								>
+								<button type="button" class="btn btn-ghost btn-xs" onclick={() => (editing = null)}
+									>Отмена</button
+								>
+							</div>
+						</form>
+					{:else}
+						<div class="mt-3 flex flex-wrap gap-2">
+							<button class="{HERO_GLASS} btn-sm" onclick={() => chat.open(meta)}>Открыть</button>
+							{#if room.system}
+								<!-- В общей комнате состоят все: вступать и выходить некуда. -->
+							{:else if session.status === 'authed'}
+								<button
+									class={[
+										'btn rounded-full btn-sm',
+										member(room.slug) ? 'btn-ghost' : 'btn-primary'
+									]}
+									disabled={busy === room.slug || (!mine && !(room.slug in toggled))}
+									onclick={() => toggle(room.slug)}
+									>{member(room.slug) ? 'Выйти' : 'Вступить'}</button
+								>
+							{:else if session.status === 'guest'}
+								<a href={loginUrl(page.url)} class="btn rounded-full btn-primary btn-sm">Вступить</a
+								>
+							{/if}
+
+							{#if canManage(room)}
+								<button
+									class="btn rounded-full btn-ghost btn-sm"
+									onclick={() => {
+										editDraft = { title: room.title, description: room.description ?? '' };
+										editing = room.slug;
+									}}>Изменить</button
+								>
+								{#if confirmDelete === room.slug}
+									<button
+										class="btn rounded-full btn-error btn-sm"
+										disabled={busy === room.slug}
+										onclick={() => remove(room.slug)}>Удалить навсегда</button
+									>
+									<button
+										class="btn rounded-full btn-ghost btn-sm"
+										onclick={() => (confirmDelete = null)}>Отмена</button
+									>
+								{:else}
+									<button
+										class="btn rounded-full btn-ghost text-error btn-sm"
+										onclick={() => (confirmDelete = room.slug)}>Удалить</button
+									>
+								{/if}
+							{:else if session.status === 'authed' && !room.system}
+								<button
+									class="btn rounded-full btn-ghost btn-sm"
+									disabled={reported[room.slug]}
+									onclick={() => (reporting = reporting === room.slug ? null : room.slug)}
+									>{reported[room.slug] ? 'Жалоба отправлена' : 'Пожаловаться'}</button
+								>
+							{/if}
+						</div>
+
+						{#if reporting === room.slug && !reported[room.slug]}
+							<form class="mt-2 flex flex-wrap gap-2" onsubmit={(e) => report(e, room.slug)}>
+								<label class="sr-only" for="reason-{room.id}">Что не так с комнатой</label>
+								<input
+									id="reason-{room.id}"
+									class="input min-w-48 flex-1 input-sm"
+									placeholder="Что не так с комнатой"
+									maxlength="500"
+									bind:value={reason}
+								/>
+								<button class="btn btn-primary btn-sm" disabled={busy === room.slug}
+									>Отправить</button
+								>
+								<button
+									type="button"
+									class="btn btn-ghost btn-sm"
+									onclick={() => (reporting = null)}>Отмена</button
+								>
+							</form>
 						{/if}
-					</div>
+					{/if}
 				</div>
 			</li>
 		{/each}

@@ -281,10 +281,9 @@ class Chat {
 		if (this.suggested || this.#suggesting) return;
 		this.#suggesting = true;
 		try {
+			// sort бэкенд пока не поддерживает: берём первые из его порядка (системные сверху).
 			const page = await unwrap(
-				guestApi.social.GET('/api/v1/social/chat/rooms', {
-					params: { query: { limit: 5, sort: 'active' } as { limit: number } }
-				})
+				guestApi.social.GET('/api/v1/social/chat/rooms', { params: { query: { limit: 8 } } })
 			);
 			this.suggested = page.items;
 		} catch {

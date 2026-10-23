@@ -13,8 +13,25 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/** Создать свою комнату. */
+		/** Завести комнату от имени площадки: `owner_id` пуст, правит её только админ. */
 		post: operations['admin_create_chat_room'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/social/admin/chat/rooms/reports': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Комнаты с жалобами: больше жалоб — выше. */
+		get: operations['admin_list_reported_chat_rooms'];
+		put?: never;
+		post?: never;
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -31,11 +48,11 @@ export interface paths {
 		get?: never;
 		put?: never;
 		post?: never;
-		/** Удалить свою комнату вместе с сообщениями и участниками → 204. */
+		/** Удалить любую несистемную комнату вместе с сообщениями и участниками → 204. */
 		delete: operations['admin_delete_chat_room'];
 		options?: never;
 		head?: never;
-		/** Изменить название или описание своей комнаты (slug не меняется: это адрес канала). */
+		/** Изменить название или описание любой несистемной комнаты (slug не меняется). */
 		patch: operations['admin_update_chat_room'];
 		trace?: never;
 	};
@@ -288,10 +305,11 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** Свои комнаты: больше участников — выше. Вошедшему — `joined` (вступил ли). */
+		/** Комнаты: системные сверху, дальше — где больше участников. Вошедшему — `joined` (вступил ли). */
 		get: operations['list_chat_rooms'];
 		put?: never;
-		post?: never;
+		/** Завести свою комнату: автор становится владельцем и участником. */
+		post: operations['create_chat_room'];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -305,14 +323,16 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** Своя комната по slug. Вошедшему — `joined` (вступил ли). */
+		/** Комната по slug. Вошедшему — `joined` (вступил ли). */
 		get: operations['get_chat_room'];
 		put?: never;
 		post?: never;
-		delete?: never;
+		/** Удалить свою комнату вместе с сообщениями и участниками → 204: владелец или админ. */
+		delete: operations['delete_chat_room'];
 		options?: never;
 		head?: never;
-		patch?: never;
+		/** Изменить свою комнату: владелец или админ. */
+		patch: operations['update_chat_room'];
 		trace?: never;
 	};
 	'/api/v1/social/chat/rooms/{slug}/membership': {
@@ -323,11 +343,34 @@ export interface paths {
 			cookie?: never;
 		};
 		get?: never;
-		/** Вступить в комнату → 204 (повторно — тоже 204): она в «моих чатах», канал подписан. */
+		/**
+		 * Вступить в комнату → 204 (повторно — тоже 204): она в «моих чатах», канал подписан.
+		 *     В системной все состоят и так — 204 без записи.
+		 */
 		put: operations['join_chat_room'];
 		post?: never;
-		/** Выйти из комнаты → 204 (даже если не был участником). */
+		/** Выйти из комнаты → 204 (даже если не был участником). Системную покинуть нельзя — 403. */
 		delete: operations['leave_chat_room'];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/social/chat/rooms/{slug}/report': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Пожаловаться на комнату → 204. Повторная жалоба того же пользователя обновляет причину,
+		 *     дубля не создаёт.
+		 */
+		post: operations['report_chat_room'];
+		delete?: never;
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -1463,21 +1506,30 @@ export interface components {
 			 */
 			title: string;
 		};
-		/** @description Своя комната (админа): название, описание, счётчики. */
+		/**
+		 * @description Комната со slug: системная (вкладка панели), заведённая админом или своя комната
+		 *     пользователя — название, описание, счётчики.
+		 */
 		CustomRoom: {
 			/** Format: date-time */
 			created_at: string;
 			description?: string | null;
 			/** Format: uuid */
 			id: string;
-			/** @description Вступил ли текущий пользователь; `null` — гость. */
+			/** @description Вступил ли текущий пользователь; `null` — гость. В системной — всегда `true`. */
 			joined?: boolean | null;
-			/** Format: int64 */
+			/**
+			 * Format: int64
+			 * @description Участников. У системной комнаты — все пользователи сайта.
+			 */
 			members_count: number;
 			/** Format: int32 */
 			messages_count: number;
+			owner?: components['schemas']['UserRef'] | null;
 			/** @example cyberpunk-fans */
 			slug: string;
+			/** @description Системная комната: в ней состоят все, её нельзя покинуть, изменить и удалить. */
+			system: boolean;
 			/** @example Киберпанк */
 			title: string;
 		};
@@ -1808,14 +1860,20 @@ export interface components {
 				description?: string | null;
 				/** Format: uuid */
 				id: string;
-				/** @description Вступил ли текущий пользователь; `null` — гость. */
+				/** @description Вступил ли текущий пользователь; `null` — гость. В системной — всегда `true`. */
 				joined?: boolean | null;
-				/** Format: int64 */
+				/**
+				 * Format: int64
+				 * @description Участников. У системной комнаты — все пользователи сайта.
+				 */
 				members_count: number;
 				/** Format: int32 */
 				messages_count: number;
+				owner?: components['schemas']['UserRef'] | null;
 				/** @example cyberpunk-fans */
 				slug: string;
+				/** @description Системная комната: в ней состоят все, её нельзя покинуть, изменить и удалить. */
+				system: boolean;
 				/** @example Киберпанк */
 				title: string;
 			}[];
@@ -1973,6 +2031,32 @@ export interface components {
 				reply_to?: components['schemas']['UserRef'] | null;
 				/** Format: uuid */
 				thread_id: string;
+			}[];
+			/**
+			 * Format: int64
+			 * @example 20
+			 */
+			limit: number;
+			/**
+			 * Format: int64
+			 * @example 0
+			 */
+			offset: number;
+			/**
+			 * Format: int64
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @example 137
+			 */
+			total: number;
+		};
+		/** @description Страница списка. */
+		Page_ReportedRoom: {
+			items: {
+				/** Format: date-time */
+				last_report_at: string;
+				/** Format: int64 */
+				reports_count: number;
+				room: components['schemas']['CustomRoom'];
 			}[];
 			/**
 			 * Format: int64
@@ -2337,6 +2421,21 @@ export interface components {
 			 */
 			entities: string[];
 		};
+		ReportRoom: {
+			/**
+			 * @description Что не так с комнатой, до 500 символов.
+			 * @example Реклама
+			 */
+			reason: string;
+		};
+		/** @description Комната с жалобами — админский листинг. */
+		ReportedRoom: {
+			/** Format: date-time */
+			last_report_at: string;
+			/** Format: int64 */
+			reports_count: number;
+			room: components['schemas']['CustomRoom'];
+		};
 		/** @description Рецензия: оценка, текст или и то и другое. */
 		Review: {
 			author: components['schemas']['UserRef'];
@@ -2616,6 +2715,7 @@ export type SchemaPageInterest = components['schemas']['Page_Interest'];
 export type SchemaPageMarkedEntity = components['schemas']['Page_MarkedEntity'];
 export type SchemaPagePersonInterest = components['schemas']['Page_PersonInterest'];
 export type SchemaPagePost = components['schemas']['Page_Post'];
+export type SchemaPageReportedRoom = components['schemas']['Page_ReportedRoom'];
 export type SchemaPageReview = components['schemas']['Page_Review'];
 export type SchemaPageReviewComment = components['schemas']['Page_ReviewComment'];
 export type SchemaPageTagInterest = components['schemas']['Page_TagInterest'];
@@ -2633,6 +2733,8 @@ export type SchemaReactionKind = components['schemas']['ReactionKind'];
 export type SchemaReactions = components['schemas']['Reactions'];
 export type SchemaRelation = components['schemas']['Relation'];
 export type SchemaReorderItems = components['schemas']['ReorderItems'];
+export type SchemaReportRoom = components['schemas']['ReportRoom'];
+export type SchemaReportedRoom = components['schemas']['ReportedRoom'];
 export type SchemaReview = components['schemas']['Review'];
 export type SchemaReviewComment = components['schemas']['ReviewComment'];
 export type SchemaReviewSort = components['schemas']['ReviewSort'];
@@ -2712,6 +2814,49 @@ export interface operations {
 			};
 		};
 	};
+	admin_list_reported_chat_rooms: {
+		parameters: {
+			query?: {
+				/** @description 1–100, по умолчанию 20. */
+				limit?: number;
+				/** @description С 0. */
+				offset?: number;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Страница комнат с жалобами */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Page_ReportedRoom'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
 	admin_delete_chat_room: {
 		parameters: {
 			query?: never;
@@ -2743,7 +2888,7 @@ export interface operations {
 					'application/json': components['schemas']['ErrorBody'];
 				};
 			};
-			/** @description Нужна роль admin */
+			/** @description Нужна роль admin или комната системная (`room_is_system`) */
 			403: {
 				headers: {
 					[name: string]: unknown;
@@ -2809,7 +2954,7 @@ export interface operations {
 					'application/json': components['schemas']['ErrorBody'];
 				};
 			};
-			/** @description Нужна роль admin */
+			/** @description Нужна роль admin или комната системная (`room_is_system`) */
 			403: {
 				headers: {
 					[name: string]: unknown;
@@ -3951,6 +4096,66 @@ export interface operations {
 			};
 		};
 	};
+	create_chat_room: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['CreateRoom'];
+			};
+		};
+		responses: {
+			/** @description Создана */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['CustomRoom'];
+				};
+			};
+			/** @description Неверный slug, название или описание */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description slug занят или зарезервирован (`slug_taken`); уже 5 своих комнат (`room_limit`) */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Больше 3 комнат в сутки (`Retry-After`) */
+			429: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
 	get_chat_room: {
 		parameters: {
 			query?: never;
@@ -3977,6 +4182,123 @@ export interface operations {
 			};
 			/** @description Неверный токен */
 			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такой комнаты */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	delete_chat_room: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug комнаты
+				 * @example cyberpunk-fans
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Удалена */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Чужая комната или системная (`room_is_system`) */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такой комнаты */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	update_chat_room: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug комнаты
+				 * @example cyberpunk-fans
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['UpdateRoom'];
+			};
+		};
+		responses: {
+			/** @description Изменена */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['CustomRoom'];
+				};
+			};
+			/** @description Неверное название или описание */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Чужая комната или системная (`room_is_system`) */
+			403: {
 				headers: {
 					[name: string]: unknown;
 				};
@@ -4061,6 +4383,79 @@ export interface operations {
 			};
 			/** @description Нет токена */
 			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Системную комнату нельзя покинуть */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такой комнаты */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	report_chat_room: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug комнаты
+				 * @example cyberpunk-fans
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['ReportRoom'];
+			};
+		};
+		responses: {
+			/** @description Жалоба принята */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Пустая или слишком длинная причина */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description На системную комнату жаловаться нечего */
+			403: {
 				headers: {
 					[name: string]: unknown;
 				};

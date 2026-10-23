@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { ApiError, errorMessage, unwrap } from '#lib/api/errors.ts';
-	import type { SchemaCustomRoom } from '#lib/api/generated/social.ts';
+	import type { SchemaCustomRoom, SchemaReportedRoom } from '#lib/api/generated/social.ts';
+	import { shortTime } from '#lib/chat/rooms.ts';
 	import { api } from '#lib/auth/session.svelte.ts';
 	import { slugError, slugify } from '#lib/admin/slug.ts';
 	import Alert from '#lib/components/Alert.svelte';
@@ -15,11 +16,21 @@
 	let slugTouched = $state(false);
 	let confirmDelete = $state<string | null>(null);
 
+	// Комнаты с жалобами — сверху: больше жалоб выше.
+	let reports = $state<SchemaReportedRoom[]>([]);
+
 	async function load() {
 		try {
 			rooms = (
 				await unwrap(
 					api.social.GET('/api/v1/social/chat/rooms', { params: { query: { limit: 100 } } })
+				)
+			).items;
+			reports = (
+				await unwrap(
+					api.social.GET('/api/v1/social/admin/chat/rooms/reports', {
+						params: { query: { limit: 50 } }
+					})
 				)
 			).items;
 		} catch (e) {
@@ -137,6 +148,33 @@
 
 {#if error}<div class="mb-4"><Alert>{error}</Alert></div>{/if}
 
+{#if reports.length}
+	<h2 class="mb-2 text-xl font-black">Жалобы</h2>
+	<ul class="mb-6 flex flex-col gap-2">
+		{#each reports as item (item.room.id)}
+			<li
+				class="flex flex-wrap items-center gap-3 rounded-box bg-warning/10 p-3 ring-1 ring-warning/30"
+			>
+				<span class="min-w-0 flex-1">
+					<span class="block truncate font-medium">{item.room.title}</span>
+					<span class="block font-mono text-xs text-base-content/60">{item.room.slug}</span>
+				</span>
+				<span class="text-sm">
+					{item.reports_count} · последняя {shortTime(item.last_report_at)}
+				</span>
+				<button
+					class="btn btn-ghost btn-xs"
+					onclick={() => {
+						draft = { title: item.room.title, description: item.room.description ?? '' };
+						editing = item.room.slug;
+					}}>Изменить</button
+				>
+				<button class="btn btn-error btn-xs" onclick={() => remove(item.room.slug)}>Удалить</button>
+			</li>
+		{/each}
+	</ul>
+{/if}
+
 <div class="overflow-x-auto rounded-box ring-1 ring-base-300">
 	<table class="table">
 		<thead
@@ -180,7 +218,9 @@
 						<td class="tabular-nums">{room.members_count}</td>
 						<td class="tabular-nums">{room.messages_count}</td>
 						<td class="text-right whitespace-nowrap">
-							{#if confirmDelete === room.slug}
+							{#if room.system}
+								<span class="badge badge-ghost badge-sm">общая — не меняется</span>
+							{:else if confirmDelete === room.slug}
 								<span class="text-sm">Удалить вместе с сообщениями?</span>
 								<button class="btn btn-error btn-xs" onclick={() => remove(room.slug)}
 									>Удалить</button

@@ -9,12 +9,9 @@ import type { PageLoad } from './$types';
 export const load: PageLoad = async ({ fetch, url }) => {
 	const api = publicApi(fetch, url);
 	const sort = roomSort(url.searchParams.get('sort'));
+	// sort бэкенд пока не поддерживает — не шлём, порядок у него свой (системные сверху).
 	const rooms = await settle(
-		unwrap(
-			api.social.GET('/api/v1/social/chat/rooms', {
-				params: { query: { limit: 100, sort } as { limit: number } }
-			})
-		)
+		unwrap(api.social.GET('/api/v1/social/chat/rooms', { params: { query: { limit: 100 } } }))
 	);
 	return { rooms, sort };
 };

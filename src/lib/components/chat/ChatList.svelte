@@ -3,14 +3,7 @@
 	import { session } from '#lib/auth/session.svelte.ts';
 	import { chat } from '#lib/chat/chat.svelte.ts';
 	import { count } from '#lib/catalog/labels.ts';
-	import {
-		activityLabel,
-		authorName,
-		isSystemRoom,
-		roomMeta,
-		shortTime,
-		unreadLabel
-	} from '#lib/chat/rooms.ts';
+	import { activityLabel, authorName, roomMeta, shortTime, unreadLabel } from '#lib/chat/rooms.ts';
 	import { loginUrl } from '#lib/utils/redirect.ts';
 	import RoomIcon from './RoomIcon.svelte';
 
@@ -23,7 +16,7 @@
 
 	const rows = $derived(
 		(chat.chats ?? [])
-			.filter((c) => !isSystemRoom(c.room))
+			.filter((c) => !c.custom?.system)
 			.map((c) => ({ chat: c, meta: roomMeta(c) }))
 			.filter(({ meta }) => matches(meta.title))
 	);
@@ -35,7 +28,7 @@
 	});
 	const suggested = $derived(
 		(chat.suggested ?? [])
-			.filter((r) => !isSystemRoom(`room:${r.slug}`))
+			.filter((r) => !r.system)
 			.filter((r) => !rows.some(({ chat: c }) => c.custom?.slug === r.slug))
 			.filter((r) => matches(r.title))
 	);
