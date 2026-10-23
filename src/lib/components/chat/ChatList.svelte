@@ -46,6 +46,17 @@
 		(chat.suggested ?? []).filter((r) => !r.system).filter((r) => !joined.includes(r.slug))
 	);
 
+	// Крестик в строке: убрать чат из своих. Обратимо — «Следить» в шапке комнаты вернёт.
+	let leaving = $state('');
+	async function remove(room: string) {
+		leaving = room;
+		try {
+			await chat.leave(room);
+		} finally {
+			leaving = '';
+		}
+	}
+
 	const roomMetaOf = (room: { slug: string; title: string }) => ({
 		room: `room:${room.slug}`,
 		title: room.title,
@@ -102,9 +113,9 @@
 			<ul>
 				{#each rows as { chat: c, meta } (c.room)}
 					{@const last = c.last_message}
-					<li>
+					<li class="group flex items-center rounded-box pr-1 transition hover:bg-base-300/60">
 						<button
-							class="flex w-full items-center gap-3 rounded-box px-2 py-2 text-left transition hover:bg-base-300/60"
+							class="flex min-w-0 flex-1 items-center gap-3 px-2 py-2 text-left"
 							onclick={() => chat.open(meta)}
 						>
 							<span class="relative">
@@ -160,6 +171,13 @@
 								</span>
 							</span>
 						</button>
+						<button
+							class="btn btn-square shrink-0 btn-ghost opacity-0 transition btn-xs group-hover:opacity-60 hover:!opacity-100 focus-visible:opacity-100"
+							aria-label={c.kind === 'room' ? `Выйти: ${meta.title}` : `Не следить: ${meta.title}`}
+							title={c.kind === 'room' ? 'Выйти из комнаты' : 'Не следить'}
+							disabled={leaving === c.room}
+							onclick={() => remove(c.room)}>✕</button
+						>
 					</li>
 				{/each}
 			</ul>

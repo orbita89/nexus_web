@@ -64,11 +64,11 @@ test('слежу за карточкой — её чат появляется в
 
 	// Чат интереса — в списке «Мои чаты», а не только в открытой комнате.
 	await panel.getByRole('tab', { name: 'Чаты' }).click();
-	await expect(panel.getByRole('button', { name: /Дюна/ })).toBeVisible();
+	await expect(panel.getByRole('button', { name: /^Дюна/ })).toBeVisible();
 
 	// И в свёрнутой полосе: системные комнаты её оттуда не вытесняют.
 	await page.getByRole('button', { name: 'Чат', exact: true }).first().click();
-	await expect(panel.getByRole('button', { name: 'Дюна' })).toBeVisible();
+	await expect(panel.getByRole('button', { name: 'Дюна', exact: true })).toBeVisible();
 });
 
 test('написал в чужой чат — он сам становится своим', async ({ page, request }) => {
@@ -84,7 +84,11 @@ test('написал в чужой чат — он сам становится �
 
 	await expect(panel.getByRole('button', { name: 'Вы следите' })).toBeVisible();
 	await panel.getByRole('tab', { name: 'Чаты' }).click();
-	await expect(panel.getByRole('button', { name: /Вильнёв/ })).toBeVisible();
+	await expect(panel.getByRole('button', { name: /^Дени Вильнёв/ })).toBeVisible();
+
+	// Крестик в строке убирает чат из своих, не открывая комнату.
+	await panel.getByRole('button', { name: /^Не следить: / }).click();
+	await expect(panel.getByRole('button', { name: /Вильнёв/ })).toHaveCount(0);
 });
 
 test('своя комната: создание, открытие и удаление', async ({ page, request }) => {
