@@ -184,43 +184,43 @@
 								</span>
 							</span>
 						</button>
-						{#if system}
-							<!-- Выйти из общего чата нельзя: в нём состоят все. Зато можно заглушить. -->
-							<button
-								class={[
-									'btn btn-square shrink-0 btn-ghost transition btn-xs',
-									c.muted
-										? 'opacity-60'
-										: 'opacity-0 group-hover:opacity-60 hover:!opacity-100 focus-visible:opacity-100'
-								]}
-								aria-pressed={c.muted}
-								aria-label={c.muted
-									? `Вернуть уведомления: ${meta.title}`
-									: `Заглушить: ${meta.title}`}
-								title={c.muted ? 'Вернуть уведомления' : 'Заглушить'}
-								disabled={leaving === c.room}
-								onclick={() => mute(c.room)}
+						<!-- Заглушить можно любой чат: чаще всего нужно не выйти, а перестать получать
+						     уведомления. Из общих выйти и нельзя — в них состоят все. -->
+						<button
+							class={[
+								'btn btn-square shrink-0 btn-ghost transition btn-xs',
+								c.muted
+									? 'opacity-60'
+									: 'opacity-0 group-hover:opacity-60 hover:!opacity-100 focus-visible:opacity-100'
+							]}
+							aria-pressed={c.muted}
+							aria-label={c.muted
+								? `Вернуть уведомления: ${meta.title}`
+								: `Заглушить: ${meta.title}`}
+							title={c.muted ? 'Вернуть уведомления' : 'Заглушить'}
+							disabled={leaving === c.room}
+							onclick={() => mute(c.room)}
+						>
+							<svg
+								class="size-3.5"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								aria-hidden="true"
 							>
-								<svg
-									class="size-3.5"
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2"
-									aria-hidden="true"
-								>
-									{#if c.muted}
-										<path
-											d="M13.7 21a2 2 0 0 1-3.4 0M18.6 13A17 17 0 0 1 18 8M6.3 6.3A6 6 0 0 0 6 8c0 7-3 9-3 9h14M2 2l20 20M18 8a6 6 0 0 0-9.3-5"
-										/>
-									{:else}
-										<path
-											d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0"
-										/>
-									{/if}
-								</svg>
-							</button>
-						{:else}
+								{#if c.muted}
+									<path
+										d="M13.7 21a2 2 0 0 1-3.4 0M18.6 13A17 17 0 0 1 18 8M6.3 6.3A6 6 0 0 0 6 8c0 7-3 9-3 9h14M2 2l20 20M18 8a6 6 0 0 0-9.3-5"
+									/>
+								{:else}
+									<path
+										d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0"
+									/>
+								{/if}
+							</svg>
+						</button>
+						{#if !system}
 							<button
 								class="btn btn-square shrink-0 btn-ghost opacity-0 transition btn-xs group-hover:opacity-60 hover:!opacity-100 focus-visible:opacity-100"
 								aria-label={c.kind === 'room'

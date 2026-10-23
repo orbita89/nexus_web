@@ -94,6 +94,10 @@ test('написал в чужой чат — он сам становится �
 	await panel.getByRole('tab', { name: 'Чаты' }).click();
 	await expect(panel.getByRole('button', { name: /^Дени Вильнёв/ })).toBeVisible();
 
+	// Уведомления можно выключить, не выходя из чата.
+	await panel.getByRole('button', { name: /^Заглушить: Дени Вильнёв/ }).click();
+	await expect(panel.getByRole('button', { name: /^Вернуть уведомления: Дени/ })).toBeVisible();
+
 	// Крестик в строке убирает чат из своих, не открывая комнату.
 	await panel.getByRole('button', { name: /^Не следить: / }).click();
 	await expect(panel.getByRole('button', { name: /Вильнёв/ })).toHaveCount(0);
