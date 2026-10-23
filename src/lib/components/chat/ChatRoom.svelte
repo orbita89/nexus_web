@@ -22,6 +22,7 @@
 	const byId = $derived(new Map(chat.messages.map((m) => [m.id, m])));
 	const last = $derived(chat.messages.findLast((m) => !m.clientId));
 	const muted = $derived(chat.muted(meta.room));
+	const system = $derived(isSystemRoom(meta.room));
 
 	// Новые сообщения или первая страница — вниз, если были внизу.
 	let count = 0;
@@ -161,63 +162,69 @@
 <svelte:document onvisibilitychange={() => (pageVisible = !document.hidden)} />
 
 <div class="flex min-h-0 flex-1 flex-col">
-	<header class="flex items-center gap-2 border-b border-base-300 px-2 pb-2">
-		{#if chat.adhoc}
-			<button class="btn btn-square btn-ghost btn-sm" aria-label="Назад" onclick={() => chat.back()}
-				>‹</button
-			>
-		{/if}
-		<RoomIcon {meta} size="size-8" />
-		<div class="min-w-0 flex-1">
-			{#if meta.href}
-				<a href={meta.href} class="block truncate text-sm font-bold hover:underline">{meta.title}</a
+	<!-- У системного чата шапки нет: название уже написано на вкладке, а заглушать его нечего. -->
+	{#if !system}
+		<header class="flex items-center gap-2 border-b border-base-300 px-2 pb-2">
+			{#if chat.adhoc}
+				<button
+					class="btn btn-square btn-ghost btn-sm"
+					aria-label="Назад"
+					onclick={() => chat.back()}>‹</button
 				>
-			{:else}
-				<p class="truncate text-sm font-bold">{meta.title}</p>
 			{/if}
-		</div>
-		{#if chat.info?.me && chat.info.room === meta.room && !isSystemRoom(meta.room)}
-			{@const room = meta.room.startsWith('room:')}
-			<button
-				class={['btn rounded-full btn-xs', chat.info.me.member ? 'btn-ghost' : 'btn-primary']}
-				aria-pressed={chat.info.me.member}
-				onclick={() => chat.toggleMember()}
-				>{chat.info.me.member
-					? room
-						? 'Выйти'
-						: 'Вы следите'
-					: room
-						? 'Вступить'
-						: 'Следить'}</button
-			>
-		{/if}
-		{#if session.status === 'authed'}
-			<button
-				class={['btn btn-square btn-ghost btn-sm', { 'text-base-content/40': muted }]}
-				aria-pressed={muted}
-				aria-label={muted ? 'Вернуть уведомления' : 'Заглушить'}
-				title={muted ? 'Вернуть уведомления' : 'Заглушить'}
-				onclick={() => chat.toggleMute()}
-			>
-				<svg
-					class="size-4"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2"
-					aria-hidden="true"
+			<RoomIcon {meta} size="size-8" />
+			<div class="min-w-0 flex-1">
+				{#if meta.href}
+					<a href={meta.href} class="block truncate text-sm font-bold hover:underline"
+						>{meta.title}</a
+					>
+				{:else}
+					<p class="truncate text-sm font-bold">{meta.title}</p>
+				{/if}
+			</div>
+			{#if chat.info?.me && chat.info.room === meta.room}
+				{@const room = meta.room.startsWith('room:')}
+				<button
+					class={['btn rounded-full btn-xs', chat.info.me.member ? 'btn-ghost' : 'btn-primary']}
+					aria-pressed={chat.info.me.member}
+					onclick={() => chat.toggleMember()}
+					>{chat.info.me.member
+						? room
+							? 'Выйти'
+							: 'Вы следите'
+						: room
+							? 'Вступить'
+							: 'Следить'}</button
 				>
-					{#if muted}
-						<path
-							d="M13.7 21a2 2 0 0 1-3.4 0M18.6 13A17 17 0 0 1 18 8M6.3 6.3A6 6 0 0 0 6 8c0 7-3 9-3 9h14M2 2l20 20M18 8a6 6 0 0 0-9.3-5"
-						/>
-					{:else}
-						<path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-					{/if}
-				</svg>
-			</button>
-		{/if}
-	</header>
+			{/if}
+			{#if session.status === 'authed'}
+				<button
+					class={['btn btn-square btn-ghost btn-sm', { 'text-base-content/40': muted }]}
+					aria-pressed={muted}
+					aria-label={muted ? 'Вернуть уведомления' : 'Заглушить'}
+					title={muted ? 'Вернуть уведомления' : 'Заглушить'}
+					onclick={() => chat.toggleMute()}
+				>
+					<svg
+						class="size-4"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						aria-hidden="true"
+					>
+						{#if muted}
+							<path
+								d="M13.7 21a2 2 0 0 1-3.4 0M18.6 13A17 17 0 0 1 18 8M6.3 6.3A6 6 0 0 0 6 8c0 7-3 9-3 9h14M2 2l20 20M18 8a6 6 0 0 0-9.3-5"
+							/>
+						{:else}
+							<path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+						{/if}
+					</svg>
+				</button>
+			{/if}
+		</header>
+	{/if}
 
 	<div
 		bind:this={feed}
