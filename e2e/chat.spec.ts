@@ -150,6 +150,30 @@ test('непрочитанное снимается, когда сообщени
 	}
 });
 
+test('картинка: загрузка, отправка и показ в ленте', async ({ page, request }) => {
+	await registerAndSignIn(page, request, 'img');
+	const panel = panelOf(page);
+	await panel.getByRole('tab', { name: 'Каталог' }).click();
+
+	// Однопиксельный PNG: проверяем путь целиком, а не качество сжатия.
+	const png = Buffer.from(
+		'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+		'base64'
+	);
+	await panel
+		.getByLabel('Картинка')
+		.setInputFiles({ name: 'p.png', mimeType: 'image/png', buffer: png });
+
+	// Превью до отправки: видно, что выбрано, и можно передумать.
+	await expect(panel.getByAltText('Выбранная картинка')).toBeVisible({ timeout: 15000 });
+
+	// Текст не обязателен — сообщение уходит с одной картинкой.
+	await panel.getByRole('button', { name: 'Отправить' }).click();
+	// Общий чат делят все прогоны, поэтому смотрим на последнее сообщение.
+	await expect(panel.getByAltText('Картинка в сообщении').last()).toBeVisible();
+	await expect(panel.getByAltText('Выбранная картинка')).toHaveCount(0);
+});
+
 test('своя комната: создание, открытие и удаление', async ({ page, request }) => {
 	await registerAndSignIn(page, request, 'room');
 	const panel = panelOf(page);

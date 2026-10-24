@@ -90,6 +90,21 @@ export function roomMeta(chat: SchemaChatSummary | SchemaChatRoomInfo): RoomMeta
 /** Значок непрочитанного: 100 и больше — «99+». */
 export const unreadLabel = (n: number) => (n > 99 ? '99+' : String(n));
 
+/** Текст отказа на загрузку картинки. */
+export function uploadError(e: unknown): string {
+	const code = e instanceof ApiError ? e.code : null;
+	switch (code) {
+		case 'not_an_image':
+			return 'Это не картинка.';
+		case 'file_too_large':
+			return 'Картинка слишком большая — до 2 МБ.';
+		case 'unknown_attachment':
+			return 'Картинка больше недоступна — выберите заново.';
+		default:
+			return errorMessage(e);
+	}
+}
+
 /** Текст отказа на попытку написать лично. */
 export function dmError(e: unknown): string {
 	const code = e instanceof ApiError ? e.code : null;

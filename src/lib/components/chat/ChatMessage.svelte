@@ -189,7 +189,7 @@
 				</div>
 			</form>
 		{:else}
-			{#if !onlyLink}
+			{#if item.body && !onlyLink}
 				<p class="text-sm break-words whitespace-pre-wrap">
 					{#each parts as part, i (i)}{#if part.t === 'mention'}<a
 								href="/u/{part.v}"
@@ -199,6 +199,27 @@
 								]}>@{part.v}</a
 							>{:else}{part.v}{/if}{/each}
 				</p>
+			{/if}
+			{#if item.attachment}
+				<!-- Место под картинку держим по размерам с сервера: лента не прыгает при загрузке. -->
+				<a
+					href={item.attachment.url}
+					target="_blank"
+					rel="noreferrer"
+					class="mt-1 block w-fit overflow-hidden rounded-box bg-base-300/40"
+					style="aspect-ratio: {item.attachment.width} / {item.attachment
+						.height}; max-width: min(100%, {item.attachment.width}px)"
+				>
+					<img
+						src={item.attachment.url}
+						alt="Картинка в сообщении"
+						width={item.attachment.width}
+						height={item.attachment.height}
+						loading="lazy"
+						decoding="async"
+						class="h-full w-full object-cover"
+					/>
+				</a>
 			{/if}
 			{#if card}
 				<MessageCard link={card} />

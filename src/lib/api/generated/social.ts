@@ -279,7 +279,7 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
-	'/api/v1/social/chat/dm/{id}': {
+	'/api/v1/social/chat/attachments': {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -287,6 +287,49 @@ export interface paths {
 			cookie?: never;
 		};
 		get?: never;
+		put?: never;
+		/** Загрузить картинку. Возвращает `id`, который потом уходит в `chat.send` как `attachment_id`. */
+		post: operations['upload_chat_attachment'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/social/chat/attachments/{id}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Отдать картинку. Доступ — как к сообщению, в котором она лежит: пока вложение никуда не
+		 *     приложено, его видит только загрузивший; дальше решает комната (личную переписку видят
+		 *     только её двое).
+		 */
+		get: operations['get_chat_attachment'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/social/chat/dm/{id}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Панель переписки: то же, что `GET /chat/{kind}/{slug}` при `kind = dm`. Отдельный
+		 *     обработчик нужен потому, что `DELETE /chat/dm/{id}` делает путь статическим и без него
+		 *     GET на него отвечал бы 405 вместо панели.
+		 */
+		get: operations['get_dm'];
 		put?: never;
 		post?: never;
 		/**
@@ -1354,6 +1397,30 @@ export interface components {
 			/** @description 1–200 символов. Не передано — не меняется. */
 			title?: string | null;
 		};
+		/** @description Вложение сообщения. */
+		Attachment: {
+			/** Format: int32 */
+			height: number;
+			/** Format: uuid */
+			id: string;
+			/**
+			 * @description Пока только `image`. Поле оставлено на будущее — под файлы.
+			 * @example image
+			 */
+			kind: string;
+			/**
+			 * Format: int64
+			 * @description Вес готового файла в байтах.
+			 */
+			size: number;
+			/**
+			 * @description Где взять картинку: `/api/v1/social/chat/attachments/{id}`.
+			 * @example /api/v1/social/chat/attachments/01932f3e-0000-7000-8000-000000000000
+			 */
+			url: string;
+			/** Format: int32 */
+			width: number;
+		};
 		/** @description Страница истории: старые сверху, последнее — самое новое. */
 		ChatHistory: {
 			items: components['schemas']['ChatMessage'][];
@@ -1365,6 +1432,7 @@ export interface components {
 		};
 		/** @description Сообщение чата. Удалённое — заглушка: `deleted: true`, без `author` и `body`. */
 		ChatMessage: {
+			attachment?: components['schemas']['Attachment'] | null;
 			author?: components['schemas']['UserRef'] | null;
 			body?: string | null;
 			/** Format: date-time */
@@ -2943,6 +3011,7 @@ export interface components {
 }
 export type SchemaAddRelated = components['schemas']['AddRelated'];
 export type SchemaAdminUpdateCollection = components['schemas']['AdminUpdateCollection'];
+export type SchemaAttachment = components['schemas']['Attachment'];
 export type SchemaChatHistory = components['schemas']['ChatHistory'];
 export type SchemaChatMessage = components['schemas']['ChatMessage'];
 export type SchemaChatRoomInfo = components['schemas']['ChatRoomInfo'];
@@ -4183,6 +4252,140 @@ export interface operations {
 				};
 			};
 			/** @description Не найдена */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	upload_chat_attachment: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** @description multipart/form-data с одним файловым полем */
+		requestBody: {
+			content: {
+				'multipart/form-data': string;
+			};
+		};
+		responses: {
+			/** @description Загружено */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Attachment'];
+				};
+			};
+			/** @description Не картинка (`not_an_image`), больше 2 МБ (`file_too_large`), пустой запрос */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Больше 10 загрузок за 10 минут (`Retry-After`) */
+			429: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	get_chat_attachment: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description id вложения */
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Картинка WebP */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'image/webp': unknown;
+				};
+			};
+			/** @description Неверный токен */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет вложения или нет доступа */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	get_dm: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description id переписки */
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Переписка */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ChatRoomInfo'];
+				};
+			};
+			/** @description Неверный токен */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такой переписки или вы не её участник */
 			404: {
 				headers: {
 					[name: string]: unknown;

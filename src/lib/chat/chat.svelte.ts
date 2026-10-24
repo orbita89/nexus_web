@@ -8,6 +8,7 @@
 // - свёрнута ли панель и открытая комната — в localStorage.
 import { browser } from '$app/env';
 import type {
+	SchemaAttachment,
 	SchemaChatMessage,
 	SchemaChatRoomInfo,
 	SchemaChatSearchHit,
@@ -22,6 +23,7 @@ import { sendRealtime } from '#lib/realtime/realtime.svelte.ts';
 import {
 	dmError,
 	GENERAL,
+	uploadError,
 	roomMeta,
 	sendError,
 	splitRoom,
@@ -418,12 +420,29 @@ class Chat {
 		}
 	}
 
-	/** Отправить текст в открытую комнату. false — нечего отправлять. */
-	send(text: string): boolean {
+	/** Загрузить картинку для сообщения. Ошибки — исключением, их покажет композитор. */
+	async upload(file: File): Promise<SchemaAttachment> {
+		const form = new FormData();
+		form.append('file', file);
+		try {
+			return await unwrap(
+				api.social.POST('/api/v1/social/chat/attachments', {
+					body: form as unknown as string,
+					bodySerializer: (body: unknown) => body as FormData,
+					headers: { 'Content-Type': null }
+				})
+			);
+		} catch (e) {
+			throw new Error(uploadError(e), { cause: e });
+		}
+	}
+
+	/** Отправить сообщение: текст, картинку или и то и другое. false — нечего отправлять. */
+	send(text: string, attachment?: SchemaAttachment | null): boolean {
 		const body = text.trim();
 		const meta = this.current;
 		const me = session.user;
-		if (!body || !meta || !me) return false;
+		if ((!body && !attachment) || !meta || !me) return false;
 		const clientId = `tmp-${++this.#seq}`;
 		const item: Item = {
 			id: clientId,
@@ -437,6 +456,7 @@ class Chat {
 				avatar_url: me.avatar_url
 			},
 			body,
+			attachment: attachment ?? null,
 			reply_to: this.replyTo?.id ?? null,
 			created_at: new Date().toISOString(),
 			deleted: false,
@@ -466,6 +486,7 @@ class Chat {
 			type: 'chat.send',
 			room,
 			body: item.body,
+			attachment_id: item.attachment?.id ?? null,
 			reply_to: item.reply_to ?? null,
 			client_id: item.clientId
 		});

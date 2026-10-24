@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import { page } from '$app/state';
-	import type { SchemaUserRef } from '#lib/api/generated/social.ts';
+	import type { SchemaAttachment, SchemaUserRef } from '#lib/api/generated/social.ts';
 	import { unwrap } from '#lib/api/errors.ts';
 	import { guestApi, session } from '#lib/auth/session.svelte.ts';
 	import { chat } from '#lib/chat/chat.svelte.ts';
@@ -81,9 +81,31 @@
 	});
 
 	function submit() {
-		if (chat.send(text)) {
+		if (chat.send(text, picture)) {
 			text = '';
+			picture = null;
 			atBottom = true;
+		}
+	}
+
+	// Картинка: грузим сразу при выборе, в сообщение уходит её id. До отправки видно превью.
+	let picture = $state<SchemaAttachment | null>(null);
+	let uploading = $state(false);
+	let pictureError = $state('');
+	let file = $state<HTMLInputElement>();
+
+	async function pick(event: Event) {
+		const chosen = (event.currentTarget as HTMLInputElement).files?.[0];
+		if (file) file.value = '';
+		if (!chosen) return;
+		uploading = true;
+		pictureError = '';
+		try {
+			picture = await chat.upload(chosen);
+		} catch (e) {
+			pictureError = e instanceof Error ? e.message : 'Не загрузилось';
+		} finally {
+			uploading = false;
 		}
 	}
 
@@ -392,6 +414,27 @@
 			{#if attaching}
 				<EntitySearchPopover onpick={attach} onclose={() => (attaching = false)} />
 			{/if}
+			{#if picture}
+				<div class="mb-1 flex items-center gap-2 rounded-box bg-base-300/60 p-1.5">
+					<img
+						src={picture.url}
+						alt="Выбранная картинка"
+						class="size-10 shrink-0 rounded object-cover"
+					/>
+					<span class="min-w-0 flex-1 truncate text-xs text-base-content/60"
+						>{picture.width}×{picture.height}</span
+					>
+					<button
+						type="button"
+						class="btn btn-ghost btn-xs"
+						aria-label="Убрать картинку"
+						onclick={() => (picture = null)}>✕</button
+					>
+				</div>
+			{/if}
+			{#if pictureError}
+				<p role="alert" class="mb-1 text-xs text-error">{pictureError}</p>
+			{/if}
 			{#if hints.length}
 				<ul class="mb-1 rounded-box bg-base-300/60 p-1" aria-label="Кого упомянуть">
 					{#each hints as user, i (user.id)}
@@ -433,6 +476,41 @@
 						/></svg
 					>
 				</button>
+				<input
+					bind:this={file}
+					type="file"
+					accept="image/*"
+					class="hidden"
+					aria-label="Картинка"
+					onchange={pick}
+				/>
+				<button
+					type="button"
+					class="btn btn-square btn-ghost btn-sm"
+					aria-label="Прикрепить картинку"
+					title="Прикрепить картинку"
+					disabled={uploading}
+					onclick={() => file?.click()}
+				>
+					{#if uploading}
+						<span class="loading loading-xs loading-spinner"></span>
+					{:else}
+						<svg
+							class="size-4"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							aria-hidden="true"
+							><rect x="3" y="3" width="18" height="18" rx="2" /><circle
+								cx="8.5"
+								cy="8.5"
+								r="1.5"
+							/>
+							<path d="m21 15-5-5L5 21" /></svg
+						>
+					{/if}
+				</button>
 				<textarea
 					bind:this={input}
 					bind:value={text}
@@ -446,7 +524,8 @@
 					onclick={(e) => (caret = e.currentTarget.selectionStart)}
 					oninput={(e) => (caret = e.currentTarget.selectionStart)}
 					onblur={() => setTimeout(() => (caret = 0), 150)}></textarea>
-				<button class="btn btn-primary btn-sm" disabled={!text.trim()}>Отправить</button>
+				<button class="btn btn-primary btn-sm" disabled={!text.trim() && !picture}>Отправить</button
+				>
 			</div>
 		</form>
 	{:else if session.status === 'guest'}
