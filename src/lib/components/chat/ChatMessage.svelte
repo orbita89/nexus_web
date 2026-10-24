@@ -18,8 +18,23 @@
 	const card = $derived(item.body && !item.deleted ? entityLink(item.body) : null);
 	const parts = $derived(parseBody(item.body ?? ''));
 	const onlyLink = $derived(!!card && parts.length === 1 && !!item.body?.trim().match(/^\S+$/));
-	/** Меню по клику на автора: профиль или личное сообщение. */
+	/** Меню по клику на автора: профиль или личное сообщение. Закрывается кликом мимо и Esc. */
 	let menu = $state(false);
+	let row = $state<HTMLElement>();
+	$effect(() => {
+		if (!menu) return;
+		const away = (e: MouseEvent) => {
+			if (!row?.contains(e.target as Node)) menu = false;
+		};
+		const esc = (e: KeyboardEvent) => e.key === 'Escape' && (menu = false);
+		// capture: закрыть до того, как клик куда-то уведёт.
+		document.addEventListener('click', away, true);
+		document.addEventListener('keydown', esc);
+		return () => {
+			document.removeEventListener('click', away, true);
+			document.removeEventListener('keydown', esc);
+		};
+	});
 	let writing = $state(false);
 	const canWrite = $derived(!mine && session.status === 'authed');
 
@@ -73,7 +88,10 @@
 	}
 </script>
 
-<article class={['group flex gap-2 px-3 py-1.5', { 'opacity-60': item.status === 'sending' }]}>
+<article
+	bind:this={row}
+	class={['group flex gap-2 px-3 py-1.5', { 'opacity-60': item.status === 'sending' }]}
+>
 	{#if item.author && !item.clientId}
 		<button
 			class="shrink-0"
@@ -90,9 +108,30 @@
 	<div class="min-w-0 flex-1">
 		<p class="flex items-baseline gap-2 text-xs">
 			{#if item.author && !item.clientId}
-				<button class="truncate font-bold link-hover" onclick={() => (menu = !menu)}
-					>{authorName(item.author)}</button
-				>
+				<span class="relative min-w-0">
+					<button class="truncate font-bold link-hover" onclick={() => (menu = !menu)}
+						>{authorName(item.author)}</button
+					>
+					{#if menu}
+						<!-- Клик по имени или аватару: в профиль или сразу написать лично. -->
+						<span
+							class="absolute top-full left-0 z-30 mt-1 flex w-44 flex-col rounded-box bg-base-100 p-1 shadow-xl ring-1 ring-base-300"
+						>
+							<a
+								href="/u/{item.author.username}"
+								class="rounded px-3 py-1.5 text-left text-sm hover:bg-base-300"
+								onclick={() => (menu = false)}>Профиль</a
+							>
+							{#if canWrite}
+								<button
+									class="rounded px-3 py-1.5 text-left text-sm hover:bg-base-300 disabled:opacity-50"
+									disabled={writing}
+									onclick={write}>Написать</button
+								>
+							{/if}
+						</span>
+					{/if}
+				</span>
 			{:else}
 				<span class="truncate font-bold">{item.author ? authorName(item.author) : 'Удалено'}</span>
 			{/if}
@@ -101,22 +140,6 @@
 			>
 			{#if item.edited_at && !item.deleted}<span class="text-base-content/40">изменено</span>{/if}
 		</p>
-
-		{#if menu && item.author}
-			<!-- Клик по имени или аватару: в профиль или сразу написать лично. -->
-			<p class="mt-1 flex flex-wrap items-center gap-2 text-xs">
-				<a
-					href="/u/{item.author.username}"
-					class="btn btn-ghost btn-xs"
-					onclick={() => (menu = false)}>Профиль</a
-				>
-				{#if canWrite}
-					<button class="btn btn-primary btn-xs" onclick={write} disabled={writing}>Написать</button
-					>
-				{/if}
-				<button class="btn btn-ghost btn-xs" onclick={() => (menu = false)}>Отмена</button>
-			</p>
-		{/if}
 
 		{#if item.reply_to}
 			<p class="mt-0.5 truncate border-l-2 border-primary/60 pl-2 text-xs text-base-content/50">
