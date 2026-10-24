@@ -62,6 +62,22 @@
 		}
 	}
 
+	/** Крестик: общий чат прячем, переписку удаляем у себя, из остального выходим. */
+	function drop(c: { room: string; kind: string; custom?: { system?: boolean } | null }) {
+		if (c.custom?.system) return hide(c.room);
+		if (c.kind === 'dm') return removeDm(c.room);
+		return remove(c.room);
+	}
+
+	async function removeDm(room: string) {
+		leaving = room;
+		try {
+			await chat.deleteDm(room);
+		} finally {
+			leaving = '';
+		}
+	}
+
 	async function hide(room: string) {
 		leaving = room;
 		try {
@@ -232,18 +248,18 @@
 						</button>
 						<button
 							class="btn btn-square shrink-0 btn-ghost opacity-40 transition btn-xs group-hover:opacity-70 hover:!opacity-100"
-							aria-label={system
+							aria-label={system || c.kind === 'dm'
 								? `Убрать из списка: ${meta.title}`
 								: c.kind === 'room'
 									? `Выйти: ${meta.title}`
 									: `Не следить: ${meta.title}`}
-							title={system
+							title={system || c.kind === 'dm'
 								? 'Убрать из списка'
 								: c.kind === 'room'
 									? 'Выйти из комнаты'
 									: 'Не следить'}
 							disabled={leaving === c.room}
-							onclick={() => (system ? hide(c.room) : remove(c.room))}>✕</button
+							onclick={() => drop(c)}>✕</button
 						>
 					</li>
 				{/each}

@@ -7,6 +7,7 @@ import type {
 	SchemaCustomRoom,
 	SchemaUserRef
 } from '#lib/api/generated/social.ts';
+import { ApiError, errorMessage } from '#lib/api/errors.ts';
 import { KINDS, kindBySlug, refHref } from '#lib/catalog/kinds.ts';
 
 export type RoomKind = 'entity' | 'person' | 'tag' | 'room' | 'dm';
@@ -88,6 +89,23 @@ export function roomMeta(chat: SchemaChatSummary | SchemaChatRoomInfo): RoomMeta
 
 /** Значок непрочитанного: 100 и больше — «99+». */
 export const unreadLabel = (n: number) => (n > 99 ? '99+' : String(n));
+
+/** Текст отказа на попытку написать лично. */
+export function dmError(e: unknown): string {
+	const code = e instanceof ApiError ? e.code : null;
+	switch (code) {
+		case 'dm_self':
+			return 'Это вы.';
+		case 'blocked':
+			return 'С этим человеком переписка недоступна.';
+		case 'dm_closed':
+			return 'Человек не принимает сообщения от незнакомых.';
+		case 'email_not_verified':
+			return 'Подтвердите email, чтобы писать личные сообщения.';
+		default:
+			return errorMessage(e);
+	}
+}
 
 /** Текст ошибки WebSocket-чата по коду сервера. */
 export function sendError(error: string): string {

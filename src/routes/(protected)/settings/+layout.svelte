@@ -7,6 +7,7 @@
 	const items = [
 		{ href: '/settings', title: 'Профиль' },
 		{ href: '/settings/email', title: 'Email' },
+		{ href: '/settings/chat', title: 'Личные сообщения' },
 		{ href: '/settings/security', title: 'Пароль и сессии' },
 		{ href: '/settings/accounts', title: 'Привязанные аккаунты' }
 	];

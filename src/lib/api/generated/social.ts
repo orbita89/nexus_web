@@ -279,6 +279,26 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/social/chat/dm/{id}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		post?: never;
+		/**
+		 * Убрать переписку у себя → 204. У собеседника она остаётся, история цела, новое сообщение
+		 *     возвращает её в список.
+		 */
+		delete: operations['delete_dm'];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/social/chat/messages/{id}': {
 		parameters: {
 			query?: never;
@@ -1093,6 +1113,41 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/social/users/blocked': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Мой список блокировок, новые сверху — для экрана настроек. */
+		get: operations['list_blocked_users'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/social/users/me/chat-settings': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Мои настройки чата. */
+		get: operations['get_chat_settings'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		/** Изменить настройки чата. */
+		patch: operations['update_chat_settings'];
+		trace?: never;
+	};
 	'/api/v1/social/users/me/marks': {
 		parameters: {
 			query?: never;
@@ -1130,6 +1185,27 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/social/users/{username}/block': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/**
+		 * Заблокировать пользователя → 204 (повторно — тоже 204). Блокировка односторонняя, его
+		 *     не уведомляют; личные сообщения закрываются в обе стороны, общие каналы не трогаются.
+		 */
+		put: operations['block_user'];
+		post?: never;
+		/** Снять блокировку → 204 (даже если её не было). */
+		delete: operations['unblock_user'];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/social/users/{username}/collections': {
 		parameters: {
 			query?: never;
@@ -1143,6 +1219,26 @@ export interface paths {
 		 */
 		get: operations['list_user_collections'];
 		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/social/users/{username}/dm': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/**
+		 * Открыть переписку с пользователем, заведя её при первом обращении. Повторный вызов
+		 *     возвращает ту же; скрытую у себя — возвращает в список.
+		 */
+		put: operations['open_dm'];
 		post?: never;
 		delete?: never;
 		options?: never;
@@ -1300,6 +1396,7 @@ export interface components {
 		 */
 		ChatRoomInfo: {
 			custom?: components['schemas']['CustomRoom'] | null;
+			dm?: components['schemas']['DmRef'] | null;
 			entity?: components['schemas']['EntityRef'] | null;
 			/** @example entity */
 			kind: string;
@@ -1346,12 +1443,17 @@ export interface components {
 			 */
 			next_before?: string | null;
 		};
+		/** @description Настройки чата пользователя. */
+		ChatSettings: {
+			dm_policy: components['schemas']['DmPolicy'];
+		};
 		/**
 		 * @description Комната в списке «мои чаты». Заполнено ровно одно из `entity`, `person`, `tag`, `custom` —
 		 *     по `kind`.
 		 */
 		ChatSummary: {
 			custom?: components['schemas']['CustomRoom'] | null;
+			dm?: components['schemas']['DmRef'] | null;
 			entity?: components['schemas']['EntityRef'] | null;
 			/** @example entity */
 			kind: string;
@@ -1627,6 +1729,17 @@ export interface components {
 			system: boolean;
 			/** @example Киберпанк */
 			title: string;
+		};
+		/**
+		 * @description Кто может начать переписку с пользователем.
+		 * @enum {string}
+		 */
+		DmPolicy: 'all' | 'following' | 'none';
+		/** @description Переписка в списке чатов: id комнаты и собеседник (не вы). */
+		DmRef: {
+			/** Format: uuid */
+			id: string;
+			peer: components['schemas']['UserRef'];
 		};
 		/** @description Сущность каталога в чужих ответах: ровно столько, сколько нужно для ссылки на карточку. */
 		EntityRef: {
@@ -2350,6 +2463,34 @@ export interface components {
 			 */
 			total: number;
 		};
+		/** @description Страница списка. */
+		Page_UserRef: {
+			items: {
+				avatar_url?: string | null;
+				/** @example Обычный пользователь */
+				display_name?: string | null;
+				/** Format: uuid */
+				id: string;
+				/** @example user */
+				username: string;
+			}[];
+			/**
+			 * Format: int64
+			 * @example 20
+			 */
+			limit: number;
+			/**
+			 * Format: int64
+			 * @example 0
+			 */
+			offset: number;
+			/**
+			 * Format: int64
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @example 137
+			 */
+			total: number;
+		};
 		/** @description Человек в интересах пользователя. */
 		PersonInterest: {
 			person: components['schemas']['PersonRef'];
@@ -2617,6 +2758,13 @@ export interface components {
 		};
 		/** @description Социальный профиль пользователя. */
 		SocialProfile: {
+			/** @description Вошедший заблокировал этого пользователя. Гостю и в своём профиле — `false`. */
+			blocked: boolean;
+			/**
+			 * @description Этот пользователь заблокировал вошедшего; `null` — гость или свой профиль.
+			 *     По паре `blocked` + `blocked_by` фронтенд решает, показывать ли «Написать».
+			 */
+			blocked_by?: boolean | null;
 			/**
 			 * Format: int64
 			 * @description Публичные коллекции; владельцу — вместе с приватными.
@@ -2723,6 +2871,9 @@ export interface components {
 			/** @description 1–2000 символов. */
 			body: string;
 		};
+		UpdateChatSettings: {
+			dm_policy?: components['schemas']['DmPolicy'] | null;
+		};
 		/** @description Изменение коллекции: переданные поля заменяются, `null` очищает описание. */
 		UpdateCollection: {
 			/** @description Закрыть (`true`) или открыть обсуждение. */
@@ -2798,6 +2949,7 @@ export type SchemaChatRoomInfo = components['schemas']['ChatRoomInfo'];
 export type SchemaChatRoomMe = components['schemas']['ChatRoomMe'];
 export type SchemaChatSearchHit = components['schemas']['ChatSearchHit'];
 export type SchemaChatSearchPage = components['schemas']['ChatSearchPage'];
+export type SchemaChatSettings = components['schemas']['ChatSettings'];
 export type SchemaChatSummary = components['schemas']['ChatSummary'];
 export type SchemaCollection = components['schemas']['Collection'];
 export type SchemaCollectionBySlug = components['schemas']['CollectionBySlug'];
@@ -2812,6 +2964,8 @@ export type SchemaCreateReviewComment = components['schemas']['CreateReviewComme
 export type SchemaCreateRoom = components['schemas']['CreateRoom'];
 export type SchemaCreateThread = components['schemas']['CreateThread'];
 export type SchemaCustomRoom = components['schemas']['CustomRoom'];
+export type SchemaDmPolicy = components['schemas']['DmPolicy'];
+export type SchemaDmRef = components['schemas']['DmRef'];
 export type SchemaEntityRef = components['schemas']['EntityRef'];
 export type SchemaErrorBody = components['schemas']['ErrorBody'];
 export type SchemaFeatureCollection = components['schemas']['FeatureCollection'];
@@ -2837,6 +2991,7 @@ export type SchemaPageReview = components['schemas']['Page_Review'];
 export type SchemaPageReviewComment = components['schemas']['Page_ReviewComment'];
 export type SchemaPageTagInterest = components['schemas']['Page_TagInterest'];
 export type SchemaPageThread = components['schemas']['Page_Thread'];
+export type SchemaPageUserRef = components['schemas']['Page_UserRef'];
 export type SchemaPersonInterest = components['schemas']['PersonInterest'];
 export type SchemaPersonRef = components['schemas']['PersonRef'];
 export type SchemaPost = components['schemas']['Post'];
@@ -2864,6 +3019,7 @@ export type SchemaThread = components['schemas']['Thread'];
 export type SchemaThreadDetail = components['schemas']['ThreadDetail'];
 export type SchemaThreadSort = components['schemas']['ThreadSort'];
 export type SchemaUpdateChatMessage = components['schemas']['UpdateChatMessage'];
+export type SchemaUpdateChatSettings = components['schemas']['UpdateChatSettings'];
 export type SchemaUpdateCollection = components['schemas']['UpdateCollection'];
 export type SchemaUpdatePost = components['schemas']['UpdatePost'];
 export type SchemaUpdateRoom = components['schemas']['UpdateRoom'];
@@ -4027,6 +4183,45 @@ export interface operations {
 				};
 			};
 			/** @description Не найдена */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	delete_dm: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description id переписки */
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Убрана из списка */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такой переписки */
 			404: {
 				headers: {
 					[name: string]: unknown;
@@ -7682,6 +7877,111 @@ export interface operations {
 			};
 		};
 	};
+	list_blocked_users: {
+		parameters: {
+			query?: {
+				/** @description 1–100, по умолчанию 20. */
+				limit?: number;
+				/** @description С 0. */
+				offset?: number;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Страница заблокированных */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Page_UserRef'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	get_chat_settings: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Настройки */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ChatSettings'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	update_chat_settings: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['UpdateChatSettings'];
+			};
+		};
+		responses: {
+			/** @description Настройки */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ChatSettings'];
+				};
+			};
+			/** @description Неизвестное значение `dm_policy` */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
 	list_own_marks: {
 		parameters: {
 			query?: {
@@ -7771,6 +8071,99 @@ export interface operations {
 			};
 		};
 	};
+	block_user: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description username
+				 * @example alice
+				 */
+				username: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Заблокирован */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Нельзя заблокировать себя */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такого пользователя */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	unblock_user: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description username
+				 * @example alice
+				 */
+				username: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Не заблокирован */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такого пользователя */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
 	list_user_collections: {
 		parameters: {
 			query?: {
@@ -7817,6 +8210,77 @@ export interface operations {
 			};
 			/** @description Пользователь или сущность из `contains` не найдены */
 			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	open_dm: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description username собеседника
+				 * @example alice
+				 */
+				username: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Переписка */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ChatRoomInfo'];
+				};
+			};
+			/** @description Переписка с самим собой (`dm_self`) */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Блокировка (`blocked`), закрытые личные (`dm_closed`) или неподтверждённый email (`email_not_verified`) */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такого пользователя */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Слишком много новых переписок за сутки (`Retry-After`) */
+			429: {
 				headers: {
 					[name: string]: unknown;
 				};

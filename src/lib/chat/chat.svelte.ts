@@ -20,6 +20,7 @@ import { api, guestApi, session } from '#lib/auth/session.svelte.ts';
 import type { RealtimeEvent, ReplyMessage } from '#lib/realtime/client.ts';
 import { sendRealtime } from '#lib/realtime/realtime.svelte.ts';
 import {
+	dmError,
 	GENERAL,
 	roomMeta,
 	sendError,
@@ -538,6 +539,10 @@ class Chat {
 				this.#toast(summary.room, message, true);
 				break;
 			}
+			case 'dm.created':
+				// Новая переписка создана собеседником — она появится в «Чатах».
+				void this.loadChats();
+				break;
 			case 'chat.room.created':
 				// Канал rooms: каталог «Обсуждается» перечитываем, список своих чатов не меняется.
 				this.suggested = null;
@@ -704,33 +709,35 @@ class Chat {
 		}
 	}
 
-	/**
-	 * Открыть личную переписку с человеком, создав её при первом обращении.
-	 * Эндпоинта пока нет на бэкенде — до выката кнопка «Написать» честно говорит об этом.
-	 */
+	/** Открыть личную переписку с человеком, создав её при первом обращении. */
 	async openDm(user: SchemaUserRef) {
 		try {
-			const info = (await unwrap(
-				api.social.PUT(
-					'/api/v1/social/users/{username}/dm' as '/api/v1/social/users/{username}/follow',
-					{ params: { path: { username: user.username } } }
-				)
-			)) as unknown as SchemaChatRoomInfo;
+			const info = await unwrap(
+				api.social.PUT('/api/v1/social/users/{username}/dm', {
+					params: { path: { username: user.username } }
+				})
+			);
 			this.tab = 'dm';
 			this.info = info;
 			this.open(roomMeta(info));
 			void this.loadChats();
 		} catch (e) {
-			if (!(e instanceof ApiError)) throw e;
-			const text =
-				e.status === 404 || e.status === 405
-					? 'Личные сообщения ещё не включены.'
-					: e.code === 'blocked'
-						? 'Этот человек недоступен для переписки.'
-						: e.code === 'dm_closed'
-							? 'Человек не принимает сообщения от незнакомых.'
-							: null;
-			throw text ? new Error(text, { cause: e }) : e;
+			throw new Error(dmError(e), { cause: e });
+		}
+	}
+
+	/** Убрать переписку у себя: у собеседника она остаётся, новое сообщение её вернёт. */
+	async deleteDm(room: string) {
+		try {
+			await unwrap(
+				api.social.DELETE('/api/v1/social/chat/dm/{id}', {
+					params: { path: { id: splitRoom(room).slug } }
+				})
+			);
+			if (this.current?.room === room) this.close();
+			await this.loadChats();
+		} catch (e) {
+			this.historyError = errorMessage(e);
 		}
 	}
 

@@ -4,6 +4,7 @@
 	import { displayName } from '#lib/social/reviews.ts';
 	import Avatar from '#lib/components/Avatar.svelte';
 	import FollowButton from '#lib/components/social/FollowButton.svelte';
+	import MessageButton from '#lib/components/social/MessageButton.svelte';
 	import type { LayoutProps } from './$types';
 
 	let { data, children }: LayoutProps = $props();
@@ -61,7 +62,10 @@
 			</p>
 		</div>
 		{#key user.username}
-			<FollowButton username={user.username} onchange={onFollow} />
+			<div class="flex flex-col items-end gap-2">
+				<FollowButton username={user.username} onchange={onFollow} />
+				<MessageButton username={user.username} />
+			</div>
 		{/key}
 	</div>
 	<nav class="overflow-x-auto border-t border-base-300 px-2 sm:px-4" aria-label="Разделы профиля">
