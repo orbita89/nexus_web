@@ -71,7 +71,8 @@ test('пользователь: ответ в тему, ответ на сооб
 	await open(page, DUNE_THREAD);
 	const first = `E2E: первый ответ ${Date.now()}`;
 	await page.getByLabel('Ваш ответ в теме').fill(first);
-	await page.getByRole('button', { name: 'Отправить' }).click();
+	// Панель чата есть на всех страницах, и в ней тоже «Отправить» — берём форму темы.
+	await page.getByRole('main').getByRole('button', { name: 'Отправить' }).click();
 	await expect(page).toHaveURL(/#post-[\w-]+$/);
 	await expect(post(page, first)).toBeVisible();
 

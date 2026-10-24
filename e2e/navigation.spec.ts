@@ -17,7 +17,7 @@ test('разделы каталога рендерятся на сервере, 
 
 test('поиск из шапки', async ({ page }) => {
 	await page.goto('/');
-	await page.getByRole('searchbox', { name: 'Поиск по каталогу' }).fill('дюна');
+	await page.getByRole('combobox', { name: 'Поиск по каталогу' }).fill('дюна');
 	await page.keyboard.press('Enter');
 	await expect(page).toHaveURL('/search?q=%D0%B4%D1%8E%D0%BD%D0%B0');
 	await expect(page.getByRole('heading', { name: 'Поиск: дюна' })).toBeVisible();

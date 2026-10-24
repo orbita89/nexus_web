@@ -91,7 +91,8 @@ test('реалтайм: чужое сообщение — плашка в тем
 	// Своё сообщение — на него потом ответят.
 	const mine = `E2E: моё ${Date.now()}`;
 	await page.getByLabel('Ваш ответ в теме').fill(mine);
-	await page.getByRole('button', { name: 'Отправить' }).click();
+	// Панель чата есть на всех страницах, и в ней тоже «Отправить» — берём форму темы.
+	await page.getByRole('main').getByRole('button', { name: 'Отправить' }).click();
 	const myPost = page
 		.getByRole('list', { name: 'Сообщения' })
 		.getByRole('article')

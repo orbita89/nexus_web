@@ -5,36 +5,37 @@ import { registerAndSignIn } from './users';
 // (кнопка «Чат» в шапке там, наоборот, сворачивает панель).
 const panelOf = (page: Page) => page.getByRole('complementary', { name: 'Чат' });
 
-test('вкладка — это сам чат, а не список чатов', async ({ page }) => {
+test('вкладка «Каталог» — сам чат, «Каналы» и «Чаты» — списки', async ({ page }) => {
 	await page.goto('/');
 	const panel = panelOf(page);
 
-	// «Общий» открывает ленту сразу: гостю — приглашение войти, выбирать нечего.
-	await panel.getByRole('tab', { name: 'Общий' }).click();
-	await expect(panel.getByText('Войдите', { exact: false })).toBeVisible();
-
-	// «Каталог» — чипы разделов, каждый чип тоже сразу лента.
+	// «Каталог» открывает ленту сразу, чипы переключают общие чаты.
 	await panel.getByRole('tab', { name: 'Каталог' }).click();
+	await expect(panel.getByText('Войдите', { exact: false })).toBeVisible();
 	const chips = panel.getByRole('group', { name: 'Раздел каталога' });
-	await expect(chips.getByRole('button', { name: 'Кино' })).toBeVisible();
-	await chips.getByRole('button', { name: 'Книги' }).click();
+	await expect(chips.getByRole('button', { name: /^Общий/ })).toBeVisible();
+	await chips.getByRole('button', { name: /^Книги/ }).click();
 	await expect(panel.getByText('Войдите', { exact: false })).toBeVisible();
 
-	// Списки — только во вкладке «Чаты», с переключателем.
-	await panel.getByRole('tab', { name: 'Чаты' }).click();
-	await expect(panel.getByLabel('Найти чат')).toBeVisible();
+	// «Каналы» — список с переключателем.
+	await panel.getByRole('tab', { name: 'Каналы' }).click();
+	await expect(panel.getByLabel('Найти канал')).toBeVisible();
 	await panel.getByRole('button', { name: 'Обсуждается' }).click();
 	await expect(panel.getByLabel('Найти комнату')).toBeVisible();
-	await panel.getByRole('button', { name: 'Мои чаты' }).click();
-	await expect(panel.getByLabel('Найти чат')).toBeVisible();
+	await panel.getByRole('button', { name: 'Мои каналы' }).click();
+	await expect(panel.getByLabel('Найти канал')).toBeVisible();
 	await expect(panel.getByRole('link', { name: 'Каталог комнат' }).last()).toBeVisible();
+
+	// «Чаты» — личные переписки, отдельный список.
+	await panel.getByRole('tab', { name: 'Чаты' }).click();
+	await expect(panel.getByLabel('Найти переписку')).toBeVisible();
 });
 
 test('системный чат: сообщение и переход в профиль автора', async ({ page, request }) => {
 	const { username } = await registerAndSignIn(page, request, 'chat');
 	const panel = panelOf(page);
 
-	await panel.getByRole('tab', { name: 'Общий' }).click();
+	await panel.getByRole('tab', { name: 'Каталог' }).click();
 	// В системном чате состоят все: ни шапки, ни «Вступить» — сразу поле ввода.
 	const composer = panel.getByLabel('Сообщение');
 	await expect(composer).toBeVisible();
@@ -44,25 +45,17 @@ test('системный чат: сообщение и переход в про�
 	await panel.getByRole('button', { name: 'Отправить' }).click();
 	await expect(panel.getByText(body, { exact: true })).toBeVisible();
 
-	// Общий чат: можно заглушить и убрать из списка, а вернуть — одной ссылкой.
-	await panel.getByRole('tab', { name: 'Чаты' }).click();
-	await panel.getByRole('button', { name: 'Заглушить: Общий чат' }).click();
-	await expect(panel.getByRole('button', { name: 'Вернуть уведомления: Общий чат' })).toBeVisible();
+	// Общий чат открывается вкладкой, поэтому заглушить и убрать его можно из шапки панели.
+	await panel.getByRole('button', { name: 'Заглушить' }).click();
+	await expect(panel.getByRole('button', { name: 'Вернуть уведомления' })).toBeVisible();
+	await panel.getByRole('button', { name: 'Убрать из списка' }).click();
+	await expect(panel.getByText('Убран из «Моих чатов»')).toBeVisible();
+	await panel.getByRole('button', { name: 'Вернуть', exact: true }).click();
+	await expect(panel.getByText('Убран из «Моих чатов»')).toHaveCount(0);
 
-	await panel.getByRole('button', { name: 'Убрать из списка: Общий чат' }).click();
-	await expect(panel.getByRole('button', { name: /^Общий чат/ })).toHaveCount(0);
-
-	// Возвращается тем же правилом, что и любой другой чат: написал — значит он твой.
-	await panel.getByRole('tab', { name: 'Общий' }).click();
-	await panel.getByLabel('Сообщение').fill(`e2e ${Date.now().toString(36)}`);
-	await panel.getByRole('button', { name: 'Отправить' }).click();
-	await panel.getByRole('tab', { name: 'Чаты' }).click();
-	await expect(panel.getByRole('button', { name: /^Общий чат/ })).toBeVisible();
-
-	await panel.getByRole('tab', { name: 'Общий' }).click();
-
-	// Имя автора — ссылка на профиль; панель при переходе остаётся на месте.
-	await panel.getByRole('link', { name: username }).first().click();
+	// Имя автора раскрывает меню: оттуда — в профиль.
+	await panel.getByRole('button', { name: username }).first().click();
+	await panel.getByRole('link', { name: 'Профиль' }).click();
 	await expect(page).toHaveURL(`/u/${username}`);
 	await expect(panel.getByLabel('Сообщение')).toBeVisible();
 });
@@ -79,8 +72,8 @@ test('слежу за карточкой — её чат появляется в
 	await panel.getByRole('button', { name: 'Следить', exact: true }).click();
 	await expect(panel.getByRole('button', { name: 'Вы следите' })).toBeVisible();
 
-	// Чат интереса — в списке «Мои чаты», а не только в открытой комнате.
-	await panel.getByRole('tab', { name: 'Чаты' }).click();
+	// Чат интереса — в списке «Каналы», а не только в открытой комнате.
+	await panel.getByRole('tab', { name: 'Каналы' }).click();
 	await expect(panel.getByRole('button', { name: /^Дюна/ })).toBeVisible();
 
 	// И в свёрнутой полосе — вместе с общими чатами, которые идут первыми.
@@ -101,7 +94,7 @@ test('написал в чужой чат — он сам становится �
 	await panel.getByRole('button', { name: 'Отправить' }).click();
 
 	await expect(panel.getByRole('button', { name: 'Вы следите' })).toBeVisible();
-	await panel.getByRole('tab', { name: 'Чаты' }).click();
+	await panel.getByRole('tab', { name: 'Каналы' }).click();
 	await expect(panel.getByRole('button', { name: /^Дени Вильнёв/ })).toBeVisible();
 
 	// Уведомления можно выключить, не выходя из чата.
@@ -125,23 +118,27 @@ test('непрочитанное снимается, когда сообщени
 
 		// Читатель смотрит в другую вкладку панели — иначе прочитает сразу.
 		const panel = panelOf(reader);
-		await panel.getByRole('tab', { name: 'Чаты' }).click();
+		await panel.getByRole('tab', { name: 'Каналы' }).click();
 
 		const body = `e2e ${Date.now().toString(36)}`;
 		const writerPanel = panelOf(writer);
-		await writerPanel.getByRole('tab', { name: 'Общий' }).click();
+		await writerPanel.getByRole('tab', { name: 'Каталог' }).click();
 		await writerPanel.getByLabel('Сообщение').fill(body);
 		await writerPanel.getByRole('button', { name: 'Отправить' }).click();
 		await expect(writerPanel.getByText(body, { exact: true })).toBeVisible();
 
-		// У читателя — значок непрочитанного на вкладке «Общий».
-		const generalTab = panel.getByRole('tab', { name: /^Общий/ });
+		// У читателя — значок непрочитанного на вкладке «Каталог».
+		const generalTab = panel.getByRole('tab', { name: /^Каталог/ });
 		await expect(generalTab.getByLabel(/^Непрочитанных: /)).toBeVisible();
 
-		// Открыл, прочитал — значок этой вкладки пропал.
+		// Открыл, прочитал — значок этого чата пропал. У вкладки он суммарный по разделам,
+		// поэтому смотрим на чип «Общий».
 		await generalTab.click();
 		await expect(panel.getByText(body, { exact: true })).toBeVisible();
-		await expect(generalTab.getByLabel(/^Непрочитанных: /)).toHaveCount(0);
+		const generalChip = panel
+			.getByRole('group', { name: 'Раздел каталога' })
+			.getByRole('button', { name: /^Общий/ });
+		await expect(generalChip.getByLabel(/^Непрочитанных: /)).toHaveCount(0);
 
 		// Остальное непрочитанное (другие общие чаты) снимается одной кнопкой.
 		await panel.getByRole('button', { name: 'Прочитать всё' }).click();

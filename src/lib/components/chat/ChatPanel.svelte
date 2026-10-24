@@ -3,7 +3,7 @@
 	import { afterNavigate } from '$app/navigation';
 	import { session } from '#lib/auth/session.svelte.ts';
 	import { chat } from '#lib/chat/chat.svelte.ts';
-	import { authorName, roomMeta, TOPICS, unreadLabel } from '#lib/chat/rooms.ts';
+	import { authorName, isSystemRoom, roomMeta, TOPICS, unreadLabel } from '#lib/chat/rooms.ts';
 	import type { Tab } from '#lib/chat/chat.svelte.ts';
 	import { useRealtime, useRealtimeReplies } from '#lib/realtime/realtime.svelte.ts';
 	import ChatList from './ChatList.svelte';
@@ -49,6 +49,12 @@
 
 	/** Поиск людей открывается поверх вкладок: из него уходят в профиль или в переписку. */
 	let people = $state(false);
+
+	// Общий чат открывается вкладкой, строки в списке у него нет — заглушить и убрать
+	// его можно отсюда.
+	const systemRoom = $derived(
+		chat.current && isSystemRoom(chat.current.room) ? chat.current.room : null
+	);
 
 	const tabs: { tab: Tab; title: string }[] = [
 		{ tab: 'catalog', title: 'Каталог' },
@@ -122,6 +128,43 @@
 					/></svg
 				>
 			</button>
+			{#if systemRoom && !people}
+				<button
+					class={[
+						'btn btn-square btn-ghost btn-sm',
+						{ 'text-base-content/40': chat.muted(systemRoom) }
+					]}
+					title={chat.muted(systemRoom) ? 'Вернуть уведомления' : 'Заглушить'}
+					aria-label={chat.muted(systemRoom) ? 'Вернуть уведомления' : 'Заглушить'}
+					aria-pressed={chat.muted(systemRoom)}
+					onclick={() => chat.toggleMute(systemRoom)}
+				>
+					<svg
+						class="size-4"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						aria-hidden="true"
+					>
+						{#if chat.muted(systemRoom)}
+							<path
+								d="M13.7 21a2 2 0 0 1-3.4 0M18.6 13A17 17 0 0 1 18 8M6.3 6.3A6 6 0 0 0 6 8c0 7-3 9-3 9h14M2 2l20 20M18 8a6 6 0 0 0-9.3-5"
+							/>
+						{:else}
+							<path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+						{/if}
+					</svg>
+				</button>
+				{#if !chat.currentHidden}
+					<button
+						class="btn btn-square btn-ghost btn-sm"
+						title="Убрать из «Моих чатов»"
+						aria-label="Убрать из списка"
+						onclick={() => chat.setHidden(systemRoom, true)}>✕</button
+					>
+				{/if}
+			{/if}
 			{#if chat.current && !people}
 				<button
 					class={['btn btn-square btn-ghost btn-sm', { 'text-primary': chat.roomSearch }]}
