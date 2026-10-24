@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { avatarSrc } from '#lib/auth/avatar.ts';
+
 	let {
 		user,
 		size = 'w-8'
@@ -8,12 +10,15 @@
 	} = $props();
 
 	const initial = $derived((user.display_name || user.username).slice(0, 1).toUpperCase());
+	// Относительный адрес загруженного фото и абсолютный от провайдера — оба как есть (avatarSrc).
+	const src = $derived(avatarSrc(user.avatar_url));
 </script>
 
-{#if user.avatar_url}
+{#if src}
 	<div class="avatar">
 		<div class="{size} rounded-full">
-			<img src={user.avatar_url} alt="" referrerpolicy="no-referrer" />
+			<!-- Бэкенд не вырезает квадрат (длинная сторона 512 px) — кадрируем сами. -->
+			<img {src} alt="" class="size-full object-cover" referrerpolicy="no-referrer" />
 		</div>
 	</div>
 {:else}

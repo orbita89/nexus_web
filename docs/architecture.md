@@ -33,14 +33,15 @@ src/
     social/            рецензии (reviews), форум (forum), коллекции (collections)
     realtime/          WebSocket-клиент (client.ts) и обёртка для компонентов (realtime.svelte.ts)
     admin/             slug (транслит), форма произведения (metadata по типам)
-    components/        Navbar, Avatar, Alert, AuthCard, ProviderButtons, Stub
+    components/        Navbar, Avatar, AvatarUpload, Alert, AuthCard, ProviderButtons, Stub
       catalog/         Poster, EntityCard, EntityGrid, PosterStrip, Pagination, KindTabs, TagChips,
                        PersonAvatar, RatingSummary, CardHero, TrailerButton, Clamp, ClientSection,
                        EmptyState, LoadError, Seo
       card/            карточка: StickyHeader, Hero, AverageRating, RateButton, Reactions, About,
                        Related, Recommendations, Production, ActivityFeed, ReviewComposer
       admin/           EntityForm, CreditsEditor, PersonForm
-      social/          RatingBadge, MyReview, ReviewCard, ReviewSortTabs, FollowButton,
+      social/          RatingBadge, MyReview, ReviewCard, ReviewSortTabs, FollowButton, LikeButton,
+                       ReputationBadge, StatsBlock, TargetComments, CollectionReactions,
                        FollowList, UserCard, ThreadItem, PostItem, ReplyForm, ThreadForm,
                        EntityPicker, NewThreadButton, RichText, TimeAgo, SortTabs,
                        CollectionCard, CollectionForm, CollectionEditor, AddToCollection,
@@ -51,7 +52,8 @@ src/
     [kind=kind]/       /films, /series, /books, /games и карточка /films/dune-2021
     people/ tags/ search/
     studios/[slug]/    студия и её фильмы — статика + ISR, как карточка
-    u/[username]/      профиль и вкладки: reviews, collections, threads, followers, following
+    u/[username]/      профиль и вкладки: reviews, collections, threads, followers, following,
+                       stats, ratings, marks, comments (аналитика — по stats_public)
     collections/ forum/
     (protected)/       только для вошедших, без SSR: feed, forum/new, settings/*
     auth/              вход, регистрация, ссылки из писем, OAuth — без SSR
@@ -75,6 +77,10 @@ scripts/api-types.mjs  генерация типов API
 | `/films/dune-2021`                       | карточка: шапка Okko или постер, «О фильме», лента               |
 | `/films/dune-2021/reviews?sort=&offset=` | все рецензии на произведение                                     |
 | `/u/{username}/reviews?offset=`          | рецензии и оценки пользователя                                   |
+| `/u/{username}/stats`                    | сводка аналитики (видна по `stats_public`)                       |
+| `/u/{username}/ratings?sort=&offset=`    | что оценил: `new`, `rating_desc`, `rating_asc`                   |
+| `/u/{username}/marks?kind=&offset=`      | отметки: `later`, `done`, без `kind` — обе                       |
+| `/u/{username}/comments?offset=`         | все комментарии одной лентой                                     |
 | `/people?q=&offset=`, `/people/{slug}`   | люди; человек и его работы (одна карточка — все роли)            |
 | `/tags`, `/tags/{slug}?kind=&offset=`    | теги; сущности с тегом, фильтр по разделу (`kind` — `films`…)    |
 | `/studios/{slug}?sort=`                  | студия: шапка из TMDB и её фильмы (статика, `sort` — в браузере) |
@@ -315,10 +321,58 @@ YouTube заблокирован в части стран СНГ и в Кита�
 **Профили и подписки** (`routes/u/[username]/`). Шапка — в `+layout.ts` / `+layout.svelte` для
 всех вкладок: `GET /users/{username}` на сервере как для гостя (`relation = null`), 404 — нет или
 заблокирован. `FollowButton` в браузере перечитывает профиль с токеном, чтобы узнать
-`relation`: «Подписаться» / «Вы подписаны» (наведение — «Отписаться») / «Читает вас»; на своём
+`relation` и `liked` (`ProfileViewer`, `#lib/social/profile-viewer.svelte.ts` — один запрос на обе
+кнопки): «Подписаться» / «Вы подписаны» (наведение — «Отписаться») / «Читает вас»; на своём
 профиле — «Редактировать профиль», гостю — вход с возвратом. Подписка меняет счётчик
 подписчиков сразу, без перезагрузки шапки. «Коллекции» — пока заглушка до блока коллекций; темы
 ведут на `/forum/{id}` (блок форума).
+
+В шапке также «о себе» (`bio`), «на сайте с …» (`registered_at`), «Нравится» (`LikeButton`:
+`PUT`/`DELETE …/users/{username}/like`, лайк один, дизлайка нет; себе — нельзя, бэкенд отвечает
+400 `like_self`) и рейтинг («карма», `ReputationBadge`) с подсказкой «из чего сложился балл»
+(`reputation.parts`). Счётчик лайков и `liked` приходят в самой шапке — отдельного запроса под
+кнопку нет. **Балл после лайка не анимируется:** пересчёт идёт раз в сутки целиком, поэтому свежий
+лайк виден в `likes_count` сразу, а в `reputation.score` — только после ближайшего прохода;
+`computed_at: null` — пересчёта ещё не было и балл стартовый (30 за регистрацию).
+
+**Аналитика профиля** (вкладки `stats`, `ratings`, `marks`, `comments`;
+`#lib/social/profile.ts`, `profile-data.svelte.ts`). Закрыта по умолчанию: четыре эндпоинта
+отвечают чужому и гостю **403 с `code: "stats_private"` — это штатный ответ, а не сбой**
+(`isStatsPrivate` в `errors.ts`), тоста об ошибке быть не должно. Рисовать вкладки или нет, решает
+`canSeeStats` по `stats_public` из шапки; владелец и админ видят их всегда. Данные грузятся
+в браузере (`profileQuery`), а не в `+page.ts`: на сервере токена нет, и владелец получил бы 403
+на собственной странице — шапка при этом остаётся серверной. Общая обвязка (скелетон, «закрыто»,
+ошибка с «Повторить») — `StatsBlock`. В ленте комментариев цель — дискриминированное объединение
+по `target.kind` (`entity`, `person`, `studio`, `review`, `collection`); ссылку и подпись даёт
+`commentPlace`, незнакомый вид — подпись без ссылки.
+
+**Фото профиля** (`#lib/auth/avatar.ts`, `AvatarUpload`). `POST /auth/me/avatar` — multipart
+с одним файловым полем (FormData уходит через openapi-fetch как есть, `Content-Type` с границей
+ставит браузер), `DELETE` убирает и файл, и аватар от провайдера. До 2 МБ, ошибки —
+`file_too_large` / `not_an_image`, 429 с `Retry-After` (10 загрузок за 10 минут). Сервер
+пережимает в WebP (длинная сторона 512 px) и квадрат не вырезает — кадрируем через
+`object-fit: cover` в `Avatar`. **`avatar_url` бывает и относительным
+(`/api/v1/auth/avatars/{id}` у загруженного файла), и абсолютным (`https://…` у Google и GitHub)
+— с базовым адресом не склеиваем ни тот, ни другой (`avatarSrc`).** Свой `avatar_url` в
+`PATCH /auth/me` удалил бы загруженный файл, поэтому настройки его не шлют. Там же — «о себе»
+(`bio`, до 1000, пустая строка очищает) и переключатель «показывать мою статистику всем»
+(`stats_public`).
+
+**Комментарии к произведениям, людям и студиям** (`#lib/social/comments.ts`, `TargetComments`).
+`GET/POST /social/comments?target=entity:dune-2021` (`person:`, `studio:`),
+`DELETE /social/comments/{id}`. Лента плоская, старые сверху, ветка ровно одного уровня: ответ на
+ответ бэкенд привязывает к корню, поэтому группируем по `parent_id` без рекурсии
+(`threadComments`); ответ, корень которого не попал на страницу, показывается корневым. Список
+публичный, отправка и удаление — с токеном; админу — модерация (`/admin/comments/{id}`). body
+1–2000, лимит 5 в минуту (429 с `Retry-After: 60` — текст «Попробуйте через 60 с» даёт
+`translate`). На карточке — ленивый раздел «Комментарии» (`ClientSection`), на страницах человека
+и студии — раздел внизу. Комментарии к рецензиям и обсуждения подборок остались на своих старых
+адресах.
+
+**Реакции на подборку** (`CollectionReactions` в `CollectionEnd`, обычный вид и особый): 🔥 😢 🤔
+😴, одна на зрителя — та же механика, что у реакций на произведение (`applyReaction`). Счётчики
+и своя реакция приходят одним запросом `GET …/collections/{id}/reactions` (гостю — с `mine: null`),
+нажатие меняет числа сразу, ошибка — откат.
 
 **Форум** (`#lib/social/forum.ts`, `routes/forum/`, `(protected)/forum/`). Тема привязана к 1–10
 произведениям, первое — главное. Сообщения приходят плоским списком по времени (`parent_id`):
@@ -433,6 +487,8 @@ SEO: `Seo.svelte` — `<title>`, `meta description` (обрезанное по �
   `message` — текст для пользователя: по `code` (словарь `BY_CODE` в `errors.ts`); у `validation`
   код общий — текст уточняется по `serverMessage`, иначе — по статусу. Сбой сети — `ApiError(0)`.
   Для 429 срок берётся из `retry_after` в теле или заголовка `Retry-After`: «Попробуйте через 80 с».
+  403 с `code: "stats_private"` — не ошибка, а «владелец закрыл статистику»: `isStatsPrivate`
+  отделяет его от настоящих сбоев, и вместо сообщения об ошибке страница объясняет, что закрыто.
   В компоненте: `catch (e) { error = errorMessage(e) }`.
 
 ## Прокси и окружение

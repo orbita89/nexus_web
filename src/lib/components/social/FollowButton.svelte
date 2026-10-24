@@ -3,40 +3,36 @@
 	import { errorMessage, unwrap } from '#lib/api/errors.ts';
 	import type { SchemaRelation } from '#lib/api/generated/social.ts';
 	import { api, session } from '#lib/auth/session.svelte.ts';
+	import type { ProfileViewer } from '#lib/social/profile-viewer.svelte.ts';
 	import { loginUrl } from '#lib/utils/redirect.ts';
 
 	// «Подписаться» в шапке профиля. Сервер рендерит профиль как для гостя (relation = null),
-	// поэтому вошедшему профиль перечитывается с токеном — так видно, подписан ли он.
+	// поэтому вошедшему шапка перечитывает профиль с токеном (ProfileViewer) — так видно, подписан
+	// ли он. Тот же запрос обслуживает «Нравится» (LikeButton).
 	let {
 		username,
+		viewer,
 		onchange
 	}: {
 		username: string;
+		viewer: ProfileViewer;
 		/** Подписались (+1) или отписались (−1): шапка поправит счётчик подписчиков. */
 		onchange?: (delta: 1 | -1) => void;
 	} = $props();
 
-	let relation = $state<SchemaRelation | null>(null);
+	// Своё состояние после нажатия; до него — то, что пришло с перечитанным профилем.
+	let changed = $state<SchemaRelation | null>(null);
 	let busy = $state(false);
 	let error = $state('');
 
-	const own = $derived(
-		session.status === 'authed' && session.user?.username.toLowerCase() === username.toLowerCase()
-	);
+	const own = $derived(viewer.own);
+	const relation = $derived(changed ?? viewer.profile?.relation ?? null);
 	const path = $derived({ username });
 
+	// Профиль перечитали заново (сменился пользователь или вход) — свой ответ больше не актуален.
 	$effect(() => {
-		relation = null;
-		error = '';
-		if (session.status !== 'authed' || own) return;
-		const name = username;
-		unwrap(
-			api.social.GET('/api/v1/social/users/{username}', { params: { path: { username: name } } })
-		)
-			.then((profile) => {
-				if (name === username) relation = profile.relation ?? null;
-			})
-			.catch((e) => (error = errorMessage(e)));
+		void viewer.profile;
+		changed = null;
 	});
 
 	async function toggle() {
@@ -49,7 +45,7 @@
 				? api.social.PUT('/api/v1/social/users/{username}/follow', { params: { path } })
 				: api.social.DELETE('/api/v1/social/users/{username}/follow', { params: { path } });
 			await unwrap(call);
-			relation = { ...relation, following };
+			changed = { ...relation, following };
 			onchange?.(following ? 1 : -1);
 		} catch (e) {
 			error = errorMessage(e);
@@ -83,8 +79,10 @@
 			</button>
 		{/if}
 		{#if relation.followed_by}<span class="badge badge-ghost">Читает вас</span>{/if}
-	{:else if !error}
+	{:else if !error && !viewer.error}
 		<div class="h-10 w-36 skeleton" aria-hidden="true"></div>
 	{/if}
-	{#if error}<span role="alert" class="text-sm text-error">{error}</span>{/if}
+	{#if error || viewer.error}
+		<span role="alert" class="text-sm text-error">{error || viewer.error}</span>
+	{/if}
 </div>

@@ -193,6 +193,23 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/social/admin/comments/{id}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		post?: never;
+		/** Удалить любой комментарий к произведению, человеку или студии (с ответами, если корневой). */
+		delete: operations['admin_delete_comment'];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/social/admin/posts/{id}': {
 		parameters: {
 			query?: never;
@@ -205,6 +222,23 @@ export interface paths {
 		post?: never;
 		/** Удалить любое сообщение. Если на него есть ответы, остаётся заглушка «сообщение удалено». */
 		delete: operations['admin_delete_post'];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/social/admin/reputation/recalc': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Пересчитать рейтинги сейчас: для админки и для тестов, чтобы не ждать суточного прохода. */
+		post: operations['admin_recalculate_reputation'];
+		delete?: never;
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -707,6 +741,41 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/social/collections/{id}/reaction': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/** Поставить реакцию на коллекцию; другая заменяет прежнюю. */
+		put: operations['put_collection_reaction'];
+		post?: never;
+		/** Убрать свою реакцию с коллекции → 204 (даже если её не было). */
+		delete: operations['delete_collection_reaction'];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/social/collections/{id}/reactions': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Сводка реакций на коллекцию: сколько каких и своя (вошедшему). */
+		get: operations['get_collection_reactions'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/social/collections/{id}/related': {
 		parameters: {
 			query?: never;
@@ -722,6 +791,41 @@ export interface paths {
 		put?: never;
 		post?: never;
 		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/social/comments': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Комментарии цели по времени: старые сверху, ответы — в той же ленте с `parent_id`. */
+		get: operations['list_comments'];
+		put?: never;
+		/** Написать комментарий или ответить на него. */
+		post: operations['create_comment'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/social/comments/{id}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		post?: never;
+		/** Удалить свой комментарий (корневой — вместе с ответами). */
+		delete: operations['delete_comment'];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -1269,6 +1373,23 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/social/users/{username}/comments': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Комментарии пользователя, новые сверху. */
+		get: operations['list_user_comments'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/social/users/{username}/dm': {
 		parameters: {
 			query?: never;
@@ -1341,6 +1462,75 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/social/users/{username}/like': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/** Лайкнуть профиль. Повторный лайк ничего не меняет. */
+		put: operations['like_user'];
+		post?: never;
+		/** Снять свой лайк. Если его не было — тоже 204. */
+		delete: operations['unlike_user'];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/social/users/{username}/likes': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Кто лайкнул профиль, новые сверху. */
+		get: operations['list_user_likes'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/social/users/{username}/marks': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Отметки пользователя: «посмотрю позже» и «просмотрено». Своё — `GET /users/me/marks`. */
+		get: operations['list_user_marks'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/social/users/{username}/ratings': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Что пользователь оценил: произведение, оценка и есть ли текст. */
+		get: operations['list_user_ratings'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/social/users/{username}/reviews': {
 		parameters: {
 			query?: never;
@@ -1350,6 +1540,23 @@ export interface paths {
 		};
 		/** Рецензии и оценки пользователя, новые сверху (включая оценки без текста). */
 		get: operations['list_user_reviews'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/social/users/{username}/stats': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Сводка: оценки, рецензии, отметки, реакции, комментарии, разрез по типам контента. */
+		get: operations['get_profile_stats'];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -1420,6 +1627,17 @@ export interface components {
 			url: string;
 			/** Format: int32 */
 			width: number;
+		};
+		/** @description Разрез по типам контента: `{"movie": 30, "book": 12}`. */
+		ByKind: {
+			/** @description Что отмечено «просмотрено». */
+			done: {
+				[key: string]: number;
+			};
+			/** @description Что оценено. */
+			rated: {
+				[key: string]: number;
+			};
 		};
 		/** @description Страница истории: старые сверху, последнее — самое новое. */
 		ChatHistory: {
@@ -1676,6 +1894,26 @@ export interface components {
 			 */
 			position: number;
 		};
+		/** @description Реакции на коллекцию: сколько каких и своя. */
+		CollectionReactions: {
+			mine?: components['schemas']['ReactionKind'] | null;
+			/** @description Всегда все четыре ключа. */
+			reactions: components['schemas']['Reactions'];
+		};
+		CommentCounts: {
+			/**
+			 * Format: int64
+			 * @description Сообщения в обсуждениях коллекций.
+			 * @example 2
+			 */
+			collections: number;
+			/**
+			 * Format: int64
+			 * @description Комментарии к рецензиям.
+			 * @example 4
+			 */
+			reviews: number;
+		};
 		CreateCollection: {
 			/** @description До 2000 символов. */
 			description?: string | null;
@@ -1734,6 +1972,20 @@ export interface components {
 			 * @example Киберпанк
 			 */
 			title: string;
+		};
+		CreateTargetComment: {
+			/** @description 1–2000 символов. */
+			body: string;
+			/**
+			 * Format: uuid
+			 * @description Ответ на комментарий той же цели; ответ на ответ привяжется к корню.
+			 */
+			parent_id?: string | null;
+			/**
+			 * @description Цель: `entity:dune-2021`, `person:denis-villeneuve`, `studio:legendary-pictures`.
+			 * @example entity:dune-2021
+			 */
+			target: string;
 		};
 		/** @description Новая тема. */
 		CreateThread: {
@@ -1972,9 +2224,32 @@ export interface components {
 			 */
 			since: string;
 		};
+		/** @description Лайк профиля. */
+		Like: {
+			/**
+			 * Format: date-time
+			 * @description Когда лайкнул.
+			 */
+			since: string;
+			user: components['schemas']['UserRef'];
+		};
 		/** @description Своя отметка на карточке. */
 		Mark: {
 			kind: components['schemas']['MarkKind'];
+		};
+		MarkCounts: {
+			/**
+			 * Format: int64
+			 * @description «Просмотрено» (у книг «прочитано», у игр «пройдено»).
+			 * @example 30
+			 */
+			done: number;
+			/**
+			 * Format: int64
+			 * @description «Посмотрю позже».
+			 * @example 7
+			 */
+			later: number;
 		};
 		/**
 		 * @description Личная отметка: `later` — «посмотреть (прочитать, пройти) позже», `done` — «просмотрено».
@@ -2240,6 +2515,33 @@ export interface components {
 			total: number;
 		};
 		/** @description Страница списка. */
+		Page_Like: {
+			items: {
+				/**
+				 * Format: date-time
+				 * @description Когда лайкнул.
+				 */
+				since: string;
+				user: components['schemas']['UserRef'];
+			}[];
+			/**
+			 * Format: int64
+			 * @example 20
+			 */
+			limit: number;
+			/**
+			 * Format: int64
+			 * @example 0
+			 */
+			offset: number;
+			/**
+			 * Format: int64
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @example 137
+			 */
+			total: number;
+		};
+		/** @description Страница списка. */
 		Page_MarkedEntity: {
 			items: {
 				/**
@@ -2322,6 +2624,38 @@ export interface components {
 				reply_to?: components['schemas']['UserRef'] | null;
 				/** Format: uuid */
 				thread_id: string;
+			}[];
+			/**
+			 * Format: int64
+			 * @example 20
+			 */
+			limit: number;
+			/**
+			 * Format: int64
+			 * @example 0
+			 */
+			offset: number;
+			/**
+			 * Format: int64
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @example 137
+			 */
+			total: number;
+		};
+		/** @description Страница списка. */
+		Page_RatedEntity: {
+			items: {
+				/** Format: date-time */
+				created_at: string;
+				entity: components['schemas']['EntityRef'];
+				/** @description Есть ли у оценки текст рецензии. */
+				has_text: boolean;
+				/**
+				 * Format: int32
+				 * @description 1–10.
+				 * @example 8
+				 */
+				rating: number;
 			}[];
 			/**
 			 * Format: int64
@@ -2484,6 +2818,46 @@ export interface components {
 			total: number;
 		};
 		/** @description Страница списка. */
+		Page_TargetComment: {
+			items: {
+				author: components['schemas']['UserRef'];
+				body: string;
+				/** Format: date-time */
+				created_at: string;
+				/** Format: uuid */
+				id: string;
+				/**
+				 * Format: uuid
+				 * @description Корневой комментарий; `null` — сам корневой. Ответ на ответ привязан к корню.
+				 */
+				parent_id?: string | null;
+				/**
+				 * @description Цель в виде `kind:slug`, как в запросе: `entity:dune-2021`, `person:denis-villeneuve`,
+				 *     `studio:legendary-pictures`.
+				 * @example entity:dune-2021
+				 */
+				target: string;
+				/** Format: date-time */
+				updated_at: string;
+			}[];
+			/**
+			 * Format: int64
+			 * @example 20
+			 */
+			limit: number;
+			/**
+			 * Format: int64
+			 * @example 0
+			 */
+			offset: number;
+			/**
+			 * Format: int64
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @example 137
+			 */
+			total: number;
+		};
+		/** @description Страница списка. */
 		Page_Thread: {
 			items: {
 				author: components['schemas']['UserRef'];
@@ -2513,6 +2887,36 @@ export interface components {
 				posts_count: number;
 				/** @example Дюна: книга против фильма */
 				title: string;
+			}[];
+			/**
+			 * Format: int64
+			 * @example 20
+			 */
+			limit: number;
+			/**
+			 * Format: int64
+			 * @example 0
+			 */
+			offset: number;
+			/**
+			 * Format: int64
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @example 137
+			 */
+			total: number;
+		};
+		/** @description Страница списка. */
+		Page_UserComment: {
+			items: {
+				body: string;
+				/** Format: date-time */
+				created_at: string;
+				/** Format: uuid */
+				id: string;
+				/** @description Где комментарий оставлен: вид цели в `kind`, рядом — её данные. */
+				target: components['schemas']['UserCommentTarget'];
+				/** Format: date-time */
+				updated_at: string;
 			}[];
 			/**
 			 * Format: int64
@@ -2606,6 +3010,47 @@ export interface components {
 			/** Format: uuid */
 			thread_id: string;
 		};
+		/** @description Оценки пользователя. Без оценок — `average: null`, `count: 0`, нули в распределении. */
+		ProfileRatings: {
+			/**
+			 * Format: double
+			 * @description Округлено до 0.1. `null` — не оценивал.
+			 * @example 8.3
+			 */
+			average?: number | null;
+			/**
+			 * Format: int64
+			 * @example 42
+			 */
+			count: number;
+			/** @description Сколько оценок 1, 2, … 10 — ровно 10 чисел. */
+			distribution: number[];
+		};
+		/**
+		 * @description Что пользователь успел на площадке. Числа считаются по его строкам: чужие ограничения
+		 *     видимости (приватные коллекции) сюда не попадают.
+		 */
+		ProfileStats: {
+			/**
+			 * @description Сколько оценённого и просмотренного каждого типа (`movie`, `series`, `book`, `game`):
+			 *     типы берутся у каталога через справочник, ключей без единой сущности нет.
+			 */
+			by_kind: components['schemas']['ByKind'];
+			/** @description Комментарии: к рецензиям и в обсуждениях коллекций, без удалённых. */
+			comments: components['schemas']['CommentCounts'];
+			/** @description Отметки «посмотрю позже» и «просмотрено». */
+			marks: components['schemas']['MarkCounts'];
+			/** @description Оценки: среднее, сколько их и распределение по 1–10. */
+			ratings: components['schemas']['ProfileRatings'];
+			/** @description Свои реакции на произведения: всегда все четыре ключа. */
+			reactions: components['schemas']['Reactions'];
+			/**
+			 * Format: int64
+			 * @description Рецензии с текстом (оценка без текста сюда не идёт).
+			 * @example 12
+			 */
+			reviews_with_text: number;
+		};
 		/** @description Добавить произведение в коллекцию или изменить пункт. */
 		PutCollectionItem: {
 			/** @description До 1000 символов. Не передан — не меняется, `null` — очищается. */
@@ -2639,6 +3084,20 @@ export interface components {
 			 * @example 1
 			 */
 			value: number;
+		};
+		/** @description Оценённое произведение в списке «что я оценил». */
+		RatedEntity: {
+			/** Format: date-time */
+			created_at: string;
+			entity: components['schemas']['EntityRef'];
+			/** @description Есть ли у оценки текст рецензии. */
+			has_text: boolean;
+			/**
+			 * Format: int32
+			 * @description 1–10.
+			 * @example 8
+			 */
+			rating: number;
 		};
 		/** @description Оценка сущности в списке: средняя (округлена до 0.1, `null` — оценок нет) и сколько оценок. */
 		RatingBrief: {
@@ -2722,6 +3181,14 @@ export interface components {
 			 */
 			think: number;
 		};
+		/** @description Сколько пользователей получили строку рейтинга (у остальных — [`BASE`]). */
+		RecalcResult: {
+			/**
+			 * Format: int64
+			 * @example 128
+			 */
+			rows: number;
+		};
 		/** @description Подписки между вошедшим и пользователем профиля. */
 		Relation: {
 			/** @description Пользователь подписан на вошедшего. */
@@ -2754,6 +3221,21 @@ export interface components {
 			/** Format: int64 */
 			reports_count: number;
 			room: components['schemas']['CustomRoom'];
+		};
+		/** @description Рейтинг пользователя: [`crate::reputation::BASE`] за регистрацию плюс веса за чужие лайки. */
+		Reputation: {
+			/**
+			 * Format: date-time
+			 * @description Когда считали в последний раз. `null` — слагаемых ещё нет, балл стартовый.
+			 */
+			computed_at?: string | null;
+			/** @description Из чего сложился балл: `{"profile_likes": 3, "review_likes": 12, "collection_reactions": 2}`. */
+			parts: Record<string, never>;
+			/**
+			 * Format: int32
+			 * @example 42
+			 */
+			score: number;
 		};
 		/** @description Рецензия: оценка, текст или и то и другое. */
 		Review: {
@@ -2826,6 +3308,8 @@ export interface components {
 		};
 		/** @description Социальный профиль пользователя. */
 		SocialProfile: {
+			/** @description «О себе» из профиля (`auth`), до 1000 символов. */
+			bio?: string | null;
 			/** @description Вошедший заблокировал этого пользователя. Гостю и в своём профиле — `false`. */
 			blocked: boolean;
 			/**
@@ -2849,19 +3333,39 @@ export interface components {
 			 * @example 3
 			 */
 			following_count: number;
+			/** @description Лайкнул ли вошедший этот профиль. Гостю и в своём профиле — `false`. */
+			liked: boolean;
+			/**
+			 * Format: int64
+			 * @description Сколько лайков у профиля (дизлайков нет).
+			 * @example 17
+			 */
+			likes_count: number;
 			/**
 			 * Format: int64
 			 * @description Сообщения на форуме, без удалённых.
 			 * @example 25
 			 */
 			posts_count: number;
+			/**
+			 * Format: date-time
+			 * @description Когда зарегистрировался.
+			 */
+			registered_at: string;
 			relation?: components['schemas']['Relation'] | null;
+			/**
+			 * @description Рейтинг («карма»): пересчитывается раз в сутки, поэтому свежий лайк виден в
+			 *     `likes_count` сразу, а в `reputation.score` — после ближайшего пересчёта.
+			 */
+			reputation: components['schemas']['Reputation'];
 			/**
 			 * Format: int64
 			 * @description Все рецензии, включая оценки без текста.
 			 * @example 40
 			 */
 			reviews_count: number;
+			/** @description Открыл ли пользователь свою аналитику всем. В своём профиле — своё значение. */
+			stats_public: boolean;
 			/**
 			 * Format: int64
 			 * @description Темы форума.
@@ -2869,6 +3373,16 @@ export interface components {
 			 */
 			threads_count: number;
 			user: components['schemas']['UserRef'];
+		};
+		/** @description Студия каталога в чужих ответах: ссылка на её страницу. */
+		StudioRef: {
+			/** Format: uuid */
+			id: string;
+			logo_url?: string | null;
+			/** @example Legendary Pictures */
+			name: string;
+			/** @example legendary-pictures */
+			slug: string;
 		};
 		/** @description Тег или жанр в интересах пользователя. */
 		TagInterest: {
@@ -2892,6 +3406,28 @@ export interface components {
 			name: string;
 			/** @example sci-fi */
 			slug: string;
+		};
+		/** @description Комментарий к произведению, человеку или студии. */
+		TargetComment: {
+			author: components['schemas']['UserRef'];
+			body: string;
+			/** Format: date-time */
+			created_at: string;
+			/** Format: uuid */
+			id: string;
+			/**
+			 * Format: uuid
+			 * @description Корневой комментарий; `null` — сам корневой. Ответ на ответ привязан к корню.
+			 */
+			parent_id?: string | null;
+			/**
+			 * @description Цель в виде `kind:slug`, как в запросе: `entity:dune-2021`, `person:denis-villeneuve`,
+			 *     `studio:legendary-pictures`.
+			 * @example entity:dune-2021
+			 */
+			target: string;
+			/** Format: date-time */
+			updated_at: string;
 		};
 		/** @description Тема в списке: без текста и сообщений. */
 		Thread: {
@@ -2974,6 +3510,52 @@ export interface components {
 			entities?: string[] | null;
 			title?: string | null;
 		};
+		/** @description Комментарий пользователя в ленте «мои комментарии» вместе с тем, где он оставлен. */
+		UserComment: {
+			body: string;
+			/** Format: date-time */
+			created_at: string;
+			/** Format: uuid */
+			id: string;
+			/** @description Где комментарий оставлен: вид цели в `kind`, рядом — её данные. */
+			target: components['schemas']['UserCommentTarget'];
+			/** Format: date-time */
+			updated_at: string;
+		};
+		/**
+		 * @description Цель комментария. `kind` — `entity`, `person`, `studio`, `review` или `collection`;
+		 *     остальные поля зависят от него.
+		 */
+		UserCommentTarget:
+			| {
+					entity: components['schemas']['EntityRef'];
+					/** @enum {string} */
+					kind: 'entity';
+			  }
+			| {
+					/** @enum {string} */
+					kind: 'person';
+					person: components['schemas']['PersonRef'];
+			  }
+			| {
+					/** @enum {string} */
+					kind: 'studio';
+					studio: components['schemas']['StudioRef'];
+			  }
+			| {
+					entity: components['schemas']['EntityRef'];
+					/** @enum {string} */
+					kind: 'review';
+					/** Format: uuid */
+					review_id: string;
+			  }
+			| {
+					/** Format: uuid */
+					collection_id: string;
+					/** @enum {string} */
+					kind: 'collection';
+					title: string;
+			  };
 		/** @description Пользователь в чужих ответах (автор рецензии, владелец коллекции, подписчик). */
 		UserRef: {
 			avatar_url?: string | null;
@@ -3012,6 +3594,7 @@ export interface components {
 export type SchemaAddRelated = components['schemas']['AddRelated'];
 export type SchemaAdminUpdateCollection = components['schemas']['AdminUpdateCollection'];
 export type SchemaAttachment = components['schemas']['Attachment'];
+export type SchemaByKind = components['schemas']['ByKind'];
 export type SchemaChatHistory = components['schemas']['ChatHistory'];
 export type SchemaChatMessage = components['schemas']['ChatMessage'];
 export type SchemaChatRoomInfo = components['schemas']['ChatRoomInfo'];
@@ -3026,11 +3609,14 @@ export type SchemaCollectionComment = components['schemas']['CollectionComment']
 export type SchemaCollectionDetail = components['schemas']['CollectionDetail'];
 export type SchemaCollectionEntity = components['schemas']['CollectionEntity'];
 export type SchemaCollectionItem = components['schemas']['CollectionItem'];
+export type SchemaCollectionReactions = components['schemas']['CollectionReactions'];
+export type SchemaCommentCounts = components['schemas']['CommentCounts'];
 export type SchemaCreateCollection = components['schemas']['CreateCollection'];
 export type SchemaCreateCollectionComment = components['schemas']['CreateCollectionComment'];
 export type SchemaCreatePost = components['schemas']['CreatePost'];
 export type SchemaCreateReviewComment = components['schemas']['CreateReviewComment'];
 export type SchemaCreateRoom = components['schemas']['CreateRoom'];
+export type SchemaCreateTargetComment = components['schemas']['CreateTargetComment'];
 export type SchemaCreateThread = components['schemas']['CreateThread'];
 export type SchemaCustomRoom = components['schemas']['CustomRoom'];
 export type SchemaDmPolicy = components['schemas']['DmPolicy'];
@@ -3044,7 +3630,9 @@ export type SchemaFeedPage = components['schemas']['FeedPage'];
 export type SchemaFeedReason = components['schemas']['FeedReason'];
 export type SchemaFollow = components['schemas']['Follow'];
 export type SchemaInterest = components['schemas']['Interest'];
+export type SchemaLike = components['schemas']['Like'];
 export type SchemaMark = components['schemas']['Mark'];
+export type SchemaMarkCounts = components['schemas']['MarkCounts'];
 export type SchemaMarkKind = components['schemas']['MarkKind'];
 export type SchemaMarkedEntity = components['schemas']['MarkedEntity'];
 export type SchemaPageCollection = components['schemas']['Page_Collection'];
@@ -3052,38 +3640,49 @@ export type SchemaPageCollectionComment = components['schemas']['Page_Collection
 export type SchemaPageCustomRoom = components['schemas']['Page_CustomRoom'];
 export type SchemaPageFollow = components['schemas']['Page_Follow'];
 export type SchemaPageInterest = components['schemas']['Page_Interest'];
+export type SchemaPageLike = components['schemas']['Page_Like'];
 export type SchemaPageMarkedEntity = components['schemas']['Page_MarkedEntity'];
 export type SchemaPagePersonInterest = components['schemas']['Page_PersonInterest'];
 export type SchemaPagePost = components['schemas']['Page_Post'];
+export type SchemaPageRatedEntity = components['schemas']['Page_RatedEntity'];
 export type SchemaPageReportedRoom = components['schemas']['Page_ReportedRoom'];
 export type SchemaPageReview = components['schemas']['Page_Review'];
 export type SchemaPageReviewComment = components['schemas']['Page_ReviewComment'];
 export type SchemaPageTagInterest = components['schemas']['Page_TagInterest'];
+export type SchemaPageTargetComment = components['schemas']['Page_TargetComment'];
 export type SchemaPageThread = components['schemas']['Page_Thread'];
+export type SchemaPageUserComment = components['schemas']['Page_UserComment'];
 export type SchemaPageUserRef = components['schemas']['Page_UserRef'];
 export type SchemaPersonInterest = components['schemas']['PersonInterest'];
 export type SchemaPersonRef = components['schemas']['PersonRef'];
 export type SchemaPost = components['schemas']['Post'];
+export type SchemaProfileRatings = components['schemas']['ProfileRatings'];
+export type SchemaProfileStats = components['schemas']['ProfileStats'];
 export type SchemaPutCollectionItem = components['schemas']['PutCollectionItem'];
 export type SchemaPutReview = components['schemas']['PutReview'];
 export type SchemaPutVote = components['schemas']['PutVote'];
+export type SchemaRatedEntity = components['schemas']['RatedEntity'];
 export type SchemaRatingBrief = components['schemas']['RatingBrief'];
 export type SchemaRatingSummary = components['schemas']['RatingSummary'];
 export type SchemaReaction = components['schemas']['Reaction'];
 export type SchemaReactionKind = components['schemas']['ReactionKind'];
 export type SchemaReactions = components['schemas']['Reactions'];
+export type SchemaRecalcResult = components['schemas']['RecalcResult'];
 export type SchemaRelation = components['schemas']['Relation'];
 export type SchemaReorderItems = components['schemas']['ReorderItems'];
 export type SchemaReportRoom = components['schemas']['ReportRoom'];
 export type SchemaReportedRoom = components['schemas']['ReportedRoom'];
+export type SchemaReputation = components['schemas']['Reputation'];
 export type SchemaReview = components['schemas']['Review'];
 export type SchemaReviewComment = components['schemas']['ReviewComment'];
 export type SchemaReviewSort = components['schemas']['ReviewSort'];
 export type SchemaRoomSort = components['schemas']['RoomSort'];
 export type SchemaSetRelated = components['schemas']['SetRelated'];
 export type SchemaSocialProfile = components['schemas']['SocialProfile'];
+export type SchemaStudioRef = components['schemas']['StudioRef'];
 export type SchemaTagInterest = components['schemas']['TagInterest'];
 export type SchemaTagRef = components['schemas']['TagRef'];
+export type SchemaTargetComment = components['schemas']['TargetComment'];
 export type SchemaThread = components['schemas']['Thread'];
 export type SchemaThreadDetail = components['schemas']['ThreadDetail'];
 export type SchemaThreadSort = components['schemas']['ThreadSort'];
@@ -3093,6 +3692,8 @@ export type SchemaUpdateCollection = components['schemas']['UpdateCollection'];
 export type SchemaUpdatePost = components['schemas']['UpdatePost'];
 export type SchemaUpdateRoom = components['schemas']['UpdateRoom'];
 export type SchemaUpdateThread = components['schemas']['UpdateThread'];
+export type SchemaUserComment = components['schemas']['UserComment'];
+export type SchemaUserCommentTarget = components['schemas']['UserCommentTarget'];
 export type SchemaUserRef = components['schemas']['UserRef'];
 export type SchemaVoteResult = components['schemas']['VoteResult'];
 export type $defs = Record<string, never>;
@@ -3974,6 +4575,54 @@ export interface operations {
 			};
 		};
 	};
+	admin_delete_comment: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description id комментария */
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Удалён */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет или уже удалён */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
 	admin_delete_post: {
 		parameters: {
 			query?: never;
@@ -4013,6 +4662,44 @@ export interface operations {
 			};
 			/** @description Нет или уже удалено */
 			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	admin_recalculate_reputation: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Пересчитано */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['RecalcResult'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
 				headers: {
 					[name: string]: unknown;
 				};
@@ -6030,6 +6717,140 @@ export interface operations {
 			};
 		};
 	};
+	put_collection_reaction: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description id коллекции */
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['Reaction'];
+			};
+		};
+		responses: {
+			/** @description Реакция сохранена */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Reaction'];
+				};
+			};
+			/** @description Неизвестная реакция */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет коллекции или она чужая приватная */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	delete_collection_reaction: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description id коллекции */
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Реакции нет */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет коллекции или она чужая приватная */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	get_collection_reactions: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description id коллекции */
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Сводка */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['CollectionReactions'];
+				};
+			};
+			/** @description Неверный токен */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет коллекции или она чужая приватная */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
 	list_related_collections: {
 		parameters: {
 			query?: never;
@@ -6061,6 +6882,162 @@ export interface operations {
 				};
 			};
 			/** @description Нет коллекции или она чужая приватная */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	list_comments: {
+		parameters: {
+			query: {
+				/**
+				 * @description Цель: `kind:slug`, где `kind` — `entity`, `person` или `studio`.
+				 * @example entity:dune-2021
+				 */
+				target: string;
+				/** @description 1–100, по умолчанию 20. */
+				limit?: number;
+				/** @description С 0. */
+				offset?: number;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Страница комментариев */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Page_TargetComment'];
+				};
+			};
+			/** @description `validation` с `field: target` — не вида `kind:slug` или неизвестный вид */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такой цели */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	create_comment: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['CreateTargetComment'];
+			};
+		};
+		responses: {
+			/** @description Создан */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['TargetComment'];
+				};
+			};
+			/** @description `validation` с `field`: `target` — не вида `kind:slug`; `body` — пусто или длиннее 2000; `parent_id` — нет такого (неудалённого) комментария у этой цели */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такой цели */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Больше 5 комментариев в минуту (`Retry-After`) */
+			429: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	delete_comment: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description id комментария */
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Удалён */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Чужой комментарий */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет или уже удалён */
 			404: {
 				headers: {
 					[name: string]: unknown;
@@ -8422,6 +9399,73 @@ export interface operations {
 			};
 		};
 	};
+	list_user_comments: {
+		parameters: {
+			query?: {
+				/** @description 1–100, по умолчанию 20. */
+				limit?: number;
+				/** @description С 0. */
+				offset?: number;
+			};
+			header?: never;
+			path: {
+				/**
+				 * @description username
+				 * @example user
+				 */
+				username: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Страница комментариев */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Page_UserComment'];
+				};
+			};
+			/** @description Неверный параметр */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Токен передан, но недействителен */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Аналитика закрыта владельцем (`stats_private`) */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Пользователь не найден или заблокирован */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
 	open_dm: {
 		parameters: {
 			query?: never;
@@ -8666,6 +9710,286 @@ export interface operations {
 			};
 		};
 	};
+	like_user: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description Кого лайкнуть
+				 * @example author
+				 */
+				username: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Лайкнут */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Лайк самому себе (`like_self`) */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Пользователь не найден или заблокирован */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	unlike_user: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description С кого снять лайк
+				 * @example author
+				 */
+				username: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Лайка нет */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Пользователь не найден или заблокирован */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	list_user_likes: {
+		parameters: {
+			query?: {
+				/** @description 1–100, по умолчанию 20. */
+				limit?: number;
+				/** @description С 0. */
+				offset?: number;
+			};
+			header?: never;
+			path: {
+				/**
+				 * @description username
+				 * @example author
+				 */
+				username: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Страница лайкнувших */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Page_Like'];
+				};
+			};
+			/** @description Неверный параметр */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Пользователь не найден или заблокирован */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	list_user_marks: {
+		parameters: {
+			query?: {
+				/** @description Только отметки этого вида; не передан — все. */
+				kind?: 'later' | 'done';
+				/** @description 1–100, по умолчанию 20. */
+				limit?: number;
+				/** @description С 0. */
+				offset?: number;
+			};
+			header?: never;
+			path: {
+				/**
+				 * @description username
+				 * @example user
+				 */
+				username: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Страница отметок */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Page_MarkedEntity'];
+				};
+			};
+			/** @description Неверный параметр */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Токен передан, но недействителен */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Аналитика закрыта владельцем (`stats_private`) */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Пользователь не найден или заблокирован */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	list_user_ratings: {
+		parameters: {
+			query?: {
+				/** @description `new` (по умолчанию), `rating_desc`, `rating_asc`. */
+				sort?: 'new' | 'rating_desc' | 'rating_asc';
+				/** @description 1–100, по умолчанию 20. */
+				limit?: number;
+				/** @description С 0. */
+				offset?: number;
+			};
+			header?: never;
+			path: {
+				/**
+				 * @description username
+				 * @example user
+				 */
+				username: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Страница оценок */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Page_RatedEntity'];
+				};
+			};
+			/** @description Неверный параметр */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Токен передан, но недействителен */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Аналитика закрыта владельцем (`stats_private`) */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Пользователь не найден или заблокирован */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
 	list_user_reviews: {
 		parameters: {
 			query?: {
@@ -8696,6 +10020,59 @@ export interface operations {
 				};
 			};
 			/** @description Пользователь не найден */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	get_profile_stats: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description username
+				 * @example user
+				 */
+				username: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Аналитика профиля */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ProfileStats'];
+				};
+			};
+			/** @description Токен передан, но недействителен */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Аналитика закрыта владельцем (`stats_private`) */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Пользователь не найден или заблокирован */
 			404: {
 				headers: {
 					[name: string]: unknown;

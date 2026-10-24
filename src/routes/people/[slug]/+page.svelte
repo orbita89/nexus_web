@@ -6,6 +6,7 @@
 	import PersonAvatar from '#lib/components/catalog/PersonAvatar.svelte';
 	import Seo from '#lib/components/catalog/Seo.svelte';
 	import ChatButton from '#lib/components/chat/ChatButton.svelte';
+	import TargetComments from '#lib/components/social/TargetComments.svelte';
 	import WatchButton from '#lib/components/social/WatchButton.svelte';
 	import { Watch } from '#lib/social/watch.svelte.ts';
 	import type { PageProps } from './$types';
@@ -98,4 +99,10 @@
 	{:else}
 		<EmptyState title="Работ пока нет" />
 	{/each}
+</section>
+
+<!-- Комментарии о человеке: публичный список грузится в браузере. -->
+<section class="mt-12" aria-labelledby="comments-title">
+	<h2 id="comments-title" class="mb-4 text-xl font-bold">Комментарии</h2>
+	<TargetComments kind="person" slug={person.slug} />
 </section>

@@ -2,9 +2,10 @@
 	import type { SchemaCollection, SchemaCollectionDetail } from '#lib/api/generated/social.ts';
 	import { count } from '#lib/catalog/labels.ts';
 	import { buildFeaturedUrl } from '#lib/social/featured.ts';
+	import CollectionReactions from '#lib/components/social/CollectionReactions.svelte';
 	import ShareMenu from '#lib/components/social/ShareMenu.svelte';
 
-	// Конец страницы коллекции: «Далее» (первая из похожих) и ряд действий — поделиться,
+	// Конец страницы коллекции: реакции, «Далее» (первая из похожих) и ряд действий — поделиться,
 	// обсуждение, все похожие. Обычные ссылки — перелинковка для SEO.
 	let {
 		collection,
@@ -24,9 +25,15 @@
 	const works = (n: number) => count(n, ['произведение', 'произведения', 'произведений']);
 </script>
 
+<!-- Реакции отдельной строкой над действиями: они грузятся в браузере и не должны двигать ряд
+     кнопок, когда придут счётчики. -->
+<div class="mx-auto mt-10 flex max-w-4xl justify-center border-t border-base-content/10 pt-8">
+	<CollectionReactions collectionId={collection.id} />
+</div>
+
 <!-- Одна строка по центру: действия, разделитель, «Далее» (на телефоне «Далее» сверху). -->
 <footer
-	class="mx-auto mt-10 flex max-w-4xl flex-col items-center gap-4 border-t border-base-content/10 pt-8 sm:flex-row sm:justify-center sm:gap-6"
+	class="mx-auto mt-6 flex max-w-4xl flex-col items-center gap-4 sm:flex-row sm:justify-center sm:gap-6"
 >
 	<div class="flex flex-wrap items-center justify-center gap-2">
 		<ShareMenu url={shareUrl} title={shareTitle} />

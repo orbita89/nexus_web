@@ -14,6 +14,7 @@
 	import ResultsFeed from '#lib/components/catalog/ResultsFeed.svelte';
 	import Seo from '#lib/components/catalog/Seo.svelte';
 	import StudioLogo from '#lib/components/catalog/StudioLogo.svelte';
+	import TargetComments from '#lib/components/social/TargetComments.svelte';
 	import { liveQuery } from '#lib/social/card-live.svelte.ts';
 	import type { PageProps } from './$types';
 
@@ -171,4 +172,10 @@
 			</EmptyState>
 		{/if}
 	</div>
+</section>
+
+<!-- Комментарии о студии: публичный список грузится в браузере (страница статическая). -->
+<section class="mt-12" aria-labelledby="comments-title">
+	<h2 id="comments-title" class="mb-4 text-xl font-bold">Комментарии</h2>
+	<TargetComments kind="studio" slug={studio.slug} />
 </section>

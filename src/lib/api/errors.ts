@@ -43,6 +43,10 @@ const BY_CODE: Record<string, string> = {
 	username_taken: 'Это имя пользователя уже занято.',
 	email_taken: 'Этот email уже зарегистрирован.',
 	not_released: 'Оценки откроются после премьеры.',
+	stats_private: 'Пользователь не открывал свою статистику.',
+	like_self: 'Свой профиль лайкнуть нельзя.',
+	file_too_large: 'Файл больше 2 МБ. Выберите картинку полегче.',
+	not_an_image: 'Это не картинка. Подойдут JPEG, PNG, WebP или GIF.',
 	review_without_text: 'Комментировать можно только рецензию с текстом.',
 	self_relation: 'Нельзя связать произведение с самим собой.',
 	password_incorrect: 'Пароль неверен.',
@@ -101,6 +105,14 @@ export function translate(
 	}
 	if (status >= 500) return 'Ошибка сервера. Попробуйте позже.';
 	return BY_STATUS[status] ?? 'Что-то пошло не так. Попробуйте ещё раз.';
+}
+
+/**
+ * Аналитика профиля закрыта владельцем: 403 `stats_private` — штатный ответ чужому и гостю, а не
+ * сбой. Такой блок просто не рисуем (и не показываем сообщение об ошибке).
+ */
+export function isStatsPrivate(e: unknown): boolean {
+	return e instanceof ApiError && e.status === 403 && e.code === 'stats_private';
 }
 
 /** Текст для пользователя из любой ошибки: ApiError, сбой сети или исключение в коде. */

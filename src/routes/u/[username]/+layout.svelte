@@ -1,10 +1,15 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { session } from '#lib/auth/session.svelte.ts';
 	import { plural } from '#lib/catalog/labels.ts';
-	import { displayName } from '#lib/social/reviews.ts';
+	import { canSeeStats } from '#lib/social/profile.ts';
+	import { ProfileViewer } from '#lib/social/profile-viewer.svelte.ts';
+	import { displayName, reviewDate } from '#lib/social/reviews.ts';
 	import Avatar from '#lib/components/Avatar.svelte';
 	import FollowButton from '#lib/components/social/FollowButton.svelte';
+	import LikeButton from '#lib/components/social/LikeButton.svelte';
 	import MessageButton from '#lib/components/social/MessageButton.svelte';
+	import ReputationBadge from '#lib/components/social/ReputationBadge.svelte';
 	import type { LayoutProps } from './$types';
 
 	let { data, children }: LayoutProps = $props();
@@ -12,6 +17,9 @@
 	const profile = $derived(data.profile);
 	const user = $derived(profile.user);
 	const base = $derived(`/u/${user.username}`);
+
+	// Один перечитанный с токеном профиль на обе кнопки: «Подписаться» и «Нравится».
+	const viewer = new ProfileViewer(() => user.username);
 
 	// Подписались или отписались — счётчик меняется сразу, без перезагрузки шапки.
 	let delta = $state(0);
@@ -23,11 +31,24 @@
 		delta += change;
 	}
 
+	// Аналитика закрыта по умолчанию: вкладки рисуем, только если владелец открыл её всем, либо
+	// смотрит он сам или админ. На сервере сессии нет — там видно ровно то, что видно гостю,
+	// и свои вкладки владелец получает после гидрации.
+	const stats = $derived(canSeeStats(profile, session.user));
+
 	const tabs = $derived([
 		{ href: base, title: 'Обзор', n: null },
 		{ href: `${base}/reviews`, title: 'Рецензии', n: profile.reviews_count },
 		{ href: `${base}/threads`, title: 'Темы', n: profile.threads_count },
 		{ href: `${base}/collections`, title: 'Коллекции', n: profile.collections_count },
+		...(stats
+			? [
+					{ href: `${base}/stats`, title: 'Статистика', n: null },
+					{ href: `${base}/ratings`, title: 'Оценки', n: null },
+					{ href: `${base}/marks`, title: 'Отметки', n: null },
+					{ href: `${base}/comments`, title: 'Комментарии', n: null }
+				]
+			: []),
 		{ href: `${base}/followers`, title: 'Подписчики', n: followers },
 		{ href: `${base}/following`, title: 'Подписки', n: profile.following_count }
 	]);
@@ -46,6 +67,17 @@
 		<div class="min-w-0 flex-1">
 			<h1 class="truncate text-3xl font-black sm:text-4xl">{displayName(user)}</h1>
 			<p class="text-base-content/50">@{user.username}</p>
+			{#if profile.bio}
+				<p class="mt-2 max-w-2xl leading-relaxed whitespace-pre-line text-base-content/80">
+					{profile.bio}
+				</p>
+			{/if}
+			<div class="mt-3 flex flex-wrap items-center gap-3">
+				<ReputationBadge reputation={profile.reputation} />
+				<span class="text-sm text-base-content/50">
+					на сайте с {reviewDate(profile.registered_at)}
+				</span>
+			</div>
 			<p class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-base-content/70">
 				<a href="{base}/followers" class="hover:text-primary"
 					><b class="text-base-content tabular-nums">{followers}</b>
@@ -63,7 +95,8 @@
 		</div>
 		{#key user.username}
 			<div class="flex flex-col items-end gap-2">
-				<FollowButton username={user.username} onchange={onFollow} />
+				<FollowButton username={user.username} {viewer} onchange={onFollow} />
+				<LikeButton username={user.username} count={profile.likes_count} {viewer} />
 				<MessageButton username={user.username} />
 			</div>
 		{/key}

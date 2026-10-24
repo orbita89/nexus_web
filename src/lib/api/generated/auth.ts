@@ -79,6 +79,23 @@ export interface paths {
 		patch: operations['set_status'];
 		trace?: never;
 	};
+	'/api/v1/auth/avatars/{id}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Отдать фото. Аватар виден всем: он стоит рядом с каждым сообщением и рецензией. */
+		get: operations['get_avatar'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/auth/dev/login': {
 		parameters: {
 			query?: never;
@@ -266,6 +283,24 @@ export interface paths {
 		head?: never;
 		/** Изменить свой профиль: username (раз в 30 дней), отображаемое имя, аватар. */
 		patch: operations['update'];
+		trace?: never;
+	};
+	'/api/v1/auth/me/avatar': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Загрузить фото профиля: заменяет прежнее (и загруженное, и адрес от провайдера). */
+		post: operations['upload_avatar'];
+		/** Убрать фото профиля: и загруженное, и адрес от провайдера. */
+		delete: operations['delete_avatar'];
+		options?: never;
+		head?: never;
+		patch?: never;
 		trace?: never;
 	};
 	'/api/v1/auth/me/email': {
@@ -645,7 +680,13 @@ export interface components {
 		/** @description Страница списка. */
 		Page_UserView: {
 			items: {
+				/**
+				 * @description Ссылка на фото: `/api/v1/auth/avatars/{id}` у загруженного, внешний https-адрес у
+				 *     пришедшего от провайдера.
+				 */
 				avatar_url?: string | null;
+				/** @description «О себе», до 1000 символов. Видно всем в профиле. */
+				bio?: string | null;
 				/** Format: date-time */
 				created_at: string;
 				display_name?: string | null;
@@ -666,6 +707,11 @@ export interface components {
 				/** @description `false` — заблокирован админом. */
 				is_active: boolean;
 				role: components['schemas']['Role'];
+				/**
+				 * @description Видна ли аналитика профиля (оценки, «просмотрено», «посмотрю позже») другим.
+				 *     По умолчанию `false` — только владельцу.
+				 */
+				stats_public: boolean;
 				/** @example user */
 				username: string;
 				/**
@@ -772,15 +818,23 @@ export interface components {
 		/** @description Изменение своего профиля: переданные поля заменяются, `null` очищает имя и аватар. */
 		UpdateProfileRequest: {
 			/**
-			 * @description Ссылка `https://…` до 500 символов. `null` или пустая строка — очистить.
+			 * @description Ссылка `https://…` до 500 символов. `null` или пустая строка — очистить. Загруженное
+			 *     фото ставится отдельным запросом (`POST /me/avatar`) и пишется в это же поле.
 			 * @example https://example.com/neo.png
 			 */
 			avatar_url?: string | null;
+			/**
+			 * @description «О себе», до 1000 символов. `null` или пустая строка — очистить.
+			 * @example Смотрю фантастику, читаю Стругацких.
+			 */
+			bio?: string | null;
 			/**
 			 * @description До 64 символов. `null` или пустая строка — очистить.
 			 * @example Нео
 			 */
 			display_name?: string | null;
+			/** @description Открыть аналитику профиля всем (`true`) или снова спрятать (`false`). */
+			stats_public?: boolean | null;
 			/**
 			 * @description 3–32 символа: латиница, цифры, `_`, `-`, `.`. Менять можно раз в 30 дней.
 			 * @example neo
@@ -789,7 +843,13 @@ export interface components {
 		};
 		/** @description Пользователь. Хеш пароля наружу не отдаётся никогда. */
 		UserView: {
+			/**
+			 * @description Ссылка на фото: `/api/v1/auth/avatars/{id}` у загруженного, внешний https-адрес у
+			 *     пришедшего от провайдера.
+			 */
 			avatar_url?: string | null;
+			/** @description «О себе», до 1000 символов. Видно всем в профиле. */
+			bio?: string | null;
 			/** Format: date-time */
 			created_at: string;
 			display_name?: string | null;
@@ -810,6 +870,11 @@ export interface components {
 			/** @description `false` — заблокирован админом. */
 			is_active: boolean;
 			role: components['schemas']['Role'];
+			/**
+			 * @description Видна ли аналитика профиля (оценки, «просмотрено», «посмотрю позже») другим.
+			 *     По умолчанию `false` — только владельцу.
+			 */
+			stats_public: boolean;
 			/** @example user */
 			username: string;
 			/**
@@ -1053,6 +1118,38 @@ export interface operations {
 				};
 			};
 			/** @description Пользователь не найден */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	get_avatar: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description id файла из `avatar_url` */
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Картинка WebP */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'image/webp': unknown;
+				};
+			};
+			/** @description Нет такого файла */
 			404: {
 				headers: {
 					[name: string]: unknown;
@@ -1482,6 +1579,87 @@ export interface operations {
 			};
 			/** @description Username занят */
 			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	upload_avatar: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** @description multipart/form-data с одним файловым полем */
+		requestBody: {
+			content: {
+				'multipart/form-data': string;
+			};
+		};
+		responses: {
+			/** @description Профиль с новым `avatar_url` */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['UserView'];
+				};
+			};
+			/** @description Не картинка (`not_an_image`), больше 2 МБ (`file_too_large`), пустой запрос */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена или аккаунт заблокирован */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Больше 10 загрузок за 10 минут (`Retry-After`) */
+			429: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	delete_avatar: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Профиль без аватара */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['UserView'];
+				};
+			};
+			/** @description Нет токена или аккаунт заблокирован */
+			401: {
 				headers: {
 					[name: string]: unknown;
 				};

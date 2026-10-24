@@ -10,6 +10,7 @@ const user: User = {
 	role: 'user',
 	is_active: true,
 	has_password: true,
+	stats_public: false,
 	created_at: '2026-01-01T00:00:00Z'
 };
 
