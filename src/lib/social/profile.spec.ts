@@ -1,15 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { SchemaReputation, SchemaUserCommentTarget } from '#lib/api/generated/social.ts';
-import {
-	byKindRows,
-	canSeeStats,
-	commentPlace,
-	readMarkKind,
-	readRatingsSort,
-	reputationParts
-} from './profile.ts';
+import { byKindRows, canSeeStats, commentPlace, reputationParts } from './profile.ts';
 
-const url = (query: string) => new URL(`https://nexus.local/u/user${query}`);
 const profile = (stats_public: boolean) => ({ user: { username: 'user' }, stats_public });
 const viewer = (username: string, role: 'user' | 'admin' = 'user') =>
 	({ username, role }) as Parameters<typeof canSeeStats>[1];
@@ -25,30 +17,6 @@ describe('canSeeStats', () => {
 		expect(canSeeStats(profile(false), viewer('other'))).toBe(false);
 		expect(canSeeStats(profile(false), viewer('user'))).toBe(true);
 		expect(canSeeStats(profile(false), viewer('other', 'admin'))).toBe(true);
-	});
-});
-
-describe('readRatingsSort', () => {
-	it('нет параметра или мусор — «новые»', () => {
-		expect(readRatingsSort(url(''))).toBe('new');
-		expect(readRatingsSort(url('?sort=wat'))).toBe('new');
-	});
-
-	it('известный порядок проходит как есть', () => {
-		expect(readRatingsSort(url('?sort=rating_desc'))).toBe('rating_desc');
-		expect(readRatingsSort(url('?sort=rating_asc'))).toBe('rating_asc');
-	});
-});
-
-describe('readMarkKind', () => {
-	it('нет параметра или мусор — обе отметки (undefined)', () => {
-		expect(readMarkKind(url(''))).toBeUndefined();
-		expect(readMarkKind(url('?kind=all'))).toBeUndefined();
-	});
-
-	it('later и done проходят', () => {
-		expect(readMarkKind(url('?kind=later'))).toBe('later');
-		expect(readMarkKind(url('?kind=done'))).toBe('done');
 	});
 });
 

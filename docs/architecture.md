@@ -41,7 +41,8 @@ src/
                        Related, Recommendations, Production, ActivityFeed, ReviewComposer
       admin/           EntityForm, CreditsEditor, PersonForm
       social/          RatingBadge, MyReview, ReviewCard, ReviewSortTabs, FollowButton, LikeButton,
-                       ReputationBadge, StatsBlock, TargetComments, CollectionReactions,
+                       ReputationBadge, StatsBlock, StatsSection, ProfileRatings, ProfileMarks,
+                       ProfileComments, TargetComments, CollectionReactions,
                        FollowList, UserCard, ThreadItem, PostItem, ReplyForm, ThreadForm,
                        EntityPicker, NewThreadButton, RichText, TimeAgo, SortTabs,
                        CollectionCard, CollectionForm, CollectionEditor, AddToCollection,
@@ -52,8 +53,8 @@ src/
     [kind=kind]/       /films, /series, /books, /games и карточка /films/dune-2021
     people/ tags/ search/
     studios/[slug]/    студия и её фильмы — статика + ISR, как карточка
-    u/[username]/      профиль и вкладки: reviews, collections, threads, followers, following,
-                       stats, ratings, marks, comments (аналитика — по stats_public)
+    u/[username]/      профиль и вкладки: reviews, collections, threads, stats (по stats_public);
+                       followers и following — по ссылкам из шапки, без вкладок
     collections/ forum/
     (protected)/       только для вошедших, без SSR: feed, forum/new, settings/*
     auth/              вход, регистрация, ссылки из писем, OAuth — без SSR
@@ -77,10 +78,7 @@ scripts/api-types.mjs  генерация типов API
 | `/films/dune-2021`                       | карточка: шапка Okko или постер, «О фильме», лента               |
 | `/films/dune-2021/reviews?sort=&offset=` | все рецензии на произведение                                     |
 | `/u/{username}/reviews?offset=`          | рецензии и оценки пользователя                                   |
-| `/u/{username}/stats`                    | сводка аналитики (видна по `stats_public`)                       |
-| `/u/{username}/ratings?sort=&offset=`    | что оценил: `new`, `rating_desc`, `rating_asc`                   |
-| `/u/{username}/marks?kind=&offset=`      | отметки: `later`, `done`, без `kind` — обе                       |
-| `/u/{username}/comments?offset=`         | все комментарии одной лентой                                     |
+| `/u/{username}/stats`                    | аналитика целиком: сводка, оценки, отметки, комментарии          |
 | `/people?q=&offset=`, `/people/{slug}`   | люди; человек и его работы (одна карточка — все роли)            |
 | `/tags`, `/tags/{slug}?kind=&offset=`    | теги; сущности с тегом, фильтр по разделу (`kind` — `films`…)    |
 | `/studios/{slug}?sort=`                  | студия: шапка из TMDB и её фильмы (статика, `sort` — в браузере) |
@@ -335,16 +333,28 @@ YouTube заблокирован в части стран СНГ и в Кита�
 лайк виден в `likes_count` сразу, а в `reputation.score` — только после ближайшего прохода;
 `computed_at: null` — пересчёта ещё не было и балл стартовый (30 за регистрацию).
 
-**Аналитика профиля** (вкладки `stats`, `ratings`, `marks`, `comments`;
-`#lib/social/profile.ts`, `profile-data.svelte.ts`). Закрыта по умолчанию: четыре эндпоинта
-отвечают чужому и гостю **403 с `code: "stats_private"` — это штатный ответ, а не сбой**
-(`isStatsPrivate` в `errors.ts`), тоста об ошибке быть не должно. Рисовать вкладки или нет, решает
-`canSeeStats` по `stats_public` из шапки; владелец и админ видят их всегда. Данные грузятся
-в браузере (`profileQuery`), а не в `+page.ts`: на сервере токена нет, и владелец получил бы 403
-на собственной странице — шапка при этом остаётся серверной. Общая обвязка (скелетон, «закрыто»,
-ошибка с «Повторить») — `StatsBlock`. В ленте комментариев цель — дискриминированное объединение
+**Аналитика профиля — одна вкладка «Статистика»** (`/u/{username}/stats`; `#lib/social/profile.ts`,
+`profile-data.svelte.ts`, `profile-list.svelte.ts`). Сверху сводка (средняя, распределение 1–10,
+отметки, реакции, комментарии, разрез по типам), под ней три списка: **что оценено, где стоят
+отметки и где оставлены комментарии** — чтобы из профиля было видно, куда ты это поставил. Своих
+вкладок у списков нет: это один разговор про пользователя, а не четыре.
+
+Закрыта по умолчанию: четыре эндпоинта отвечают чужому и гостю **403 с `code: "stats_private"` —
+это штатный ответ, а не сбой** (`isStatsPrivate` в `errors.ts`), тоста об ошибке быть не должно.
+Рисовать вкладку или нет, решает `canSeeStats` по `stats_public` из шапки; владелец и админ видят
+её всегда. Данные грузятся в браузере (`profileQuery`), а не в `+page.ts`: на сервере токена нет,
+и владелец получил бы 403 на собственной странице — шапка при этом остаётся серверной. Общая
+обвязка (скелетон, «закрыто», ошибка с «Повторить») — `StatsBlock`; списки монтируются только
+после сводки, иначе при закрытой статистике они собрали бы те же три 403 без пользы.
+
+Списки (`profileList`, оформление — `StatsSection`) дочитываются по «Показать ещё», а порядок
+оценок и вид отметок живут в состоянии раздела, а не в адресе: на странице три списка сразу,
+и один `?sort=` на всех не поделить. В ленте комментариев цель — дискриминированное объединение
 по `target.kind` (`entity`, `person`, `studio`, `review`, `collection`); ссылку и подпись даёт
 `commentPlace`, незнакомый вид — подпись без ссылки.
+
+Подписчики и подписки вкладками не дублируются — на них ведут счётчики в шапке
+(`/u/{username}/followers`, `/following`).
 
 **Фото профиля** (`#lib/auth/avatar.ts`, `AvatarUpload`). `POST /auth/me/avatar` — multipart
 с одним файловым полем (FormData уходит через openapi-fetch как есть, `Content-Type` с границей
@@ -372,7 +382,10 @@ YouTube заблокирован в части стран СНГ и в Кита�
 **Реакции на подборку** (`CollectionReactions` в `CollectionEnd`, обычный вид и особый): 🔥 😢 🤔
 😴, одна на зрителя — та же механика, что у реакций на произведение (`applyReaction`). Счётчики
 и своя реакция приходят одним запросом `GET …/collections/{id}/reactions` (гостю — с `mine: null`),
-нажатие меняет числа сразу, ошибка — откат.
+нажатие меняет числа сразу, ошибка — откат. Это временно: вместо четырёх реакций подборке нужны
+лайк и дизлайк, а человеку — лайк, чтобы и то и другое попадало в «Статистику» («что мне
+нравится»). У бэкенда таких эндпоинтов пока нет — задача:
+[backend-tasks/likes.md](backend-tasks/likes.md).
 
 **Форум** (`#lib/social/forum.ts`, `routes/forum/`, `(protected)/forum/`). Тема привязана к 1–10
 произведениям, первое — главное. Сообщения приходят плоским списком по времени (`parent_id`):

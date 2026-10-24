@@ -7,16 +7,23 @@
 	import { REACTIONS } from '#lib/social/reactions.ts';
 	import { displayName, formatRating } from '#lib/social/reviews.ts';
 	import Seo from '#lib/components/catalog/Seo.svelte';
+	import ProfileComments from '#lib/components/social/ProfileComments.svelte';
+	import ProfileMarks from '#lib/components/social/ProfileMarks.svelte';
+	import ProfileRatings from '#lib/components/social/ProfileRatings.svelte';
 	import StatsBlock from '#lib/components/social/StatsBlock.svelte';
 	import type { PageProps } from './$types';
 
-	// Сводка: оценки с распределением, отметки, реакции, комментарии и разрез по типам.
+	// Вся аналитика профиля на одной вкладке: сводка (оценки с распределением, отметки, реакции,
+	// комментарии, разрез по типам), а под ней сами списки — что оценено, где стоят отметки и где
+	// оставлены комментарии. Отдельных вкладок под них нет: это один разговор про пользователя.
+	//
 	// Данные грузятся в браузере — у владельца закрытая статистика видна только с токеном.
 	let { data }: PageProps = $props();
 
 	const user = $derived(data.profile.user);
+	const username = $derived(page.params.username!);
 	const stats = profileQuery(
-		() => page.params.username!,
+		() => username,
 		(client, username) =>
 			unwrap(
 				client.social.GET('/api/v1/social/users/{username}/stats', {
@@ -166,3 +173,13 @@
 		</div>
 	{/if}
 </StatsBlock>
+
+<!-- Списки монтируются только после сводки: если статистика закрыта, они получили бы те же три
+     403 без всякой пользы. -->
+{#if stats.current}
+	<div class="mt-10 flex flex-col gap-10">
+		<ProfileRatings {username} />
+		<ProfileMarks {username} />
+		<ProfileComments {username} />
+	</div>
+{/if}

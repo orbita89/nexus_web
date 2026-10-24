@@ -11,7 +11,6 @@ import type {
 } from '#lib/api/generated/social.ts';
 import type { User } from '#lib/auth/core.ts';
 import { entityHref, asKind } from '#lib/catalog/kinds.ts';
-import type { UrlLike } from '#lib/catalog/url.ts';
 
 /** Видит ли аналитику этого профиля вошедший (или гость — тогда user = null). */
 export function canSeeStats(
@@ -23,7 +22,11 @@ export function canSeeStats(
 	return viewer.username === profile.user.username || viewer.role === 'admin';
 }
 
-/** Порядок оценок в списке `/ratings` (тот же набор, что у рецензий, но свой тип в контракте). */
+/**
+ * Порядок оценок (тот же набор, что у рецензий, но свой тип в контракте). Порядок и вид отметок
+ * живут в состоянии раздела, а не в адресе: на «Статистике» три списка сразу, и один `?sort=`
+ * на всех не поделить.
+ */
 export type RatingsSort = 'new' | 'rating_desc' | 'rating_asc';
 
 export const RATINGS_SORTS: readonly { value: RatingsSort; title: string }[] = [
@@ -31,17 +34,6 @@ export const RATINGS_SORTS: readonly { value: RatingsSort; title: string }[] = [
 	{ value: 'rating_desc', title: 'Сначала высокие' },
 	{ value: 'rating_asc', title: 'Сначала низкие' }
 ];
-
-export function readRatingsSort(url: UrlLike): RatingsSort {
-	const raw = url.searchParams.get('sort');
-	return RATINGS_SORTS.find((s) => s.value === raw)?.value ?? 'new';
-}
-
-/** Фильтр вкладки отметок: `?kind=`; нет или мусор — обе вместе. */
-export function readMarkKind(url: UrlLike): SchemaMarkKind | undefined {
-	const raw = url.searchParams.get('kind');
-	return raw === 'later' || raw === 'done' ? raw : undefined;
-}
 
 /** Подписи отметок в профиле — общие для всех типов (у списка они вперемешку). */
 export const MARK_TITLES: Record<SchemaMarkKind, string> = {

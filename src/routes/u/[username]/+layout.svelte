@@ -36,21 +36,14 @@
 	// и свои вкладки владелец получает после гидрации.
 	const stats = $derived(canSeeStats(profile, session.user));
 
+	// Подписчиков и подписки во вкладки не выносим: на них уже ведут счётчики в шапке.
 	const tabs = $derived([
 		{ href: base, title: 'Обзор', n: null },
 		{ href: `${base}/reviews`, title: 'Рецензии', n: profile.reviews_count },
 		{ href: `${base}/threads`, title: 'Темы', n: profile.threads_count },
 		{ href: `${base}/collections`, title: 'Коллекции', n: profile.collections_count },
-		...(stats
-			? [
-					{ href: `${base}/stats`, title: 'Статистика', n: null },
-					{ href: `${base}/ratings`, title: 'Оценки', n: null },
-					{ href: `${base}/marks`, title: 'Отметки', n: null },
-					{ href: `${base}/comments`, title: 'Комментарии', n: null }
-				]
-			: []),
-		{ href: `${base}/followers`, title: 'Подписчики', n: followers },
-		{ href: `${base}/following`, title: 'Подписки', n: profile.following_count }
+		// Оценки, отметки и комментарии — разделы «Статистики», своих вкладок у них нет.
+		...(stats ? [{ href: `${base}/stats`, title: 'Статистика', n: null }] : [])
 	]);
 	const isActive = (href: string) => page.url.pathname === href;
 </script>
