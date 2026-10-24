@@ -44,7 +44,7 @@
 
 	// Свёрнутая полоса — все чаты подряд: общие сверху (их так отдаёт бэкенд), дальше свои.
 	// Без ограничения по числу: полоса прокручивается, и обрезать её — терять чаты из виду.
-	const strip = $derived((chat.chats ?? []).filter((c) => !chat.hidden.includes(c.room)));
+	const strip = $derived(chat.chats ?? []);
 
 	const tabs: { tab: Tab; title: string }[] = [
 		{ tab: 'general', title: 'Общий' },
@@ -99,6 +99,27 @@
 			<p class="mr-auto pl-2 text-xs font-bold tracking-widest text-base-content/60 uppercase">
 				Чат
 			</p>
+			{#if chat.current}
+				<button
+					class={['btn btn-square btn-ghost btn-sm', { 'text-primary': chat.roomSearch }]}
+					title="Поиск по чату"
+					aria-label="Поиск по чату"
+					aria-pressed={chat.roomSearch}
+					onclick={() => {
+						chat.roomSearch = !chat.roomSearch;
+						if (!chat.roomSearch) chat.clearSearch();
+					}}
+				>
+					<svg
+						class="size-4"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg
+					>
+				</button>
+			{/if}
 			{#if chat.unread}
 				<!-- Непрочитанное копится в общих чатах, которые человек не открывал. -->
 				<button

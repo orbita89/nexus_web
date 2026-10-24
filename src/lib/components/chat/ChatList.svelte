@@ -21,7 +21,6 @@
 	// первыми, поэтому и в списке они сверху.
 	const rows = $derived(
 		(chat.chats ?? [])
-			.filter((c) => !chat.hidden.includes(c.room))
 			.map((c) => ({ chat: c, meta: roomMeta(c), system: !!c.custom?.system }))
 			.filter(({ meta }) => matches(meta.title))
 	);
@@ -54,6 +53,15 @@
 		leaving = room;
 		try {
 			await chat.leave(room);
+		} finally {
+			leaving = '';
+		}
+	}
+
+	async function hide(room: string) {
+		leaving = room;
+		try {
+			await chat.setHidden(room, true);
 		} finally {
 			leaving = '';
 		}
@@ -187,9 +195,7 @@
 						<button
 							class={[
 								'btn btn-square shrink-0 btn-ghost transition btn-xs',
-								c.muted
-									? 'opacity-60'
-									: 'opacity-0 group-hover:opacity-60 hover:!opacity-100 focus-visible:opacity-100'
+								c.muted ? 'opacity-70' : 'opacity-40 group-hover:opacity-70 hover:!opacity-100'
 							]}
 							aria-pressed={c.muted}
 							aria-label={c.muted
@@ -219,7 +225,7 @@
 							</svg>
 						</button>
 						<button
-							class="btn btn-square shrink-0 btn-ghost opacity-0 transition btn-xs group-hover:opacity-60 hover:!opacity-100 focus-visible:opacity-100"
+							class="btn btn-square shrink-0 btn-ghost opacity-40 transition btn-xs group-hover:opacity-70 hover:!opacity-100"
 							aria-label={system
 								? `Убрать из списка: ${meta.title}`
 								: c.kind === 'room'
@@ -231,7 +237,7 @@
 									? 'Выйти из комнаты'
 									: 'Не следить'}
 							disabled={leaving === c.room}
-							onclick={() => (system ? chat.hide(c.room) : remove(c.room))}>✕</button
+							onclick={() => (system ? hide(c.room) : remove(c.room))}>✕</button
 						>
 					</li>
 				{/each}

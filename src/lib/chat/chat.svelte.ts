@@ -82,11 +82,6 @@ class Chat {
 	topic = $state<Topic>('movies');
 	/** Вкладка «Чаты»: мои или те, где сейчас обсуждают. */
 	listView = $state<ListView>('mine');
-	/**
-	 * Общие чаты, убранные из списка. Выйти из них нельзя — в них состоят все, — но держать
-	 * их в «Моих чатах» никто не обязан: открываются вкладками. Пока хранится на устройстве.
-	 */
-	hidden = $state<string[]>([]);
 	/** Комната, открытая поверх вкладки: с карточки, из списка комнат, из уведомления. */
 	adhoc = $state<RoomMeta | null>(null);
 
@@ -102,6 +97,8 @@ class Chat {
 	/** Найденные сообщения (GET /chat/search); null — не искали. */
 	found = $state<SchemaChatSearchHit[] | null>(null);
 	searching = $state(false);
+	/** Открыт поиск по текущей комнате. */
+	roomSearch = $state(false);
 
 	current = $state<RoomMeta | null>(null);
 	/** Состояние открытой комнаты для меня (GET /chat/{kind}/{slug}); me — null у гостя. */
@@ -205,9 +202,6 @@ class Chat {
 			this.topic = topicOf(saved.topic);
 			this.tab = TABS.includes(saved.tab) ? saved.tab : 'general';
 			this.listView = saved.list === 'live' ? 'live' : 'mine';
-			this.hidden = Array.isArray(saved.hidden)
-				? saved.hidden.filter((r: unknown) => typeof r === 'string')
-				: [];
 			if (saved.open?.room) this.open(saved.open, { show: false });
 			else this.setTab(this.tab);
 		} catch {
@@ -225,7 +219,6 @@ class Chat {
 					tab: this.tab,
 					topic: this.topic,
 					list: this.listView,
-					hidden: [...this.hidden],
 					open: this.adhoc && { ...this.adhoc }
 				})
 			);
@@ -265,6 +258,8 @@ class Chat {
 			this.info = null;
 			this.readMark = null;
 			this.missing = false;
+			this.roomSearch = false;
+			this.clearSearch();
 			void this.loadInfo();
 			void this.loadHistory();
 		}
@@ -341,10 +336,13 @@ class Chat {
 		}
 	}
 
-	/** Поиск по сообщениям моих чатов. Пустой запрос — сбросить выдачу. */
-	async searchMessages(q: string) {
+	/**
+	 * Поиск по сообщениям: без комнаты — по всем моим чатам (нужен вход), с комнатой — по ней
+	 * одной, и это доступно гостю. Пустой запрос сбрасывает выдачу.
+	 */
+	async searchMessages(q: string, room?: string) {
 		const query = q.trim();
-		if (!query || session.status !== 'authed') {
+		if (!query || (!room && session.status !== 'authed')) {
 			this.found = null;
 			this.searching = false;
 			return;
@@ -352,7 +350,9 @@ class Chat {
 		this.searching = true;
 		try {
 			const page = await unwrap(
-				api.social.GET('/api/v1/social/chat/search', { params: { query: { q: query, limit: 20 } } })
+				client().social.GET('/api/v1/social/chat/search', {
+					params: { query: { q: query, room, limit: 20 } }
+				})
 			);
 			this.found = page.items;
 		} catch {
@@ -360,6 +360,12 @@ class Chat {
 		} finally {
 			this.searching = false;
 		}
+	}
+
+	/** Закрыть выдачу поиска по комнате. */
+	clearSearch() {
+		this.found = null;
+		this.searching = false;
 	}
 
 	/** Шапка комнаты по её имени: из «моих чатов», иначе — хотя бы slug. */
@@ -695,17 +701,30 @@ class Chat {
 		await this.#setMember(room, false);
 	}
 
-	/** Убрать общий чат из списка: сам чат остаётся, открывается вкладкой. */
-	hide(room: string) {
-		if (!this.hidden.includes(room)) this.hidden = [...this.hidden, room];
-		this.#save();
+	/**
+	 * Убрать общий чат из «Моих чатов» или вернуть обратно. Сам чат остаётся рабочим:
+	 * открывается вкладкой, канал подписан, упоминания приходят. Только для системных —
+	 * из остальных можно выйти, а вернуть их из интерфейса было бы нечем.
+	 */
+	async setHidden(room: string, next: boolean) {
+		const { slug } = splitRoom(room);
+		const params = { path: { slug } };
+		try {
+			await unwrap(
+				next
+					? api.social.PUT('/api/v1/social/chat/rooms/{slug}/hidden', { params })
+					: api.social.DELETE('/api/v1/social/chat/rooms/{slug}/hidden', { params })
+			);
+			if (this.info?.room === room && this.info.custom) this.info.custom.hidden = next;
+			await this.loadChats();
+		} catch (e) {
+			this.historyError = errorMessage(e);
+		}
 	}
 
-	/** Вернуть убранный чат в список. */
-	#unhide(room: string) {
-		if (!this.hidden.includes(room)) return;
-		this.hidden = this.hidden.filter((r) => r !== room);
-		this.#save();
+	/** Открытый чат убран из списка: показываем, как вернуть. */
+	get currentHidden(): boolean {
+		return !!this.current && this.info?.room === this.current.room && !!this.info.custom?.hidden;
 	}
 
 	/**
@@ -714,7 +733,7 @@ class Chat {
 	 */
 	#joinAfterWriting(room: string) {
 		// Убранный чат возвращается в список тем же правилом: написал — значит он твой.
-		this.#unhide(room);
+		if (this.info?.room === room && this.info.custom?.hidden) void this.setHidden(room, false);
 		const info = this.info;
 		if (!info || info.room !== room || !info.me || info.me.member) return;
 		void this.#setMember(room, true);

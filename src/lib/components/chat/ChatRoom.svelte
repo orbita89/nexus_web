@@ -5,7 +5,7 @@
 	import { unwrap } from '#lib/api/errors.ts';
 	import { guestApi, session } from '#lib/auth/session.svelte.ts';
 	import { chat } from '#lib/chat/chat.svelte.ts';
-	import { authorName, isSystemRoom, MAX_BODY, type RoomMeta } from '#lib/chat/rooms.ts';
+	import { authorName, isSystemRoom, MAX_BODY, shortTime, type RoomMeta } from '#lib/chat/rooms.ts';
 	import { loginUrl } from '#lib/utils/redirect.ts';
 	import ChatMessage from './ChatMessage.svelte';
 	import EntitySearchPopover from './EntitySearchPopover.svelte';
@@ -90,6 +90,18 @@
 	$effect(() => {
 		if (chat.replyTo) input?.focus();
 	});
+
+	// Поиск по этой комнате: гостю тоже доступен, как и её история.
+	let roomQuery = $state('');
+	let roomTimer: ReturnType<typeof setTimeout> | undefined;
+	$effect(() => {
+		if (!chat.roomSearch) roomQuery = '';
+	});
+	function onRoomSearch() {
+		clearTimeout(roomTimer);
+		const q = roomQuery.trim();
+		roomTimer = setTimeout(() => void chat.searchMessages(q.length >= 2 ? q : '', meta.room), 300);
+	}
 
 	// Подсказка по «@»: сначала те, кто писал в комнате, следом — поиск по всем пользователям.
 	let caret = $state(0);
@@ -251,9 +263,58 @@
 		</header>
 	{/if}
 
+	{#if chat.currentHidden}
+		<!-- Чат убран из «Моих чатов», но открыт вкладкой: отсюда его и возвращают. -->
+		<p class="flex items-center gap-2 border-b border-base-300 px-3 py-1.5 text-xs">
+			<span class="min-w-0 flex-1 truncate text-base-content/60">Убран из «Моих чатов»</span>
+			<button class="shrink-0 link link-primary" onclick={() => chat.setHidden(meta.room, false)}
+				>Вернуть</button
+			>
+		</p>
+	{/if}
+
+	{#if chat.roomSearch}
+		<!-- Поиск по этой комнате: выдача вместо ленты, пока поиск открыт. -->
+		<div class="border-b border-base-300 px-2 py-2">
+			<label class="input w-full input-sm">
+				<input
+					type="search"
+					placeholder="Найти в этом чате"
+					aria-label="Найти в этом чате"
+					bind:value={roomQuery}
+					oninput={onRoomSearch}
+				/>
+				{#if chat.searching}<span class="loading loading-xs loading-spinner"></span>{/if}
+			</label>
+		</div>
+		<div class="min-h-0 flex-1 overflow-y-auto px-2 py-2">
+			{#if roomQuery.trim().length < 2}
+				<p class="px-2 py-6 text-sm text-base-content/60">Введите хотя бы два символа.</p>
+			{:else if chat.found?.length}
+				<ul class="flex flex-col gap-1">
+					{#each chat.found as hit (hit.message.id)}
+						<li class="rounded-box bg-base-300/40 px-3 py-2">
+							<p class="flex items-baseline gap-2 text-xs">
+								<span class="truncate font-bold"
+									>{hit.message.author ? authorName(hit.message.author) : 'Удалено'}</span
+								>
+								<span class="ml-auto shrink-0 text-base-content/40"
+									>{shortTime(hit.message.created_at)}</span
+								>
+							</p>
+							<p class="text-sm break-words whitespace-pre-wrap">{hit.message.body}</p>
+						</li>
+					{/each}
+				</ul>
+			{:else if !chat.searching}
+				<p class="px-2 py-6 text-sm text-base-content/60">Ничего не нашлось.</p>
+			{/if}
+		</div>
+	{/if}
+
 	<div
 		bind:this={feed}
-		class="min-h-0 flex-1 overflow-y-auto py-2"
+		class={['min-h-0 flex-1 overflow-y-auto py-2', { hidden: chat.roomSearch }]}
 		onscroll={onScroll}
 		aria-live="polite"
 	>

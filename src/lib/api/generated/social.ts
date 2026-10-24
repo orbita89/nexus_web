@@ -335,6 +335,28 @@ export interface paths {
 		patch: operations['update_chat_room'];
 		trace?: never;
 	};
+	'/api/v1/social/chat/rooms/{slug}/hidden': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/**
+		 * Убрать комнату из «Моих чатов» → 204 (повторно — тоже 204). Комната остаётся рабочей:
+		 *     история, отправка и подписка на канал не меняются — иначе пропали бы упоминания.
+		 *     Только для системных: из остальных можно просто выйти.
+		 */
+		put: operations['hide_chat_room'];
+		post?: never;
+		/** Вернуть комнату в «Мои чаты» → 204 (даже если она не была скрыта). */
+		delete: operations['unhide_chat_room'];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/social/chat/rooms/{slug}/membership': {
 		parameters: {
 			query?: never;
@@ -1572,6 +1594,11 @@ export interface components {
 			/** Format: date-time */
 			created_at: string;
 			description?: string | null;
+			/**
+			 * @description Убрана ли комната из «Моих чатов» текущим пользователем; `null` — гость. Скрытая не
+			 *     приходит в `GET /chats`, но остаётся рабочей: история, отправка и канал не меняются.
+			 */
+			hidden?: boolean | null;
 			/** Format: uuid */
 			id: string;
 			/** @description Вступил ли текущий пользователь; `null` — гость. В системной — всегда `true`. */
@@ -1926,6 +1953,11 @@ export interface components {
 				/** Format: date-time */
 				created_at: string;
 				description?: string | null;
+				/**
+				 * @description Убрана ли комната из «Моих чатов» текущим пользователем; `null` — гость. Скрытая не
+				 *     приходит в `GET /chats`, но остаётся рабочей: история, отправка и канал не меняются.
+				 */
+				hidden?: boolean | null;
 				/** Format: uuid */
 				id: string;
 				/** @description Вступил ли текущий пользователь; `null` — гость. В системной — всегда `true`. */
@@ -4392,6 +4424,108 @@ export interface operations {
 			};
 			/** @description Чужая комната или системная (`room_is_system`) */
 			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такой комнаты */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	hide_chat_room: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug комнаты
+				 * @example general
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Скрыта */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Комната не системная — из неё можно выйти */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такой комнаты */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	unhide_chat_room: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug комнаты
+				 * @example general
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description В списке */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Комната не системная */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
 				headers: {
 					[name: string]: unknown;
 				};

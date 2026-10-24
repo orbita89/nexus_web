@@ -110,6 +110,13 @@
 	let reason = $state('');
 	const reported = $state<Record<string, boolean>>({});
 
+	/** Своих комнат можно завести пять — показываем остаток, чтобы не упереться молча. */
+	const MAX_OWN = 5;
+	const own = $derived(
+		session.status === 'authed' ? rooms.filter((r) => r.owner?.id === session.user?.id) : []
+	);
+	const outOfSlots = $derived(own.length >= MAX_OWN);
+
 	const canManage = (room: SchemaCustomRoom) =>
 		!room.system &&
 		session.status === 'authed' &&
@@ -215,9 +222,14 @@
 <div class="mb-2 flex flex-wrap items-center gap-3">
 	<h1 class="text-3xl font-black sm:text-4xl">Комнаты</h1>
 	{#if session.status === 'authed'}
+		<span class="ml-auto text-sm text-base-content/50">
+			Моих комнат: {own.length} из {MAX_OWN}
+		</span>
 		<button
-			class="btn ml-auto rounded-full btn-primary btn-sm"
+			class="btn rounded-full btn-primary btn-sm"
 			aria-expanded={creating}
+			disabled={outOfSlots && !creating}
+			title={outOfSlots ? 'Больше пяти комнат нельзя — удалите одну' : undefined}
 			onclick={() => (creating = !creating)}>{creating ? 'Отмена' : 'Создать комнату'}</button
 		>
 	{:else if session.status === 'guest'}
@@ -267,7 +279,8 @@
 			/>
 		</label>
 		<p class="text-xs text-base-content/50">
-			Адрес потом не изменить — это постоянная ссылка комнаты. Вы станете её участником сразу.
+			Адрес потом не изменить — это постоянная ссылка комнаты. Вы станете её участником сразу. Своих
+			комнат можно держать {MAX_OWN}; занято {own.length}.
 		</p>
 		{#if createError}<p role="alert" class="text-sm text-error">{createError}</p>{/if}
 		<div class="flex gap-2">
