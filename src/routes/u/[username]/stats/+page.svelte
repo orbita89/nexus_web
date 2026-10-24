@@ -8,6 +8,7 @@
 	import { displayName, formatRating } from '#lib/social/reviews.ts';
 	import Seo from '#lib/components/catalog/Seo.svelte';
 	import ProfileComments from '#lib/components/social/ProfileComments.svelte';
+	import ProfileLikes from '#lib/components/social/ProfileLikes.svelte';
 	import ProfileMarks from '#lib/components/social/ProfileMarks.svelte';
 	import ProfileRatings from '#lib/components/social/ProfileRatings.svelte';
 	import StatsBlock from '#lib/components/social/StatsBlock.svelte';
@@ -119,6 +120,21 @@
 					</dl>
 				</section>
 
+				<!-- Произведений здесь нет: лайков у них не бывает, likes_given.entities всегда 0. -->
+				<section aria-labelledby="stats-likes" class="rounded-box bg-base-200 p-5">
+					<h3 id="stats-likes" class="mb-3 text-lg font-bold">Поставлено лайков</h3>
+					<dl class="flex flex-col gap-2 text-sm">
+						<div class="flex justify-between gap-3">
+							<dt class="text-base-content/70">Подборкам</dt>
+							<dd class="font-semibold tabular-nums">{s.likes_given.collections}</dd>
+						</div>
+						<div class="flex justify-between gap-3">
+							<dt class="text-base-content/70">Людям</dt>
+							<dd class="font-semibold tabular-nums">{s.likes_given.people}</dd>
+						</div>
+					</dl>
+				</section>
+
 				<section aria-labelledby="stats-reactions" class="rounded-box bg-base-200 p-5">
 					<h3 id="stats-reactions" class="mb-3 text-lg font-bold">Реакции</h3>
 					<ul class="flex flex-wrap gap-3">
@@ -180,6 +196,7 @@
 	<div class="mt-10 flex flex-col gap-10">
 		<ProfileRatings {username} />
 		<ProfileMarks {username} />
+		<ProfileLikes {username} />
 		<ProfileComments {username} />
 	</div>
 {/if}

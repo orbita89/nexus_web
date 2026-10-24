@@ -6,6 +6,7 @@
 	import PersonAvatar from '#lib/components/catalog/PersonAvatar.svelte';
 	import Seo from '#lib/components/catalog/Seo.svelte';
 	import ChatButton from '#lib/components/chat/ChatButton.svelte';
+	import PersonLikeButton from '#lib/components/social/PersonLikeButton.svelte';
 	import TargetComments from '#lib/components/social/TargetComments.svelte';
 	import WatchButton from '#lib/components/social/WatchButton.svelte';
 	import { Watch } from '#lib/social/watch.svelte.ts';
@@ -47,6 +48,7 @@
 			</p>
 		{/if}
 		<div class="mt-4 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+			<PersonLikeButton slug={person.slug} likesCount={person.likes_count} liked={person.liked} />
 			<WatchButton {watch} />
 			<ChatButton
 				meta={{

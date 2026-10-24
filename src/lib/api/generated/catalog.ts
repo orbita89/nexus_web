@@ -1738,6 +1738,14 @@ export interface components {
 		/** @description Человек и его фильмография (новые работы сверху). */
 		PersonDetail: components['schemas']['Person'] & {
 			credits: components['schemas']['PersonCredit'][];
+			/** @description Лайкнул ли его вошедший. Гостю — `false`. */
+			liked: boolean;
+			/**
+			 * Format: int64
+			 * @description Сколько лайков у человека (данные `social`, читаются справочником `PersonLikes`).
+			 * @example 42
+			 */
+			likes_count: number;
 		};
 		/** @description Человек в выдаче поиска людей. */
 		PersonHit: {

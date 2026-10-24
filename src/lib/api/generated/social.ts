@@ -741,6 +741,41 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/social/collections/{id}/like': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/** Поставить подборке «нравится» или «не нравится»; другой голос заменяет прежний. */
+		put: operations['like_collection'];
+		post?: never;
+		/** Снять свой голос с подборки → 204 (даже если его не было). */
+		delete: operations['unlike_collection'];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/social/collections/{id}/likes': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Голоса за подборку: сколько «нравится», сколько «не нравится» и свой голос. */
+		get: operations['get_collection_likes'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/social/collections/{id}/reaction': {
 		parameters: {
 			query?: never;
@@ -1074,6 +1109,41 @@ export interface paths {
 		post?: never;
 		/** Убрать человека из интересов → 204 (даже если его там не было). */
 		delete: operations['remove_person_interest'];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/social/people/{slug}/like': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/** Лайкнуть человека каталога. Дизлайка здесь нет — как и у профилей. */
+		put: operations['like_person'];
+		post?: never;
+		/** Снять свой лайк с человека → 204 (даже если его не было). */
+		delete: operations['unlike_person'];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/social/people/{slug}/likes': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Кто лайкнул человека, новые сверху. */
+		get: operations['list_person_likes'];
+		put?: never;
+		post?: never;
+		delete?: never;
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -1497,6 +1567,27 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/social/users/{username}/likes/given': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Что пользователь лайкнул: раздел «Что нравится» в аналитике профиля.
+		 * @description Закрытость — как у остальной аналитики (`stats::visible`): владелец и admin всегда,
+		 *     остальные при `stats_public`.
+		 */
+		get: operations['list_given_likes'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/social/users/{username}/marks': {
 		parameters: {
 			query?: never;
@@ -1780,6 +1871,12 @@ export interface components {
 			/** Format: date-time */
 			created_at: string;
 			description?: string | null;
+			/**
+			 * Format: int64
+			 * @description Дизлайков.
+			 * @example 3
+			 */
+			dislikes_count: number;
 			/** @description Декоративные эффекты темы (капли крови, снег…). */
 			effects: boolean;
 			/**
@@ -1805,6 +1902,19 @@ export interface components {
 			 * @example 7
 			 */
 			items_count: number;
+			/**
+			 * Format: int64
+			 * @description Лайков у подборки.
+			 * @example 12
+			 */
+			likes_count: number;
+			/**
+			 * Format: int32
+			 * @description Свой голос: `1`, `-1` или `null` (гость или не голосовал). Под кнопку отдельного
+			 *     запроса не нужно.
+			 * @example 1
+			 */
+			mine?: number | null;
 			owner: components['schemas']['UserRef'];
 			/** @description Первые 4 произведения по порядку: обложки в карточке коллекции. */
 			preview: components['schemas']['EntityRef'][];
@@ -1893,6 +2003,34 @@ export interface components {
 			 * @description Порядок: по возрастанию, при равенстве — по времени добавления.
 			 */
 			position: number;
+		};
+		/** @description Тело `PUT /collections/{id}/like`. */
+		CollectionLike: {
+			/**
+			 * Format: int32
+			 * @description `1` — нравится, `-1` — не нравится.
+			 * @example 1
+			 */
+			value: number;
+		};
+		/** @description Сводка голосов за подборку. */
+		CollectionLikes: {
+			/**
+			 * Format: int64
+			 * @example 3
+			 */
+			dislikes: number;
+			/**
+			 * Format: int64
+			 * @example 12
+			 */
+			likes: number;
+			/**
+			 * Format: int32
+			 * @description Свой голос: `1`, `-1` или `null` (гость или не голосовал).
+			 * @example 1
+			 */
+			mine?: number | null;
 		};
 		/** @description Реакции на коллекцию: сколько каких и своя. */
 		CollectionReactions: {
@@ -2215,6 +2353,19 @@ export interface components {
 			since: string;
 			user: components['schemas']['UserRef'];
 		};
+		/** @description Что пользователь лайкнул — лента «Что нравится» в аналитике профиля. */
+		GivenLike: {
+			/** Format: date-time */
+			created_at: string;
+			/** @description Куда поставлен лайк. */
+			target: components['schemas']['LikeTarget'];
+			/**
+			 * Format: int32
+			 * @description `1` — нравится, `-1` — не нравится (дизлайк есть только у подборок).
+			 * @example 1
+			 */
+			value: number;
+		};
 		/** @description Сущность в интересах пользователя. */
 		Interest: {
 			entity: components['schemas']['EntityRef'];
@@ -2232,6 +2383,39 @@ export interface components {
 			 */
 			since: string;
 			user: components['schemas']['UserRef'];
+		};
+		/** @description Цель лайка. `kind` — `collection` или `person`; остальные поля зависят от него. */
+		LikeTarget:
+			| {
+					/** Format: uuid */
+					collection_id: string;
+					/** @enum {string} */
+					kind: 'collection';
+					title: string;
+			  }
+			| {
+					/** @enum {string} */
+					kind: 'person';
+					person: components['schemas']['PersonRef'];
+			  };
+		/** @description Сколько лайков пользователь поставил сам. */
+		LikesGiven: {
+			/**
+			 * Format: int64
+			 * @example 12
+			 */
+			collections: number;
+			/**
+			 * Format: int64
+			 * @description Лайков у произведений нет — всегда `0`.
+			 * @example 0
+			 */
+			entities: number;
+			/**
+			 * Format: int64
+			 * @example 3
+			 */
+			people: number;
 		};
 		/** @description Своя отметка на карточке. */
 		Mark: {
@@ -2288,6 +2472,12 @@ export interface components {
 				/** Format: date-time */
 				created_at: string;
 				description?: string | null;
+				/**
+				 * Format: int64
+				 * @description Дизлайков.
+				 * @example 3
+				 */
+				dislikes_count: number;
 				/** @description Декоративные эффекты темы (капли крови, снег…). */
 				effects: boolean;
 				/**
@@ -2313,6 +2503,19 @@ export interface components {
 				 * @example 7
 				 */
 				items_count: number;
+				/**
+				 * Format: int64
+				 * @description Лайков у подборки.
+				 * @example 12
+				 */
+				likes_count: number;
+				/**
+				 * Format: int32
+				 * @description Свой голос: `1`, `-1` или `null` (гость или не голосовал). Под кнопку отдельного
+				 *     запроса не нужно.
+				 * @example 1
+				 */
+				mine?: number | null;
 				owner: components['schemas']['UserRef'];
 				/** @description Первые 4 произведения по порядку: обложки в карточке коллекции. */
 				preview: components['schemas']['EntityRef'][];
@@ -2469,6 +2672,37 @@ export interface components {
 				 */
 				since: string;
 				user: components['schemas']['UserRef'];
+			}[];
+			/**
+			 * Format: int64
+			 * @example 20
+			 */
+			limit: number;
+			/**
+			 * Format: int64
+			 * @example 0
+			 */
+			offset: number;
+			/**
+			 * Format: int64
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @example 137
+			 */
+			total: number;
+		};
+		/** @description Страница списка. */
+		Page_GivenLike: {
+			items: {
+				/** Format: date-time */
+				created_at: string;
+				/** @description Куда поставлен лайк. */
+				target: components['schemas']['LikeTarget'];
+				/**
+				 * Format: int32
+				 * @description `1` — нравится, `-1` — не нравится (дизлайк есть только у подборок).
+				 * @example 1
+				 */
+				value: number;
 			}[];
 			/**
 			 * Format: int64
@@ -3038,6 +3272,8 @@ export interface components {
 			by_kind: components['schemas']['ByKind'];
 			/** @description Комментарии: к рецензиям и в обсуждениях коллекций, без удалённых. */
 			comments: components['schemas']['CommentCounts'];
+			/** @description Сколько лайков пользователь поставил сам — раздел «Что нравится». */
+			likes_given: components['schemas']['LikesGiven'];
 			/** @description Отметки «посмотрю позже» и «просмотрено». */
 			marks: components['schemas']['MarkCounts'];
 			/** @description Оценки: среднее, сколько их и распределение по 1–10. */
@@ -3609,6 +3845,8 @@ export type SchemaCollectionComment = components['schemas']['CollectionComment']
 export type SchemaCollectionDetail = components['schemas']['CollectionDetail'];
 export type SchemaCollectionEntity = components['schemas']['CollectionEntity'];
 export type SchemaCollectionItem = components['schemas']['CollectionItem'];
+export type SchemaCollectionLike = components['schemas']['CollectionLike'];
+export type SchemaCollectionLikes = components['schemas']['CollectionLikes'];
 export type SchemaCollectionReactions = components['schemas']['CollectionReactions'];
 export type SchemaCommentCounts = components['schemas']['CommentCounts'];
 export type SchemaCreateCollection = components['schemas']['CreateCollection'];
@@ -3629,8 +3867,11 @@ export type SchemaFeedItemType = components['schemas']['FeedItemType'];
 export type SchemaFeedPage = components['schemas']['FeedPage'];
 export type SchemaFeedReason = components['schemas']['FeedReason'];
 export type SchemaFollow = components['schemas']['Follow'];
+export type SchemaGivenLike = components['schemas']['GivenLike'];
 export type SchemaInterest = components['schemas']['Interest'];
 export type SchemaLike = components['schemas']['Like'];
+export type SchemaLikeTarget = components['schemas']['LikeTarget'];
+export type SchemaLikesGiven = components['schemas']['LikesGiven'];
 export type SchemaMark = components['schemas']['Mark'];
 export type SchemaMarkCounts = components['schemas']['MarkCounts'];
 export type SchemaMarkKind = components['schemas']['MarkKind'];
@@ -3639,6 +3880,7 @@ export type SchemaPageCollection = components['schemas']['Page_Collection'];
 export type SchemaPageCollectionComment = components['schemas']['Page_CollectionComment'];
 export type SchemaPageCustomRoom = components['schemas']['Page_CustomRoom'];
 export type SchemaPageFollow = components['schemas']['Page_Follow'];
+export type SchemaPageGivenLike = components['schemas']['Page_GivenLike'];
 export type SchemaPageInterest = components['schemas']['Page_Interest'];
 export type SchemaPageLike = components['schemas']['Page_Like'];
 export type SchemaPageMarkedEntity = components['schemas']['Page_MarkedEntity'];
@@ -6717,6 +6959,138 @@ export interface operations {
 			};
 		};
 	};
+	like_collection: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description id подборки */
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['CollectionLike'];
+			};
+		};
+		responses: {
+			/** @description Голос учтён */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description `value` не `1` и не `-1` */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет подборки или она чужая приватная */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	unlike_collection: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description id подборки */
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Голоса нет */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет подборки или она чужая приватная */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	get_collection_likes: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description id подборки */
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Сводка */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['CollectionLikes'];
+				};
+			};
+			/** @description Неверный токен */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет подборки или она чужая приватная */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
 	put_collection_reaction: {
 		parameters: {
 			query?: never;
@@ -8145,6 +8519,139 @@ export interface operations {
 				};
 			};
 			/** @description Человек не найден */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	like_person: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug человека
+				 * @example denis-villeneuve
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Лайкнут */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Человека нет или он скрыт */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	unlike_person: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug человека
+				 * @example denis-villeneuve
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Лайка нет */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Человека нет или он скрыт */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	list_person_likes: {
+		parameters: {
+			query?: {
+				/** @description 1–100, по умолчанию 20. */
+				limit?: number;
+				/** @description С 0. */
+				offset?: number;
+			};
+			header?: never;
+			path: {
+				/**
+				 * @description slug человека
+				 * @example denis-villeneuve
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Страница лайкнувших */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Page_Like'];
+				};
+			};
+			/** @description Неверный параметр */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Человека нет или он скрыт */
 			404: {
 				headers: {
 					[name: string]: unknown;
@@ -9834,6 +10341,75 @@ export interface operations {
 			};
 			/** @description Неверный параметр */
 			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Пользователь не найден или заблокирован */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	list_given_likes: {
+		parameters: {
+			query?: {
+				/** @description Только лайки этого вида; не передан — все вперемешку. */
+				target?: 'collection' | 'person' | 'entity';
+				/** @description 1–100, по умолчанию 20. */
+				limit?: number;
+				/** @description С 0. */
+				offset?: number;
+			};
+			header?: never;
+			path: {
+				/**
+				 * @description username
+				 * @example user
+				 */
+				username: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Страница лайков */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Page_GivenLike'];
+				};
+			};
+			/** @description Неверный параметр */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Токен передан, но недействителен */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Аналитика закрыта владельцем (`stats_private`) */
+			403: {
 				headers: {
 					[name: string]: unknown;
 				};
