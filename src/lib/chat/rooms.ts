@@ -107,15 +107,22 @@ export function dmError(e: unknown): string {
 	}
 }
 
-/** Текст ошибки WebSocket-чата по коду сервера. */
+/**
+ * Причина отказа WebSocket-чата: читается после «Не отправлено: », поэтому строчной буквы
+ * и без повтора самого «не отправлено».
+ */
 export function sendError(error: string): string {
 	switch (error) {
 		case 'too many messages':
-			return 'Слишком часто — подождите';
+			return 'слишком часто, подождите';
 		case 'not authenticated':
-			return 'Войдите, чтобы писать';
+			return 'нужно войти';
+		case 'blocked':
+			return 'собеседник недоступен';
+		case 'internal error':
+			return 'ошибка на сервере';
 		default:
-			return 'Не отправлено';
+			return error || 'сервер отклонил сообщение';
 	}
 }
 
