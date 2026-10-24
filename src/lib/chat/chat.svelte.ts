@@ -33,12 +33,15 @@ import {
 
 export type Message = SchemaChatMessage;
 
-/** Вкладка панели: два системных чата и списки. */
-export type Tab = 'general' | 'catalog' | 'chats';
+/**
+ * Вкладка панели: «Каталог» — общие чаты (чипами), «Каналы» — фильмы, люди, темы и комнаты,
+ * «Чаты» — личные переписки один на один.
+ */
+export type Tab = 'catalog' | 'channels' | 'dm';
 
-const TABS: Tab[] = ['general', 'catalog', 'chats'];
+const TABS: Tab[] = ['catalog', 'channels', 'dm'];
 
-/** Что показывает вкладка «Чаты»: где я состою или где сейчас говорят. */
+/** Что показывает вкладка «Каналы»: где я состою или где сейчас говорят. */
 export type ListView = 'mine' | 'live';
 
 /** Сообщение в ленте; своё неотправленное — с client_id и состоянием. */
@@ -77,9 +80,9 @@ class Chat {
 	/** Лист открыт (мобильная ширина). */
 	sheet = $state(false);
 	/** Вкладка панели. «Общий» и «Каталог» — сами чаты, «Комнаты» — список. */
-	tab = $state<Tab>('general');
+	tab = $state<Tab>('catalog');
 	/** Какой из чатов «Каталога» открыт. */
-	topic = $state<Topic>('movies');
+	topic = $state<Topic>(GENERAL);
 	/** Вкладка «Чаты»: мои или те, где сейчас обсуждают. */
 	listView = $state<ListView>('mine');
 	/** Комната, открытая поверх вкладки: с карточки, из списка комнат, из уведомления. */
@@ -134,10 +137,14 @@ class Chat {
 	/** Непрочитанное по вкладкам: иначе общий счётчик указывает в никуда. */
 	get unreadByTab(): Record<Tab, number> {
 		return {
-			general: this.unreadOf(systemMeta(GENERAL).room),
 			catalog: TOPICS.reduce((sum, t) => sum + this.unreadOf(systemMeta(t.slug).room), 0),
-			chats: (this.chats ?? []).reduce(
-				(sum, c) => sum + (c.custom?.system || c.muted ? 0 : c.unread),
+			channels: (this.chats ?? []).reduce(
+				(sum, c) => sum + (c.kind === 'dm' || c.custom?.system || c.muted ? 0 : c.unread),
+				0
+			),
+			// Личные переписки появятся вместе с бэкендом: kind === 'dm'.
+			dm: (this.chats ?? []).reduce(
+				(sum, c) => sum + (c.kind === 'dm' && !c.muted ? c.unread : 0),
 				0
 			)
 		};
@@ -147,8 +154,7 @@ class Chat {
 	setTab(tab: Tab) {
 		this.tab = tab;
 		this.adhoc = null;
-		if (tab === 'general') this.#enter(systemMeta(GENERAL));
-		else if (tab === 'catalog') this.#enter(systemMeta(this.topic));
+		if (tab === 'catalog') this.#enter(systemMeta(this.topic));
 		else this.#leave();
 	}
 
@@ -200,13 +206,13 @@ class Chat {
 			const saved = JSON.parse(localStorage.getItem(STORAGE) ?? '{}');
 			this.collapsed = !!saved.collapsed;
 			this.topic = topicOf(saved.topic);
-			this.tab = TABS.includes(saved.tab) ? saved.tab : 'general';
+			this.tab = TABS.includes(saved.tab) ? saved.tab : 'catalog';
 			this.listView = saved.list === 'live' ? 'live' : 'mine';
 			if (saved.open?.room) this.open(saved.open, { show: false });
 			else this.setTab(this.tab);
 		} catch {
 			// localStorage недоступен — панель по умолчанию
-			this.setTab('general');
+			this.setTab('catalog');
 		}
 	}
 
@@ -680,6 +686,8 @@ class Chat {
 
 	async #setMember(room: string, next: boolean) {
 		const { kind, slug } = splitRoom(room);
+		// Личная переписка не «комната, в которую вступают»: её убирают крестиком.
+		if (kind === 'dm') return;
 		const params = { path: { slug } };
 		// Пути интересов и участия устроены одинаково: PUT / DELETE, 204.
 		const path = (
@@ -693,6 +701,36 @@ class Chat {
 			void this.loadChats();
 		} catch (e) {
 			this.historyError = errorMessage(e);
+		}
+	}
+
+	/**
+	 * Открыть личную переписку с человеком, создав её при первом обращении.
+	 * Эндпоинта пока нет на бэкенде — до выката кнопка «Написать» честно говорит об этом.
+	 */
+	async openDm(user: SchemaUserRef) {
+		try {
+			const info = (await unwrap(
+				api.social.PUT(
+					'/api/v1/social/users/{username}/dm' as '/api/v1/social/users/{username}/follow',
+					{ params: { path: { username: user.username } } }
+				)
+			)) as unknown as SchemaChatRoomInfo;
+			this.tab = 'dm';
+			this.info = info;
+			this.open(roomMeta(info));
+			void this.loadChats();
+		} catch (e) {
+			if (!(e instanceof ApiError)) throw e;
+			const text =
+				e.status === 404 || e.status === 405
+					? 'Личные сообщения ещё не включены.'
+					: e.code === 'blocked'
+						? 'Этот человек недоступен для переписки.'
+						: e.code === 'dm_closed'
+							? 'Человек не принимает сообщения от незнакомых.'
+							: null;
+			throw text ? new Error(text, { cause: e }) : e;
 		}
 	}
 

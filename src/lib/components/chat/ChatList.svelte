@@ -12,15 +12,17 @@
 	// Общий чат и чаты разделов — отдельные вкладки, они не списки.
 	let query = $state('');
 
-	const live = $derived(chat.listView === 'live');
-	const searchLabel = $derived(live ? 'Найти комнату' : 'Найти чат');
+	/** Вкладка «Чаты» — личные переписки; «Каналы» — всё остальное. */
+	const dm = $derived(chat.tab === 'dm');
+	const live = $derived(!dm && chat.listView === 'live');
+	const searchLabel = $derived(dm ? 'Найти переписку' : live ? 'Найти комнату' : 'Найти канал');
 
 	const matches = (title: string) => title.toLowerCase().includes(query.trim().toLowerCase());
 
-	// Общий чат и чаты разделов тоже здесь: это такие же чаты, просто пошире. Бэкенд отдаёт их
-	// первыми, поэтому и в списке они сверху.
+	// Общие чаты каталога в «Каналах» не показываем: у них своя вкладка с чипами.
 	const rows = $derived(
 		(chat.chats ?? [])
+			.filter((c) => (dm ? c.kind === 'dm' : c.kind !== 'dm' && !c.custom?.system))
 			.map((c) => ({ chat: c, meta: roomMeta(c), system: !!c.custom?.system }))
 			.filter(({ meta }) => matches(meta.title))
 	);
@@ -31,9 +33,11 @@
 	$effect(() => {
 		const q = query.trim();
 		const mode = chat.listView;
+		const personal = dm;
 		clearTimeout(timer);
 		timer = setTimeout(
 			() => {
+				if (personal) return;
 				if (mode === 'live') void chat.loadSuggested(q);
 				else void chat.searchMessages(q.length >= 2 ? q : '');
 			},
@@ -86,19 +90,21 @@
 
 <div class="flex min-h-0 flex-1 flex-col">
 	<div class="px-4 pt-2">
-		<div class="flex gap-1" role="group" aria-label="Какие чаты показывать">
-			<button
-				class={['btn flex-1 rounded-full btn-xs', live ? 'btn-ghost' : 'btn-primary']}
-				aria-pressed={!live}
-				onclick={() => chat.setListView('mine')}>Мои чаты</button
-			>
-			<button
-				class={['btn flex-1 rounded-full btn-xs', live ? 'btn-primary' : 'btn-ghost']}
-				aria-pressed={live}
-				onclick={() => chat.setListView('live')}>Обсуждается</button
-			>
-		</div>
-		<label class="input mt-2 w-full input-sm">
+		{#if !dm}
+			<div class="flex gap-1" role="group" aria-label="Какие каналы показывать">
+				<button
+					class={['btn flex-1 rounded-full btn-xs', live ? 'btn-ghost' : 'btn-primary']}
+					aria-pressed={!live}
+					onclick={() => chat.setListView('mine')}>Мои каналы</button
+				>
+				<button
+					class={['btn flex-1 rounded-full btn-xs', live ? 'btn-primary' : 'btn-ghost']}
+					aria-pressed={live}
+					onclick={() => chat.setListView('live')}>Обсуждается</button
+				>
+			</div>
+		{/if}
+		<label class={['input w-full input-sm', dm ? '' : 'mt-2']}>
 			<input type="search" placeholder={searchLabel} bind:value={query} aria-label={searchLabel} />
 			<svg
 				class="size-4 opacity-50"
@@ -244,12 +250,14 @@
 			</ul>
 		{:else if !query.trim()}
 			<p class="px-2 py-6 text-sm text-base-content/60">
-				Добавьте фильмы, людей или темы в интересы, вступите в комнату — чаты появятся здесь.
+				{dm
+					? 'Личных переписок пока нет. Найдите человека кнопкой в шапке панели или напишите прямо из чата, нажав на имя.'
+					: 'Добавьте фильмы, людей или темы в интересы, вступите в комнату — каналы появятся здесь.'}
 			</p>
 		{/if}
 
 		<!-- Поиск по сообщениям моих чатов: отдельным блоком под списком. -->
-		{#if !live && query.trim().length >= 2}
+		{#if !live && !dm && query.trim().length >= 2}
 			<p
 				class="px-2 pt-4 pb-1 text-[0.65rem] font-bold tracking-widest text-base-content/50 uppercase"
 			>
@@ -331,7 +339,9 @@
 		{/if}
 	</div>
 
-	<p class="border-t border-base-300 px-4 py-3 text-xs text-base-content/60">
-		<a href="/chat" class="link link-primary">Каталог комнат</a> — все комнаты Nexus.
-	</p>
+	{#if !dm}
+		<p class="border-t border-base-300 px-4 py-3 text-xs text-base-content/60">
+			<a href="/chat" class="link link-primary">Каталог комнат</a> — все комнаты Nexus.
+		</p>
+	{/if}
 </div>

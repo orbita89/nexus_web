@@ -8,6 +8,7 @@
 	import { useRealtime, useRealtimeReplies } from '#lib/realtime/realtime.svelte.ts';
 	import ChatList from './ChatList.svelte';
 	import ChatRoom from './ChatRoom.svelte';
+	import PeopleSearch from './PeopleSearch.svelte';
 	import RoomIcon from './RoomIcon.svelte';
 
 	// Правая панель чата на всех страницах. Десктоп (lg) — закреплена справа, сворачивается в
@@ -46,10 +47,13 @@
 	// Без ограничения по числу: полоса прокручивается, и обрезать её — терять чаты из виду.
 	const strip = $derived(chat.chats ?? []);
 
+	/** Поиск людей открывается поверх вкладок: из него уходят в профиль или в переписку. */
+	let people = $state(false);
+
 	const tabs: { tab: Tab; title: string }[] = [
-		{ tab: 'general', title: 'Общий' },
 		{ tab: 'catalog', title: 'Каталог' },
-		{ tab: 'chats', title: 'Чаты' }
+		{ tab: 'channels', title: 'Каналы' },
+		{ tab: 'dm', title: 'Чаты' }
 	];
 </script>
 
@@ -99,7 +103,26 @@
 			<p class="mr-auto pl-2 text-xs font-bold tracking-widest text-base-content/60 uppercase">
 				Чат
 			</p>
-			{#if chat.current}
+			<button
+				class={['btn btn-square btn-ghost btn-sm', { 'text-primary': people }]}
+				title="Найти человека"
+				aria-label="Найти человека"
+				aria-pressed={people}
+				onclick={() => (people = !people)}
+			>
+				<svg
+					class="size-4"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					aria-hidden="true"
+					><path
+						d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"
+					/></svg
+				>
+			</button>
+			{#if chat.current && !people}
 				<button
 					class={['btn btn-square btn-ghost btn-sm', { 'text-primary': chat.roomSearch }]}
 					title="Поиск по чату"
@@ -168,8 +191,8 @@
 				onclick={() => (chat.sheet = false)}>✕</button
 			>
 		</div>
-		<!-- Вкладка — это сам чат: «Общий» и «Каталог» сразу показывают ленту. -->
-		<div class="px-4 pb-1">
+		<!-- «Каталог» — сам чат, чипы переключают общие ленты; «Каналы» и «Чаты» — списки. -->
+		<div class={['px-4 pb-1', { hidden: people }]}>
 			<div class="flex rounded-full bg-base-300/60 p-1" role="tablist" aria-label="Разделы чата">
 				{#each tabs as t (t.tab)}
 					{@const unread = chat.unreadByTab[t.tab]}
@@ -208,7 +231,9 @@
 			{/if}
 		</div>
 
-		{#if chat.current}
+		{#if people}
+			<PeopleSearch onclose={() => (people = false)} />
+		{:else if chat.current}
 			<ChatRoom meta={chat.current} />
 		{:else}
 			<ChatList />

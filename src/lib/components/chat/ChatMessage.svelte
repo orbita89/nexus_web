@@ -18,6 +18,24 @@
 	const card = $derived(item.body && !item.deleted ? entityLink(item.body) : null);
 	const parts = $derived(parseBody(item.body ?? ''));
 	const onlyLink = $derived(!!card && parts.length === 1 && !!item.body?.trim().match(/^\S+$/));
+	/** Меню по клику на автора: профиль или личное сообщение. */
+	let menu = $state(false);
+	let writing = $state(false);
+	const canWrite = $derived(!mine && session.status === 'authed');
+
+	async function write() {
+		if (!item.author) return;
+		writing = true;
+		try {
+			await chat.openDm(item.author);
+			menu = false;
+		} catch (e) {
+			error = errorMessage(e);
+		} finally {
+			writing = false;
+		}
+	}
+
 	let editing = $state(false);
 	let draft = $state('');
 	let error = $state('');
@@ -57,9 +75,13 @@
 
 <article class={['group flex gap-2 px-3 py-1.5', { 'opacity-60': item.status === 'sending' }]}>
 	{#if item.author && !item.clientId}
-		<a href="/u/{item.author.username}" class="shrink-0" aria-label={authorName(item.author)}>
+		<button
+			class="shrink-0"
+			aria-label="{authorName(item.author)} — профиль или написать"
+			onclick={() => (menu = !menu)}
+		>
 			<Avatar user={item.author} />
-		</a>
+		</button>
 	{:else if item.author}
 		<Avatar user={item.author} />
 	{:else}
@@ -68,8 +90,8 @@
 	<div class="min-w-0 flex-1">
 		<p class="flex items-baseline gap-2 text-xs">
 			{#if item.author && !item.clientId}
-				<a href="/u/{item.author.username}" class="truncate font-bold link-hover"
-					>{authorName(item.author)}</a
+				<button class="truncate font-bold link-hover" onclick={() => (menu = !menu)}
+					>{authorName(item.author)}</button
 				>
 			{:else}
 				<span class="truncate font-bold">{item.author ? authorName(item.author) : 'Удалено'}</span>
@@ -79,6 +101,22 @@
 			>
 			{#if item.edited_at && !item.deleted}<span class="text-base-content/40">изменено</span>{/if}
 		</p>
+
+		{#if menu && item.author}
+			<!-- Клик по имени или аватару: в профиль или сразу написать лично. -->
+			<p class="mt-1 flex flex-wrap items-center gap-2 text-xs">
+				<a
+					href="/u/{item.author.username}"
+					class="btn btn-ghost btn-xs"
+					onclick={() => (menu = false)}>Профиль</a
+				>
+				{#if canWrite}
+					<button class="btn btn-primary btn-xs" onclick={write} disabled={writing}>Написать</button
+					>
+				{/if}
+				<button class="btn btn-ghost btn-xs" onclick={() => (menu = false)}>Отмена</button>
+			</p>
+		{/if}
 
 		{#if item.reply_to}
 			<p class="mt-0.5 truncate border-l-2 border-primary/60 pl-2 text-xs text-base-content/50">

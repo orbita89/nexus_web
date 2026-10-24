@@ -4,19 +4,21 @@ import type { SchemaEntityKind } from '#lib/api/generated/catalog.ts';
 import type {
 	SchemaChatRoomInfo,
 	SchemaChatSummary,
-	SchemaCustomRoom
+	SchemaCustomRoom,
+	SchemaUserRef
 } from '#lib/api/generated/social.ts';
 import { KINDS, kindBySlug, refHref } from '#lib/catalog/kinds.ts';
 
-export type RoomKind = 'entity' | 'person' | 'tag' | 'room';
+export type RoomKind = 'entity' | 'person' | 'tag' | 'room' | 'dm';
 
 // Системные чаты. Вкладка панели — сам чат, а не список чатов: «Общий» открывает ленту
 // сразу, «Каталог» переключает между лентами по разделам. Заведены на бэкенде, участие
 // у всех по умолчанию.
 export const GENERAL = 'general';
 
-/** Чипы вкладки «Каталог»: по одному чату на раздел каталога. */
+/** Чипы вкладки «Каталог»: общий разговор и по одному чату на раздел каталога. */
 export const TOPICS = [
+	{ slug: GENERAL, title: 'Общий' },
 	{ slug: 'movies', title: 'Кино' },
 	{ slug: 'series', title: 'Сериалы' },
 	{ slug: 'books', title: 'Книги' },
@@ -26,9 +28,9 @@ export const TOPICS = [
 export type Topic = (typeof TOPICS)[number]['slug'];
 
 export const topicOf = (value: string | null | undefined): Topic =>
-	TOPICS.find((t) => t.slug === value)?.slug ?? 'movies';
+	TOPICS.find((t) => t.slug === value)?.slug ?? GENERAL;
 
-const SYSTEM = [{ slug: GENERAL, title: 'Общий чат' }, ...TOPICS];
+const SYSTEM = [{ slug: GENERAL, title: 'Общий чат' }, ...TOPICS.filter((t) => t.slug !== GENERAL)];
 
 /** Шапка системного чата: ссылки на карточку у него нет. */
 export function systemMeta(slug: string): RoomMeta {
@@ -69,6 +71,15 @@ export function roomMeta(chat: SchemaChatSummary | SchemaChatRoomInfo): RoomMeta
 			title: chat.person.full_name,
 			href: `/people/${chat.person.slug}`,
 			image: chat.person.photo_url ?? null
+		};
+	// Личная переписка: в шапке — собеседник. Поле появится вместе с бэкендом.
+	const dm = (chat as { dm?: { peer: SchemaUserRef } | null }).dm;
+	if (dm)
+		return {
+			room,
+			title: authorName(dm.peer),
+			href: `/u/${dm.peer.username}`,
+			image: dm.peer.avatar_url ?? null
 		};
 	if (chat.tag) return { room, title: chat.tag.name, href: `/tags/${chat.tag.slug}`, image: null };
 	if (chat.custom) return { room, title: chat.custom.title, href: '/chat', image: null };
