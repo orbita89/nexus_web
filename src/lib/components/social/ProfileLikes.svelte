@@ -40,7 +40,9 @@
 		{#each list.items as like (like.target.kind + (like.target.kind === 'person' ? like.target.person.id : like.target.collection_id))}
 			{@const place = likePlace(like.target)}
 			<li class="flex items-center gap-3 rounded-box bg-base-200 px-4 py-3 ring-1 ring-base-300">
-				<span class="shrink-0 text-lg" aria-hidden="true">{like.value === -1 ? '👎' : '👍'}</span>
+				<!-- Дизлайк поставить больше нельзя, но у старых записей он ещё встречается:
+				     рисуем как есть, а не выдаём за лайк. -->
+				<span class="shrink-0 text-lg" aria-hidden="true">{like.value === -1 ? '👎' : '♥'}</span>
 				<span class="min-w-0 flex-1">
 					{#if place.href}
 						<a href={place.href} class="font-semibold hover:text-primary">{place.title}</a>

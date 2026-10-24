@@ -2,11 +2,11 @@
 	import type { SchemaCollection, SchemaCollectionDetail } from '#lib/api/generated/social.ts';
 	import { count } from '#lib/catalog/labels.ts';
 	import { buildFeaturedUrl } from '#lib/social/featured.ts';
-	import CollectionLikes from '#lib/components/social/CollectionLikes.svelte';
+	import CollectionLikeButton from '#lib/components/social/CollectionLikeButton.svelte';
 	import ShareMenu from '#lib/components/social/ShareMenu.svelte';
 
-	// Конец страницы коллекции: «нравится / не нравится», «Далее» (первая из похожих) и ряд
-	// действий — поделиться, обсуждение, все похожие. Обычные ссылки — перелинковка для SEO.
+	// Конец страницы коллекции: «Нравится», «Далее» (первая из похожих) и ряд действий —
+	// поделиться, обсуждение, все похожие. Обычные ссылки — перелинковка для SEO.
 	let {
 		collection,
 		others = [],
@@ -25,10 +25,10 @@
 	const works = (n: number) => count(n, ['произведение', 'произведения', 'произведений']);
 </script>
 
-<!-- Голоса отдельной строкой над действиями: свой голос уточняется в браузере, и ряд кнопок
+<!-- Сердечко отдельной строкой над действиями: свой лайк уточняется в браузере, и ряд кнопок
      не должен дёргаться, когда он придёт. -->
 <div class="mx-auto mt-10 flex max-w-4xl justify-center border-t border-base-content/10 pt-8">
-	<CollectionLikes {collection} />
+	<CollectionLikeButton {collection} />
 </div>
 
 <!-- Одна строка по центру: действия, разделитель, «Далее» (на телефоне «Далее» сверху). -->

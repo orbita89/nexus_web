@@ -1,9 +1,8 @@
 <script lang="ts">
-	import { page } from '$app/state';
 	import { errorMessage, unwrap } from '#lib/api/errors.ts';
-	import { api, session } from '#lib/auth/session.svelte.ts';
+	import { api } from '#lib/auth/session.svelte.ts';
 	import type { ProfileViewer } from '#lib/social/profile-viewer.svelte.ts';
-	import { loginUrl } from '#lib/utils/redirect.ts';
+	import LikeHeart from './LikeHeart.svelte';
 
 	// «Нравится» в шапке профиля: лайк один, дизлайка нет и не будет. Счётчик и `liked` приходят
 	// в самой шапке — отдельного запроса под кнопку не нужно; вошедшему `liked` уточняет
@@ -58,33 +57,14 @@
 </script>
 
 <div class="flex flex-wrap items-center justify-end gap-2">
-	{#if session.status === 'guest'}
-		<a
-			href={loginUrl(page.url)}
-			class="btn gap-2 btn-ghost btn-sm"
-			aria-label="Войдите, чтобы отметить профиль"
-		>
-			<span aria-hidden="true">♥</span>
-			<span class="tabular-nums">{shown}</span>
-		</a>
-	{:else if viewer.own}
-		<!-- Себе лайк не поставить (бэкенд отвечает 400 like_self) — показываем только счётчик. -->
-		<span class="flex items-center gap-2 px-2 text-sm text-base-content/60">
-			<span aria-hidden="true">♥</span>
-			<span class="tabular-nums">{shown}</span>
-		</span>
-	{:else}
-		<button
-			class={['btn gap-2 btn-sm', liked ? 'btn-primary' : 'btn-ghost']}
-			disabled={busy || session.status === 'loading'}
-			aria-pressed={liked}
-			aria-label={liked ? 'Убрать отметку «нравится»' : 'Нравится'}
-			title={liked ? 'Убрать отметку «нравится»' : 'Нравится'}
-			onclick={toggle}
-		>
-			<span aria-hidden="true">♥</span>
-			<span class="tabular-nums">{shown}</span>
-		</button>
-	{/if}
+	<!-- Себе лайк не поставить (бэкенд отвечает 400 like_self) — у себя остаётся только счётчик. -->
+	<LikeHeart
+		count={shown}
+		{liked}
+		{busy}
+		readonly={viewer.own}
+		guestLabel="Войдите, чтобы отметить профиль"
+		onclick={toggle}
+	/>
 	{#if error}<span role="alert" class="text-sm text-error">{error}</span>{/if}
 </div>
