@@ -10,7 +10,7 @@
 	// «повторить». Админ может удалить любое.
 	let { item, quoted }: { item: Item; quoted: Message | null | undefined } = $props();
 
-	const mine = $derived(!!item.author && item.author.id === session.user?.id);
+	const mine = $derived(!!item.author && (item.author.id === session.user?.id || item.author.username === session.user?.username));
 	const canDelete = $derived(
 		!item.clientId && !item.deleted && (mine || session.user?.role === 'admin')
 	);
