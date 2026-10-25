@@ -25,17 +25,12 @@
 	const works = (n: number) => count(n, ['произведение', 'произведения', 'произведений']);
 </script>
 
-<!-- Сердечко отдельной строкой над действиями: свой лайк уточняется в браузере, и ряд кнопок
-     не должен дёргаться, когда он придёт. -->
-<div class="mx-auto mt-10 flex max-w-4xl justify-center border-t border-base-content/10 pt-8">
-	<CollectionLikeButton {collection} />
-</div>
-
 <!-- Одна строка по центру: действия, разделитель, «Далее» (на телефоне «Далее» сверху). -->
 <footer
 	class="mx-auto mt-6 flex max-w-4xl flex-col items-center gap-4 sm:flex-row sm:justify-center sm:gap-6"
 >
 	<div class="flex flex-wrap items-center justify-center gap-2">
+		<CollectionLikeButton {collection} />
 		<ShareMenu url={shareUrl} title={shareTitle} />
 		<a href="{base}/discussion" class="btn gap-2 btn-ghost btn-sm">
 			Обсуждение

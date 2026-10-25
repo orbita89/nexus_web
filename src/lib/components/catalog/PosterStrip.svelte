@@ -15,10 +15,44 @@
 		/** Подпись над постером по id: «Сиквел», «Ремейк». */
 		badges?: Record<string, string>;
 	} = $props();
+
+	let track = $state<HTMLUListElement | undefined>(undefined);
+	let atStart = $state(true);
+	let atEnd = $state(false);
+
+	/** Сколько карточек листаем за один клик — чем больше, тем чувствительнее скролл. */
+	const STEP_CARDS = 2;
+
+	/** Прокрутка ленты вперёд/назад на несколько карточек за раз. */
+	function scroll(direction: -1 | 1) {
+		if (!track) return;
+		const first = track.querySelector('li') as HTMLElement | undefined;
+		const cardStep = first ? first.offsetWidth + 16 : track.clientWidth / STEP_CARDS; // 16px = gap-4
+		const step = STEP_CARDS * cardStep;
+		track.scrollBy({ left: direction * step, behavior: 'smooth' });
+	}
+
+	/** Активность краевых кнопок зависит от позиции прокрутки. */
+	$effect(() => {
+		const el = track;
+		if (!el) return;
+		const update = () => {
+			atStart = el.scrollLeft <= 2;
+			atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 2;
+		};
+		el.addEventListener('scroll', update, { passive: true });
+		update();
+		return () => el.removeEventListener('scroll', update);
+	});
 </script>
 
-<!-- Полоса постеров: на телефоне листается пальцем, на десктопе — колесом или тачпадом. -->
-<ul class="flex snap-x gap-4 overflow-x-auto pt-1.5 pb-3" aria-label={label}>
+<!-- Полоса постеров: на телефоне листается пальцем, на десктопе — колёсом, тачпадом или кнопками < >. -->
+<div class="relative">
+	<ul
+		bind:this={track}
+		class="flex snap-x gap-4 overflow-x-auto scrollbar-hide py-3"
+		aria-label={label}
+	>
 	{#each entities as entity (entity.id)}
 		<li class="w-32 shrink-0 snap-start sm:w-36 lg:w-40">
 			{#if badges[entity.id]}
@@ -27,4 +61,22 @@
 			<EntityCard {entity} rating={ratings[entity.slug]} />
 		</li>
 	{/each}
-</ul>
+	</ul>
+
+	{#if entities.length}
+		<button
+			type="button"
+			class="btn border-0 bg-white/35 text-white absolute top-1/2 left-3 -translate-y-1/2 z-20 hover:bg-white/50 disabled:opacity-50 rounded-lg px-4 py-2.5"
+			aria-label="Назад"
+			disabled={atStart}
+			onclick={() => scroll(-1)}
+		>{`<`}</button>
+		<button
+			type="button"
+			class="btn border-0 bg-white/35 text-white absolute top-1/2 right-3 -translate-y-1/2 z-20 hover:bg-white/50 disabled:opacity-50 rounded-lg px-4 py-2.5"
+			aria-label="Вперёд"
+			disabled={atEnd}
+			onclick={() => scroll(1)}
+		>{`>`}</button>
+	{/if}
+</div>

@@ -204,14 +204,37 @@ export function parseBody(body: string): BodyPart[] {
 	return parts;
 }
 
-/** Ссылка на карточку внутри сообщения: /films/dune-2021 — чтобы показать превью. */
-const ENTITY_LINK = new RegExp(
-	`(?:^|\\s|\\()(?:https?://[^\\s/]+)?/(${KINDS.map((k) => k.slug).join('|')})/([a-z0-9][a-z0-9-]*)`,
-	'i'
-);
+/** Все ссылки на карточки внутри сообщения (для превью нескольких сущностей). */
+export function entityLinks(body: string): { kind: SchemaEntityKind; slug: string }[] {
+	const re = new RegExp(
+		`(?:^|\\s|\\()(?:https?://[^\\s/]+)?/(${KINDS.map((k) => k.slug).join('|')})/([a-z0-9][a-z0-9-]*)`,
+		'gi'
+	);
+	const out: { kind: SchemaEntityKind; slug: string }[] = [];
+	const seen = new Set<string>();
+	for (const m of body.matchAll(re)) {
+		const kind = kindBySlug(m[1].toLowerCase());
+		if (!kind) continue;
+		const slug = m[2].toLowerCase();
+		const key = `${kind.kind}:${slug}`;
+		if (seen.has(key)) continue;
+		seen.add(key);
+		out.push({ kind: kind.kind, slug });
+	}
+	return out;
+}
 
+/** Текст сообщения без ссылок на сущности — чтобы не дублировать URL рядом с превью. */
+export function stripEntityLinks(body: string): string {
+	const re = new RegExp(
+		`(?:^|\\s|\\()(?:https?://[^\\s/]+)?/(${KINDS.map((k) => k.slug).join('|')})/[a-z0-9][a-z0-9-]*`,
+		'gi'
+	);
+	return body.replace(re, ' ').replace(/\\s{2,}/g, ' ').trim();
+}
+
+
+/** Ссылка на карточку внутри сообщения (первая) — обратная совместимость. */
 export function entityLink(body: string): { kind: SchemaEntityKind; slug: string } | null {
-	const m = ENTITY_LINK.exec(body);
-	const kind = m && kindBySlug(m[1].toLowerCase());
-	return kind ? { kind: kind.kind, slug: m[2].toLowerCase() } : null;
+	return entityLinks(body)[0] ?? null;
 }

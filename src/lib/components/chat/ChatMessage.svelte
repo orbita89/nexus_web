@@ -90,9 +90,9 @@
 
 <article
 	bind:this={row}
-	class={['group flex gap-2 px-3 py-1.5', { 'opacity-60': item.status === 'sending' }]}
+	class={['group flex gap-2 px-3 py-1.5', { 'opacity-60': item.status === 'sending', 'flex-row-reverse': mine }]}
 >
-	{#if item.author && !item.clientId}
+	{#if !mine && item.author && !item.clientId}
 		<button
 			class="shrink-0"
 			aria-label="{authorName(item.author)} — профиль или написать"
@@ -105,7 +105,7 @@
 	{:else}
 		<span class="size-8 shrink-0 rounded-full bg-base-300" aria-hidden="true"></span>
 	{/if}
-	<div class="min-w-0 flex-1">
+	<div class={["min-w-0 flex-1 rounded-2xl px-3 py-2", mine ? "bg-[#2b5278] text-white ml-auto max-w-[80%]" : "bg-[#242f3d] text-white max-w-[80%]"]}>
 		<p class="flex items-baseline gap-2 text-xs">
 			{#if item.author && !item.clientId}
 				<span class="relative min-w-0">

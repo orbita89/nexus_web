@@ -44,7 +44,9 @@
 <!-- Справа закреплена панель чата: на десктопе контент сдвигается на её ширину. -->
 <div
 	class={[
-		'relative isolate flex min-h-screen flex-col overflow-x-clip',
+		// @container: от него считают ширину шапки карточки (100cqw) — чтобы она занимала страницу
+		// без панели чата, а не всё окно.
+		'@container relative isolate flex min-h-screen flex-col overflow-x-clip',
 		chat.collapsed ? 'lg:pr-16' : 'lg:pr-80'
 	]}
 >

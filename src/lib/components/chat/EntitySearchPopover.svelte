@@ -6,7 +6,7 @@
 	import type { PickedEntity } from '#lib/components/social/EntityPicker.svelte';
 
 	// Поиск карточки для вставки в сообщение. Только Meilisearch: в GET /entities поиска нет.
-	let { onpick, onclose }: { onpick: (href: string) => void; onclose: () => void } = $props();
+	let { onpick, onclose }: { onpick: (entity: PickedEntity) => void; onclose: () => void } = $props();
 
 	let query = $state('');
 	let results = $state<PickedEntity[]>([]);
@@ -77,7 +77,7 @@
 					<button
 						type="button"
 						class="w-full truncate rounded px-2 py-1 text-left text-xs hover:bg-base-100"
-						onclick={() => onpick(entityHref({ kind: entity.kind as 'movie', slug: entity.slug }))}
+						onclick={() => onpick(entity)}
 						>{label(entity)}</button
 					>
 				</li>

@@ -21,7 +21,7 @@
 	import TagChips from '#lib/components/catalog/TagChips.svelte';
 	import AddToCollection from '#lib/components/social/AddToCollection.svelte';
 	import CardCollections from '#lib/components/social/CardCollections.svelte';
-	import TargetComments from '#lib/components/social/TargetComments.svelte';
+	
 	import WatchButton from '#lib/components/social/WatchButton.svelte';
 	import ChatButton from '#lib/components/chat/ChatButton.svelte';
 	import { useRealtime } from '#lib/realtime/realtime.svelte.ts';
@@ -185,7 +185,5 @@
 		<CardCollections slug={entity.slug} {live} />
 	</ClientSection>
 
-	<ClientSection id="comments" title="Комментарии" placeholder="h-40">
-		<TargetComments kind="entity" slug={entity.slug} />
-	</ClientSection>
+
 {/key}

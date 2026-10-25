@@ -13,12 +13,18 @@
 	let {
 		username,
 		count,
-		viewer
+		viewer,
+		size = 'sm',
+		red = false
 	}: {
 		username: string;
 		/** likes_count из шапки (серверный, как для гостя). */
 		count: number;
 		viewer: ProfileViewer;
+		/** Размер кнопки: xs, sm, md, lg. */
+		size?: 'xs' | 'sm' | 'md' | 'lg';
+		/** Красный вариант кнопки. */
+		red?: boolean;
 	} = $props();
 
 	// Своё состояние после нажатия; до него — то, что пришло с перечитанным профилем.
@@ -56,12 +62,14 @@
 	}
 </script>
 
-<div class="flex flex-wrap items-center justify-end gap-2">
+<div class="inline-flex items-center gap-2">
 	<!-- Себе лайк не поставить (бэкенд отвечает 400 like_self) — у себя остаётся только счётчик. -->
 	<LikeHeart
 		count={shown}
 		{liked}
 		{busy}
+		{size}
+		{red}
 		readonly={viewer.own}
 		guestLabel="Войдите, чтобы отметить профиль"
 		onclick={toggle}

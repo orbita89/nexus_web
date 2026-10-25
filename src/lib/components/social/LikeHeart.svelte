@@ -12,6 +12,8 @@
 		liked,
 		busy = false,
 		readonly = false,
+		size = 'sm',
+		red = false,
 		title = 'Нравится',
 		guestLabel = 'Войдите, чтобы отметить',
 		onclick
@@ -21,16 +23,22 @@
 		busy?: boolean;
 		/** Свой профиль: лайкнуть себя нельзя, остаётся просто число. */
 		readonly?: boolean;
+		/** Размер кнопки: xs, sm, md, lg. */
+		size?: 'xs' | 'sm' | 'md' | 'lg';
+		/** Красный вариант кнопки. */
+		red?: boolean;
 		title?: string;
 		guestLabel?: string;
 		onclick?: () => void;
 	} = $props();
 
 	const label = $derived(liked ? 'Убрать отметку «нравится»' : title);
+	const baseCls = $derived(`btn gap-2 btn-${size}`);
+	const activeCls = $derived(red ? 'btn-error' : (liked ? 'btn-primary' : 'btn-ghost'));
 </script>
 
 {#if session.status === 'guest'}
-	<a href={loginUrl(page.url)} class="btn gap-2 btn-ghost btn-sm" aria-label={guestLabel}>
+	<a href={loginUrl(page.url)} class={baseCls + ' ' + activeCls} aria-label={guestLabel}>
 		<span aria-hidden="true">♥</span>
 		<span class="tabular-nums">{count}</span>
 	</a>
@@ -41,7 +49,7 @@
 	</span>
 {:else}
 	<button
-		class={['btn gap-2 btn-sm', liked ? 'btn-primary' : 'btn-ghost']}
+		class={[baseCls, activeCls]}
 		disabled={busy || session.status === 'loading'}
 		aria-pressed={liked}
 		aria-label={label}

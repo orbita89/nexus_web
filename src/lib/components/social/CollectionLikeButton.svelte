@@ -65,7 +65,7 @@
 	}
 </script>
 
-<div class="flex flex-col items-center gap-2">
-	<LikeHeart {count} {liked} {busy} title="Нравится подборка" onclick={toggle} />
+<div class="inline-flex items-center gap-2">
+	<LikeHeart {count} {liked} {busy} title="Нравится подборка" red={true} onclick={toggle} />
 	{#if error}<p role="alert" class="text-sm text-error">{error}</p>{/if}
 </div>

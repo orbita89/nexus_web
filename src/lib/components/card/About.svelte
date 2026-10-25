@@ -14,6 +14,7 @@
 
 	const rows = $derived(aboutRows(entity));
 	const groups = $derived(creditGroups(entity.credits));
+	const castGroups = $derived(groups.filter((g) => g.role === 'actor' || g.role === 'voice_actor'));
 	const title = $derived(aboutTitle(entity.kind));
 	const original = $derived(originalTitle(entity));
 </script>
@@ -66,6 +67,6 @@
 		</div>
 
 		<!-- Плашка 2, отдельно: полные титры по группам. Нет титров — нет и плашки. -->
-		{#if groups.length}<Credits {groups} />{/if}
+		{#if castGroups.length}<Credits groups={castGroups} />{/if}
 	</div>
 </section>

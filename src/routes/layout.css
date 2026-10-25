@@ -41,3 +41,22 @@
 	--depth: 1;
 	--noise: 1;
 }
+
+/* Полоса прокрутки лент постеров скрыта — листать можно колёсом, тачпадом/тачем или кнопками ←/→. */
+.scrollbar-hide {
+	scrollbar-width: none; /* Firefox */
+	-ms-overflow-style: none; /* IE/Edge */
+}
+.scrollbar-hide::-webkit-scrollbar {
+	height: 4px; /* Safari/Chrome — почти невидимая полоска */
+}
+.scrollbar-hide::-webkit-scrollbar-track {
+	background: transparent;
+}
+.scrollbar-hide::-webkit-scrollbar-thumb {
+	background: rgba(255, 255, 255, 0.25); /* белый, но почти не виден */
+	border-radius: 100px;
+}
+.scrollbar-hide::-webkit-scrollbar-thumb:hover {
+	background: rgba(255, 255, 255, 0.45);
+}
