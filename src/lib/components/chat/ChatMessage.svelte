@@ -105,7 +105,8 @@
 	{:else}
 		<span class="size-8 shrink-0 rounded-full bg-base-300" aria-hidden="true"></span>
 	{/if}
-	<div class={["min-w-0 flex-1 rounded-2xl px-3 py-2", mine ? "bg-[#2b5278] text-white ml-auto max-w-[80%]" : "bg-[#242f3d] text-white max-w-[80%]"]}>
+	<div class={["relative min-w-0 flex-1 rounded-2xl px-3 py-2", mine ? "bg-[#2b5278] text-white ml-auto max-w-[80%]" : "bg-[#242f3d] text-white max-w-[80%]"]}>
+		<span class={["absolute bottom-2 h-3 w-3 rounded-sm", mine ? "-right-1.5 rotate-45 bg-[#2b5278]" : "-left-1.5 rotate-45 bg-[#242f3d]"]}></span>
 		<p class="flex items-baseline gap-2 text-xs">
 			{#if !mine && item.author && !item.clientId}
 				<span class="relative min-w-0">
