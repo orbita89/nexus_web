@@ -551,7 +551,7 @@ import EntitySearchPopover from './EntitySearchPopover.svelte';
 					onclick={(e) => (caret = e.currentTarget.selectionStart)}
 					oninput={(e) => (caret = e.currentTarget.selectionStart)}
 					onblur={() => setTimeout(() => (caret = 0), 150)}></textarea>
-				<button class="btn btn-primary btn-sm" disabled={!text.trim() && !picture}>➤</button
+				<button class="btn btn-warning btn-sm" disabled={!text.trim() && !picture}>➤</button
 				>
 			</div>
 		</form>
