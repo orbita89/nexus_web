@@ -107,7 +107,7 @@
 	{/if}
 	<div class={["min-w-0 flex-1 rounded-2xl px-3 py-2", mine ? "bg-[#2b5278] text-white ml-auto max-w-[80%]" : "bg-[#242f3d] text-white max-w-[80%]"]}>
 		<p class="flex items-baseline gap-2 text-xs">
-			{#if item.author && !item.clientId}
+			{#if !mine && item.author && !item.clientId}
 				<span class="relative min-w-0">
 					<button class="truncate font-bold link-hover" onclick={() => (menu = !menu)}
 						>{authorName(item.author)}</button
