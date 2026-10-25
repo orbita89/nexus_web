@@ -544,7 +544,7 @@ import EntitySearchPopover from './EntitySearchPopover.svelte';
 					class="textarea min-h-0 flex-1 resize-none textarea-sm"
 					rows="1"
 					maxlength={MAX_BODY}
-					placeholder=""
+					placeholder="@люди, #контент"
 					aria-label="Сообщение"
 					onkeydown={onKeydown}
 					onkeyup={(e) => (caret = e.currentTarget.selectionStart)}
