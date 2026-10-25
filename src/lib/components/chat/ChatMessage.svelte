@@ -105,8 +105,7 @@
 	{:else}
 		<span class="size-8 shrink-0 rounded-full bg-base-300" aria-hidden="true"></span>
 	{/if}
-	<div class={["relative min-w-0 flex-1 rounded-2xl px-3 py-2", mine ? "bg-[#2b5278] text-white ml-auto max-w-[80%]" : "bg-[#242f3d] text-white max-w-[80%]"]}>
-		<span class={["absolute bottom-0 h-3 w-3", mine ? "-right-1 bg-[#2b5278]" : "-left-1 bg-[#242f3d]"]} style="clip-path: polygon(0 0, 100% 100%, 0 100%);"></span>
+	<div class={["min-w-0 flex-1 rounded-2xl px-3 py-2", mine ? "bg-[#2b5278] text-white ml-auto max-w-[80%]" : "bg-[#242f3d] text-white max-w-[80%]"]}>
 		<p class="flex items-baseline gap-2 text-xs">
 			{#if !mine && item.author && !item.clientId}
 				<span class="relative min-w-0">
