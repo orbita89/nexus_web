@@ -20,27 +20,58 @@
 />
 
 <section
-	class="relative mb-10 overflow-hidden rounded-box bg-linear-to-br from-primary/25 via-base-200 to-secondary/15 px-6 py-10 ring-1 ring-base-300 sm:px-10 sm:py-14"
+	class="relative mb-10 flex min-h-[24rem] flex-col justify-center overflow-hidden rounded-box bg-base-100 px-6 py-10 ring-1 ring-base-300 sm:min-h-[32rem] sm:px-10 sm:py-14"
 >
-	<p class="text-xs font-semibold tracking-[0.3em] text-primary uppercase">Nexus</p>
-	<h1 class="mt-3 max-w-2xl text-3xl leading-tight font-black sm:text-5xl">
-		Всё, что смотрят, читают и проходят
-	</h1>
-	<p class="mt-3 max-w-xl text-base-content/70">
-		Фильмы, сериалы, книги и игры в одном каталоге — с оценками, рецензиями и обсуждениями, которые
-		связывают книгу с её экранизацией.
-	</p>
-	<form action="/search" method="GET" role="search" class="mt-6 flex max-w-lg gap-2">
-		<input
-			type="search"
-			name="q"
-			placeholder="Дюна, Кинг, киберпанк…"
-			aria-label="Найти в каталоге"
-			class="input w-full bg-base-100/80 input-lg"
-		/>
-		<button class="btn btn-lg btn-primary">Найти</button>
-	</form>
+	<!-- «Кассандра» Эвелин де Морган в неоновой инверсии. Арт живёт в верхней части экрана и
+	     маской бесшовно гаснет в фон сайта чуть ниже строки поиска. -->
+	<img
+		src="/cassandra.webp"
+		alt=""
+		aria-hidden="true"
+		fetchpriority="high"
+		class="hero-art pointer-events-none absolute top-0 right-0 h-[112%] w-auto max-w-none sm:right-[6%]"
+	/>
+	<!-- Мягкие фиолетово-синие отсветы на тёмном фоне + затемнение слева под текст. -->
+	<div
+		class="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_60%_at_75%_20%,rgba(139,92,246,0.25),transparent_70%),radial-gradient(50%_45%_at_15%_85%,rgba(79,70,229,0.18),transparent_70%),linear-gradient(to_right,rgba(9,9,11,0.92)_0%,rgba(9,9,11,0.75)_38%,transparent_70%)]"
+	></div>
+
+	<div class="relative">
+		<p class="text-xs font-semibold tracking-[0.3em] text-primary uppercase">Nexus</p>
+		<h1 class="mt-3 max-w-2xl text-3xl leading-tight font-black sm:text-5xl">
+			Всё, что смотрят, читают и проходят
+		</h1>
+		<p class="mt-3 max-w-xl text-base-content/70">
+			Фильмы, сериалы, книги и игры в одном каталоге — с оценками, рецензиями и обсуждениями,
+			которые связывают книгу с её экранизацией.
+		</p>
+		<form action="/search" method="GET" role="search" class="mt-6 flex max-w-lg gap-2">
+			<input
+				type="search"
+				name="q"
+				placeholder="Дюна, Кинг, киберпанк…"
+				aria-label="Найти в каталоге"
+				class="input w-full bg-base-100/70 backdrop-blur input-lg"
+			/>
+			<button class="btn btn-lg btn-primary">Найти</button>
+		</form>
+	</div>
 </section>
+
+<style>
+	/* Размытие и затемнение арта + его угасание к низу блока. */
+	.hero-art {
+		filter: blur(3px) brightness(0.5) saturate(1.2);
+		-webkit-mask-image:
+			linear-gradient(to bottom, #000 0%, #000 45%, transparent 97%),
+			linear-gradient(to right, transparent 0%, #000 28%, #000 74%, transparent 100%);
+		mask-image:
+			linear-gradient(to bottom, #000 0%, #000 45%, transparent 97%),
+			linear-gradient(to right, transparent 0%, #000 28%, #000 74%, transparent 100%);
+		-webkit-mask-composite: source-in;
+		mask-composite: intersect;
+	}
+</style>
 
 {#if data.featured.length}
 	<section class="mb-10" aria-labelledby="featured-collections">
