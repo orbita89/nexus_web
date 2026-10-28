@@ -38,11 +38,11 @@
 		alt=""
 		aria-hidden="true"
 		fetchpriority="high"
-		class="hero-figure pointer-events-none absolute top-0 left-1/2 h-full w-auto max-w-none -translate-x-1/2 sm:left-[58%]"
+		class="hero-figure pointer-events-none absolute top-0 left-1/2 h-[112%] w-auto max-w-none -translate-x-1/2 sm:left-[54%]"
 	/>
-	<!-- Фиолетово-синие отсветы и затемнение слева — чтобы текст читался поверх арта. -->
+	<!-- Лёгкая подложка под текстом слева — арт по краям остаётся виден. -->
 	<div
-		class="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_50%_at_70%_25%,rgba(139,92,246,0.22),transparent_70%),linear-gradient(to_right,rgba(9,9,11,0.9)_0%,rgba(9,9,11,0.6)_30%,transparent_60%)]"
+		class="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(9,9,11,0.72)_0%,rgba(9,9,11,0.42)_28%,transparent_55%)]"
 	></div>
 
 	<div class="relative mx-auto w-full max-w-6xl px-4">
@@ -125,18 +125,18 @@
 		mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 98%);
 	}
 	.hero-sky {
-		filter: blur(28px) brightness(0.4) saturate(1.2);
-		transform: scale(1.1); /* размытие не должно оголять края */
+		filter: blur(10px) brightness(0.6) saturate(1.2);
+		transform: scale(1.15); /* размытие не должно оголять края */
 	}
 	/* Фигуре нужно ещё и боковое угасание — иначе виден вертикальный край холста. */
 	.hero-figure {
-		filter: blur(1.5px) brightness(0.62) saturate(1.15);
+		filter: blur(0.5px) brightness(0.8) saturate(1.15);
 		-webkit-mask-image:
-			linear-gradient(to bottom, #000 0%, #000 55%, transparent 98%),
-			linear-gradient(to right, transparent 0%, #000 18%, #000 82%, transparent 100%);
+			linear-gradient(to bottom, #000 0%, #000 62%, transparent 98%),
+			linear-gradient(to right, transparent 0%, #000 26%, #000 74%, transparent 100%);
 		mask-image:
-			linear-gradient(to bottom, #000 0%, #000 55%, transparent 98%),
-			linear-gradient(to right, transparent 0%, #000 18%, #000 82%, transparent 100%);
+			linear-gradient(to bottom, #000 0%, #000 62%, transparent 98%),
+			linear-gradient(to right, transparent 0%, #000 26%, #000 74%, transparent 100%);
 		-webkit-mask-composite: source-in;
 		mask-composite: intersect;
 	}
