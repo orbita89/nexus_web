@@ -22,7 +22,7 @@
 <!-- Первый экран во всю ширину окна: выходит из колонки main (100cqw — ширина страницы
      без панели чата) и подтягивается под шапку. -->
 <section
-	class="relative mx-[calc(50%-50cqw)] -mt-6 mb-10 flex min-h-[30rem] w-[100cqw] flex-col justify-center overflow-hidden bg-base-100 py-16 sm:min-h-[42rem]"
+	class="relative mx-[calc(50%-50cqw)] -mt-[5.5rem] mb-10 flex min-h-[32rem] w-[100cqw] flex-col justify-center overflow-hidden bg-base-100 pt-[9rem] pb-16 sm:min-h-[44rem]"
 >
 	<!-- «Кассандра» Эвелин де Морган в неоновой инверсии. Нижний слой — сильно размытое небо и
 	     горящая Троя во весь фон, верхний — сама фигура в полный рост. Оба гаснут маской в
@@ -125,18 +125,18 @@
 		mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 98%);
 	}
 	.hero-sky {
-		filter: blur(10px) brightness(0.6) saturate(1.2);
+		filter: blur(7px) brightness(0.62) saturate(1.2);
 		transform: scale(1.15); /* размытие не должно оголять края */
 	}
-	/* Фигуре нужно ещё и боковое угасание — иначе виден вертикальный край холста. */
+	/* По бокам фигура лишь слегка стыкуется с фоном — край холста прячет узкая растушёвка. */
 	.hero-figure {
-		filter: blur(0.5px) brightness(0.8) saturate(1.15);
+		filter: blur(0.5px) brightness(0.85) saturate(1.15);
 		-webkit-mask-image:
-			linear-gradient(to bottom, #000 0%, #000 62%, transparent 98%),
-			linear-gradient(to right, transparent 0%, #000 26%, #000 74%, transparent 100%);
+			linear-gradient(to bottom, #000 0%, #000 68%, transparent 99%),
+			linear-gradient(to right, transparent 0%, #000 12%, #000 88%, transparent 100%);
 		mask-image:
-			linear-gradient(to bottom, #000 0%, #000 62%, transparent 98%),
-			linear-gradient(to right, transparent 0%, #000 26%, #000 74%, transparent 100%);
+			linear-gradient(to bottom, #000 0%, #000 68%, transparent 99%),
+			linear-gradient(to right, transparent 0%, #000 12%, #000 88%, transparent 100%);
 		-webkit-mask-composite: source-in;
 		mask-composite: intersect;
 	}

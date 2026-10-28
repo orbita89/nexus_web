@@ -19,6 +19,11 @@
 		{ href: '/forum', title: 'Форум' }
 	];
 
+	// На главной шапка лежит поверх арта «Кассандры» и остаётся прозрачной, пока страницу
+	// не прокрутили: ниже она снова получает фон, иначе текст контента просвечивает сквозь неё.
+	let scrolled = $state(false);
+	const overArt = $derived(page.url.pathname === '/' && !scrolled);
+
 	const isActive = (href: string) =>
 		page.url.pathname === href || page.url.pathname.startsWith(`${href}/`);
 	const catalogActive = $derived(catalog.some((c) => isActive(c.href)));
@@ -51,10 +56,18 @@
 		if (catalogOpen && !catalogEl?.contains(e.target as Node)) catalogOpen = false;
 		if (menuOpen && !menuEl?.contains(e.target as Node)) menuOpen = false;
 	}}
+	onscroll={() => (scrolled = window.scrollY > 24)}
 	onkeydown={(e) => e.key === 'Escape' && ((catalogOpen = false), (menuOpen = false))}
 />
 
-<header class="sticky top-0 z-20 border-b border-base-300 bg-base-100/85 backdrop-blur-md">
+<header
+	class={[
+		'sticky top-0 z-20 border-b transition-colors',
+		overArt
+			? 'border-transparent bg-transparent'
+			: 'border-base-300 bg-base-100/85 backdrop-blur-md'
+	]}
+>
 	<nav class="navbar w-full gap-2 px-4" aria-label="Основная навигация">
 		<div class="navbar-start w-auto gap-1">
 			<details class="dropdown md:hidden" bind:this={menuEl} bind:open={menuOpen}>
