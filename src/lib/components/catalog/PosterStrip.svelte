@@ -42,8 +42,8 @@
 		const el = track;
 		if (!el) return;
 		const update = () => {
-			atStart = el.scrollLeft <= 2;
-			atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 2;
+			atStart = el.scrollLeft <= 8;
+			atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 8;
 			scrollable = el.scrollWidth > el.clientWidth + 2;
 			const poster = el.querySelector('li a > div') as HTMLElement | null;
 			if (poster && box) {
@@ -67,7 +67,7 @@
 	<!-- Боковые отступы внутри ленты: иначе обводка карточки по краю обрезается прокруткой. -->
 	<ul
 		bind:this={track}
-		class="scrollbar-hide -mx-1.5 flex snap-x gap-4 overflow-x-auto px-1.5 py-3"
+		class="scrollbar-hide -mx-1.5 flex snap-x scroll-px-1.5 gap-4 overflow-x-auto px-1.5 py-3"
 		aria-label={label}
 	>
 		{#each entities as entity (entity.id)}
