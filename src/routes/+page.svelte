@@ -5,6 +5,7 @@
 	import PosterStrip from '#lib/components/catalog/PosterStrip.svelte';
 	import Seo from '#lib/components/catalog/Seo.svelte';
 	import TagChips from '#lib/components/catalog/TagChips.svelte';
+	import { KINDS } from '#lib/catalog/kinds.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -22,47 +23,60 @@
 <!-- Первый экран во всю ширину окна: выходит из колонки main (100cqw — ширина страницы
      без панели чата) и подтягивается под шапку. -->
 <section
-	class="relative mx-[calc(50%-50cqw)] -mt-[5.5rem] mb-10 flex min-h-[32rem] w-[100cqw] flex-col justify-center pt-[9rem] pb-16 sm:min-h-[44rem]"
+	class="relative mx-[calc(50%-50cqw)] -mt-[5.5rem] mb-10 flex min-h-[32rem] w-[100cqw] flex-col justify-center pt-[9rem] pb-14 sm:min-h-[70vh]"
 >
-	<!-- «Кассандра» Эвелин де Морган в неоновой инверсии: одна картина во всю ширину первого
-	     экрана. Слой выше самого блока — картина продолжается за «Подборками», постепенно
-	     уходя в темноту, и только там окончательно гаснет в фон сайта. -->
+	<!-- «Кассандра» Эвелин де Морган в дуотоне фиолетовый→янтарный (перекрашена в самом
+	     файле, scripts/duotone.py): арт живёт в одной палитре с темой, а не отдельным
+	     цветовым миром. Слой выше самого блока — картина продолжается за «Подборками»
+	     и только там гаснет в фон сайта. -->
 	<div class="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[170%] overflow-hidden">
 		<img
 			src="/cassandra.webp"
 			alt=""
 			aria-hidden="true"
 			fetchpriority="high"
-			class="size-full scale-105 object-cover object-[1%_28%] blur-[2px] brightness-75"
+			class="size-full scale-105 object-cover object-[50%_20%] blur-[2px] brightness-[0.85] sm:origin-left sm:scale-[1.18]"
 		/>
 		<!-- Затемнение вниз: к «Подборкам» от картины остаётся лишь тёмный отсвет. -->
 		<div
-			class="absolute inset-0 bg-[linear-gradient(to_bottom,transparent_0%,rgba(9,9,11,0.35)_42%,rgba(9,9,11,0.82)_62%,rgba(9,9,11,0.96)_82%,#09090b_100%)]"
+			class="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(9,9,11,0.25)_0%,rgba(9,9,11,0.45)_42%,rgba(9,9,11,0.85)_62%,rgba(9,9,11,0.97)_82%,#09090b_100%)]"
 		></div>
 		<!-- Подложка под текстом слева — арт по краям остаётся виден. -->
 		<div
-			class="absolute inset-0 bg-[linear-gradient(to_right,rgba(9,9,11,0.85)_0%,rgba(9,9,11,0.55)_30%,transparent_58%)]"
+			class="absolute inset-0 bg-[linear-gradient(to_right,rgba(9,9,11,0.88)_0%,rgba(9,9,11,0.6)_28%,transparent_55%)]"
 		></div>
 	</div>
 
 	<div class="relative mx-auto w-full max-w-6xl px-4">
-		<h1 class="max-w-xl text-4xl leading-tight font-black sm:text-6xl">
+		<h1 class="max-w-xl text-4xl leading-tight font-black tracking-[-0.02em] sm:text-6xl">
 			Всё, что смотрят, читают и проходят
 		</h1>
-		<p class="mt-5 max-w-md text-base-content/70">
-			Фильмы, сериалы, книги и игры в одном каталоге — с оценками, рецензиями и обсуждениями,
-			которые связывают книгу с её экранизацией.
-		</p>
-		<form action="/search" method="GET" role="search" class="mt-8 flex max-w-lg gap-2">
-			<input
-				type="search"
-				name="q"
-				placeholder="Дюна, Кинг, киберпанк…"
-				aria-label="Найти в каталоге"
-				class="input w-full bg-base-100/60 backdrop-blur input-lg"
-			/>
-			<button class="btn btn-lg btn-primary">Найти</button>
-		</form>
+		<!-- Стеклянная плашка: подзаголовок и поиск не лежат голым текстом на картине. -->
+		<div
+			class="mt-6 max-w-xl rounded-box bg-base-100/35 p-5 ring-1 ring-base-content/10 backdrop-blur-md"
+		>
+			<p class="text-base-content/80">
+				Фильмы, сериалы, книги и игры в одном каталоге — с оценками, рецензиями и обсуждениями,
+				которые связывают книгу с её экранизацией.
+			</p>
+			<form action="/search" method="GET" role="search" class="mt-4 flex gap-2">
+				<input
+					type="search"
+					name="q"
+					placeholder="Дюна, Кинг, киберпанк…"
+					aria-label="Найти в каталоге"
+					class="input w-full bg-base-100/70 input-lg"
+				/>
+				<button class="btn btn-lg btn-primary">Найти</button>
+			</form>
+			<!-- Охват каталога виден сразу, до скролла. -->
+			<nav aria-label="Разделы каталога" class="mt-4 flex flex-wrap gap-2">
+				{#each KINDS as k (k.slug)}
+					<a href="/{k.slug}" class="btn btn-ghost btn-sm">{k.title}</a>
+				{/each}
+				<a href="/collections" class="btn btn-ghost btn-sm">Коллекции</a>
+			</nav>
+		</div>
 	</div>
 </section>
 
@@ -72,7 +86,8 @@
 			<h2 id="featured-collections" class="text-xl font-bold">Подборки</h2>
 			<a href="/collections/featured" class="link text-sm link-primary link-hover">Все →</a>
 		</div>
-		<ul class="grid gap-4 sm:grid-cols-2" aria-label="Подборки">
+		<!-- Одна подборка занимает всю ширину: половина пустой сетки выглядит как недогруз. -->
+		<ul class={['grid gap-4', data.featured.length > 1 && 'sm:grid-cols-2']} aria-label="Подборки">
 			{#each data.featured as collection (collection.id)}
 				<li><FeaturedCollectionCard {collection} /></li>
 			{/each}
