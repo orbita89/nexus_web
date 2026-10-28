@@ -34,7 +34,7 @@
 
 	const label = $derived(liked ? 'Убрать отметку «нравится»' : title);
 	const baseCls = $derived(`btn gap-2 btn-${size}`);
-	const activeCls = $derived(red ? 'btn-error' : (liked ? 'btn-primary' : 'btn-ghost'));
+	const activeCls = $derived(red ? 'btn-error' : liked ? 'btn-primary' : 'btn-ghost');
 </script>
 
 {#if session.status === 'guest'}

@@ -49,10 +49,17 @@ export interface CatalogFilters {
 	person?: string;
 	/** Роль человека; без person не используется. */
 	role?: string;
+	/** Slug премии: работы с её наградой или номинацией. */
+	award?: string;
+	/** Год церемонии; без award не используется. */
+	awardYear?: number;
+	/** Только с полученной наградой (не номинацией). */
+	awarded?: boolean;
 }
 
 export function readFilters(url: UrlLike): CatalogFilters {
 	const person = readText(url, 'person');
+	const award = readText(url, 'award');
 	const role = readText(url, 'role');
 	const yearFrom = readYear(url, 'year_from');
 	const yearTo = readYear(url, 'year_to');
@@ -66,7 +73,10 @@ export function readFilters(url: UrlLike): CatalogFilters {
 		yearTo,
 		studio: readText(url, 'studio'),
 		person,
-		role: person && PERSON_ROLES.some((r) => r.value === role) ? role : undefined
+		role: person && PERSON_ROLES.some((r) => r.value === role) ? role : undefined,
+		award,
+		awardYear: award ? readYear(url, 'award_year') : undefined,
+		awarded: url.searchParams.get('awarded') === '1' || undefined
 	};
 }
 
@@ -80,7 +90,17 @@ export function readArchive(url: UrlLike): boolean {
 
 /** Активен хоть один фильтр — показываем «Сбросить». Архив не фильтр: он только добавляет фильмы. */
 export function hasFilters(f: CatalogFilters): boolean {
-	return !!(f.q || f.tag || f.year || f.yearFrom || f.yearTo || f.studio || f.person);
+	return !!(
+		f.q ||
+		f.tag ||
+		f.year ||
+		f.yearFrom ||
+		f.yearTo ||
+		f.studio ||
+		f.person ||
+		f.award ||
+		f.awarded
+	);
 }
 
 /** Порядок выдачи: с текстом — по релевантности или любой из списка, без текста — из списка. */

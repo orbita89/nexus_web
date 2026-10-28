@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { SvelteSet } from 'svelte/reactivity';
 	import { count, formatDate, summary, WORKS_SHOWN } from '#lib/catalog/labels.ts';
+	import Awards from '#lib/components/card/Awards.svelte';
 	import EmptyState from '#lib/components/catalog/EmptyState.svelte';
 	import EntityGrid from '#lib/components/catalog/EntityGrid.svelte';
 	import PersonAvatar from '#lib/components/catalog/PersonAvatar.svelte';
@@ -66,6 +67,11 @@
 		{/if}
 	</div>
 </header>
+
+{#if person.awards.length}
+	<!-- Награды человека: с работой, за которую он номинирован. -->
+	<Awards awards={person.awards} withEntity />
+{/if}
 
 <section aria-labelledby="works-title">
 	<h2 id="works-title" class="mb-6 text-xl font-bold">

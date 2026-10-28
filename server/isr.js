@@ -16,12 +16,15 @@ const gz = promisify(gzip);
  * не попадут `..` и `%2e`. Те же адреса — в location статики deploy/nginx.conf.
  */
 export const STATIC_PAGE =
-	/^(\/(?:films|series|books|games|studios)\/[a-z0-9]+(?:-[a-z0-9]+)*)(\/__data\.json)?$/;
+	/^(\/(?:films|series|books|games|studios)\/[a-z0-9]+(?:-[a-z0-9]+)*|\/awards\/[a-z0-9]+(?:-[a-z0-9]+)*(?:\/\d{4})?)(\/__data\.json)?$/;
 
 /** Раздел в адресе по типу сущности — как KINDS в src/lib/catalog/kinds.ts. */
 const SECTION = { movie: 'films', series: 'series', book: 'books', game: 'games' };
-/** Каталоги статики на диске: разделы карточек и студии (списка студий в API нет — только диск). */
-const STATIC_DIRS = [...Object.values(SECTION), 'studios'];
+/**
+ * Каталоги статики на диске: разделы карточек, студии и награды (списка студий в API нет — только
+ * диск; у наград внутри премии ещё и годы, поэтому обход рекурсивный).
+ */
+const STATIC_DIRS = [...Object.values(SECTION), 'studios', 'awards'];
 /** Сколько страниц рисовать одновременно при пересборке всего: не забить CPU и бэкенд. */
 const ALL_CONCURRENCY = Number(process.env.ISR_CONCURRENCY ?? 8);
 
@@ -134,14 +137,19 @@ export function createIsr({ server, root, origin, backend }) {
 		return paths;
 	}
 
-	/** Адреса страниц (карточек и студий), у которых есть HTML на диске. */
+	/** Адреса страниц (карточек, студий, премий и церемоний), у которых есть HTML на диске. */
 	async function diskPaths() {
 		const paths = [];
 		for (const dir of STATIC_DIRS) {
-			const files = await readdir(join(root, dir)).catch(() => []);
+			const files = await readdir(join(root, dir), { recursive: true, withFileTypes: true }).catch(
+				() => []
+			);
 			for (const file of files) {
-				const path = `/${dir}/${file.slice(0, -'.html'.length)}`;
-				if (file.endsWith('.html') && STATIC_PAGE.test(path)) paths.push(path);
+				if (!file.isFile() || !file.name.endsWith('.html')) continue;
+				// parentPath — каталог файла: у церемонии это build/prerendered/awards/oscar.
+				const inside = join(file.parentPath, file.name).slice(join(root, dir).length);
+				const path = `/${dir}${inside.slice(0, -'.html'.length)}`;
+				if (STATIC_PAGE.test(path)) paths.push(path);
 			}
 		}
 		return paths;

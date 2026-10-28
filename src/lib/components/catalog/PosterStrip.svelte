@@ -86,7 +86,7 @@
 			class="absolute left-3 z-20 flex size-12 -translate-y-1/2 items-center justify-center rounded-xl border-0 bg-white/35 text-xl text-white transition hover:bg-white/50"
 			style="top: {centerY}px"
 			aria-label="Назад"
-			onclick={() => scroll(-1)}>{`<`}</button
+			onclick={() => scroll(-1)}>&lt;</button
 		>
 	{/if}
 	{#if scrollable && !atEnd}
@@ -95,7 +95,7 @@
 			class="absolute right-3 z-20 flex size-12 -translate-y-1/2 items-center justify-center rounded-xl border-0 bg-white/35 text-xl text-white transition hover:bg-white/50"
 			style="top: {centerY}px"
 			aria-label="Вперёд"
-			onclick={() => scroll(1)}>{`>`}</button
+			onclick={() => scroll(1)}>&gt;</button
 		>
 	{/if}
 </div>

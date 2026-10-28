@@ -144,6 +144,21 @@
 			return slug ? studioHref(slug) : null;
 		}
 	);
+	// Название премии для плашки: в адресе только slug. Не нашлась — показываем slug.
+	const awardPage = liveQuery(
+		() => filters.award ?? null,
+		async (slug) => {
+			if (!slug) return null;
+			try {
+				const award = await unwrap(
+					guestApi.catalog.GET('/api/v1/catalog/awards/{slug}', { params: { path: { slug } } })
+				);
+				return award.title;
+			} catch {
+				return null;
+			}
+		}
+	);
 	const chips = $derived.by(() => {
 		const f = filters;
 		const list: Chip[] = [];
@@ -162,6 +177,14 @@
 			const what = selectedTag?.kind === 'genre' ? 'Жанр' : 'Тег';
 			list.push({ label: `${what}: ${selectedTag?.name ?? f.tag}`, remove: { tag: null } });
 		}
+		if (f.award) {
+			const title = awardPage.current?.data ?? f.award;
+			list.push({
+				label: f.awardYear ? `Премия: ${title} ${f.awardYear}` : `Премия: ${title}`,
+				remove: { award: null, award_year: null },
+				href: `/awards/${f.award}${f.awardYear ? `/${f.awardYear}` : ''}`
+			});
+		}
 		const years = yearLabel(f);
 		if (years) list.push({ label: `Год: ${years}`, remove: YEAR_KEYS });
 		return list;
@@ -178,7 +201,7 @@
 	{#if titleField}
 		<form method="GET" action={path} onsubmit={submitTitle} class="flex gap-2" role="search">
 			<!-- Без JS форма уходит обычным GET: остальные фильтры — скрытыми полями. -->
-			{#each ['tag', 'year', 'year_from', 'year_to', 'studio', 'person', 'role', 'archive'] as key (key)}
+			{#each ['tag', 'year', 'year_from', 'year_to', 'studio', 'person', 'role', 'archive', 'award', 'award_year', 'awarded'] as key (key)}
 				{@const value = page.url.searchParams.get(key)}
 				{#if value}<input type="hidden" name={key} {value} />{/if}
 			{/each}
@@ -280,40 +303,49 @@
 		</div>
 	</div>
 
-	{#if archiveField || chips.length}
-		<div class="flex flex-wrap items-center gap-2">
-			{#if archiveField}
-				<label class="label mr-2 cursor-pointer text-sm text-base-content/80">
-					<input
-						type="checkbox"
-						class="checkbox checkbox-sm checkbox-primary"
-						checked={archive}
-						onchange={(e) => apply({ archive: e.currentTarget.checked ? '1' : null })}
-					/>
-					Архив
-				</label>
-			{/if}
-			{#each chips as chip (chip.label)}
-				<span class="badge gap-1 badge-soft py-3 pr-1 badge-primary">
-					{#if chip.href}
-						<a href={chip.href} class="link link-hover" title="Страница студии">{chip.label}</a>
-					{:else}
-						{chip.label}
-					{/if}
-					<button
-						type="button"
-						class="btn btn-circle btn-ghost btn-xs"
-						aria-label="Убрать фильтр {chip.label}"
-						onclick={() => apply(chip.remove)}>✕</button
-					>
-				</span>
-			{/each}
-			{#if active}
-				<a
-					href={titleField ? path : `${path}?q=${encodeURIComponent(filters.q ?? '')}`}
-					class="btn ml-auto btn-ghost btn-sm">Сбросить фильтры</a
+	<!-- Нижняя строка есть всегда: в ней «С наградами», архив, плашки и сброс. -->
+	<div class="flex flex-wrap items-center gap-2">
+		{#if archiveField}
+			<label class="label mr-2 cursor-pointer text-sm text-base-content/80">
+				<input
+					type="checkbox"
+					class="checkbox checkbox-sm checkbox-primary"
+					checked={archive}
+					onchange={(e) => apply({ archive: e.currentTarget.checked ? '1' : null })}
+				/>
+				Архив
+			</label>
+		{/if}
+		<!-- «С наградами» — у работы есть хотя бы одна победа (фасет Meilisearch). -->
+		<label class="label mr-2 cursor-pointer text-sm text-base-content/80">
+			<input
+				type="checkbox"
+				class="checkbox checkbox-sm checkbox-primary"
+				checked={!!filters.awarded}
+				onchange={(e) => apply({ awarded: e.currentTarget.checked ? '1' : null })}
+			/>
+			С наградами
+		</label>
+		{#each chips as chip (chip.label)}
+			<span class="badge gap-1 badge-soft py-3 pr-1 badge-primary">
+				{#if chip.href}
+					<a href={chip.href} class="link link-hover" title="Страница студии">{chip.label}</a>
+				{:else}
+					{chip.label}
+				{/if}
+				<button
+					type="button"
+					class="btn btn-circle btn-ghost btn-xs"
+					aria-label="Убрать фильтр {chip.label}"
+					onclick={() => apply(chip.remove)}>✕</button
 				>
-			{/if}
-		</div>
-	{/if}
+			</span>
+		{/each}
+		{#if active}
+			<a
+				href={titleField ? path : `${path}?q=${encodeURIComponent(filters.q ?? '')}`}
+				class="btn ml-auto btn-ghost btn-sm">Сбросить фильтры</a
+			>
+		{/if}
+	</div>
 </section>

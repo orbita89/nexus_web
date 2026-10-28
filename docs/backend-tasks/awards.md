@@ -22,34 +22,34 @@
 
 ### `awards` — премия
 
-| Колонка       | Тип                               | Примечание                          |
-| ------------- | --------------------------------- | ----------------------------------- |
-| `id`          | uuid                              |                                     |
-| `slug`        | text, unique                      | `oscar`, `the-game-awards`, `hugo`  |
-| `title`       | text                              | «Оскар»                             |
-| `full_title`  | text, null                        | «Премия Американской киноакадемии»  |
-| `kinds`       | text[]                            | `movie`, `series`, `book`, `game`   |
-| `country`     | text, null                        | «США»                               |
-| `founded`     | int, null                         | год учреждения                      |
-| `description` | text, null                        | 1–2 абзаца на страницу премии       |
-| `logo_url`    | text, null                        | логотип/статуэтка                   |
-| `site_url`    | text, null                        | офсайт                              |
-| `position`    | int                               | ручной порядок в списке, крупные выше |
+| Колонка       | Тип          | Примечание                            |
+| ------------- | ------------ | ------------------------------------- |
+| `id`          | uuid         |                                       |
+| `slug`        | text, unique | `oscar`, `the-game-awards`, `hugo`    |
+| `title`       | text         | «Оскар»                               |
+| `full_title`  | text, null   | «Премия Американской киноакадемии»    |
+| `kinds`       | text[]       | `movie`, `series`, `book`, `game`     |
+| `country`     | text, null   | «США»                                 |
+| `founded`     | int, null    | год учреждения                        |
+| `description` | text, null   | 1–2 абзаца на страницу премии         |
+| `logo_url`    | text, null   | логотип/статуэтка                     |
+| `site_url`    | text, null   | офсайт                                |
+| `position`    | int          | ручной порядок в списке, крупные выше |
 
 `kinds` — массив, а не одно значение: у «Золотого глобуса» и фильмы, и сериалы.
 Разделение в UI идёт по нему (вкладки «Фильмы / Сериалы / Книги / Игры»).
 
 ### `award_editions` — церемония (премия + год)
 
-| Колонка    | Тип                          | Примечание                          |
-| ---------- | ---------------------------- | ----------------------------------- |
-| `id`       | uuid                         |                                     |
-| `award_id` | uuid, FK → awards, CASCADE   |                                     |
-| `year`     | int                          | год церемонии, 1880–2100            |
-| `number`   | int, null                    | «96-я церемония»                    |
-| `held_on`  | date, null                   | дата проведения                     |
-| `place`    | text, null                   | «Dolby Theatre, Лос-Анджелес»       |
-| `cover_url`| text, null                   | фон/постер церемонии                |
+| Колонка     | Тип                        | Примечание                    |
+| ----------- | -------------------------- | ----------------------------- |
+| `id`        | uuid                       |                               |
+| `award_id`  | uuid, FK → awards, CASCADE |                               |
+| `year`      | int                        | год церемонии, 1880–2100      |
+| `number`    | int, null                  | «96-я церемония»              |
+| `held_on`   | date, null                 | дата проведения               |
+| `place`     | text, null                 | «Dolby Theatre, Лос-Анджелес» |
+| `cover_url` | text, null                 | фон/постер церемонии          |
 
 Unique `(award_id, year)`. Год церемонии и «год фильмов» часто разные (Оскар 2024 —
 за 2023-й): если это важно, добавьте `season_year int, null`, фронт покажет
@@ -57,13 +57,13 @@ Unique `(award_id, year)`. Год церемонии и «год фильмов�
 
 ### `award_categories` — категория
 
-| Колонка    | Тип                        | Примечание                                  |
-| ---------- | -------------------------- | ------------------------------------------- |
-| `id`       | uuid                       |                                             |
-| `award_id` | uuid, FK → awards, CASCADE | категории принадлежат премии, не церемонии  |
-| `slug`     | text                       | `best-picture`                              |
-| `title`    | text                       | «Лучший фильм»                              |
-| `position` | int                        | порядок на странице церемонии               |
+| Колонка    | Тип                        | Примечание                                 |
+| ---------- | -------------------------- | ------------------------------------------ |
+| `id`       | uuid                       |                                            |
+| `award_id` | uuid, FK → awards, CASCADE | категории принадлежат премии, не церемонии |
+| `slug`     | text                       | `best-picture`                             |
+| `title`    | text                       | «Лучший фильм»                             |
+| `position` | int                        | порядок на странице церемонии              |
 
 Unique `(award_id, slug)`. Категории меняются по годам (появляются, исчезают,
 переименовываются) — поэтому они привязаны к премии, а что именно было в конкретном
@@ -72,17 +72,17 @@ Unique `(award_id, slug)`. Категории меняются по годам (
 
 ### `award_nominations` — номинация
 
-| Колонка       | Тип                                    | Примечание                            |
-| ------------- | -------------------------------------- | ------------------------------------- |
-| `id`          | uuid                                   |                                       |
-| `edition_id`  | uuid, FK → award_editions, CASCADE     |                                       |
-| `category_id` | uuid, FK → award_categories, RESTRICT  |                                       |
-| `entity_id`   | uuid, FK → entities, null              | работа                                |
-| `person_id`   | uuid, FK → people, null                | человек                               |
-| `name`        | text, null                             | если ни того, ни другого нет в базе   |
-| `role`        | text, null                             | «режиссёр», «за роль Оппенгеймера»    |
-| `won`         | bool, default false                    | победитель категории                  |
-| `position`    | int                                    | порядок внутри категории              |
+| Колонка       | Тип                                   | Примечание                          |
+| ------------- | ------------------------------------- | ----------------------------------- |
+| `id`          | uuid                                  |                                     |
+| `edition_id`  | uuid, FK → award_editions, CASCADE    |                                     |
+| `category_id` | uuid, FK → award_categories, RESTRICT |                                     |
+| `entity_id`   | uuid, FK → entities, null             | работа                              |
+| `person_id`   | uuid, FK → people, null               | человек                             |
+| `name`        | text, null                            | если ни того, ни другого нет в базе |
+| `role`        | text, null                            | «режиссёр», «за роль Оппенгеймера»  |
+| `won`         | bool, default false                   | победитель категории                |
+| `position`    | int                                   | порядок внутри категории            |
 
 - Хотя бы одно из `entity_id`, `person_id`, `name` заполнено (CHECK).
 - Актёрские категории — это и работа, и человек сразу: оба FK заполнены, фронт
@@ -115,7 +115,7 @@ Unique `(award_id, slug)`. Категории меняются по годам (
 
 - В `EntityDetail` вместо (или рядом с) нынешних строк `metadata.awards` —
   `awards: EntityAward[]`, где `EntityAward = { award: { slug, title, logo_url },
-  year, category: { slug, title }, role, won }`. Тогда блок «Награды» на карточке
+year, category: { slug, title }, role, won }`. Тогда блок «Награды» на карточке
   станет ссылками на `/awards/oscar/2024`, а не просто текстом.
 - То же поле в профиле человека (`PersonDetail`).
 

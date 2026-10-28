@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { SchemaMetadata } from '#lib/api/generated/catalog.ts';
 import {
 	detectProvider,
 	emptyMetadataForm,
@@ -118,7 +119,8 @@ describe('fromMetadata', () => {
 			awards: [{ title: 'Оскар', year: 2022, won: true }],
 			trivia: ['Факт']
 		};
-		const f = fromMetadata('series', metadata);
+		// awards в контракте описаны схемой премии — метаданные приходят строчками (см. card.ts).
+		const f = fromMetadata('series', metadata as unknown as SchemaMetadata);
 		expect(f.studios).toBe('Legendary\nWarner Bros.');
 		expect(f.awards).toEqual([{ title: 'Оскар', year: '2022', won: true }]);
 		expect(toMetadata('series', f)).toEqual(metadata);

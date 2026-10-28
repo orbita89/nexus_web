@@ -8,6 +8,7 @@
 	import { trailerSources } from '#lib/catalog/trailer.ts';
 	import About from '#lib/components/card/About.svelte';
 	import ActivityFeed from '#lib/components/card/ActivityFeed.svelte';
+	import Awards from '#lib/components/card/Awards.svelte';
 	import AverageRating from '#lib/components/card/AverageRating.svelte';
 	import Hero from '#lib/components/card/Hero.svelte';
 	import MarkButtons from '#lib/components/card/MarkButtons.svelte';
@@ -21,7 +22,7 @@
 	import TagChips from '#lib/components/catalog/TagChips.svelte';
 	import AddToCollection from '#lib/components/social/AddToCollection.svelte';
 	import CardCollections from '#lib/components/social/CardCollections.svelte';
-	
+
 	import WatchButton from '#lib/components/social/WatchButton.svelte';
 	import ChatButton from '#lib/components/chat/ChatButton.svelte';
 	import { useRealtime } from '#lib/realtime/realtime.svelte.ts';
@@ -171,6 +172,11 @@
 		<About {entity} />
 	{/if}
 
+	<!-- Награды — из award_nominations, ссылками на церемонии; пусто — блока нет. -->
+	{#if entity.awards.length}
+		<Awards awards={entity.awards} />
+	{/if}
+
 	<!-- Приквелы, сиквелы, ремейки — только если есть; рекомендации — заглушкой, пока нет API. -->
 	<Related {entity} />
 	<Recommendations slug={entity.slug} />
@@ -184,6 +190,4 @@
 	<ClientSection id="collections" title="В коллекциях" placeholder="h-40">
 		<CardCollections slug={entity.slug} {live} />
 	</ClientSection>
-
-
 {/key}

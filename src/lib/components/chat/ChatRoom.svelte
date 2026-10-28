@@ -6,6 +6,7 @@
 	import { guestApi, session } from '#lib/auth/session.svelte.ts';
 	import { chat } from '#lib/chat/chat.svelte.ts';
 	import { authorName, isSystemRoom, MAX_BODY, shortTime, type RoomMeta } from '#lib/chat/rooms.ts';
+	import type { SchemaEntityKind } from '#lib/api/generated/catalog.ts';
 	import { entityHref } from '#lib/catalog/kinds.ts';
 	import { loginUrl } from '#lib/utils/redirect.ts';
 	import ChatMessage from './ChatMessage.svelte';
@@ -86,7 +87,7 @@
 		let body = text;
 		if (attached.length) {
 			const hrefs = attached
-				.map((e) => entityHref({ kind: e.kind as any, slug: e.slug }))
+				.map((e) => entityHref({ kind: e.kind as SchemaEntityKind, slug: e.slug }))
 				.join(' ');
 			body = text.trim() ? `${text.trim()} ${hrefs}` : hrefs;
 		}

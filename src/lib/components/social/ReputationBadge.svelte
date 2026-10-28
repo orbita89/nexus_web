@@ -72,7 +72,11 @@
 	>
 		<span aria-hidden="true">★</span>
 		<div
-			class={["shrink-0 overflow-hidden rounded-full border border-base-content/20 bg-base-content/10", barH, barW]}
+			class={[
+				'shrink-0 overflow-hidden rounded-full border border-base-content/20 bg-base-content/10',
+				barH,
+				barW
+			]}
 			aria-valuenow={pct}
 			aria-valuemin={0}
 			aria-valuemax={100}
@@ -80,7 +84,7 @@
 		>
 			<div
 				class="h-full shrink-0 transition-colors duration-300"
-				style={`width: ${pct}%; background-color: ${color === "error" ? "#f43f5e" : barColor}`}
+				style={`width: ${pct}%; background-color: ${color === 'error' ? '#f43f5e' : barColor}`}
 			></div>
 		</div>
 		<b class="tabular-nums">{score}</b>

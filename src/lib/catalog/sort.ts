@@ -15,6 +15,7 @@ export const LIST_SORTS: readonly { value: ListSort; title: string }[] = [
 	{ value: 'soon', title: 'Скоро' },
 	{ value: 'popular', title: 'Больше оценок Nexus' },
 	{ value: 'rating', title: 'Оценки Nexus' },
+	{ value: 'awarded', title: 'Больше наград' },
 	{ value: 'title', title: 'По названию' }
 ];
 

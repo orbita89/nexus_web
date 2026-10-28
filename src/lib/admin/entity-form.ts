@@ -3,15 +3,12 @@
 // трейлеров; студии (фильмы, сериалы), награды и факты (все типы) — списки с лимитами. Пустое поле
 // в metadata не попадает.
 import type {
-	SchemaBookMetadata,
 	SchemaEntityKind,
-	SchemaGameMetadata,
 	SchemaMetadata,
-	SchemaMovieMetadata,
-	SchemaSeriesMetadata,
 	SchemaSeriesStatus,
 	SchemaTrailerProvider
 } from '#lib/api/generated/catalog.ts';
+import type { AnyMetadata } from '#lib/catalog/card.ts';
 
 export interface TrailerRow {
 	provider: SchemaTrailerProvider;
@@ -168,10 +165,7 @@ export function toMetadata(kind: SchemaEntityKind, form: MetadataForm): SchemaMe
 export function fromMetadata(kind: SchemaEntityKind, metadata: SchemaMetadata): MetadataForm {
 	const form = emptyMetadataForm();
 	const n = (v: number | null | undefined) => (v == null ? '' : String(v));
-	const m = metadata as SchemaMovieMetadata &
-		SchemaSeriesMetadata &
-		SchemaBookMetadata &
-		SchemaGameMetadata;
+	const m = metadata as AnyMetadata;
 	form.runtime_min = n(m.runtime_min);
 	form.countries = (m.countries ?? []).join(', ');
 	form.age_rating = m.age_rating ?? '';

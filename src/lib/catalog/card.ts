@@ -140,6 +140,19 @@ export interface Production {
 	trivia: string[];
 }
 
+/** Строчка награды в `metadata`: в контракте `awards` ошибочно ссылается на схему премии. */
+export interface MetadataAward {
+	title: string;
+	year?: number | null;
+	won?: boolean;
+}
+
+/** Metadata любого типа работы — поля читаем по наличию. */
+export type AnyMetadata = Omit<
+	SchemaMovieMetadata & SchemaSeriesMetadata & SchemaBookMetadata & SchemaGameMetadata,
+	'awards'
+> & { awards?: MetadataAward[] | null };
+
 /**
  * «Производство и факты»: студии (у фильмов и сериалов — EntityDetail.studios со страницами, у игр —
  * разработчик и издатель, у книг — издательство из metadata), награды, факты. Пустое — null.
@@ -147,10 +160,7 @@ export interface Production {
 export function productionOf(
 	entity: Pick<SchemaEntityDetail, 'kind' | 'metadata' | 'studios'>
 ): Production | null {
-	const m = entity.metadata as SchemaMovieMetadata &
-		SchemaSeriesMetadata &
-		SchemaBookMetadata &
-		SchemaGameMetadata;
+	const m = entity.metadata as AnyMetadata;
 	const plain = (names: (string | null | undefined)[]) =>
 		[...new Set(names.filter((s): s is string => !!s))].map((name) => ({ name }));
 	const studios =

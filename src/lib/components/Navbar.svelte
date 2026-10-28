@@ -13,6 +13,7 @@
 	const catalog = KINDS.map((k) => ({ href: `/${k.slug}`, title: k.title }));
 	const sections = [
 		{ href: '/people', title: 'Люди' },
+		{ href: '/awards', title: 'Награды' },
 		{ href: '/collections', title: 'Коллекции' },
 		{ href: '/feed', title: 'Лента' },
 		{ href: '/forum', title: 'Форум' }

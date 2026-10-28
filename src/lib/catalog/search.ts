@@ -31,6 +31,9 @@ export function searchPage(
 		studio_slug: options.studioSlug,
 		person: f.person,
 		role: f.person ? f.role : undefined,
+		award: f.award,
+		award_year: f.award ? f.awardYear : undefined,
+		awarded: f.awarded,
 		sort: options.sort,
 		limit: options.limit,
 		offset: options.offset

@@ -4,7 +4,7 @@
 	import { plural } from '#lib/catalog/labels.ts';
 	import { canSeeStats } from '#lib/social/profile.ts';
 	import { ProfileViewer } from '#lib/social/profile-viewer.svelte.ts';
-	import { displayName, reviewDate } from '#lib/social/reviews.ts';
+	import { displayName } from '#lib/social/reviews.ts';
 	import Avatar from '#lib/components/Avatar.svelte';
 	import FollowButton from '#lib/components/social/FollowButton.svelte';
 	import LikeButton from '#lib/components/social/LikeButton.svelte';

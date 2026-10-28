@@ -51,6 +51,146 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/catalog/admin/awards': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Завести премию. */
+		post: operations['create_award'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/admin/awards/nominations/{id}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		post?: never;
+		/** Удалить одну номинацию. */
+		delete: operations['delete_award_nomination'];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/admin/awards/{slug}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		post?: never;
+		/** Удалить премию вместе с церемониями, категориями и номинациями. */
+		delete: operations['delete_award'];
+		options?: never;
+		head?: never;
+		/** Поправить премию. */
+		patch: operations['update_award'];
+		trace?: never;
+	};
+	'/api/v1/catalog/admin/awards/{slug}/categories': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Завести категорию премии. */
+		post: operations['create_award_category'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/admin/awards/{slug}/categories/{category_slug}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		post?: never;
+		/** Удалить категорию. С номинациями — 409: сначала разобрать их. */
+		delete: operations['delete_award_category'];
+		options?: never;
+		head?: never;
+		/** Переименовать категорию или сменить порядок. */
+		patch: operations['update_award_category'];
+		trace?: never;
+	};
+	'/api/v1/catalog/admin/awards/{slug}/editions': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Завести церемонию. */
+		post: operations['create_award_edition'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/admin/awards/{slug}/editions/{year}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		post?: never;
+		/** Удалить церемонию вместе с её номинациями. */
+		delete: operations['delete_award_edition'];
+		options?: never;
+		head?: never;
+		/** Поправить церемонию. */
+		patch: operations['update_award_edition'];
+		trace?: never;
+	};
+	'/api/v1/catalog/admin/awards/{slug}/{year}/nominations': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/** Заменить номинации церемонии целиком — основной путь импорта. */
+		put: operations['put_award_nominations'];
+		/** Добавить одну номинацию — точечная правка поверх импорта. */
+		post: operations['create_award_nomination'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/catalog/admin/banners': {
 		parameters: {
 			query?: never;
@@ -553,6 +693,57 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/catalog/awards': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Список премий: ручной порядок, затем алфавит. `?kind=` — вкладки раздела. */
+		get: operations['list_awards'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/awards/{slug}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Премия и её церемонии: по ним выбирают год. */
+		get: operations['get_award'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/awards/{slug}/{year}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Церемония: категории по порядку, в каждой победители первыми. */
+		get: operations['get_award_edition'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/catalog/banners': {
 		parameters: {
 			query?: never;
@@ -697,11 +888,13 @@ export interface paths {
 		 *     поиск на сайте идёт сюда (в `GET /entities` поиска по названию нет).
 		 * @description Фильтры (через AND): `kind`, `tag`, год (`year` — ровно, `year_from` / `year_to` — диапазон
 		 *     включительно), `studio` (точное название, без учёта регистра), `person` (slug участника) и
-		 *     `role` (его роль в этой сущности; без `person` — 400).
+		 *     `role` (его роль в этой сущности; без `person` — 400), `award` (slug премии), `award_year`
+		 *     (год церемонии) и `awarded` (только с наградой).
 		 *
 		 *     Сортировка по релевантности; `sort=recommended` / `trending` / `top_rated` — по баллу
 		 *     «Рекомендуемые», TMDB popularity, рейтингу IMDb (у кого значения нет — в конце); `new` — только
-		 *     вышедшие, новые сверху; `soon` — только не вышедшие, ближайшие сверху; `title` — по названию.
+		 *     вышедшие, новые сверху; `soon` — только не вышедшие, ближайшие сверху; `title` — по названию;
+		 *     `awarded` — больше наград сверху.
 		 *
 		 *     Индекс обновляется после изменений в админке с задержкой в доли секунды.
 		 */
@@ -908,21 +1101,133 @@ export interface components {
 			 */
 			total: number;
 		};
-		/** @description Награда или номинация. */
+		/** @description Премия целиком (строка `awards`). */
 		Award: {
-			/**
-			 * @description 1–200 символов.
-			 * @example «Оскар» за лучшую операторскую работу
-			 */
-			title: string;
-			/** @description `true` — получена, `false` — номинация. По умолчанию `false`. */
-			won?: boolean;
+			/** @example США */
+			country?: string | null;
+			description?: string | null;
 			/**
 			 * Format: int32
-			 * @description 1880–2100; `null` — год неизвестен.
-			 * @example 2022
+			 * @example 1929
 			 */
-			year?: number | null;
+			founded?: number | null;
+			/** @example Премия Американской киноакадемии */
+			full_title?: string | null;
+			/** Format: uuid */
+			id: string;
+			/**
+			 * @description Типы работ премии: по ним вкладки раздела. У «Золотого глобуса» — `movie` и `series`.
+			 * @example [
+			 *       "movie"
+			 *     ]
+			 */
+			kinds: string[];
+			logo_url?: string | null;
+			/**
+			 * Format: int32
+			 * @description Ручной порядок в списке: крупные премии выше.
+			 */
+			position: number;
+			site_url?: string | null;
+			/** @example oscar */
+			slug: string;
+			/** @example Оскар */
+			title: string;
+		};
+		/** @description Категория церемонии: номинации уже отсортированы, победители первыми. */
+		AwardCategory: {
+			nominations: components['schemas']['Nomination'][];
+			/** Format: int32 */
+			position: number;
+			/** @example best-picture */
+			slug: string;
+			/** @example Лучший фильм */
+			title: string;
+		};
+		/** @description Категория в ссылке с карточки. */
+		AwardCategoryRef: {
+			/** @example best-picture */
+			slug: string;
+			/** @example Лучший фильм */
+			title: string;
+		};
+		/** @description Страница премии: она сама и её церемонии, новые сверху. */
+		AwardDetail: components['schemas']['Award'] & {
+			editions: components['schemas']['AwardEditionBrief'][];
+		};
+		/** @description Церемония в сетке годов на странице премии. */
+		AwardEditionBrief: {
+			cover_url?: string | null;
+			/** Format: date */
+			held_on?: string | null;
+			/**
+			 * Format: int64
+			 * @example 121
+			 */
+			nominations_count: number;
+			/**
+			 * Format: int32
+			 * @example 96
+			 */
+			number?: number | null;
+			/**
+			 * Format: int32
+			 * @description Год работ, если он отличается от года церемонии: «Оскар 2024 — за 2023-й».
+			 * @example 2023
+			 */
+			season_year?: number | null;
+			/** @description 3–5 победителей главной (первой по порядку) категории — превью на плитке года. */
+			top: components['schemas']['EntitySummary'][];
+			/**
+			 * Format: int32
+			 * @example 2024
+			 */
+			year: number;
+		};
+		/** @description Церемония целиком: категории и номинации. */
+		AwardEditionDetail: {
+			award: components['schemas']['AwardRef'];
+			categories: components['schemas']['AwardCategory'][];
+			cover_url?: string | null;
+			/** Format: date */
+			held_on?: string | null;
+			/** Format: int32 */
+			number?: number | null;
+			/** @example Dolby Theatre, Лос-Анджелес */
+			place?: string | null;
+			/** Format: int32 */
+			season_year?: number | null;
+			/**
+			 * Format: int32
+			 * @example 2024
+			 */
+			year: number;
+		};
+		/** @description Премия в списке раздела: на плитке пишут «1929–2024» и число церемоний. */
+		AwardListItem: components['schemas']['Award'] & {
+			/**
+			 * Format: int64
+			 * @example 96
+			 */
+			editions_count: number;
+			/**
+			 * Format: int32
+			 * @example 1929
+			 */
+			first_year?: number | null;
+			/**
+			 * Format: int32
+			 * @example 2024
+			 */
+			latest_year?: number | null;
+		};
+		/** @description Премия в ссылке с карточки работы или человека. */
+		AwardRef: {
+			logo_url?: string | null;
+			/** @example oscar */
+			slug: string;
+			/** @example Оскар */
+			title: string;
 		};
 		Banner: {
 			buttons: components['schemas']['BannerButton'][];
@@ -1036,6 +1341,34 @@ export interface components {
 		};
 		/** @enum {string} */
 		ButtonStyle: 'primary' | 'secondary' | 'ghost';
+		/** @description Категория церемонии целиком — тело `PUT .../nominations`. */
+		CategoryNominations: {
+			nominations: components['schemas']['NominationInput'][];
+			/** Format: int32 */
+			position?: number | null;
+			/** @example best-picture */
+			slug: string;
+			/** @description Название: с ним категория, которой у премии ещё нет, заводится на месте (путь импорта). */
+			title?: string | null;
+		};
+		/** @description Новая премия. */
+		CreateAward: {
+			country?: string | null;
+			description?: string | null;
+			/** Format: int32 */
+			founded?: number | null;
+			full_title?: string | null;
+			/** @description Типы работ премии: вкладки раздела. Пустой список — премия не попадёт ни на одну вкладку. */
+			kinds?: components['schemas']['EntityKind'][];
+			logo_url?: string | null;
+			/** Format: int32 */
+			position?: number;
+			site_url?: string | null;
+			/** @example oscar */
+			slug: string;
+			/** @example Оскар */
+			title: string;
+		};
 		CreateBanner: {
 			/** @description 0..3. */
 			buttons?: components['schemas']['BannerButton'][];
@@ -1072,6 +1405,31 @@ export interface components {
 			targets?: components['schemas']['BannerTarget'][] | null;
 			theme?: string | null;
 			title: string;
+		};
+		/** @description Новая категория премии. */
+		CreateCategory: {
+			/** Format: int32 */
+			position?: number;
+			/** @example best-picture */
+			slug: string;
+			/** @example Лучший фильм */
+			title: string;
+		};
+		/** @description Церемония: год задаётся в пути при правке и в теле при создании. */
+		CreateEdition: {
+			cover_url?: string | null;
+			/** Format: date */
+			held_on?: string | null;
+			/** Format: int32 */
+			number?: number | null;
+			place?: string | null;
+			/** Format: int32 */
+			season_year?: number | null;
+			/**
+			 * Format: int32
+			 * @example 2024
+			 */
+			year: number;
 		};
 		CreateEntity: {
 			/** @description Видна на сайте. По умолчанию `true`. */
@@ -1212,6 +1570,19 @@ export interface components {
 			 */
 			visible: boolean;
 		};
+		/** @description Награда на карточке работы или в профиле человека — ссылкой на церемонию. */
+		EntityAward: {
+			award: components['schemas']['AwardRef'];
+			category: components['schemas']['AwardCategoryRef'];
+			entity?: components['schemas']['EntitySummary'] | null;
+			role?: string | null;
+			won: boolean;
+			/**
+			 * Format: int32
+			 * @example 2024
+			 */
+			year: number;
+		};
 		/** @description Участие человека в сущности (строка `entity_credits` + человек). */
 		EntityCredit: {
 			/** @example Пол Атрейдес */
@@ -1229,6 +1600,12 @@ export interface components {
 		};
 		/** @description Карточка: сущность, теги, участники в порядке титров и связанные произведения. */
 		EntityDetail: components['schemas']['Entity'] & {
+			/**
+			 * @description Награды и номинации работы (`award_nominations`): полученные сверху, затем по годам
+			 *     (новые первыми), со ссылкой на церемонию. Плоские строчки `metadata.awards` остаются в
+			 *     `metadata` — они наполняют блок «Производство и факты», пока контент не переехал.
+			 */
+			awards: components['schemas']['EntityAward'][];
 			credits: components['schemas']['EntityCredit'][];
 			related: components['schemas']['RelatedWork'][];
 			/**
@@ -1447,6 +1824,41 @@ export interface components {
 			 */
 			trivia?: string[] | null;
 		};
+		/** @description Номинация: работа и человек сразу (актёрская категория), либо просто имя. */
+		Nomination: {
+			entity?: components['schemas']['EntitySummary'] | null;
+			/** Format: uuid */
+			id: string;
+			/**
+			 * @description Кого/что номинировали, если ни работы, ни человека в каталоге нет.
+			 * @example Pixar
+			 */
+			name?: string | null;
+			person?: components['schemas']['PersonSummary'] | null;
+			/** @example режиссёр */
+			role?: string | null;
+			/** @description Название категории в этот год, если оно отличалось от нынешнего. */
+			title_override?: string | null;
+			won: boolean;
+		};
+		/** @description Номинация в теле запроса: работа и человек — по slug (ссылки импорта) или по id. */
+		NominationInput: {
+			/** Format: uuid */
+			entity_id?: string | null;
+			/** @example oppenheimer-2023 */
+			entity_slug?: string | null;
+			/** @description Кого/что номинировали, если в каталоге этого нет. */
+			name?: string | null;
+			/** Format: uuid */
+			person_id?: string | null;
+			person_slug?: string | null;
+			/** Format: int32 */
+			position?: number;
+			/** @example режиссёр */
+			role?: string | null;
+			title_override?: string | null;
+			won?: boolean;
+		};
 		/** @description Страница списка. */
 		Page_AdminEntitySummary: {
 			items: (components['schemas']['EntitySummary'] & {
@@ -1506,6 +1918,42 @@ export interface components {
 				 */
 				tmdb_id?: number | null;
 			}[];
+			/**
+			 * Format: int64
+			 * @example 20
+			 */
+			limit: number;
+			/**
+			 * Format: int64
+			 * @example 0
+			 */
+			offset: number;
+			/**
+			 * Format: int64
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @example 137
+			 */
+			total: number;
+		};
+		/** @description Страница списка. */
+		Page_AwardListItem: {
+			items: (components['schemas']['Award'] & {
+				/**
+				 * Format: int64
+				 * @example 96
+				 */
+				editions_count: number;
+				/**
+				 * Format: int32
+				 * @example 1929
+				 */
+				first_year?: number | null;
+				/**
+				 * Format: int32
+				 * @example 2024
+				 */
+				latest_year?: number | null;
+			})[];
 			/**
 			 * Format: int64
 			 * @example 20
@@ -1737,6 +2185,8 @@ export interface components {
 		};
 		/** @description Человек и его фильмография (новые работы сверху). */
 		PersonDetail: components['schemas']['Person'] & {
+			/** @description Награды и номинации человека: с работой, за которую он номинирован. */
+			awards: components['schemas']['EntityAward'][];
 			credits: components['schemas']['PersonCredit'][];
 			/** @description Лайкнул ли его вошедший. Гостю — `false`. */
 			liked: boolean;
@@ -1807,6 +2257,10 @@ export interface components {
 			 * @example 100000
 			 */
 			total: number;
+		};
+		/** @description Церемония целиком: прежние номинации заменяются этими. */
+		PutNominations: {
+			categories: components['schemas']['CategoryNominations'][];
 		};
 		/** @description Связать сущность с другой. */
 		PutRelation: {
@@ -1946,7 +2400,15 @@ export interface components {
 		 * @enum {string}
 		 */
 		SearchSort:
-			'recommended' | 'trending' | 'top_rated' | 'new' | 'soon' | 'title' | 'popular' | 'rating';
+			| 'recommended'
+			| 'trending'
+			| 'top_rated'
+			| 'new'
+			| 'soon'
+			| 'title'
+			| 'popular'
+			| 'rating'
+			| 'awarded';
 		/** @description Поля сериала. */
 		SeriesMetadata: {
 			/** @description Награды и номинации: до 50. */
@@ -2161,6 +2623,21 @@ export interface components {
 			id: string;
 			provider: components['schemas']['TrailerProvider'];
 		};
+		/** @description Правка премии: переданные поля, `null` — стереть. */
+		UpdateAward: {
+			country?: string | null;
+			description?: string | null;
+			/** Format: int32 */
+			founded?: number | null;
+			full_title?: string | null;
+			kinds?: components['schemas']['EntityKind'][] | null;
+			logo_url?: string | null;
+			/** Format: int32 */
+			position?: number | null;
+			site_url?: string | null;
+			slug?: string | null;
+			title?: string | null;
+		};
 		/**
 		 * @description Переданные поля заменяются (массивы `slides`, `buttons`, `targets`, `exclude_paths` —
 		 *     целиком), `null` очищает необязательное.
@@ -2189,6 +2666,24 @@ export interface components {
 			targets?: components['schemas']['BannerTarget'][] | null;
 			theme?: string | null;
 			title?: string | null;
+		};
+		/** @description Правка категории. */
+		UpdateCategory: {
+			/** Format: int32 */
+			position?: number | null;
+			slug?: string | null;
+			title?: string | null;
+		};
+		/** @description Правка церемонии. */
+		UpdateEdition: {
+			cover_url?: string | null;
+			/** Format: date */
+			held_on?: string | null;
+			/** Format: int32 */
+			number?: number | null;
+			place?: string | null;
+			/** Format: int32 */
+			season_year?: number | null;
 		};
 		/**
 		 * @description Изменение сущности: переданные поля заменяются, `null` очищает необязательное поле.
@@ -2237,6 +2732,13 @@ export type SchemaAdminEntitySummary = components['schemas']['AdminEntitySummary
 export type SchemaArchiveDoc = components['schemas']['ArchiveDoc'];
 export type SchemaArchiveStats = components['schemas']['ArchiveStats'];
 export type SchemaAward = components['schemas']['Award'];
+export type SchemaAwardCategory = components['schemas']['AwardCategory'];
+export type SchemaAwardCategoryRef = components['schemas']['AwardCategoryRef'];
+export type SchemaAwardDetail = components['schemas']['AwardDetail'];
+export type SchemaAwardEditionBrief = components['schemas']['AwardEditionBrief'];
+export type SchemaAwardEditionDetail = components['schemas']['AwardEditionDetail'];
+export type SchemaAwardListItem = components['schemas']['AwardListItem'];
+export type SchemaAwardRef = components['schemas']['AwardRef'];
 export type SchemaBanner = components['schemas']['Banner'];
 export type SchemaBannerButton = components['schemas']['BannerButton'];
 export type SchemaBannerKind = components['schemas']['BannerKind'];
@@ -2244,7 +2746,11 @@ export type SchemaBannerSlide = components['schemas']['BannerSlide'];
 export type SchemaBannerTarget = components['schemas']['BannerTarget'];
 export type SchemaBookMetadata = components['schemas']['BookMetadata'];
 export type SchemaButtonStyle = components['schemas']['ButtonStyle'];
+export type SchemaCategoryNominations = components['schemas']['CategoryNominations'];
+export type SchemaCreateAward = components['schemas']['CreateAward'];
 export type SchemaCreateBanner = components['schemas']['CreateBanner'];
+export type SchemaCreateCategory = components['schemas']['CreateCategory'];
+export type SchemaCreateEdition = components['schemas']['CreateEdition'];
 export type SchemaCreateEntity = components['schemas']['CreateEntity'];
 export type SchemaCreatePerson = components['schemas']['CreatePerson'];
 export type SchemaCreateTag = components['schemas']['CreateTag'];
@@ -2254,6 +2760,7 @@ export type SchemaDemoteSkip = components['schemas']['DemoteSkip'];
 export type SchemaDemoteSkipReason = components['schemas']['DemoteSkipReason'];
 export type SchemaDoneEvent = components['schemas']['DoneEvent'];
 export type SchemaEntity = components['schemas']['Entity'];
+export type SchemaEntityAward = components['schemas']['EntityAward'];
 export type SchemaEntityCredit = components['schemas']['EntityCredit'];
 export type SchemaEntityDetail = components['schemas']['EntityDetail'];
 export type SchemaEntityKind = components['schemas']['EntityKind'];
@@ -2266,8 +2773,11 @@ export type SchemaLibgenFile = components['schemas']['LibgenFile'];
 export type SchemaLibgenSource = components['schemas']['LibgenSource'];
 export type SchemaMetadata = components['schemas']['Metadata'];
 export type SchemaMovieMetadata = components['schemas']['MovieMetadata'];
+export type SchemaNomination = components['schemas']['Nomination'];
+export type SchemaNominationInput = components['schemas']['NominationInput'];
 export type SchemaPageAdminEntitySummary = components['schemas']['Page_AdminEntitySummary'];
 export type SchemaPageArchiveDoc = components['schemas']['Page_ArchiveDoc'];
+export type SchemaPageAwardListItem = components['schemas']['Page_AwardListItem'];
 export type SchemaPageBanner = components['schemas']['Page_Banner'];
 export type SchemaPageEntitySummary = components['schemas']['Page_EntitySummary'];
 export type SchemaPagePersonHit = components['schemas']['Page_PersonHit'];
@@ -2280,6 +2790,7 @@ export type SchemaPersonRef = components['schemas']['PersonRef'];
 export type SchemaPersonSummary = components['schemas']['PersonSummary'];
 export type SchemaPlannedStep = components['schemas']['PlannedStep'];
 export type SchemaProgressEvent = components['schemas']['ProgressEvent'];
+export type SchemaPutNominations = components['schemas']['PutNominations'];
 export type SchemaPutRelation = components['schemas']['PutRelation'];
 export type SchemaRankPreviewRow = components['schemas']['RankPreviewRow'];
 export type SchemaRankingSettings = components['schemas']['RankingSettings'];
@@ -2303,7 +2814,10 @@ export type SchemaTagKind = components['schemas']['TagKind'];
 export type SchemaTagWithCount = components['schemas']['TagWithCount'];
 export type SchemaTrailerProvider = components['schemas']['TrailerProvider'];
 export type SchemaTrailerSource = components['schemas']['TrailerSource'];
+export type SchemaUpdateAward = components['schemas']['UpdateAward'];
 export type SchemaUpdateBanner = components['schemas']['UpdateBanner'];
+export type SchemaUpdateCategory = components['schemas']['UpdateCategory'];
+export type SchemaUpdateEdition = components['schemas']['UpdateEdition'];
 export type SchemaUpdateEntity = components['schemas']['UpdateEntity'];
 export type SchemaUpdatePerson = components['schemas']['UpdatePerson'];
 export type SchemaUpdateTag = components['schemas']['UpdateTag'];
@@ -2437,6 +2951,822 @@ export interface operations {
 			};
 			/** @description Архив не настроен или недоступен */
 			503: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	create_award: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['CreateAward'];
+			};
+		};
+		responses: {
+			/** @description Создана */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Award'];
+				};
+			};
+			/** @description Неверные поля */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description slug занят */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	delete_award_nomination: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description id номинации */
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Удалена */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такой номинации */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	delete_award: {
+		parameters: {
+			query?: {
+				/** @description Без него премия с номинациями не удаляется (409). */
+				force?: boolean;
+			};
+			header?: never;
+			path: {
+				/**
+				 * @description slug премии
+				 * @example oscar
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Удалена */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такой премии */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Есть номинации, нужен ?force=true */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	update_award: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug премии
+				 * @example oscar
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['UpdateAward'];
+			};
+		};
+		responses: {
+			/** @description Изменена */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Award'];
+				};
+			};
+			/** @description Неверные поля */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такой премии */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description slug занят */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	create_award_category: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug премии
+				 * @example oscar
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['CreateCategory'];
+			};
+		};
+		responses: {
+			/** @description Создана */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['CreateCategory'];
+				};
+			};
+			/** @description Неверные поля */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такой премии */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description slug категории занят */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	delete_award_category: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug премии
+				 * @example oscar
+				 */
+				slug: string;
+				/**
+				 * @description slug категории
+				 * @example best-picture
+				 */
+				category_slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Удалена */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такой категории */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description В категории есть номинации */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	update_award_category: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug премии
+				 * @example oscar
+				 */
+				slug: string;
+				/**
+				 * @description slug категории
+				 * @example best-picture
+				 */
+				category_slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['UpdateCategory'];
+			};
+		};
+		responses: {
+			/** @description Изменена */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['CreateCategory'];
+				};
+			};
+			/** @description Неверные поля */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такой категории */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description slug категории занят */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	create_award_edition: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug премии
+				 * @example oscar
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['CreateEdition'];
+			};
+		};
+		responses: {
+			/** @description Создана */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['AwardEditionDetail'];
+				};
+			};
+			/** @description Неверные поля */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такой премии */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Церемония этого года уже есть */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	delete_award_edition: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug премии
+				 * @example oscar
+				 */
+				slug: string;
+				/**
+				 * @description год церемонии
+				 * @example 2024
+				 */
+				year: number;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Удалена */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такой церемонии */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	update_award_edition: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug премии
+				 * @example oscar
+				 */
+				slug: string;
+				/**
+				 * @description год церемонии
+				 * @example 2024
+				 */
+				year: number;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['UpdateEdition'];
+			};
+		};
+		responses: {
+			/** @description Изменена */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['AwardEditionDetail'];
+				};
+			};
+			/** @description Неверные поля */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такой церемонии */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	put_award_nominations: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug премии
+				 * @example oscar
+				 */
+				slug: string;
+				/**
+				 * @description год церемонии
+				 * @example 2024
+				 */
+				year: number;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['PutNominations'];
+			};
+		};
+		responses: {
+			/** @description Церемония заменена */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['AwardEditionDetail'];
+				};
+			};
+			/** @description Неверные поля или неизвестный slug */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такой церемонии */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	create_award_nomination: {
+		parameters: {
+			query: {
+				/**
+				 * @description slug категории
+				 * @example best-picture
+				 */
+				category: string;
+			};
+			header?: never;
+			path: {
+				/**
+				 * @description slug премии
+				 * @example oscar
+				 */
+				slug: string;
+				/**
+				 * @description год церемонии
+				 * @example 2024
+				 */
+				year: number;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['NominationInput'];
+			};
+		};
+		responses: {
+			/** @description Создана */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['AwardEditionDetail'];
+				};
+			};
+			/** @description Неверные поля */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такой церемонии или категории */
+			404: {
 				headers: {
 					[name: string]: unknown;
 				};
@@ -4237,6 +5567,119 @@ export interface operations {
 			};
 		};
 	};
+	list_awards: {
+		parameters: {
+			query?: {
+				/** @description Вкладка раздела: только премии этого типа работ. */
+				kind?: components['schemas']['EntityKind'];
+				/** @description Поиск по названию (полному тоже). */
+				q?: string;
+				/** @description 1–100, по умолчанию 20. */
+				limit?: number;
+				/** @description С 0. */
+				offset?: number;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Страница премий */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Page_AwardListItem'];
+				};
+			};
+			/** @description Неверный параметр */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	get_award: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug премии
+				 * @example oscar
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Премия с церемониями */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['AwardDetail'];
+				};
+			};
+			/** @description Нет такой премии */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	get_award_edition: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug премии
+				 * @example oscar
+				 */
+				slug: string;
+				/**
+				 * @description год церемонии
+				 * @example 2024
+				 */
+				year: number;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Церемония */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['AwardEditionDetail'];
+				};
+			};
+			/** @description Нет такой премии или года */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
 	list_banners: {
 		parameters: {
 			query?: {
@@ -4551,6 +5994,18 @@ export interface operations {
 				 * @example director
 				 */
 				role?: string;
+				/**
+				 * @description Slug премии (`GET /awards/{slug}`): работы с её наградой или номинацией.
+				 * @example oscar
+				 */
+				award?: string;
+				/**
+				 * @description Год церемонии: вместе с `award` — «лауреаты и номинанты „Оскара“ 2024».
+				 * @example 2024
+				 */
+				award_year?: number;
+				/** @description `true` — только полученные награды (у работы есть хотя бы одна победа). */
+				awarded?: boolean;
 				/** @description 1–100, по умолчанию 20. */
 				limit?: number;
 				/** @description С 0. */

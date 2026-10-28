@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { unwrap } from '#lib/api/errors.ts';
 	import { guestApi } from '#lib/auth/session.svelte.ts';
-	import { entityHref, KINDS } from '#lib/catalog/kinds.ts';
+	import { KINDS } from '#lib/catalog/kinds.ts';
 	import { yearOf } from '#lib/catalog/labels.ts';
 	import type { PickedEntity } from '#lib/components/social/EntityPicker.svelte';
 
 	// Поиск карточки для вставки в сообщение. Только Meilisearch: в GET /entities поиска нет.
-	let { onpick, onclose }: { onpick: (entity: PickedEntity) => void; onclose: () => void } = $props();
+	let { onpick, onclose }: { onpick: (entity: PickedEntity) => void; onclose: () => void } =
+		$props();
 
 	let query = $state('');
 	let results = $state<PickedEntity[]>([]);
@@ -77,8 +78,7 @@
 					<button
 						type="button"
 						class="w-full truncate rounded px-2 py-1 text-left text-xs hover:bg-base-100"
-						onclick={() => onpick(entity)}
-						>{label(entity)}</button
+						onclick={() => onpick(entity)}>{label(entity)}</button
 					>
 				</li>
 			{/each}

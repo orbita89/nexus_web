@@ -143,7 +143,7 @@
 		// страницы в +layout.svelte), а не 100vw: справа закреплена панель чата, и по 100vw шапка
 		// уезжала бы влево на половину её ширины, обрезая название и кнопки. В полном экране сдвиг
 		// снимаем: иначе браузер ставит элемент в 0,0, а translate уводит половину плеера за край.
-		fullscreen ? 'h-screen w-screen' : 'w-[100cqw] left-1/2 -mt-6 mb-8 -translate-x-1/2'
+		fullscreen ? 'h-screen w-screen' : 'left-1/2 -mt-6 mb-8 w-[100cqw] -translate-x-1/2'
 	]}
 	aria-label="Шапка: {title}"
 >
