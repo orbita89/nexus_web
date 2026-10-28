@@ -10,6 +10,8 @@
 		parseBody,
 		stripEntityLinks
 	} from '#lib/chat/rooms.ts';
+	import type { SchemaEntityKind } from '#lib/api/generated/catalog.ts';
+	import { entityHref } from '#lib/catalog/kinds.ts';
 	import Avatar from '#lib/components/Avatar.svelte';
 	import MessageCard from './MessageCard.svelte';
 
@@ -65,6 +67,14 @@
 
 	let editing = $state(false);
 	let draft = $state('');
+	/** Прикреплённые карточки правим постерами с крестиком, а не сырыми ссылками в тексте. */
+	let editCards = $state<{ kind: SchemaEntityKind; slug: string }[]>([]);
+
+	function startEdit() {
+		draft = text;
+		editCards = [...cards];
+		editing = true;
+	}
 	let error = $state('');
 	let busy = $state(false);
 
@@ -81,7 +91,8 @@
 		busy = true;
 		error = '';
 		try {
-			await chat.edit(item.id, draft);
+			const hrefs = editCards.map((link) => entityHref(link));
+			await chat.edit(item.id, [draft.trim(), ...hrefs].filter(Boolean).join(' '));
 			editing = false;
 		} catch (e) {
 			error = errorMessage(e);
@@ -201,8 +212,26 @@
 							void save();
 						}
 					}}></textarea>
+				{#if editCards.length}
+					<div class="mt-1 flex flex-wrap gap-2">
+						{#each editCards as link, i (link.kind + link.slug)}
+							<div class="relative inline-block">
+								<MessageCard {link} compact />
+								<button
+									type="button"
+									class="btn absolute -top-1 -right-1 btn-circle bg-base-100 btn-ghost btn-xs"
+									aria-label="Убрать карточку"
+									onclick={() => (editCards = editCards.filter((_, j) => j !== i))}>✕</button
+								>
+							</div>
+						{/each}
+					</div>
+				{/if}
 				<div class="mt-1 flex gap-2">
-					<button class="btn btn-primary btn-xs" disabled={busy || !draft.trim()}>Сохранить</button>
+					<button
+						class="btn btn-primary btn-xs"
+						disabled={busy || (!draft.trim() && !editCards.length)}>Сохранить</button
+					>
 					<button type="button" class="btn btn-ghost btn-xs" onclick={() => (editing = false)}
 						>Отмена</button
 					>
@@ -291,10 +320,7 @@
 					class="btn btn-ghost btn-xs"
 					title="Изменить"
 					aria-label="Изменить"
-					onclick={() => {
-						draft = item.body ?? '';
-						editing = true;
-					}}>✎</button
+					onclick={startEdit}>✎</button
 				>
 			{/if}
 			{#if canDelete}
@@ -317,22 +343,22 @@
 		bottom: 0;
 		width: 0;
 		height: 0;
-		border-top: 22px solid transparent;
+		border-top: 14px solid transparent;
 	}
 	.mine {
 		background: #2b5278;
 		border-bottom-right-radius: 3px;
 	}
 	.mine::after {
-		right: -11px;
-		border-left: 12px solid #2b5278;
+		right: -7px;
+		border-left: 8px solid #2b5278;
 	}
 	.theirs {
 		background: #182533;
 		border-bottom-left-radius: 3px;
 	}
 	.theirs::after {
-		left: -11px;
-		border-right: 12px solid #182533;
+		left: -7px;
+		border-right: 8px solid #182533;
 	}
 </style>

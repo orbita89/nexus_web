@@ -7,7 +7,11 @@
 
 	// Превью карточки под сообщением: ссылку нашли в тексте, саму карточку грузим по слагу.
 	// Не нашли — не показываем ничего, в сообщении остаётся ссылка.
-	let { link }: { link: { kind: SchemaEntityKind; slug: string } } = $props();
+	// compact — только постер (в режиме правки рядом с крестиком).
+	let {
+		link,
+		compact = false
+	}: { link: { kind: SchemaEntityKind; slug: string }; compact?: boolean } = $props();
 
 	let entity = $state<CardPreview | null>(null);
 	let loading = $state(true);
@@ -23,7 +27,16 @@
 	});
 </script>
 
-{#if loading}
+{#if compact}
+	<span class="block w-10">
+		<Poster
+			title={entity?.title ?? link.slug}
+			kind={entity?.kind ?? link.kind}
+			coverUrl={entity?.cover_url}
+			small
+		/>
+	</span>
+{:else if loading}
 	<span class="mt-1 flex items-center gap-2 rounded-box bg-base-300/40 p-1.5">
 		<span class="h-12 w-8 shrink-0 skeleton rounded"></span>
 		<span class="h-4 flex-1 skeleton"></span>
