@@ -22,21 +22,28 @@
 <!-- Первый экран во всю ширину окна: выходит из колонки main (100cqw — ширина страницы
      без панели чата) и подтягивается под шапку. -->
 <section
-	class="relative mx-[calc(50%-50cqw)] -mt-[5.5rem] mb-10 flex min-h-[32rem] w-[100cqw] flex-col justify-center overflow-hidden bg-base-100 pt-[9rem] pb-16 sm:min-h-[44rem]"
+	class="relative mx-[calc(50%-50cqw)] -mt-[5.5rem] mb-10 flex min-h-[32rem] w-[100cqw] flex-col justify-center pt-[9rem] pb-16 sm:min-h-[44rem]"
 >
 	<!-- «Кассандра» Эвелин де Морган в неоновой инверсии: одна картина во всю ширину первого
-	     экрана, без размытых полей по бокам. Гаснет только к низу — в фон сайта. -->
-	<img
-		src="/cassandra.webp"
-		alt=""
-		aria-hidden="true"
-		fetchpriority="high"
-		class="hero-art pointer-events-none absolute inset-0 size-full object-cover object-[50%_18%]"
-	/>
-	<!-- Лёгкая подложка под текстом слева — арт по краям остаётся виден. -->
-	<div
-		class="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(9,9,11,0.85)_0%,rgba(9,9,11,0.55)_30%,transparent_58%)]"
-	></div>
+	     экрана. Слой выше самого блока — картина продолжается за «Подборками», постепенно
+	     уходя в темноту, и только там окончательно гаснет в фон сайта. -->
+	<div class="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[170%] overflow-hidden">
+		<img
+			src="/cassandra.webp"
+			alt=""
+			aria-hidden="true"
+			fetchpriority="high"
+			class="hero-art size-full object-cover object-[50%_14%]"
+		/>
+		<!-- Затемнение вниз: к «Подборкам» от картины остаётся лишь тёмный отсвет. -->
+		<div
+			class="absolute inset-0 bg-[linear-gradient(to_bottom,transparent_0%,rgba(9,9,11,0.35)_42%,rgba(9,9,11,0.82)_62%,rgba(9,9,11,0.96)_82%,#09090b_100%)]"
+		></div>
+		<!-- Подложка под текстом слева — арт по краям остаётся виден. -->
+		<div
+			class="absolute inset-0 bg-[linear-gradient(to_right,rgba(9,9,11,0.85)_0%,rgba(9,9,11,0.55)_30%,transparent_58%)]"
+		></div>
+	</div>
 
 	<div class="relative mx-auto w-full max-w-6xl px-4">
 		<h1 class="max-w-xl text-4xl leading-tight font-black sm:text-6xl">
@@ -111,10 +118,9 @@
 {/if}
 
 <style>
-	/* Угасание арта в фон сайта к низу первого экрана; по бокам — ничего. */
+	/* Небольшие размытие и затемнение: арт не спорит с текстом, а заодно не видно
+	   блочности webp там, где картина почти ушла в темноту. */
 	.hero-art {
-		filter: brightness(0.85) saturate(1.15);
-		-webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 68%, transparent 99%);
-		mask-image: linear-gradient(to bottom, #000 0%, #000 68%, transparent 99%);
+		filter: blur(2px) brightness(0.7) saturate(1.15);
 	}
 </style>
