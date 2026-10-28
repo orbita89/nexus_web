@@ -33,7 +33,7 @@
 			alt=""
 			aria-hidden="true"
 			fetchpriority="high"
-			class="size-full scale-105 object-cover object-[1%_0%] blur-sm brightness-75"
+			class="size-full scale-105 object-cover object-[1%_28%] blur-[2px] brightness-75"
 		/>
 		<!-- Затемнение вниз: к «Подборкам» от картины остаётся лишь тёмный отсвет. -->
 		<div
