@@ -64,9 +64,10 @@
 
 <!-- Полоса постеров: на телефоне листается пальцем, на десктопе — колёсом, тачпадом или кнопками < >. -->
 <div class="relative" bind:this={box}>
+	<!-- Боковые отступы внутри ленты: иначе обводка карточки по краю обрезается прокруткой. -->
 	<ul
 		bind:this={track}
-		class="scrollbar-hide flex snap-x gap-4 overflow-x-auto py-3"
+		class="scrollbar-hide -mx-1.5 flex snap-x gap-4 overflow-x-auto px-1.5 py-3"
 		aria-label={label}
 	>
 		{#each entities as entity (entity.id)}
