@@ -24,25 +24,18 @@
 <section
 	class="relative mx-[calc(50%-50cqw)] -mt-[5.5rem] mb-10 flex min-h-[32rem] w-[100cqw] flex-col justify-center overflow-hidden bg-base-100 pt-[9rem] pb-16 sm:min-h-[44rem]"
 >
-	<!-- «Кассандра» Эвелин де Морган в неоновой инверсии. Нижний слой — сильно размытое небо и
-	     горящая Троя во весь фон, верхний — сама фигура в полный рост. Оба гаснут маской в
-	     чистый чёрный фон сайта. -->
-	<img
-		src="/cassandra.webp"
-		alt=""
-		aria-hidden="true"
-		class="hero-sky pointer-events-none absolute inset-0 size-full object-cover object-top"
-	/>
+	<!-- «Кассандра» Эвелин де Морган в неоновой инверсии: одна картина во всю ширину первого
+	     экрана, без размытых полей по бокам. Гаснет только к низу — в фон сайта. -->
 	<img
 		src="/cassandra.webp"
 		alt=""
 		aria-hidden="true"
 		fetchpriority="high"
-		class="hero-figure pointer-events-none absolute top-0 left-1/2 h-[112%] w-auto max-w-none -translate-x-1/2 sm:left-[54%]"
+		class="hero-art pointer-events-none absolute inset-0 size-full object-cover object-[50%_18%]"
 	/>
 	<!-- Лёгкая подложка под текстом слева — арт по краям остаётся виден. -->
 	<div
-		class="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(9,9,11,0.72)_0%,rgba(9,9,11,0.42)_28%,transparent_55%)]"
+		class="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(9,9,11,0.85)_0%,rgba(9,9,11,0.55)_30%,transparent_58%)]"
 	></div>
 
 	<div class="relative mx-auto w-full max-w-6xl px-4">
@@ -118,19 +111,9 @@
 {/if}
 
 <style>
-	/* Общее угасание арта в фон сайта к низу первого экрана. */
-	.hero-sky,
-	.hero-figure {
-		-webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 98%);
-		mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 98%);
-	}
-	.hero-sky {
-		filter: blur(7px) brightness(0.62) saturate(1.2);
-		transform: scale(1.15); /* размытие не должно оголять края */
-	}
-	/* Боковой растушёвки нет: картина стоит встык с фоном, гаснет только к низу. */
-	.hero-figure {
-		filter: blur(0.5px) brightness(0.85) saturate(1.15);
+	/* Угасание арта в фон сайта к низу первого экрана; по бокам — ничего. */
+	.hero-art {
+		filter: brightness(0.85) saturate(1.15);
 		-webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 68%, transparent 99%);
 		mask-image: linear-gradient(to bottom, #000 0%, #000 68%, transparent 99%);
 	}
