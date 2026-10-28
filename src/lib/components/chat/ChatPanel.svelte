@@ -43,6 +43,12 @@
 	// Мобильный лист закрывается переходом по ссылке (на карточку из шапки комнаты).
 	afterNavigate(() => (chat.sheet = false));
 
+	/** На широком экране панель сворачивается в полосу, на узком — просто закрывается шторка. */
+	function collapse() {
+		if (window.matchMedia('(min-width: 1024px)').matches) chat.toggleCollapsed();
+		else chat.sheet = false;
+	}
+
 	// Свёрнутая полоса — все чаты подряд: общие сверху (их так отдаёт бэкенд), дальше свои.
 	// Без ограничения по числу: полоса прокручивается, и обрезать её — терять чаты из виду.
 	const strip = $derived(chat.chats ?? []);
@@ -216,23 +222,25 @@
 					fill="none"
 					stroke="currentColor"
 					stroke-width="2"
-					aria-hidden="true"
-					><path
-						d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"
-					/></svg
+					aria-hidden="true"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z" /></svg
 				>
 			</a>
+			<!-- Одна кнопка на оба размера: на широком экране сворачивает панель, на узком — закрывает шторку. -->
 			<button
-				class="btn hidden btn-square btn-ghost btn-sm lg:inline-flex"
+				class="btn btn-square btn-ghost btn-sm"
 				title="Свернуть"
 				aria-label="Свернуть чат"
-				onclick={() => chat.toggleCollapsed()}>»</button
+				onclick={collapse}
 			>
-			<button
-				class="btn btn-square btn-ghost btn-sm lg:hidden"
-				aria-label="Закрыть чат"
-				onclick={() => (chat.sheet = false)}>✕</button
-			>
+				<svg
+					class="size-4"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg
+				>
+			</button>
 		</div>
 		<!-- «Каталог» — сам чат, чипы переключают общие ленты; «Каналы» и «Чаты» — списки. -->
 		<div class={['px-4 pb-1', { hidden: people }]}>
