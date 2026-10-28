@@ -239,7 +239,7 @@
 			</form>
 		{:else}
 			{#if text}
-				<p class="text-sm break-words whitespace-pre-wrap">
+				<p class="text-[13px] break-words whitespace-pre-wrap">
 					{#each parts as part, i (i)}{#if part.t === 'mention'}<a
 								href="/u/{part.v}"
 								class={[

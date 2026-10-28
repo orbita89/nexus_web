@@ -495,7 +495,7 @@
 					{/each}
 				</ul>
 			{/if}
-			<div class="flex items-end gap-2">
+			<div class="flex items-center gap-2">
 				<input
 					bind:this={file}
 					type="file"
@@ -557,7 +557,7 @@
 				<textarea
 					bind:this={input}
 					bind:value={text}
-					class="min-h-0 flex-1 resize-none rounded-2xl border-0 bg-base-200 px-4 py-2.5 text-base outline-none focus:outline-none"
+					class="min-h-0 flex-1 resize-none rounded-2xl border-0 bg-base-200 px-4 py-2.5 text-sm outline-none focus:outline-none"
 					rows="1"
 					maxlength={MAX_BODY}
 					placeholder="@люди, #контент"
