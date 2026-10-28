@@ -236,7 +236,7 @@ export function stripEntityLinks(body: string): string {
 	);
 	return body
 		.replace(re, ' ')
-		.replace(/\\s{2,}/g, ' ')
+		.replace(/[ \t]{2,}/g, ' ')
 		.trim();
 }
 

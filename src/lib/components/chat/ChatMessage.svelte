@@ -2,7 +2,14 @@
 	import { errorMessage } from '#lib/api/errors.ts';
 	import { session } from '#lib/auth/session.svelte.ts';
 	import { chat, type Item, type Message } from '#lib/chat/chat.svelte.ts';
-	import { authorName, clockTime, entityLink, MAX_BODY, parseBody } from '#lib/chat/rooms.ts';
+	import {
+		authorName,
+		clockTime,
+		entityLinks,
+		MAX_BODY,
+		parseBody,
+		stripEntityLinks
+	} from '#lib/chat/rooms.ts';
 	import Avatar from '#lib/components/Avatar.svelte';
 	import MessageCard from './MessageCard.svelte';
 
@@ -17,14 +24,12 @@
 	const canDelete = $derived(
 		!item.clientId && !item.deleted && (mine || session.user?.role === 'admin')
 	);
-	/** Карточка, на которую ссылается сообщение; если кроме ссылки ничего нет — текст не рисуем. */
-	const card = $derived(item.body && !item.deleted ? entityLink(item.body) : null);
-	const parts = $derived(parseBody(item.body ?? ''));
-	const onlyLink = $derived(!!card && parts.length === 1 && !!item.body?.trim().match(/^\S+$/));
+	/** Карточки всех упомянутых сущностей; сами ссылки из текста убираем — их заменяет превью. */
+	const cards = $derived(item.body && !item.deleted ? entityLinks(item.body) : []);
+	const text = $derived(item.body && !item.deleted ? stripEntityLinks(item.body) : '');
+	const parts = $derived(parseBody(text));
 	/** Время висит в последней строке текста (как в телеграме), а под картинкой и карточкой — отдельно. */
-	const inlineTime = $derived(
-		!item.deleted && !!item.body && !onlyLink && !item.attachment && !card
-	);
+	const inlineTime = $derived(!item.deleted && !!text && !item.attachment && !cards.length);
 	/** Меню по клику на автора: профиль или личное сообщение. Закрывается кликом мимо и Esc. */
 	let menu = $state(false);
 	let row = $state<HTMLElement>();
@@ -204,7 +209,7 @@
 				</div>
 			</form>
 		{:else}
-			{#if item.body && !onlyLink}
+			{#if text}
 				<p class="text-sm break-words whitespace-pre-wrap">
 					{#each parts as part, i (i)}{#if part.t === 'mention'}<a
 								href="/u/{part.v}"
@@ -241,9 +246,9 @@
 					/>
 				</a>
 			{/if}
-			{#if card}
-				<MessageCard link={card} />
-			{/if}
+			{#each cards as link (link.kind + link.slug)}
+				<MessageCard {link} />
+			{/each}
 		{/if}
 
 		{#if !inlineTime && !editing}
