@@ -16,7 +16,7 @@
 	];
 </script>
 
-<svelte:head><title>Админка — Nexus</title></svelte:head>
+<svelte:head><title>Админка — Кассандра</title></svelte:head>
 
 <h1 class="mb-6 text-3xl font-black">Админка</h1>
 

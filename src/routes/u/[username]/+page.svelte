@@ -14,7 +14,7 @@
 
 <Seo
 	title="{displayName(user)} (@{user.username})"
-	description="Профиль @{user.username} в Nexus: рецензии, оценки, темы форума и подписки."
+	description="Профиль @{user.username} в Кассандра: рецензии, оценки, темы форума и подписки."
 />
 
 <div class="grid gap-10 lg:grid-cols-2">

@@ -65,7 +65,7 @@
 	}
 </script>
 
-<svelte:head><title>Привязанные аккаунты — Настройки — Nexus</title></svelte:head>
+<svelte:head><title>Привязанные аккаунты — Настройки — Кассандра</title></svelte:head>
 
 <div class="flex flex-col gap-4">
 	{#if linkedNow}<Alert kind="success">{providerTitle(linkedNow)} привязан.</Alert>{/if}

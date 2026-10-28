@@ -78,7 +78,7 @@
 	}
 </script>
 
-<svelte:head><title>Пользователи — Админка — Nexus</title></svelte:head>
+<svelte:head><title>Пользователи — Админка — Кассандра</title></svelte:head>
 
 <h1 class="mb-2 text-3xl font-black">Пользователи</h1>
 <p class="mb-6 text-sm text-base-content/60">

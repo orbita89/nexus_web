@@ -16,62 +16,55 @@
 
 <Seo
 	title="Фильмы, сериалы, книги и игры"
-	description="Nexus — каталог фильмов, сериалов, книг и игр: оценки, рецензии, коллекции и обсуждения, привязанные к произведениям."
+	description="Кассандра — каталог фильмов, сериалов, книг и игр: оценки, рецензии, коллекции и обсуждения, привязанные к произведениям."
 />
 
+<!-- Первый экран во всю ширину окна: выходит из колонки main (100cqw — ширина страницы
+     без панели чата) и подтягивается под шапку. -->
 <section
-	class="relative mb-10 flex min-h-[24rem] flex-col justify-center overflow-hidden rounded-box bg-base-100 px-6 py-10 ring-1 ring-base-300 sm:min-h-[32rem] sm:px-10 sm:py-14"
+	class="relative mx-[calc(50%-50cqw)] -mt-6 mb-10 flex min-h-[30rem] w-[100cqw] flex-col justify-center overflow-hidden bg-base-100 py-16 sm:min-h-[42rem]"
 >
-	<!-- «Кассандра» Эвелин де Морган в неоновой инверсии. Арт живёт в верхней части экрана и
-	     маской бесшовно гаснет в фон сайта чуть ниже строки поиска. -->
+	<!-- «Кассандра» Эвелин де Морган в неоновой инверсии. Нижний слой — сильно размытое небо и
+	     горящая Троя во весь фон, верхний — сама фигура в полный рост. Оба гаснут маской в
+	     чистый чёрный фон сайта. -->
+	<img
+		src="/cassandra.webp"
+		alt=""
+		aria-hidden="true"
+		class="hero-sky pointer-events-none absolute inset-0 size-full object-cover object-top"
+	/>
 	<img
 		src="/cassandra.webp"
 		alt=""
 		aria-hidden="true"
 		fetchpriority="high"
-		class="hero-art pointer-events-none absolute top-0 right-0 h-[112%] w-auto max-w-none sm:right-[6%]"
+		class="hero-figure pointer-events-none absolute top-0 left-1/2 h-full w-auto max-w-none -translate-x-1/2 sm:left-[58%]"
 	/>
-	<!-- Мягкие фиолетово-синие отсветы на тёмном фоне + затемнение слева под текст. -->
+	<!-- Фиолетово-синие отсветы и затемнение слева — чтобы текст читался поверх арта. -->
 	<div
-		class="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_60%_at_75%_20%,rgba(139,92,246,0.25),transparent_70%),radial-gradient(50%_45%_at_15%_85%,rgba(79,70,229,0.18),transparent_70%),linear-gradient(to_right,rgba(9,9,11,0.92)_0%,rgba(9,9,11,0.75)_38%,transparent_70%)]"
+		class="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_50%_at_70%_25%,rgba(139,92,246,0.22),transparent_70%),linear-gradient(to_right,rgba(9,9,11,0.9)_0%,rgba(9,9,11,0.6)_30%,transparent_60%)]"
 	></div>
 
-	<div class="relative">
-		<p class="text-xs font-semibold tracking-[0.3em] text-primary uppercase">Nexus</p>
-		<h1 class="mt-3 max-w-2xl text-3xl leading-tight font-black sm:text-5xl">
+	<div class="relative mx-auto w-full max-w-6xl px-4">
+		<h1 class="max-w-xl text-4xl leading-tight font-black sm:text-6xl">
 			Всё, что смотрят, читают и проходят
 		</h1>
-		<p class="mt-3 max-w-xl text-base-content/70">
+		<p class="mt-5 max-w-md text-base-content/70">
 			Фильмы, сериалы, книги и игры в одном каталоге — с оценками, рецензиями и обсуждениями,
 			которые связывают книгу с её экранизацией.
 		</p>
-		<form action="/search" method="GET" role="search" class="mt-6 flex max-w-lg gap-2">
+		<form action="/search" method="GET" role="search" class="mt-8 flex max-w-lg gap-2">
 			<input
 				type="search"
 				name="q"
 				placeholder="Дюна, Кинг, киберпанк…"
 				aria-label="Найти в каталоге"
-				class="input w-full bg-base-100/70 backdrop-blur input-lg"
+				class="input w-full bg-base-100/60 backdrop-blur input-lg"
 			/>
 			<button class="btn btn-lg btn-primary">Найти</button>
 		</form>
 	</div>
 </section>
-
-<style>
-	/* Размытие и затемнение арта + его угасание к низу блока. */
-	.hero-art {
-		filter: blur(3px) brightness(0.5) saturate(1.2);
-		-webkit-mask-image:
-			linear-gradient(to bottom, #000 0%, #000 45%, transparent 97%),
-			linear-gradient(to right, transparent 0%, #000 28%, #000 74%, transparent 100%);
-		mask-image:
-			linear-gradient(to bottom, #000 0%, #000 45%, transparent 97%),
-			linear-gradient(to right, transparent 0%, #000 28%, #000 74%, transparent 100%);
-		-webkit-mask-composite: source-in;
-		mask-composite: intersect;
-	}
-</style>
 
 {#if data.featured.length}
 	<section class="mb-10" aria-labelledby="featured-collections">
@@ -123,3 +116,28 @@
 		<TagChips tags={data.tags} label="Популярные теги" />
 	</section>
 {/if}
+
+<style>
+	/* Общее угасание арта в фон сайта к низу первого экрана. */
+	.hero-sky,
+	.hero-figure {
+		-webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 98%);
+		mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 98%);
+	}
+	.hero-sky {
+		filter: blur(28px) brightness(0.4) saturate(1.2);
+		transform: scale(1.1); /* размытие не должно оголять края */
+	}
+	/* Фигуре нужно ещё и боковое угасание — иначе виден вертикальный край холста. */
+	.hero-figure {
+		filter: blur(1.5px) brightness(0.62) saturate(1.15);
+		-webkit-mask-image:
+			linear-gradient(to bottom, #000 0%, #000 55%, transparent 98%),
+			linear-gradient(to right, transparent 0%, #000 18%, #000 82%, transparent 100%);
+		mask-image:
+			linear-gradient(to bottom, #000 0%, #000 55%, transparent 98%),
+			linear-gradient(to right, transparent 0%, #000 18%, #000 82%, transparent 100%);
+		-webkit-mask-composite: source-in;
+		mask-composite: intersect;
+	}
+</style>

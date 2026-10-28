@@ -55,7 +55,7 @@
 	}
 </script>
 
-<svelte:head><title>Профиль — Настройки — Nexus</title></svelte:head>
+<svelte:head><title>Профиль — Настройки — Кассандра</title></svelte:head>
 
 <div class="flex flex-col gap-6">
 	<AvatarUpload />

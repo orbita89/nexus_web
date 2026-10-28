@@ -7,7 +7,7 @@
 		image
 	}: { title: string; description?: string; image?: string | null } = $props();
 
-	const fullTitle = $derived(`${title} — Nexus`);
+	const fullTitle = $derived(`${title} — Кассандра`);
 </script>
 
 <svelte:head>
@@ -17,7 +17,7 @@
 		<meta property="og:description" content={description} />
 	{/if}
 	<meta property="og:title" content={title} />
-	<meta property="og:site_name" content="Nexus" />
+	<meta property="og:site_name" content="Кассандра" />
 	<meta property="og:url" content={page.url.href} />
 	{#if image}<meta property="og:image" content={image} />{/if}
 </svelte:head>

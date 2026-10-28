@@ -84,7 +84,7 @@
 		);
 </script>
 
-<svelte:head><title>Теги — Админка — Nexus</title></svelte:head>
+<svelte:head><title>Теги — Админка — Кассандра</title></svelte:head>
 
 <h1 class="mb-6 text-3xl font-black">Теги</h1>
 

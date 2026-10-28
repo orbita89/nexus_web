@@ -13,7 +13,7 @@
 </script>
 
 <svelte:head>
-	<title>{page.status} — Nexus</title>
+	<title>{page.status} — Кассандра</title>
 </svelte:head>
 
 <div class="hero py-16">

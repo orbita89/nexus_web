@@ -65,7 +65,7 @@
 	}
 </script>
 
-<svelte:head><title>Личные сообщения — Настройки — Nexus</title></svelte:head>
+<svelte:head><title>Личные сообщения — Настройки — Кассандра</title></svelte:head>
 
 <h2 class="mb-4 text-xl font-bold">Личные сообщения</h2>
 

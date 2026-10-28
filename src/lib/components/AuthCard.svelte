@@ -6,7 +6,7 @@
 </script>
 
 <svelte:head>
-	<title>{title} — Nexus</title>
+	<title>{title} — Кассандра</title>
 </svelte:head>
 
 <div class="mx-auto max-w-sm py-6">

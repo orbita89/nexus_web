@@ -113,7 +113,7 @@
 
 	const description = $derived(
 		summary(entity.description) ||
-			`${kind.one} «${entity.title}»${year ? ` (${year})` : ''}: оценки, рецензии и обсуждения в Nexus.`
+			`${kind.one} «${entity.title}»${year ? ` (${year})` : ''}: оценки, рецензии и обсуждения в Кассандра.`
 	);
 </script>
 

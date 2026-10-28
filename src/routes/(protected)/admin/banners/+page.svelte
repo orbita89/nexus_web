@@ -396,7 +396,7 @@
 	{#if fieldErrors[key]}<p class="mt-1 text-xs text-error">{fieldErrors[key]}</p>{/if}
 {/snippet}
 
-<svelte:head><title>Баннеры — Админка — Nexus</title></svelte:head>
+<svelte:head><title>Баннеры — Админка — Кассандра</title></svelte:head>
 
 <h1 class="mb-6 text-3xl font-black">Баннеры</h1>
 

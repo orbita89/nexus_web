@@ -357,7 +357,7 @@
 
 	{#if !dm}
 		<p class="border-t border-base-300 px-4 py-3 text-xs text-base-content/60">
-			<a href="/chat" class="link link-primary">Каталог комнат</a> — все комнаты Nexus.
+			<a href="/chat" class="link link-primary">Каталог комнат</a> — все комнаты Кассандра.
 		</p>
 	{/if}
 </div>

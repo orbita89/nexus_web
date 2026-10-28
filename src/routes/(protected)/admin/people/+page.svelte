@@ -27,7 +27,7 @@
 	}
 </script>
 
-<svelte:head><title>Люди — Админка — Nexus</title></svelte:head>
+<svelte:head><title>Люди — Админка — Кассандра</title></svelte:head>
 
 <div class="mb-6 flex flex-wrap items-end justify-between gap-3">
 	<h1 class="text-3xl font-black">Люди</h1>

@@ -219,7 +219,7 @@
 	<Seo
 		title={collection.title}
 		description={summary(collection.description) ||
-			`Коллекция @${collection.owner.username} в Nexus: ${count(collection.items_count, ['произведение', 'произведения', 'произведений'])}.`}
+			`Коллекция @${collection.owner.username} в Кассандра: ${count(collection.items_count, ['произведение', 'произведения', 'произведений'])}.`}
 	/>
 
 	<header class="mb-8">

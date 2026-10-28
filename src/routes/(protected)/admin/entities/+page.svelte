@@ -53,7 +53,7 @@
 	}
 </script>
 
-<svelte:head><title>Произведения — Админка — Nexus</title></svelte:head>
+<svelte:head><title>Произведения — Админка — Кассандра</title></svelte:head>
 
 <div class="mb-6 flex flex-wrap items-end justify-between gap-3">
 	<h1 class="text-3xl font-black">Произведения</h1>

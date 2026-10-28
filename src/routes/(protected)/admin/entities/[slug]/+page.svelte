@@ -98,7 +98,7 @@
 	}
 </script>
 
-<svelte:head><title>{entity?.title ?? 'Произведение'} — Админка — Nexus</title></svelte:head>
+<svelte:head><title>{entity?.title ?? 'Произведение'} — Админка — Кассандра</title></svelte:head>
 
 <a href="/admin/entities" class="link text-sm text-primary link-hover">← Произведения</a>
 {#if error}<div class="mt-4"><Alert>{error}</Alert></div>{/if}

@@ -11,7 +11,7 @@
 		'movie') as SchemaEntityKind;
 </script>
 
-<svelte:head><title>Новое произведение — Админка — Nexus</title></svelte:head>
+<svelte:head><title>Новое произведение — Админка — Кассандра</title></svelte:head>
 
 <a href="/admin/entities" class="link text-sm text-primary link-hover">← Произведения</a>
 <h1 class="mt-2 mb-6 text-3xl font-black">Новое произведение</h1>

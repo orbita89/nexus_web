@@ -5,7 +5,7 @@
 	import PersonForm from '#lib/components/admin/PersonForm.svelte';
 </script>
 
-<svelte:head><title>Новый человек — Админка — Nexus</title></svelte:head>
+<svelte:head><title>Новый человек — Админка — Кассандра</title></svelte:head>
 
 <a href="/admin/people" class="link text-sm text-primary link-hover">← Люди</a>
 <h1 class="mt-2 mb-6 text-3xl font-black">Новый человек</h1>

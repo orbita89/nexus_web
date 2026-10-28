@@ -11,7 +11,7 @@ import type { PageServerLoad } from './$types';
 //
 // В статике — студия и первая порция фильмов в порядке по умолчанию. Адрес не читаем: nginx
 // отдаёт файл без учёта query, другую сортировку (?sort=) и «Показать ещё» страница грузит в
-// браузере. Оценки Nexus тоже — в статике они бы устарели.
+// браузере. Оценки Кассандра тоже — в статике они бы устарели.
 export const prerender = 'auto';
 
 export const load: PageServerLoad = async ({ fetch, url, params }) => {

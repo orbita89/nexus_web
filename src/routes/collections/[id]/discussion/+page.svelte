@@ -21,7 +21,7 @@
 
 <svelte:head>
 	{#if collection}
-		<title>Обсуждение: {collection.title} | Nexus</title>
+		<title>Обсуждение: {collection.title} | Кассандра</title>
 		<link rel="canonical" href="{page.url.origin}{back}/discussion" />
 		{#if !indexable}<meta name="robots" content="noindex, follow" />{/if}
 	{:else}

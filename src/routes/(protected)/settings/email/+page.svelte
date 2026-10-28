@@ -30,7 +30,7 @@
 	}
 </script>
 
-<svelte:head><title>Email — Настройки — Nexus</title></svelte:head>
+<svelte:head><title>Email — Настройки — Кассандра</title></svelte:head>
 
 <p class="mb-4">Текущий email: <b>{session.user?.email}</b></p>
 

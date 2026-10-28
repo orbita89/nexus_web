@@ -102,7 +102,7 @@
 	);
 </script>
 
-<svelte:head><title>Лента — Nexus</title></svelte:head>
+<svelte:head><title>Лента — Кассандра</title></svelte:head>
 
 <div class="grid gap-8 lg:grid-cols-[1fr_18rem]">
 	<div class="min-w-0">

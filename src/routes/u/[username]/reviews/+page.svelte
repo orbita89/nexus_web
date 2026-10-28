@@ -13,7 +13,7 @@
 
 <Seo
 	title="Рецензии — {displayName(user)} (@{user.username})"
-	description="Рецензии и оценки @{user.username} в Nexus: фильмы, сериалы, книги и игры."
+	description="Рецензии и оценки @{user.username} в Кассандра: фильмы, сериалы, книги и игры."
 />
 
 <h2 class="sr-only">Рецензии и оценки</h2>

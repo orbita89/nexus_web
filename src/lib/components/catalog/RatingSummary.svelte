@@ -29,7 +29,7 @@
 		id="rating-title"
 		class="text-xs font-semibold tracking-widest text-base-content/50 uppercase"
 	>
-		Оценка Nexus
+		Оценка Кассандра
 	</h2>
 	{#if rating.count === 0 || rating.average == null}
 		<p class="mt-2 text-sm text-base-content/60">Оценок пока нет.</p>

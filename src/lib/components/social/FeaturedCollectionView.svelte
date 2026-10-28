@@ -102,7 +102,7 @@
 
 	const origin = $derived(page.url.origin);
 	const canonical = $derived(origin + buildFeaturedUrl(collection));
-	const title = $derived(`${featuredTitle(collection)} | Nexus`);
+	const title = $derived(`${featuredTitle(collection)} | Кассандра`);
 	const description = $derived(featuredDescription(collection));
 	const look = $derived(resolveFeaturedHero(collection));
 	// Оформление страницы: обои шапкой или фоном, затемнение/размытие, эффекты, свой акцент.
@@ -152,7 +152,7 @@
 	<meta name="description" content={description} />
 	<link rel="canonical" href={canonical} />
 	<meta property="og:type" content="website" />
-	<meta property="og:site_name" content="Nexus" />
+	<meta property="og:site_name" content="Кассандра" />
 	<meta property="og:title" content={title} />
 	<meta property="og:description" content={description} />
 	<meta property="og:url" content={canonical} />

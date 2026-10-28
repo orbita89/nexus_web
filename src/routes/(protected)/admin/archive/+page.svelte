@@ -80,7 +80,7 @@
 	}
 </script>
 
-<svelte:head><title>Архив — Админка — Nexus</title></svelte:head>
+<svelte:head><title>Архив — Админка — Кассандра</title></svelte:head>
 
 <h1 class="mb-2 text-3xl font-black">Архив</h1>
 <p class="mb-6 max-w-2xl text-sm text-base-content/60">

@@ -34,7 +34,7 @@
 	}
 </script>
 
-<svelte:head><title>{person?.full_name ?? 'Человек'} — Админка — Nexus</title></svelte:head>
+<svelte:head><title>{person?.full_name ?? 'Человек'} — Админка — Кассандра</title></svelte:head>
 
 <a href="/admin/people" class="link text-sm text-primary link-hover">← Люди</a>
 {#if error}<div class="mt-4"><Alert>{error}</Alert></div>{/if}

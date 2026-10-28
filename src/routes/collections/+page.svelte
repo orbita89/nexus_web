@@ -13,7 +13,7 @@
 
 <Seo
 	title="Коллекции"
-	description="Подборки фильмов, сериалов, книг и игр от пользователей Nexus."
+	description="Подборки фильмов, сериалов, книг и игр от пользователей Кассандра."
 />
 
 <header class="mb-8 flex flex-wrap items-end justify-between gap-4">

@@ -31,7 +31,7 @@
 	}
 </script>
 
-<svelte:head><title>Изменить тему — Форум — Nexus</title></svelte:head>
+<svelte:head><title>Изменить тему — Форум — Кассандра</title></svelte:head>
 
 <a href="/forum/{id}" class="link text-sm text-primary link-hover">← К теме</a>
 <h1 class="mt-2 mb-6 text-3xl font-black">Изменить тему</h1>

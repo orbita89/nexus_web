@@ -18,7 +18,7 @@
 	const name = $derived(`${entity.title}${year ? ` (${year})` : ''}`);
 </script>
 
-<Seo title="Обсуждения: {name}" description="Темы форума Nexus о «{name}»." />
+<Seo title="Обсуждения: {name}" description="Темы форума Кассандра о «{name}»." />
 
 <header class="mb-6 flex flex-wrap items-end justify-between gap-4">
 	<div>

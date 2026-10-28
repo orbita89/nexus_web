@@ -25,7 +25,7 @@
 	title="Рецензии: {name}"
 	description="Рецензии и оценки зрителей: {kindByApi(
 		entity.kind
-	).one.toLowerCase()} «{name}» в Nexus."
+	).one.toLowerCase()} «{name}» в Кассандра."
 />
 
 <header class="mb-8">

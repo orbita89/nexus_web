@@ -23,9 +23,9 @@ export function featuredDescription(collection: SchemaCollectionDetail): string 
 	const own = collection.description?.trim();
 	if (own) return own.length > 300 ? `${own.slice(0, 297)}…` : own;
 	const names = collection.items.slice(0, 5).map((i) => i.entity.title);
-	if (!names.length) return `${collection.title} — подборка редакции Nexus.`;
+	if (!names.length) return `${collection.title} — подборка редакции Кассандра.`;
 	const more = collection.items.length > names.length ? ' и другие' : '';
-	return `${collection.title}: ${names.join(', ')}${more}. Подборка редакции Nexus.`;
+	return `${collection.title}: ${names.join(', ')}${more}. Подборка редакции Кассандра.`;
 }
 
 /** JSON-LD: ItemList произведений + BreadcrumbList. `origin` — https://host. */

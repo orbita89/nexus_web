@@ -105,7 +105,7 @@
 		);
 </script>
 
-<svelte:head><title>Комнаты чата — Админка — Nexus</title></svelte:head>
+<svelte:head><title>Комнаты чата — Админка — Кассандра</title></svelte:head>
 
 <h1 class="mb-6 text-3xl font-black">Комнаты чата</h1>
 

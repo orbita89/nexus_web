@@ -78,7 +78,7 @@
 				</ul>
 			</details>
 			<a href="/" class="btn btn-ghost px-2 text-lg font-black tracking-[0.2em] uppercase btn-sm"
-				>Nexus<span class="-ml-1 text-primary" aria-hidden="true">.</span></a
+				>Кассандра<span class="-ml-1 text-primary" aria-hidden="true">.</span></a
 			>
 		</div>
 

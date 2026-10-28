@@ -16,7 +16,7 @@
 		))!;
 </script>
 
-<svelte:head><title>Индексация — Админка — Nexus</title></svelte:head>
+<svelte:head><title>Индексация — Админка — Кассандра</title></svelte:head>
 
 <h1 class="mb-2 text-3xl font-black">Индексация</h1>
 <p class="mb-6 max-w-3xl text-sm text-base-content/60">

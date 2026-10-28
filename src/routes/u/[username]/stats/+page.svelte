@@ -42,7 +42,7 @@
 
 <Seo
 	title="Статистика — {displayName(user)} (@{user.username})"
-	description="Оценки, отметки и активность @{user.username} в Nexus."
+	description="Оценки, отметки и активность @{user.username} в Кассандра."
 />
 
 <h2 class="sr-only">Статистика</h2>

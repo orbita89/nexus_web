@@ -43,7 +43,7 @@
 
 <Seo
 	title={heading}
-	description="{data.kind.title} в каталоге Nexus{tagName
+	description="{data.kind.title} в каталоге Кассандра{tagName
 		? `: ${tagName}`
 		: ''} — оценки, рецензии и обсуждения."
 />

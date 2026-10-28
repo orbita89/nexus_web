@@ -87,7 +87,7 @@
 	}
 </script>
 
-<svelte:head><title>Пароль и сессии — Настройки — Nexus</title></svelte:head>
+<svelte:head><title>Пароль и сессии — Настройки — Кассандра</title></svelte:head>
 
 <section class="mb-10">
 	<h2 class="mb-2 text-lg font-semibold">Пароль</h2>

@@ -21,7 +21,7 @@
 <svelte:head>
 	<meta name="robots" content="noindex, follow" />
 	{#if collection}
-		<title>Похожие на «{collection.title}» | Nexus</title>
+		<title>Похожие на «{collection.title}» | Кассандра</title>
 		<link rel="canonical" href="{page.url.origin}{back}/similar" />
 	{/if}
 </svelte:head>

@@ -13,7 +13,7 @@
 
 <Seo
 	title="Темы — {displayName(user)} (@{user.username})"
-	description="Темы форума, которые начал @{user.username} в Nexus."
+	description="Темы форума, которые начал @{user.username} в Кассандра."
 />
 
 <h2 class="sr-only">Темы на форуме</h2>

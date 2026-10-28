@@ -25,7 +25,7 @@
 	title={heading}
 	description="{data.tag.name}: {data.kind
 		? data.kind.title.toLowerCase()
-		: 'фильмы, сериалы, книги и игры'} в каталоге Nexus."
+		: 'фильмы, сериалы, книги и игры'} в каталоге Кассандра."
 />
 
 <header class="mb-6">

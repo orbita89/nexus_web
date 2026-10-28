@@ -11,7 +11,7 @@
 
 <Seo
 	title="Подборки"
-	description="Подборки и рейтинги фильмов, сериалов, книг и игр от редакции Nexus."
+	description="Подборки и рейтинги фильмов, сериалов, книг и игр от редакции Кассандра."
 />
 <svelte:head>
 	<link rel="canonical" href="{page.url.origin}/collections/featured" />

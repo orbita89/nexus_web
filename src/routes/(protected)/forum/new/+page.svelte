@@ -29,7 +29,7 @@
 	}
 </script>
 
-<svelte:head><title>Новая тема — Форум — Nexus</title></svelte:head>
+<svelte:head><title>Новая тема — Форум — Кассандра</title></svelte:head>
 
 <a href="/forum" class="link text-sm text-primary link-hover">← Форум</a>
 <h1 class="mt-2 mb-6 text-3xl font-black">Новая тема</h1>

@@ -29,7 +29,8 @@
 
 <Seo
 	title={person.full_name}
-	description={summary(person.bio) || `${person.full_name}: фильмы, сериалы, книги и игры в Nexus.`}
+	description={summary(person.bio) ||
+		`${person.full_name}: фильмы, сериалы, книги и игры в Кассандра.`}
 	image={person.photo_url}
 />
 
