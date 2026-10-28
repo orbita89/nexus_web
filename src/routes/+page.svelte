@@ -128,16 +128,10 @@
 		filter: blur(7px) brightness(0.62) saturate(1.2);
 		transform: scale(1.15); /* размытие не должно оголять края */
 	}
-	/* По бокам фигура лишь слегка стыкуется с фоном — край холста прячет узкая растушёвка. */
+	/* Боковой растушёвки нет: картина стоит встык с фоном, гаснет только к низу. */
 	.hero-figure {
 		filter: blur(0.5px) brightness(0.85) saturate(1.15);
-		-webkit-mask-image:
-			linear-gradient(to bottom, #000 0%, #000 68%, transparent 99%),
-			linear-gradient(to right, transparent 0%, #000 12%, #000 88%, transparent 100%);
-		mask-image:
-			linear-gradient(to bottom, #000 0%, #000 68%, transparent 99%),
-			linear-gradient(to right, transparent 0%, #000 12%, #000 88%, transparent 100%);
-		-webkit-mask-composite: source-in;
-		mask-composite: intersect;
+		-webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 68%, transparent 99%);
+		mask-image: linear-gradient(to bottom, #000 0%, #000 68%, transparent 99%);
 	}
 </style>
