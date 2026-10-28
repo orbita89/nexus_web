@@ -16,9 +16,14 @@
 		badges?: Record<string, string>;
 	} = $props();
 
+	let box = $state<HTMLDivElement | undefined>(undefined);
 	let track = $state<HTMLUListElement | undefined>(undefined);
 	let atStart = $state(true);
 	let atEnd = $state(false);
+	/** Лента шире экрана — только тогда кнопки вообще нужны. */
+	let scrollable = $state(false);
+	/** Центр постера от верха полосы: подписи под ним не должны сдвигать кнопки вниз. */
+	let centerY = $state(0);
 
 	/** Сколько карточек листаем за один клик — чем больше, тем чувствительнее скролл. */
 	const STEP_CARDS = 2;
@@ -32,51 +37,64 @@
 		track.scrollBy({ left: direction * step, behavior: 'smooth' });
 	}
 
-	/** Активность краевых кнопок зависит от позиции прокрутки. */
+	/** Края ленты, нужны ли кнопки и куда их ставить по вертикали. */
 	$effect(() => {
 		const el = track;
 		if (!el) return;
 		const update = () => {
 			atStart = el.scrollLeft <= 2;
 			atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 2;
+			scrollable = el.scrollWidth > el.clientWidth + 2;
+			const poster = el.querySelector('li a > div') as HTMLElement | null;
+			if (poster && box) {
+				const card = poster.getBoundingClientRect();
+				centerY = card.top - box.getBoundingClientRect().top + card.height / 2;
+			}
 		};
 		el.addEventListener('scroll', update, { passive: true });
+		const observer = new ResizeObserver(update);
+		observer.observe(el);
 		update();
-		return () => el.removeEventListener('scroll', update);
+		return () => {
+			el.removeEventListener('scroll', update);
+			observer.disconnect();
+		};
 	});
 </script>
 
 <!-- Полоса постеров: на телефоне листается пальцем, на десктопе — колёсом, тачпадом или кнопками < >. -->
-<div class="relative">
+<div class="relative" bind:this={box}>
 	<ul
 		bind:this={track}
-		class="flex snap-x gap-4 overflow-x-auto scrollbar-hide py-3"
+		class="scrollbar-hide flex snap-x gap-4 overflow-x-auto py-3"
 		aria-label={label}
 	>
-	{#each entities as entity (entity.id)}
-		<li class="w-32 shrink-0 snap-start sm:w-36 lg:w-40">
-			{#if badges[entity.id]}
-				<span class="mb-1.5 badge badge-ghost badge-sm">{badges[entity.id]}</span>
-			{/if}
-			<EntityCard {entity} rating={ratings[entity.slug]} />
-		</li>
-	{/each}
+		{#each entities as entity (entity.id)}
+			<li class="w-32 shrink-0 snap-start sm:w-36 lg:w-40">
+				{#if badges[entity.id]}
+					<span class="mb-1.5 badge badge-ghost badge-sm">{badges[entity.id]}</span>
+				{/if}
+				<EntityCard {entity} rating={ratings[entity.slug]} />
+			</li>
+		{/each}
 	</ul>
 
-	{#if entities.length}
+	{#if scrollable && !atStart}
 		<button
 			type="button"
-			class="btn border-0 bg-white/35 text-white absolute top-1/2 left-3 -translate-y-1/2 z-20 hover:bg-white/50 disabled:opacity-50 rounded-lg px-4 py-2.5"
+			class="absolute left-3 z-20 flex size-12 -translate-y-1/2 items-center justify-center rounded-xl border-0 bg-white/35 text-xl text-white transition hover:bg-white/50"
+			style="top: {centerY}px"
 			aria-label="Назад"
-			disabled={atStart}
-			onclick={() => scroll(-1)}
-		>{`<`}</button>
+			onclick={() => scroll(-1)}>{`<`}</button
+		>
+	{/if}
+	{#if scrollable && !atEnd}
 		<button
 			type="button"
-			class="btn border-0 bg-white/35 text-white absolute top-1/2 right-3 -translate-y-1/2 z-20 hover:bg-white/50 disabled:opacity-50 rounded-lg px-4 py-2.5"
+			class="absolute right-3 z-20 flex size-12 -translate-y-1/2 items-center justify-center rounded-xl border-0 bg-white/35 text-xl text-white transition hover:bg-white/50"
+			style="top: {centerY}px"
 			aria-label="Вперёд"
-			disabled={atEnd}
-			onclick={() => scroll(1)}
-		>{`>`}</button>
+			onclick={() => scroll(1)}>{`>`}</button
+		>
 	{/if}
 </div>
