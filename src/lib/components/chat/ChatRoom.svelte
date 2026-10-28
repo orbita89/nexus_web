@@ -7,10 +7,10 @@
 	import { chat } from '#lib/chat/chat.svelte.ts';
 	import { authorName, isSystemRoom, MAX_BODY, shortTime, type RoomMeta } from '#lib/chat/rooms.ts';
 	import { entityHref } from '#lib/catalog/kinds.ts';
-import { loginUrl } from '#lib/utils/redirect.ts';
+	import { loginUrl } from '#lib/utils/redirect.ts';
 	import ChatMessage from './ChatMessage.svelte';
 	import type { PickedEntity } from '#lib/components/social/EntityPicker.svelte';
-import EntitySearchPopover from './EntitySearchPopover.svelte';
+	import EntitySearchPopover from './EntitySearchPopover.svelte';
 	import RoomIcon from './RoomIcon.svelte';
 
 	// Открытая комната: шапка, лента (вверх — старые), поле ввода. Лента прилипает к низу, пока
@@ -85,7 +85,9 @@ import EntitySearchPopover from './EntitySearchPopover.svelte';
 	function submit() {
 		let body = text;
 		if (attached.length) {
-			const hrefs = attached.map((e) => entityHref({ kind: e.kind as any, slug: e.slug })).join(' ');
+			const hrefs = attached
+				.map((e) => entityHref({ kind: e.kind as any, slug: e.slug }))
+				.join(' ');
 			body = text.trim() ? `${text.trim()} ${hrefs}` : hrefs;
 		}
 		if (chat.send(body, picture)) {
@@ -137,6 +139,8 @@ import EntitySearchPopover from './EntitySearchPopover.svelte';
 	let caret = $state(0);
 	let picked = $state(0);
 	let attaching = $state(false);
+	/** Меню скрепки: выбрать карточку или картинку. */
+	let attachMenu = $state(false);
 	let attached = $state<PickedEntity[]>([]);
 	let searched = $state<SchemaUserRef[]>([]);
 	let searchTimer: ReturnType<typeof setTimeout> | undefined;
@@ -204,12 +208,12 @@ import EntitySearchPopover from './EntitySearchPopover.svelte';
 	/** Enter и стрелки сначала достаются списку подсказок. */
 	function onKeydown(e: KeyboardEvent) {
 		/** «#» открывает поиск карточки (как кнопка прикрепления). */
-	if (e.key === '#') {
-		e.preventDefault();
-		attaching = true;
-		return;
-	}
-	if (hints.length) {
+		if (e.key === '#') {
+			e.preventDefault();
+			attaching = true;
+			return;
+		}
+		if (hints.length) {
 			if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
 				e.preventDefault();
 				picked = (picked + (e.key === 'ArrowDown' ? 1 : hints.length - 1)) % hints.length;
@@ -324,7 +328,7 @@ import EntitySearchPopover from './EntitySearchPopover.svelte';
 				{#if chat.searching}<span class="loading loading-xs loading-spinner"></span>{/if}
 			</label>
 		</div>
-		<div class="min-h-0 flex-1 overflow-y-auto scrollbar-hide px-2 py-2">
+		<div class="scrollbar-hide min-h-0 flex-1 overflow-y-auto px-2 py-2">
 			{#if roomQuery.trim().length < 2}
 				<p class="px-2 py-6 text-sm text-base-content/60">Введите хотя бы два символа.</p>
 			{:else if chat.found?.length}
@@ -351,7 +355,7 @@ import EntitySearchPopover from './EntitySearchPopover.svelte';
 
 	<div
 		bind:this={feed}
-		class={['min-h-0 flex-1 overflow-y-auto scrollbar-hide py-2', { hidden: chat.roomSearch }]}
+		class={['scrollbar-hide min-h-0 flex-1 overflow-y-auto py-2', { hidden: chat.roomSearch }]}
 		onscroll={onScroll}
 		aria-live="polite"
 	>
@@ -450,11 +454,20 @@ import EntitySearchPopover from './EntitySearchPopover.svelte';
 			{#if attached.length}
 				<div class="mb-1 flex flex-wrap gap-2">
 					{#each attached as entity, i (entity.slug + i)}
-						<div class="inline-block relative">
+						<div class="relative inline-block">
 							{#if entity.cover_url}
-								<img src={entity.cover_url} alt={entity.title} class="size-10 rounded object-cover" />
+								<img
+									src={entity.cover_url}
+									alt={entity.title}
+									class="size-10 rounded object-cover"
+								/>
 							{/if}
-							<button type="button" class="absolute -right-1 -top-1 btn btn-ghost btn-xs btn-circle bg-base-100" aria-label="Убрать сущность" onclick={() => (attached = attached.filter((_, j) => j !== i))}>✕</button>
+							<button
+								type="button"
+								class="btn absolute -top-1 -right-1 btn-circle bg-base-100 btn-ghost btn-xs"
+								aria-label="Убрать сущность"
+								onclick={() => (attached = attached.filter((_, j) => j !== i))}>✕</button
+							>
 						</div>
 					{/each}
 				</div>
@@ -483,26 +496,6 @@ import EntitySearchPopover from './EntitySearchPopover.svelte';
 				</ul>
 			{/if}
 			<div class="flex items-end gap-2">
-				<button
-					type="button"
-					class={['btn btn-square btn-ghost btn-sm', { 'text-primary': attaching }]}
-					aria-label="Прикрепить карточку"
-					title="Прикрепить карточку"
-					aria-pressed={attaching}
-					onclick={() => (attaching = !attaching)}
-				>
-					<svg
-						class="size-4"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2"
-						aria-hidden="true"
-						><path
-							d="M21.4 11.1 12.3 20a5 5 0 0 1-7.1-7.1l9.2-9.2a3.3 3.3 0 1 1 4.7 4.7l-9.2 9.2a1.7 1.7 0 0 1-2.4-2.4l8.5-8.5"
-						/></svg
-					>
-				</button>
 				<input
 					bind:this={file}
 					type="file"
@@ -511,37 +504,60 @@ import EntitySearchPopover from './EntitySearchPopover.svelte';
 					aria-label="Картинка"
 					onchange={pick}
 				/>
-				<button
-					type="button"
-					class="btn btn-square btn-ghost btn-sm"
-					aria-label="Прикрепить картинку"
-					title="Прикрепить картинку"
-					disabled={uploading}
-					onclick={() => file?.click()}
-				>
-					{#if uploading}
-						<span class="loading loading-xs loading-spinner"></span>
-					{:else}
-						<svg
-							class="size-4"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="2"
-							aria-hidden="true"
-							><rect x="3" y="3" width="18" height="18" rx="2" /><circle
-								cx="8.5"
-								cy="8.5"
-								r="1.5"
-							/>
-							<path d="m21 15-5-5L5 21" /></svg
+				<!-- Одна скрепка на оба вложения: карточка и картинка выбираются в её меню. -->
+				<div class="relative shrink-0">
+					<button
+						type="button"
+						class={['btn btn-square btn-ghost btn-sm', { 'text-primary': attachMenu || attaching }]}
+						aria-label="Прикрепить"
+						title="Прикрепить"
+						aria-expanded={attachMenu}
+						disabled={uploading}
+						onclick={() => (attachMenu = !attachMenu)}
+					>
+						{#if uploading}
+							<span class="loading loading-xs loading-spinner"></span>
+						{:else}
+							<svg
+								class="size-4"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								aria-hidden="true"
+								><path
+									d="M21.4 11.1 12.3 20a5 5 0 0 1-7.1-7.1l9.2-9.2a3.3 3.3 0 1 1 4.7 4.7l-9.2 9.2a1.7 1.7 0 0 1-2.4-2.4l8.5-8.5"
+								/></svg
+							>
+						{/if}
+					</button>
+					{#if attachMenu}
+						<div
+							class="absolute bottom-full left-0 z-30 mb-1 flex w-44 flex-col rounded-box bg-base-100 p-1 shadow-xl ring-1 ring-base-300"
 						>
+							<button
+								type="button"
+								class="rounded px-3 py-1.5 text-left text-sm hover:bg-base-300"
+								onclick={() => {
+									attachMenu = false;
+									attaching = true;
+								}}>Карточка</button
+							>
+							<button
+								type="button"
+								class="rounded px-3 py-1.5 text-left text-sm hover:bg-base-300"
+								onclick={() => {
+									attachMenu = false;
+									file?.click();
+								}}>Картинка</button
+							>
+						</div>
 					{/if}
-				</button>
+				</div>
 				<textarea
 					bind:this={input}
 					bind:value={text}
-					class="textarea min-h-0 flex-1 resize-none textarea-sm"
+					class="min-h-0 flex-1 resize-none rounded-2xl border-0 bg-base-200 px-4 py-2.5 text-base outline-none focus:outline-none"
 					rows="1"
 					maxlength={MAX_BODY}
 					placeholder="@люди, #контент"
@@ -551,7 +567,9 @@ import EntitySearchPopover from './EntitySearchPopover.svelte';
 					onclick={(e) => (caret = e.currentTarget.selectionStart)}
 					oninput={(e) => (caret = e.currentTarget.selectionStart)}
 					onblur={() => setTimeout(() => (caret = 0), 150)}></textarea>
-				<button class="btn btn-sm bg-orange-500 text-white border-orange-500 hover:bg-orange-600" disabled={!text.trim() && !picture}>➤</button
+				<button
+					class="btn border-orange-500 bg-orange-500 text-white btn-sm hover:bg-orange-600"
+					disabled={!text.trim() && !picture}>➤</button
 				>
 			</div>
 		</form>
