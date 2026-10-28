@@ -98,7 +98,7 @@
 <article
 	bind:this={row}
 	class={[
-		'group flex items-end gap-2 px-3 py-0.5',
+		'group relative flex items-end gap-2 px-3 py-0.5',
 		{ 'opacity-60': item.status === 'sending', 'flex-row-reverse': mine }
 	]}
 >
@@ -118,10 +118,9 @@
 		<span class="size-8 shrink-0 rounded-full bg-base-300" aria-hidden="true"></span>
 	{/if}
 	<div
-		class={[
-			'bubble w-fit max-w-[94%] min-w-0 rounded-2xl px-2.5 py-1.5 text-white',
-			mine ? 'mine' : 'theirs'
-		]}
+		class="bubble w-fit max-w-[94%] min-w-0 rounded-2xl px-2.5 py-1.5 text-white"
+		class:mine
+		class:theirs={!mine}
 	>
 		{#if !mine}
 			<p class="flex items-baseline gap-2 text-xs">
@@ -269,8 +268,12 @@
 	</div>
 
 	{#if !item.clientId && !item.deleted && !editing && session.status === 'authed'}
+		<!-- Кнопки лежат поверх сообщения, чтобы не отнимать ширину у пузыря. -->
 		<div
-			class="flex shrink-0 items-start gap-0.5 opacity-0 transition group-focus-within:opacity-100 group-hover:opacity-100"
+			class={[
+				'absolute top-0 z-20 flex items-start gap-0.5 rounded-full bg-base-300/80 px-0.5 opacity-0 backdrop-blur transition group-focus-within:opacity-100 group-hover:opacity-100',
+				mine ? 'left-2' : 'right-2'
+			]}
 		>
 			<button
 				class="btn btn-ghost btn-xs"
@@ -309,23 +312,22 @@
 		bottom: 0;
 		width: 0;
 		height: 0;
-		border: 13px solid transparent;
-		border-bottom: 0;
+		border-top: 22px solid transparent;
 	}
 	.mine {
 		background: #2b5278;
-		border-bottom-right-radius: 4px;
+		border-bottom-right-radius: 3px;
 	}
 	.mine::after {
 		right: -11px;
-		border-left-color: #2b5278;
+		border-left: 12px solid #2b5278;
 	}
 	.theirs {
 		background: #182533;
-		border-bottom-left-radius: 4px;
+		border-bottom-left-radius: 3px;
 	}
 	.theirs::after {
 		left: -11px;
-		border-right-color: #182533;
+		border-right: 12px solid #182533;
 	}
 </style>
