@@ -1,5 +1,11 @@
 <script lang="ts">
-	import { editionHref, numberLabel, seasonLabel, yearsLabel } from '#lib/catalog/awards.ts';
+	import {
+		awardCatalogHref,
+		editionHref,
+		numberLabel,
+		seasonLabel,
+		yearsLabel
+	} from '#lib/catalog/awards.ts';
 	import { kindByApi } from '#lib/catalog/kinds.ts';
 	import { count } from '#lib/catalog/labels.ts';
 	import AwardLogo from '#lib/components/catalog/AwardLogo.svelte';
@@ -47,8 +53,9 @@
 		{#if facts.length}
 			<p class="mt-2 text-sm text-base-content/50">{facts.join(' · ')}</p>
 		{/if}
-		<a href="/films?award={award.slug}" class="mt-2 mr-3 inline-block link text-sm link-primary"
-			>Работы премии в каталоге</a
+		<a
+			href={awardCatalogHref(award.kinds, award.slug)}
+			class="mt-2 mr-3 inline-block link text-sm link-primary">Работы премии в каталоге</a
 		>
 		{#if award.site_url}
 			<a

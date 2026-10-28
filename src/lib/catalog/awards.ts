@@ -139,6 +139,15 @@ export function groupAwards(awards: readonly SchemaEntityAward[]): AwardGroup[] 
 	);
 }
 
+/**
+ * Раздел каталога с работами премии: по её первому типу работ. У The Game Awards это /games,
+ * а не /films. Тип неизвестен — фильмы.
+ */
+export function awardCatalogHref(kinds: readonly string[], slug: string, year?: number): string {
+	const kind = KINDS.find((k) => k.kind === kinds[0]) ?? KINDS[0];
+	return `/${kind.slug}?award=${slug}${year ? `&award_year=${year}` : ''}`;
+}
+
 /** Адрес церемонии. */
 export const editionHref = (slug: string, year: number) => `/awards/${slug}/${year}`;
 
