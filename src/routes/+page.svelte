@@ -33,7 +33,7 @@
 			alt=""
 			aria-hidden="true"
 			fetchpriority="high"
-			class="hero-art size-full object-cover object-[50%_14%]"
+			class="size-full scale-105 object-cover object-[1%_0%] blur-sm brightness-75"
 		/>
 		<!-- Затемнение вниз: к «Подборкам» от картины остаётся лишь тёмный отсвет. -->
 		<div
@@ -116,11 +116,3 @@
 		<TagChips tags={data.tags} label="Популярные теги" />
 	</section>
 {/if}
-
-<style>
-	/* Небольшие размытие и затемнение: арт не спорит с текстом, а заодно не видно
-	   блочности webp там, где картина почти ушла в темноту. */
-	.hero-art {
-		filter: blur(2px) brightness(0.7) saturate(1.15);
-	}
-</style>
