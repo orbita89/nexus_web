@@ -119,7 +119,7 @@
 	{/if}
 	<div
 		class={[
-			'bubble w-fit max-w-[80%] min-w-0 rounded-2xl px-2.5 py-1.5 text-white',
+			'bubble w-fit max-w-[94%] min-w-0 rounded-2xl px-2.5 py-1.5 text-white',
 			mine ? 'mine' : 'theirs'
 		]}
 	>
@@ -218,8 +218,6 @@
 						>
 							{#if item.edited_at}<span>изм.</span>{/if}
 							<time datetime={item.created_at}>{clockTime(item.created_at)}</time>
-							{#if mine}<span aria-hidden="true">{item.status === 'sending' ? '🕘' : '✓✓'}</span
-								>{/if}
 						</span>{/if}
 				</p>
 			{/if}
@@ -253,7 +251,6 @@
 			<p class="flex items-center justify-end gap-1 text-[11px] text-white/50">
 				{#if item.edited_at && !item.deleted}<span>изм.</span>{/if}
 				<time datetime={item.created_at}>{clockTime(item.created_at)}</time>
-				{#if mine}<span aria-hidden="true">{item.status === 'sending' ? '🕘' : '✓✓'}</span>{/if}
 			</p>
 		{/if}
 
@@ -312,7 +309,7 @@
 		bottom: 0;
 		width: 0;
 		height: 0;
-		border: 8px solid transparent;
+		border: 13px solid transparent;
 		border-bottom: 0;
 	}
 	.mine {
@@ -320,7 +317,7 @@
 		border-bottom-right-radius: 4px;
 	}
 	.mine::after {
-		right: -7px;
+		right: -11px;
 		border-left-color: #2b5278;
 	}
 	.theirs {
@@ -328,7 +325,7 @@
 		border-bottom-left-radius: 4px;
 	}
 	.theirs::after {
-		left: -7px;
+		left: -11px;
 		border-right-color: #182533;
 	}
 </style>
