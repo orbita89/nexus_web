@@ -2,7 +2,7 @@
 	import { errorMessage } from '#lib/api/errors.ts';
 	import { session } from '#lib/auth/session.svelte.ts';
 	import { chat, type Item, type Message } from '#lib/chat/chat.svelte.ts';
-	import { authorName, entityLink, MAX_BODY, parseBody, shortTime } from '#lib/chat/rooms.ts';
+	import { authorName, clockTime, entityLink, MAX_BODY, parseBody } from '#lib/chat/rooms.ts';
 	import Avatar from '#lib/components/Avatar.svelte';
 	import MessageCard from './MessageCard.svelte';
 
@@ -10,7 +10,10 @@
 	// «повторить». Админ может удалить любое.
 	let { item, quoted }: { item: Item; quoted: Message | null | undefined } = $props();
 
-	const mine = $derived(!!item.author && (item.author.id === session.user?.id || item.author.username === session.user?.username));
+	const mine = $derived(
+		!!item.author &&
+			(item.author.id === session.user?.id || item.author.username === session.user?.username)
+	);
 	const canDelete = $derived(
 		!item.clientId && !item.deleted && (mine || session.user?.role === 'admin')
 	);
@@ -18,6 +21,10 @@
 	const card = $derived(item.body && !item.deleted ? entityLink(item.body) : null);
 	const parts = $derived(parseBody(item.body ?? ''));
 	const onlyLink = $derived(!!card && parts.length === 1 && !!item.body?.trim().match(/^\S+$/));
+	/** Время висит в последней строке текста (как в телеграме), а под картинкой и карточкой — отдельно. */
+	const inlineTime = $derived(
+		!item.deleted && !!item.body && !onlyLink && !item.attachment && !card
+	);
 	/** Меню по клику на автора: профиль или личное сообщение. Закрывается кликом мимо и Esc. */
 	let menu = $state(false);
 	let row = $state<HTMLElement>();
@@ -90,9 +97,14 @@
 
 <article
 	bind:this={row}
-	class={['group flex gap-2 px-3 py-1.5', { 'opacity-60': item.status === 'sending', 'flex-row-reverse': mine }]}
+	class={[
+		'group flex items-end gap-2 px-3 py-0.5',
+		{ 'opacity-60': item.status === 'sending', 'flex-row-reverse': mine }
+	]}
 >
-	{#if !mine && item.author && !item.clientId}
+	{#if mine}
+		<!-- Своё сообщение — без аватара и имени, как в телеграме. -->
+	{:else if item.author && !item.clientId}
 		<button
 			class="shrink-0"
 			aria-label="{authorName(item.author)} — профиль или написать"
@@ -105,41 +117,45 @@
 	{:else}
 		<span class="size-8 shrink-0 rounded-full bg-base-300" aria-hidden="true"></span>
 	{/if}
-	<div class={["min-w-0 flex-1 rounded-2xl px-3 py-2", mine ? "bg-[#2b5278] text-white ml-auto max-w-[80%]" : "bg-[#242f3d] text-white max-w-[80%]"]}>
-		<p class="flex items-baseline gap-2 text-xs">
-			{#if !mine && item.author && !item.clientId}
-				<span class="relative min-w-0">
-					<button class="truncate font-bold link-hover" onclick={() => (menu = !menu)}
-						>{authorName(item.author)}</button
-					>
-					{#if menu}
-						<!-- Клик по имени или аватару: в профиль или сразу написать лично. -->
-						<span
-							class="absolute top-full left-0 z-30 mt-1 flex w-44 flex-col rounded-box bg-base-100 p-1 shadow-xl ring-1 ring-base-300"
+	<div
+		class={[
+			'bubble w-fit max-w-[80%] min-w-0 rounded-2xl px-2.5 py-1.5 text-white',
+			mine ? 'mine' : 'theirs'
+		]}
+	>
+		{#if !mine}
+			<p class="flex items-baseline gap-2 text-xs">
+				{#if item.author && !item.clientId}
+					<span class="relative min-w-0">
+						<button class="truncate font-bold link-hover" onclick={() => (menu = !menu)}
+							>{authorName(item.author)}</button
 						>
-							<a
-								href="/u/{item.author.username}"
-								class="rounded px-3 py-1.5 text-left text-sm hover:bg-base-300"
-								onclick={() => (menu = false)}>Профиль</a
+						{#if menu}
+							<!-- Клик по имени или аватару: в профиль или сразу написать лично. -->
+							<span
+								class="absolute top-full left-0 z-30 mt-1 flex w-44 flex-col rounded-box bg-base-100 p-1 shadow-xl ring-1 ring-base-300"
 							>
-							{#if canWrite}
-								<button
-									class="rounded px-3 py-1.5 text-left text-sm hover:bg-base-300 disabled:opacity-50"
-									disabled={writing}
-									onclick={write}>Написать</button
+								<a
+									href="/u/{item.author.username}"
+									class="rounded px-3 py-1.5 text-left text-sm hover:bg-base-300"
+									onclick={() => (menu = false)}>Профиль</a
 								>
-							{/if}
-						</span>
-					{/if}
-				</span>
-			{:else}
-				<span class="truncate font-bold">{item.author ? authorName(item.author) : 'Удалено'}</span>
-			{/if}
-			<time class="text-base-content/40" datetime={item.created_at}
-				>{shortTime(item.created_at)}</time
-			>
-			{#if item.edited_at && !item.deleted}<span class="text-base-content/40">изменено</span>{/if}
-		</p>
+								{#if canWrite}
+									<button
+										class="rounded px-3 py-1.5 text-left text-sm hover:bg-base-300 disabled:opacity-50"
+										disabled={writing}
+										onclick={write}>Написать</button
+									>
+								{/if}
+							</span>
+						{/if}
+					</span>
+				{:else}
+					<span class="truncate font-bold">{item.author ? authorName(item.author) : 'Удалено'}</span
+					>
+				{/if}
+			</p>
+		{/if}
 
 		{#if item.reply_to}
 			<p class="mt-0.5 truncate border-l-2 border-primary/60 pl-2 text-xs text-base-content/50">
@@ -197,7 +213,14 @@
 									'link link-primary',
 									{ 'rounded bg-primary/15 px-0.5': part.v === session.user?.username }
 								]}>@{part.v}</a
-							>{:else}{part.v}{/if}{/each}
+							>{:else}{part.v}{/if}{/each}{#if inlineTime}<span
+							class="float-right mt-1 ml-2 inline-flex translate-y-0.5 items-center gap-1 text-[11px] whitespace-nowrap text-white/50"
+						>
+							{#if item.edited_at}<span>изм.</span>{/if}
+							<time datetime={item.created_at}>{clockTime(item.created_at)}</time>
+							{#if mine}<span aria-hidden="true">{item.status === 'sending' ? '🕘' : '✓✓'}</span
+								>{/if}
+						</span>{/if}
 				</p>
 			{/if}
 			{#if item.attachment}
@@ -224,6 +247,14 @@
 			{#if card}
 				<MessageCard link={card} />
 			{/if}
+		{/if}
+
+		{#if !inlineTime && !editing}
+			<p class="flex items-center justify-end gap-1 text-[11px] text-white/50">
+				{#if item.edited_at && !item.deleted}<span>изм.</span>{/if}
+				<time datetime={item.created_at}>{clockTime(item.created_at)}</time>
+				{#if mine}<span aria-hidden="true">{item.status === 'sending' ? '🕘' : '✓✓'}</span>{/if}
+			</p>
 		{/if}
 
 		{#if item.status === 'failed'}
@@ -269,3 +300,35 @@
 		</div>
 	{/if}
 </article>
+
+<style>
+	/* Пузырь с хвостиком у нижнего угла — как в телеграме. */
+	.bubble {
+		position: relative;
+	}
+	.bubble::after {
+		content: '';
+		position: absolute;
+		bottom: 0;
+		width: 0;
+		height: 0;
+		border: 8px solid transparent;
+		border-bottom: 0;
+	}
+	.mine {
+		background: #2b5278;
+		border-bottom-right-radius: 4px;
+	}
+	.mine::after {
+		right: -7px;
+		border-left-color: #2b5278;
+	}
+	.theirs {
+		background: #182533;
+		border-bottom-left-radius: 4px;
+	}
+	.theirs::after {
+		left: -7px;
+		border-right-color: #182533;
+	}
+</style>

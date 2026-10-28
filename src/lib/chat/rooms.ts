@@ -153,6 +153,10 @@ export function shortTime(iso: string, now = Date.now()): string {
 		: date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
 }
 
+/** Время внутри пузыря сообщения: всегда «14:05», дату показывает разделитель дня. */
+export const clockTime = (iso: string) =>
+	new Date(iso).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+
 /** Имя автора сообщения. */
 export const authorName = (author: { username: string; display_name?: string | null }) =>
 	author.display_name || author.username;
@@ -230,9 +234,11 @@ export function stripEntityLinks(body: string): string {
 		`(?:^|\\s|\\()(?:https?://[^\\s/]+)?/(${KINDS.map((k) => k.slug).join('|')})/[a-z0-9][a-z0-9-]*`,
 		'gi'
 	);
-	return body.replace(re, ' ').replace(/\\s{2,}/g, ' ').trim();
+	return body
+		.replace(re, ' ')
+		.replace(/\\s{2,}/g, ' ')
+		.trim();
 }
-
 
 /** Ссылка на карточку внутри сообщения (первая) — обратная совместимость. */
 export function entityLink(body: string): { kind: SchemaEntityKind; slug: string } | null {
