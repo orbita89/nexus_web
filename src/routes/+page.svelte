@@ -30,17 +30,28 @@
 	     оранжевым акцентом. Слой выше самого блока — картина продолжается за «Подборками»
 	     и только там гаснет в фон сайта.
 	     Файл обрезан по верхние 62% холста — видна всё равно только эта часть, зато пикселей
-	     хватает на широкий экран без апскейла, и размытие больше не нужно. -->
+	     хватает на широкий экран без апскейла, и размытие больше не нужно.
+	     AVIF с webp-запаской: то же разрешение почти без потерь и вдвое легче. -->
 	<div class="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[170%] overflow-hidden">
-		<img
-			src="/cassandra.webp"
-			srcset="/cassandra-820.webp 820w, /cassandra.webp 1536w"
-			sizes="100vw"
-			alt=""
-			aria-hidden="true"
-			fetchpriority="high"
-			class="size-full scale-105 object-cover object-[46%_0%] brightness-[0.92] saturate-[0.82] sm:origin-left sm:scale-[1.12] sm:object-[50%_26%]"
-		/>
+		<picture class="block size-full">
+			<source
+				type="image/avif"
+				srcset="/cassandra-820.avif 820w, /cassandra.avif 1536w"
+				sizes="100vw"
+			/>
+			<source
+				type="image/webp"
+				srcset="/cassandra-820.webp 820w, /cassandra.webp 1536w"
+				sizes="100vw"
+			/>
+			<img
+				src="/cassandra.webp"
+				alt=""
+				aria-hidden="true"
+				fetchpriority="high"
+				class="size-full scale-105 object-cover object-[46%_0%] brightness-[0.92] saturate-[0.82] sm:origin-left sm:scale-[1.12] sm:object-[50%_26%]"
+			/>
+		</picture>
 		<!-- Затемнение вниз: к «Подборкам» от картины остаётся лишь тёмный отсвет. -->
 		<div
 			class="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(9,9,11,0.15)_0%,rgba(9,9,11,0.4)_42%,rgba(9,9,11,0.85)_62%,rgba(9,9,11,0.97)_82%,#09090b_100%)]"
