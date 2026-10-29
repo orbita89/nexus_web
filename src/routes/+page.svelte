@@ -23,7 +23,7 @@
 <!-- Первый экран во всю ширину окна: выходит из колонки main (100cqw — ширина страницы
      без панели чата) и подтягивается под шапку. -->
 <section
-	class="relative mx-[calc(50%-50cqw)] -mt-[5.5rem] mb-10 flex min-h-[32rem] w-[100cqw] flex-col justify-center pt-[9rem] pb-14 sm:min-h-[92vh]"
+	class="relative mx-[calc(50%-50cqw)] -mt-[5.5rem] mb-10 flex min-h-[32rem] w-[100cqw] flex-col justify-center pt-[9rem] pb-14 sm:min-h-screen"
 >
 	<!-- «Кассандра» Эвелин де Морган в авторской неоновой гамме — она даёт глубину, которой
 	     нет у плоской перекраски. Чуть приглушена по насыщенности, чтобы не спорить с
@@ -33,7 +33,7 @@
 	     хватает на широкий экран без апскейла, и размытие больше не нужно.
 	     AVIF с webp-запаской: то же разрешение почти без потерь и вдвое легче. -->
 	<div class="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[170%] overflow-hidden">
-		<picture class="block size-full">
+		<picture class="hero-art block size-full sm:ml-auto sm:w-[86%]">
 			<source
 				type="image/avif"
 				srcset="/cassandra-820.avif 820w, /cassandra.avif 1536w"
@@ -49,7 +49,7 @@
 				alt=""
 				aria-hidden="true"
 				fetchpriority="high"
-				class="size-full scale-105 object-cover object-[46%_0%] brightness-[0.92] saturate-[0.78] sm:origin-right sm:translate-x-[6%] sm:scale-[1.07] sm:object-[50%_74%]"
+				class="size-full scale-105 object-cover object-[46%_0%] brightness-[0.92] saturate-[0.78] sm:object-[50%_82%]"
 			/>
 		</picture>
 		<!-- Затемнение вниз: к «Подборкам» от картины остаётся лишь тёмный отсвет. -->
@@ -146,3 +146,14 @@
 		<TagChips tags={data.tags} label="Популярные теги" />
 	</section>
 {/if}
+
+<style>
+	/* Картина занимает не всю ширину — левый край растушёван, чтобы вместо неё
+	   не было видно вертикального шва с фоном. */
+	@media (min-width: 40rem) {
+		.hero-art {
+			-webkit-mask-image: linear-gradient(to right, transparent 0, #000 9%);
+			mask-image: linear-gradient(to right, transparent 0, #000 9%);
+		}
+	}
+</style>
