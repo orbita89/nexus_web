@@ -23,7 +23,7 @@
 <!-- Первый экран во всю ширину окна: выходит из колонки main (100cqw — ширина страницы
      без панели чата) и подтягивается под шапку. -->
 <section
-	class="relative mx-[calc(50%-50cqw)] -mt-[5.5rem] mb-10 flex min-h-[32rem] w-[100cqw] flex-col justify-center pt-[9rem] pb-14 sm:min-h-[70vh]"
+	class="relative mx-[calc(50%-50cqw)] -mt-[5.5rem] mb-10 flex min-h-[32rem] w-[100cqw] flex-col justify-center pt-[9rem] pb-14 sm:min-h-[84vh]"
 >
 	<!-- «Кассандра» Эвелин де Морган в авторской неоновой гамме — она даёт глубину, которой
 	     нет у плоской перекраски. Чуть приглушена по насыщенности, чтобы не спорить с
@@ -49,7 +49,7 @@
 				alt=""
 				aria-hidden="true"
 				fetchpriority="high"
-				class="size-full scale-105 object-cover object-[46%_0%] brightness-[0.92] saturate-[0.82] sm:origin-right sm:translate-x-[5%] sm:scale-[1.06] sm:object-[50%_46%]"
+				class="size-full scale-105 object-cover object-[46%_0%] brightness-[0.92] saturate-[0.82] sm:origin-right sm:translate-x-[4%] sm:scale-[1.04] sm:object-[50%_62%]"
 			/>
 		</picture>
 		<!-- Затемнение вниз: к «Подборкам» от картины остаётся лишь тёмный отсвет. -->
