@@ -9,6 +9,7 @@
 		nomineeNote
 	} from '#lib/catalog/awards.ts';
 	import AwardLogo from '#lib/components/catalog/AwardLogo.svelte';
+	import ChatButton from '#lib/components/chat/ChatButton.svelte';
 	import EntityCard from '#lib/components/catalog/EntityCard.svelte';
 	import PersonAvatar from '#lib/components/catalog/PersonAvatar.svelte';
 	import Seo from '#lib/components/catalog/Seo.svelte';
@@ -47,6 +48,17 @@
 			href={awardCatalogHref(edition.award.kinds, edition.award.slug, edition.year)}
 			class="mt-2 inline-block link text-sm link-primary">Работы этого года в каталоге</a
 		>
+		<div class="mt-4">
+			<!-- Чат церемонии: до объявления лауреатов это самый живой разговор раздела. -->
+			<ChatButton
+				meta={{
+					room: `award:${edition.award.slug}-${edition.year}`,
+					title: title,
+					href: `/awards/${edition.award.slug}/${edition.year}`,
+					image: edition.cover_url ?? edition.award.logo_url ?? null
+				}}
+			/>
+		</div>
 	</div>
 </header>
 

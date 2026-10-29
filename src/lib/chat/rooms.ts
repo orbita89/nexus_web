@@ -10,7 +10,9 @@ import type {
 import { ApiError, errorMessage } from '#lib/api/errors.ts';
 import { KINDS, kindBySlug, refHref } from '#lib/catalog/kinds.ts';
 
-export type RoomKind = 'entity' | 'person' | 'tag' | 'room' | 'dm';
+// Комната премии и комната церемонии в адресе — один вид `award`, различает их slug
+// (`oscar` и `oscar-2024`); в ответе kind приходит как `award` или `award_edition`.
+export type RoomKind = 'entity' | 'person' | 'tag' | 'room' | 'dm' | 'award';
 
 // Системные чаты. Вкладка панели — сам чат, а не список чатов: «Общий» открывает ленту
 // сразу, «Каталог» переключает между лентами по разделам. Заведены на бэкенде, участие
@@ -82,9 +84,37 @@ export function roomMeta(chat: SchemaChatSummary | SchemaChatRoomInfo): RoomMeta
 			href: `/u/${dm.peer.username}`,
 			image: dm.peer.avatar_url ?? null
 		};
+	if (chat.award)
+		return {
+			room,
+			title: chat.award.year ? `${chat.award.title} ${chat.award.year}` : chat.award.title,
+			href: awardRoomHref(chat.award),
+			image: chat.award.logo_url ?? null
+		};
 	if (chat.tag) return { room, title: chat.tag.name, href: `/tags/${chat.tag.slug}`, image: null };
 	if (chat.custom) return { room, title: chat.custom.title, href: '/chat', image: null };
 	return { room, title: splitRoom(room).slug, href: null, image: null };
+}
+
+/**
+ * Адрес премии или церемонии по комнате: у церемонии slug — «oscar-2024», а адрес раздела —
+ * `/awards/oscar/2024`, поэтому год отрезаем.
+ */
+export function awardRoomHref(award: { slug: string; year?: number | null }): string {
+	if (!award.year) return `/awards/${award.slug}`;
+	const suffix = `-${award.year}`;
+	const slug = award.slug.endsWith(suffix) ? award.slug.slice(0, -suffix.length) : award.slug;
+	return `/awards/${slug}/${award.year}`;
+}
+
+/** Комната премии (`award:oscar`) или её церемонии (`award:oscar-2024`). */
+export function awardRoom(slug: string, year?: number): RoomMeta & { room: string } {
+	return {
+		room: `award:${year ? `${slug}-${year}` : slug}`,
+		title: '',
+		href: year ? `/awards/${slug}/${year}` : `/awards/${slug}`,
+		image: null
+	};
 }
 
 /** Значок непрочитанного: 100 и больше — «99+». */

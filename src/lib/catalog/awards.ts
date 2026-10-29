@@ -148,22 +148,6 @@ export function awardCatalogHref(kinds: readonly string[], slug: string, year?: 
 	return `/${kind.slug}?award=${slug}${year ? `&award_year=${year}` : ''}`;
 }
 
-/**
- * Превью года без повторов: в `top` одна работа приходит столько раз, сколько у неё побед
- * («Золотой глобус» — драма и комедия в одной категории), а в ленте нужен один постер.
- */
-export function uniqueTop<T extends { id: string }>(top: readonly T[], limit = 4): T[] {
-	const seen = new Set<string>();
-	const out: T[] = [];
-	for (const item of top) {
-		if (seen.has(item.id)) continue;
-		seen.add(item.id);
-		out.push(item);
-		if (out.length === limit) break;
-	}
-	return out;
-}
-
 /** Адрес церемонии. */
 export const editionHref = (slug: string, year: number) => `/awards/${slug}/${year}`;
 

@@ -714,12 +714,16 @@ class Chat {
 		const { kind, slug } = splitRoom(room);
 		// Личная переписка не «комната, в которую вступают»: её убирают крестиком.
 		if (kind === 'dm') return;
-		const params = { path: { slug } };
+		// У премий своё участие (интересов у них нет), у остальных — интерес или своя комната.
+		const award = kind === 'award';
+		const params = { path: award ? { kind, slug } : { slug } } as { path: { slug: string } };
 		// Пути интересов и участия устроены одинаково: PUT / DELETE, 204.
 		const path = (
-			kind === 'room'
-				? '/api/v1/social/chat/rooms/{slug}/membership'
-				: `/api/v1/social/${{ entity: 'entities', person: 'people', tag: 'tags' }[kind]}/{slug}/interest`
+			award
+				? '/api/v1/social/chat/{kind}/{slug}/membership'
+				: kind === 'room'
+					? '/api/v1/social/chat/rooms/{slug}/membership'
+					: `/api/v1/social/${{ entity: 'entities', person: 'people', tag: 'tags' }[kind]}/{slug}/interest`
 		) as '/api/v1/social/entities/{slug}/interest';
 		try {
 			await unwrap(next ? api.social.PUT(path, { params }) : api.social.DELETE(path, { params }));

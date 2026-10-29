@@ -4,12 +4,12 @@
 		editionHref,
 		numberLabel,
 		seasonLabel,
-		uniqueTop,
 		yearsLabel
 	} from '#lib/catalog/awards.ts';
 	import { KINDS } from '#lib/catalog/kinds.ts';
 	import { count } from '#lib/catalog/labels.ts';
 	import AwardLogo from '#lib/components/catalog/AwardLogo.svelte';
+	import ChatButton from '#lib/components/chat/ChatButton.svelte';
 	import EmptyState from '#lib/components/catalog/EmptyState.svelte';
 	import Poster from '#lib/components/catalog/Poster.svelte';
 	import Seo from '#lib/components/catalog/Seo.svelte';
@@ -63,6 +63,16 @@
 				class="mt-2 inline-block link text-sm link-primary">Официальный сайт</a
 			>
 		{/if}
+		<div class="mt-4">
+			<ChatButton
+				meta={{
+					room: `award:${award.slug}`,
+					title: award.title,
+					href: `/awards/${award.slug}`,
+					image: award.logo_url ?? null
+				}}
+			/>
+		</div>
 	</div>
 </header>
 
@@ -97,7 +107,7 @@
 					{#if edition.top.length}
 						<!-- Победители главной категории: по ним год узнают быстрее, чем по номеру. -->
 						<span class="flex gap-2">
-							{#each uniqueTop(edition.top) as entity (entity.id)}
+							{#each edition.top.slice(0, 4) as entity (entity.id)}
 								<span class="w-12 shrink-0">
 									<Poster
 										title={entity.title}

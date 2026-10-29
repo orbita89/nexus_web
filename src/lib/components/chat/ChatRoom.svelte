@@ -262,7 +262,8 @@
 				{/if}
 			</div>
 			{#if chat.info?.me && chat.info.room === meta.room}
-				{@const room = meta.room.startsWith('room:')}
+				<!-- В свою комнату и в чат премии вступают, за карточкой, человеком и тегом следят. -->
+				{@const room = meta.room.startsWith('room:') || meta.room.startsWith('award:')}
 				<button
 					class={['btn rounded-full btn-xs', chat.info.me.member ? 'btn-ghost' : 'btn-primary']}
 					aria-pressed={chat.info.me.member}

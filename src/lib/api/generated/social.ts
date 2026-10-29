@@ -537,6 +537,29 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/social/chat/{kind}/{slug}/membership': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/**
+		 * Вступить в комнату премии или церемонии → 204 (повторно — тоже 204): она появляется в
+		 *     «моих чатах», канал подписывается. Комната заводится при первом вступлении.
+		 * @description Для сущностей, людей и тегов участие идёт за интересами (`PUT /interests/...`), для своих
+		 *     комнат — `PUT /chat/rooms/{slug}/membership`; здесь только `award`.
+		 */
+		put: operations['join_award_chat'];
+		post?: never;
+		/** Выйти из комнаты премии или церемонии → 204 (даже если не был участником). */
+		delete: operations['leave_award_chat'];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/social/chat/{kind}/{slug}/messages': {
 		parameters: {
 			query?: never;
@@ -1719,6 +1742,25 @@ export interface components {
 			/** Format: int32 */
 			width: number;
 		};
+		/**
+		 * @description Премия или её церемония для чата и реалтайма: `slug` — адрес раздела (`oscar`,
+		 *     `oscar-2024`), `year` заполнен у церемонии.
+		 */
+		AwardRoomRef: {
+			/** Format: uuid */
+			id: string;
+			logo_url?: string | null;
+			/** @example oscar-2024 */
+			slug: string;
+			/** @example Оскар */
+			title: string;
+			/**
+			 * Format: int32
+			 * @description Год церемонии; `null` — комната премии целиком.
+			 * @example 2024
+			 */
+			year?: number | null;
+		};
 		/** @description Разрез по типам контента: `{"movie": 30, "book": 12}`. */
 		ByKind: {
 			/** @description Что отмечено «просмотрено». */
@@ -1752,7 +1794,7 @@ export interface components {
 			/** Format: uuid */
 			id: string;
 			/**
-			 * @description Вид комнаты: `entity`, `person`, `tag`, `room`.
+			 * @description Вид комнаты: `entity`, `person`, `tag`, `award`, `award_edition`, `room`.
 			 * @example entity
 			 */
 			kind: string;
@@ -1763,7 +1805,7 @@ export interface components {
 			reply_to?: string | null;
 			/**
 			 * Format: uuid
-			 * @description id сущности, человека или тега комнаты; у своей комнаты — id комнаты.
+			 * @description id сущности, человека, тега, премии или церемонии комнаты; у своей комнаты — id комнаты.
 			 */
 			target_id: string;
 		};
@@ -1772,6 +1814,7 @@ export interface components {
 		 *     пользователя. Заполнено одно из `entity`, `person`, `tag`, `custom` — по `kind`.
 		 */
 		ChatRoomInfo: {
+			award?: components['schemas']['AwardRoomRef'] | null;
 			custom?: components['schemas']['CustomRoom'] | null;
 			dm?: components['schemas']['DmRef'] | null;
 			entity?: components['schemas']['EntityRef'] | null;
@@ -1794,7 +1837,10 @@ export interface components {
 			 * @description Последнее прочитанное сообщение (`null` — ничего): разделитель «новые сообщения».
 			 */
 			last_read_id?: string | null;
-			/** @description Комната в «моих чатах»: сущность, человек или тег в интересах, в свою комнату — вступил. */
+			/**
+			 * @description Комната в «моих чатах»: сущность, человек или тег в интересах, в свою комнату и в
+			 *     комнату премии — вступил.
+			 */
 			member: boolean;
 			muted: boolean;
 			/**
@@ -1829,6 +1875,7 @@ export interface components {
 		 *     по `kind`.
 		 */
 		ChatSummary: {
+			award?: components['schemas']['AwardRoomRef'] | null;
 			custom?: components['schemas']['CustomRoom'] | null;
 			dm?: components['schemas']['DmRef'] | null;
 			entity?: components['schemas']['EntityRef'] | null;
@@ -1839,7 +1886,7 @@ export interface components {
 			person?: components['schemas']['PersonRef'] | null;
 			/**
 			 * @description Имя канала и комнаты для WebSocket: `entity:<slug>`, `person:<slug>`, `tag:<slug>`,
-			 *     `room:<slug>`.
+			 *     `award:<slug>`, `room:<slug>`.
 			 * @example entity:dune-2021
 			 */
 			room: string;
@@ -3830,6 +3877,7 @@ export interface components {
 export type SchemaAddRelated = components['schemas']['AddRelated'];
 export type SchemaAdminUpdateCollection = components['schemas']['AdminUpdateCollection'];
 export type SchemaAttachment = components['schemas']['Attachment'];
+export type SchemaAwardRoomRef = components['schemas']['AwardRoomRef'];
 export type SchemaByKind = components['schemas']['ByKind'];
 export type SchemaChatHistory = components['schemas']['ChatHistory'];
 export type SchemaChatMessage = components['schemas']['ChatMessage'];
@@ -6129,6 +6177,118 @@ export interface operations {
 				};
 			};
 			/** @description Неизвестный вид комнаты или slug */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	join_award_chat: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description Только `award`
+				 * @example award
+				 */
+				kind: string;
+				/**
+				 * @description slug премии или церемонии
+				 * @example oscar-2024
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Участник */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description У этого вида комнат своё участие */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такой премии или церемонии */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	leave_award_chat: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description Только `award`
+				 * @example award
+				 */
+				kind: string;
+				/**
+				 * @description slug премии или церемонии
+				 * @example oscar-2024
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Не участник */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description У этого вида комнат своё участие */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такой премии или церемонии */
 			404: {
 				headers: {
 					[name: string]: unknown;

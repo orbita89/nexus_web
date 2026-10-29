@@ -8,7 +8,6 @@ import {
 	nomineeNote,
 	readAwardKind,
 	seasonLabel,
-	uniqueTop,
 	yearsLabel
 } from './awards.ts';
 
@@ -118,13 +117,5 @@ describe('readAwardKind', () => {
 		expect(readAwardKind('movie')).toBe('movie');
 		expect(readAwardKind('films')).toBeUndefined();
 		expect(readAwardKind(undefined)).toBeUndefined();
-	});
-});
-
-describe('uniqueTop', () => {
-	it('убирает повторы работ и обрезает до лимита', () => {
-		const top = [{ id: 'a' }, { id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' }, { id: 'e' }];
-		expect(uniqueTop(top).map((t) => t.id)).toEqual(['a', 'b', 'c', 'd']);
-		expect(uniqueTop(top, 2).map((t) => t.id)).toEqual(['a', 'b']);
 	});
 });
