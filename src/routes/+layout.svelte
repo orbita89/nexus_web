@@ -52,7 +52,7 @@
 >
 	<!-- Фиолетовый отсвет от «Кассандры» держится на фоне всей страницы, куда бы её ни пролистали. -->
 	<div
-		class="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(70%_55%_at_75%_12%,rgba(139,92,246,0.3),transparent_72%),radial-gradient(60%_50%_at_8%_75%,rgba(109,76,235,0.22),transparent_72%)]"
+		class="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(70%_55%_at_75%_12%,rgba(139,92,246,0.13),transparent_72%),radial-gradient(60%_50%_at_8%_75%,rgba(109,76,235,0.09),transparent_72%)]"
 		aria-hidden="true"
 	></div>
 	<main class="mx-auto w-full max-w-6xl flex-1 px-4 py-6">

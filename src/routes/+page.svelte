@@ -49,7 +49,7 @@
 				alt=""
 				aria-hidden="true"
 				fetchpriority="high"
-				class="size-full scale-105 object-cover object-[46%_0%] brightness-[0.92] saturate-[0.82] sm:origin-right sm:translate-x-[4%] sm:scale-[1.04] sm:object-[50%_62%]"
+				class="size-full scale-105 object-cover object-[46%_0%] brightness-[0.92] saturate-[0.72] sm:origin-right sm:translate-x-[4%] sm:scale-[1.04] sm:object-[50%_62%]"
 			/>
 		</picture>
 		<!-- Затемнение вниз: к «Подборкам» от картины остаётся лишь тёмный отсвет. -->
