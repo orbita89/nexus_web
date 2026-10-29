@@ -34,7 +34,7 @@
 					<a href="/awards/{group.award.slug}" class="font-bold link-hover">{group.award.title}</a>
 					<ul class="mt-1 flex flex-col gap-1">
 						{#each group.years as year (year.year)}
-							{#each year.items as item (item.category.slug + item.year + (item.entity?.slug ?? ''))}
+							{#each year.items as item, i (i)}
 								<li class="flex flex-wrap items-baseline gap-x-2 text-sm">
 									<span aria-hidden="true" class={{ 'opacity-40 grayscale': !item.won }}>🏆</span>
 									<a href={editionHref(group.award.slug, item.year)} class="font-medium link-hover"

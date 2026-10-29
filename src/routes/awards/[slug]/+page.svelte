@@ -4,6 +4,7 @@
 		editionHref,
 		numberLabel,
 		seasonLabel,
+		uniqueTop,
 		yearsLabel
 	} from '#lib/catalog/awards.ts';
 	import { KINDS } from '#lib/catalog/kinds.ts';
@@ -96,7 +97,7 @@
 					{#if edition.top.length}
 						<!-- Победители главной категории: по ним год узнают быстрее, чем по номеру. -->
 						<span class="flex gap-2">
-							{#each edition.top.slice(0, 4) as entity (entity.id)}
+							{#each uniqueTop(edition.top) as entity (entity.id)}
 								<span class="w-12 shrink-0">
 									<Poster
 										title={entity.title}
