@@ -25,9 +25,9 @@
 <section
 	class="relative mx-[calc(50%-50cqw)] -mt-[5.5rem] mb-10 flex min-h-[32rem] w-[100cqw] flex-col justify-center pt-[9rem] pb-14 sm:min-h-[70vh]"
 >
-	<!-- «Кассандра» Эвелин де Морган в дуотоне фиолетовый→янтарный (перекрашена в самом
-	     файле, scripts/duotone.py): арт живёт в одной палитре с темой, а не отдельным
-	     цветовым миром. Слой выше самого блока — картина продолжается за «Подборками»
+	<!-- «Кассандра» Эвелин де Морган в авторской неоновой гамме — она даёт глубину, которой
+	     нет у плоской перекраски. Чуть приглушена по насыщенности, чтобы не спорить с
+	     оранжевым акцентом. Слой выше самого блока — картина продолжается за «Подборками»
 	     и только там гаснет в фон сайта. -->
 	<div class="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[170%] overflow-hidden">
 		<img
@@ -35,11 +35,11 @@
 			alt=""
 			aria-hidden="true"
 			fetchpriority="high"
-			class="size-full scale-105 object-cover object-[50%_20%] blur-[2px] brightness-[0.85] sm:origin-left sm:scale-[1.18]"
+			class="size-full scale-105 object-cover object-[50%_20%] blur-[2px] brightness-[0.92] saturate-[0.82] sm:origin-left sm:scale-[1.18]"
 		/>
 		<!-- Затемнение вниз: к «Подборкам» от картины остаётся лишь тёмный отсвет. -->
 		<div
-			class="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(9,9,11,0.25)_0%,rgba(9,9,11,0.45)_42%,rgba(9,9,11,0.85)_62%,rgba(9,9,11,0.97)_82%,#09090b_100%)]"
+			class="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(9,9,11,0.15)_0%,rgba(9,9,11,0.4)_42%,rgba(9,9,11,0.85)_62%,rgba(9,9,11,0.97)_82%,#09090b_100%)]"
 		></div>
 		<!-- Подложка под текстом слева — арт по краям остаётся виден. -->
 		<div
