@@ -144,7 +144,7 @@ export function groupAwards(awards: readonly SchemaEntityAward[]): AwardGroup[] 
  * а не /films. Тип неизвестен — фильмы.
  */
 export function awardCatalogHref(kinds: readonly string[], slug: string, year?: number): string {
-	const kind = KINDS.find((k) => k.kind === kinds[0]) ?? KINDS[0];
+	const kind = KINDS.find((k) => k.kind === kinds?.[0]) ?? KINDS[0];
 	return `/${kind.slug}?award=${slug}${year ? `&award_year=${year}` : ''}`;
 }
 

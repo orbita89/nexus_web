@@ -6,7 +6,7 @@
 		seasonLabel,
 		yearsLabel
 	} from '#lib/catalog/awards.ts';
-	import { kindByApi } from '#lib/catalog/kinds.ts';
+	import { KINDS } from '#lib/catalog/kinds.ts';
 	import { count } from '#lib/catalog/labels.ts';
 	import AwardLogo from '#lib/components/catalog/AwardLogo.svelte';
 	import EmptyState from '#lib/components/catalog/EmptyState.svelte';
@@ -20,10 +20,13 @@
 
 	const award = $derived(data.award);
 	const years = $derived(yearsLabel(award));
+	// kindByApi на неизвестном типе вернул бы undefined, а старый бэкенд может не прислать kinds.
 	const kinds = $derived(
-		award.kinds.map((k) => kindByApi(k as Parameters<typeof kindByApi>[0]).title)
+		(award.kinds ?? []).flatMap((k) => KINDS.find((known) => known.kind === k)?.title ?? [])
 	);
-	const facts = $derived([award.country, years, ...kinds].filter(Boolean) as string[]);
+	const facts = $derived(
+		[award.country, years, ...kinds].filter((f): f is string => typeof f === 'string')
+	);
 </script>
 
 <Seo
