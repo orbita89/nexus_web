@@ -28,14 +28,18 @@
 	<!-- «Кассандра» Эвелин де Морган в авторской неоновой гамме — она даёт глубину, которой
 	     нет у плоской перекраски. Чуть приглушена по насыщенности, чтобы не спорить с
 	     оранжевым акцентом. Слой выше самого блока — картина продолжается за «Подборками»
-	     и только там гаснет в фон сайта. -->
+	     и только там гаснет в фон сайта.
+	     Файл обрезан по верхние 62% холста — видна всё равно только эта часть, зато пикселей
+	     хватает на широкий экран без апскейла, и размытие больше не нужно. -->
 	<div class="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[170%] overflow-hidden">
 		<img
 			src="/cassandra.webp"
+			srcset="/cassandra-820.webp 820w, /cassandra.webp 1536w"
+			sizes="100vw"
 			alt=""
 			aria-hidden="true"
 			fetchpriority="high"
-			class="size-full scale-105 object-cover object-[50%_20%] blur-[2px] brightness-[0.92] saturate-[0.82] sm:origin-left sm:scale-[1.18]"
+			class="size-full scale-105 object-cover object-[46%_0%] brightness-[0.92] saturate-[0.82] sm:origin-left sm:scale-[1.12] sm:object-[50%_26%]"
 		/>
 		<!-- Затемнение вниз: к «Подборкам» от картины остаётся лишь тёмный отсвет. -->
 		<div
