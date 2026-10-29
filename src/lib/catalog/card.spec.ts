@@ -193,13 +193,12 @@ describe('productionOf', () => {
 			],
 			metadata: {
 				studios: ['Legendary Pictures', 'Mosfilm', 'Ещё без страницы'],
-				// awards в контракте описаны схемой премии — приходят строчки (см. card.ts).
 				awards: [
 					{ title: 'Оскар — фильм', year: 2022, won: false },
 					{ title: 'Оскар — звук', year: 2022, won: true }
 				],
 				trivia: ['Иордания']
-			} as unknown as SchemaEntityDetail['metadata']
+			}
 		});
 		expect(p?.studiosTitle).toBe('Студии');
 		expect(p?.studios).toEqual([

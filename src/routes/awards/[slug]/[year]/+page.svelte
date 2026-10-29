@@ -22,13 +22,6 @@
 	const meta = $derived(editionMeta(edition));
 	const title = $derived(`${edition.award.title} ${edition.year}`);
 
-	// В AwardRef типов работ нет — берём их у первой работы церемонии (у «Хьюго» это книги).
-	const kinds = $derived(
-		edition.categories
-			.flatMap((c) => c.nominations.map((n) => n.entity?.kind))
-			.filter(Boolean) as string[]
-	);
-
 	const winners = (nominations: SchemaNomination[]) => nominations.filter((n) => n.won);
 	const rest = (nominations: SchemaNomination[]) => nominations.filter((n) => !n.won);
 </script>
@@ -51,7 +44,7 @@
 		<h1 class="text-3xl font-black sm:text-4xl">{title}</h1>
 		{#if meta.length}<p class="mt-2 text-sm text-base-content/50">{meta.join(' · ')}</p>{/if}
 		<a
-			href={awardCatalogHref(kinds, edition.award.slug, edition.year)}
+			href={awardCatalogHref(edition.award.kinds, edition.award.slug, edition.year)}
 			class="mt-2 inline-block link text-sm link-primary">Работы этого года в каталоге</a
 		>
 	</div>

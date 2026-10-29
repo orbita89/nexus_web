@@ -140,18 +140,11 @@ export interface Production {
 	trivia: string[];
 }
 
-/** Строчка награды в `metadata`: в контракте `awards` ошибочно ссылается на схему премии. */
-export interface MetadataAward {
-	title: string;
-	year?: number | null;
-	won?: boolean;
-}
-
-/** Metadata любого типа работы — поля читаем по наличию. */
-export type AnyMetadata = Omit<
-	SchemaMovieMetadata & SchemaSeriesMetadata & SchemaBookMetadata & SchemaGameMetadata,
-	'awards'
-> & { awards?: MetadataAward[] | null };
+/** Metadata любого типа работы: поля читаем по наличию. */
+export type AnyMetadata = SchemaMovieMetadata &
+	SchemaSeriesMetadata &
+	SchemaBookMetadata &
+	SchemaGameMetadata;
 
 /**
  * «Производство и факты»: студии (у фильмов и сериалов — EntityDetail.studios со страницами, у игр —

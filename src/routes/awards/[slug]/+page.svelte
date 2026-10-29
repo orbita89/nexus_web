@@ -19,13 +19,7 @@
 	let { data }: PageProps = $props();
 
 	const award = $derived(data.award);
-	// В AwardDetail нет first_year/latest_year — берём края из списка церемоний (он по убыванию).
-	const years = $derived(
-		yearsLabel({
-			first_year: award.editions.at(-1)?.year ?? null,
-			latest_year: award.editions[0]?.year ?? null
-		})
-	);
+	const years = $derived(yearsLabel(award));
 	const kinds = $derived(
 		award.kinds.map((k) => kindByApi(k as Parameters<typeof kindByApi>[0]).title)
 	);
@@ -74,9 +68,9 @@
 
 <h2 class="mb-4 text-xl font-bold">
 	Церемонии
-	{#if award.editions.length}
+	{#if award.editions_count}
 		<span class="ml-1 text-sm font-normal text-base-content/50"
-			>{count(award.editions.length, ['год', 'года', 'лет'])}</span
+			>{count(award.editions_count, ['год', 'года', 'лет'])}</span
 		>
 	{/if}
 </h2>

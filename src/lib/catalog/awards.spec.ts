@@ -31,7 +31,7 @@ const award = (
 	won: boolean,
 	category = 'Лучший фильм'
 ): SchemaEntityAward => ({
-	award: { slug, title: slug === 'oscar' ? 'Оскар' : 'BAFTA' },
+	award: { slug, title: slug === 'oscar' ? 'Оскар' : 'BAFTA', kinds: ['movie'] },
 	category: { slug: 'best-picture', title: category },
 	year,
 	won

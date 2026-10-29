@@ -1151,9 +1151,27 @@ export interface components {
 			/** @example Лучший фильм */
 			title: string;
 		};
-		/** @description Страница премии: она сама и её церемонии, новые сверху. */
+		/**
+		 * @description Страница премии: она сама и её церемонии, новые сверху. Диапазон лет — теми же полями, что
+		 *     в списке раздела, чтобы его не пересчитывали из `editions`.
+		 */
 		AwardDetail: components['schemas']['Award'] & {
 			editions: components['schemas']['AwardEditionBrief'][];
+			/**
+			 * Format: int64
+			 * @example 96
+			 */
+			editions_count: number;
+			/**
+			 * Format: int32
+			 * @example 1929
+			 */
+			first_year?: number | null;
+			/**
+			 * Format: int32
+			 * @example 2024
+			 */
+			latest_year?: number | null;
 		};
 		/** @description Церемония в сетке годов на странице премии. */
 		AwardEditionBrief: {
@@ -1221,8 +1239,17 @@ export interface components {
 			 */
 			latest_year?: number | null;
 		};
-		/** @description Премия в ссылке с карточки работы или человека. */
+		/**
+		 * @description Премия в ссылке с карточки работы, человека или церемонии. `kinds` — чтобы фронт знал
+		 *     раздел каталога, не разглядывая тип первой работы.
+		 */
 		AwardRef: {
+			/**
+			 * @example [
+			 *       "movie"
+			 *     ]
+			 */
+			kinds: string[];
 			logo_url?: string | null;
 			/** @example oscar */
 			slug: string;
@@ -1317,7 +1344,7 @@ export interface components {
 		/** @description Поля книги. */
 		BookMetadata: {
 			/** @description Награды и номинации: до 50. */
-			awards?: components['schemas']['Award'][] | null;
+			awards?: components['schemas']['MetadataAward'][] | null;
 			/**
 			 * @description ISBN-10 или ISBN-13, дефисы допустимы. Хранится без дефисов.
 			 * @example 9780441013593
@@ -1681,7 +1708,7 @@ export interface components {
 		/** @description Поля игры. */
 		GameMetadata: {
 			/** @description Награды и номинации: до 50. */
-			awards?: components['schemas']['Award'][] | null;
+			awards?: components['schemas']['MetadataAward'][] | null;
 			/** @example CD Projekt Red */
 			developer?: string | null;
 			/**
@@ -1771,6 +1798,36 @@ export interface components {
 			| components['schemas']['SeriesMetadata']
 			| components['schemas']['BookMetadata']
 			| components['schemas']['GameMetadata'];
+		/**
+		 * @description Строчка награды в `metadata.awards` — текст блока «Производство и факты», а не раздел
+		 *     «Награды»: тот живёт в таблицах `award_*` и отдаётся схемой `Award` (`catalog::awards`).
+		 */
+		MetadataAward: {
+			/**
+			 * @description Премия: по ней работает вкладка «Награды» (`GET /awards/{slug}`). 1–200 символов;
+			 *     `null` у записей, заведённых до появления вкладки, и у ручных без премии.
+			 * @example Оскар
+			 */
+			award?: string | null;
+			/**
+			 * @description Номинация внутри премии: «за лучшую операторскую работу». До 200 символов.
+			 * @example за лучшую операторскую работу
+			 */
+			category?: string | null;
+			/**
+			 * @description Как показывать одной строкой. 1–200 символов.
+			 * @example «Оскар» за лучшую операторскую работу
+			 */
+			title: string;
+			/** @description `true` — получена, `false` — номинация. По умолчанию `false`. */
+			won?: boolean;
+			/**
+			 * Format: int32
+			 * @description 1880–2100; `null` — год неизвестен.
+			 * @example 2022
+			 */
+			year?: number | null;
+		};
 		/** @description Поля фильма. */
 		MovieMetadata: {
 			/**
@@ -1779,7 +1836,7 @@ export interface components {
 			 */
 			age_rating?: string | null;
 			/** @description Награды и номинации: до 50. */
-			awards?: components['schemas']['Award'][] | null;
+			awards?: components['schemas']['MetadataAward'][] | null;
 			/**
 			 * @description Страны производства, ISO 3166-1 alpha-2.
 			 * @example [
@@ -2412,7 +2469,7 @@ export interface components {
 		/** @description Поля сериала. */
 		SeriesMetadata: {
 			/** @description Награды и номинации: до 50. */
-			awards?: components['schemas']['Award'][] | null;
+			awards?: components['schemas']['MetadataAward'][] | null;
 			/**
 			 * @description Страны производства, ISO 3166-1 alpha-2.
 			 * @example [
@@ -2772,6 +2829,7 @@ export type SchemaJobEvent = components['schemas']['JobEvent'];
 export type SchemaLibgenFile = components['schemas']['LibgenFile'];
 export type SchemaLibgenSource = components['schemas']['LibgenSource'];
 export type SchemaMetadata = components['schemas']['Metadata'];
+export type SchemaMetadataAward = components['schemas']['MetadataAward'];
 export type SchemaMovieMetadata = components['schemas']['MovieMetadata'];
 export type SchemaNomination = components['schemas']['Nomination'];
 export type SchemaNominationInput = components['schemas']['NominationInput'];
