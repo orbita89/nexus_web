@@ -3,9 +3,7 @@ import type { SchemaEntityAward, SchemaNomination } from '#lib/api/generated/cat
 import {
 	editionMeta,
 	groupAwards,
-	nomineeHref,
-	nomineeName,
-	nomineeNote,
+	nominee,
 	readAwardKind,
 	seasonLabel,
 	yearsLabel
@@ -64,31 +62,47 @@ describe('editionMeta', () => {
 	});
 });
 
-describe('номинант', () => {
+describe('nominee', () => {
 	const nomination = (over: Partial<SchemaNomination>): SchemaNomination => ({
 		id: 'n1',
 		won: false,
 		...over
 	});
 
-	it('человек важнее работы: имя, ссылка на профиль, работа — подписью', () => {
-		const n = nomination({ person, entity, role: 'режиссёр' });
-		expect(nomineeName(n)).toBe('Кристофер Нолан');
-		expect(nomineeHref(n)).toBe('/people/nolan');
-		expect(nomineeNote(n)).toBe('Оппенгеймер · режиссёр');
+	it('работа и человек сразу: заголовок — работа, человек отдельной ссылкой', () => {
+		const who = nominee(nomination({ person, entity, name: 'Кристофер Нолан', role: 'режиссёр' }));
+		expect(who.title).toBe('Оппенгеймер');
+		expect(who.href).toBe('/films/oppenheimer-2023');
+		expect(who.person).toEqual({ name: 'Кристофер Нолан', href: '/people/nolan' });
+		// Имя уже показано ссылкой — в подписи его не дублируем.
+		expect(who.people).toBeNull();
+		expect(who.role).toBe('режиссёр');
 	});
 
-	it('работа без человека — ссылка на карточку, подписи нет', () => {
-		const n = nomination({ entity });
-		expect(nomineeName(n)).toBe('Оппенгеймер');
-		expect(nomineeHref(n)).toBe('/films/oppenheimer-2023');
-		expect(nomineeNote(n)).toBeNull();
+	it('соавторы из name — подписью, без имени самого номинанта', () => {
+		const who = nominee(
+			nomination({ person, entity, name: 'Кристофер Нолан, Эмма Томас, Чарльз Роувен' })
+		);
+		expect(who.people).toBe('Эмма Томас, Чарльз Роувен');
 	});
 
-	it('нет ни того ни другого — строка из name и без ссылки', () => {
-		const n = nomination({ name: 'Pixar' });
-		expect(nomineeName(n)).toBe('Pixar');
-		expect(nomineeHref(n)).toBeNull();
+	it('только работа: имя не придумываем', () => {
+		const who = nominee(nomination({ entity, name: 'Оппенгеймер' }));
+		expect(who.title).toBe('Оппенгеймер');
+		expect(who.person).toBeNull();
+		expect(who.people).toBeNull();
+	});
+
+	it('только человек — ссылка на профиль', () => {
+		const who = nominee(nomination({ person }));
+		expect(who.title).toBe('Кристофер Нолан');
+		expect(who.href).toBe('/people/nolan');
+	});
+
+	it('ни работы, ни человека — строка из name и без ссылки', () => {
+		const who = nominee(nomination({ name: 'Pixar' }));
+		expect(who.title).toBe('Pixar');
+		expect(who.href).toBeNull();
 	});
 });
 

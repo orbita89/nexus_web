@@ -64,31 +64,69 @@ export function editionMeta(
 	].filter((part): part is string => !!part);
 }
 
-/** Кого номинировали: человек, работа или просто строка, если в каталоге этого нет. */
-export function nomineeName(nomination: SchemaNomination): string {
-	return (
-		nomination.person?.full_name ?? nomination.entity?.title ?? nomination.name ?? 'Без названия'
-	);
+/**
+ * Номинация на экране. У полных церемоний в одной записи бывает и работа, и человек (актёрские
+ * и сценарные категории), а в `name` — список соавторов одной номинации, а не отдельный человек.
+ * Поэтому заголовок — работа, если она есть, а люди уходят в подпись.
+ */
+export interface Nominee {
+	/** Что крупно: название работы или имя человека. */
+	title: string;
+	/** Ссылка заголовка: карточка работы или профиль. */
+	href: string | null;
+	/** Имя номинанта со ссылкой на профиль — когда у работы есть и человек. */
+	person: { name: string; href: string } | null;
+	/** Соавторы и прочие имена одной строкой; имя из `person` в неё не дублируется. */
+	people: string | null;
+	/** Роль («режиссёр»), если пришла. */
+	role: string | null;
 }
 
-/** Ссылка на номинанта: человек важнее работы (работа уйдёт в подпись). null — ссылки нет. */
-export function nomineeHref(nomination: SchemaNomination): string | null {
-	if (nomination.person) return `/people/${nomination.person.slug}`;
-	if (nomination.entity) return entityHref(nomination.entity);
-	return null;
+export function nominee(nomination: SchemaNomination): Nominee {
+	const { entity, person, name, role } = nomination;
+	const people = coauthors(name, person?.full_name, entity?.title);
+	if (entity)
+		return {
+			title: entity.title,
+			href: entityHref(entity),
+			person: person ? { name: person.full_name, href: `/people/${person.slug}` } : null,
+			people,
+			role: role ?? null
+		};
+	if (person)
+		return {
+			title: person.full_name,
+			href: `/people/${person.slug}`,
+			person: null,
+			people,
+			role: role ?? null
+		};
+	return {
+		title: name ?? 'Без названия',
+		href: null,
+		person: null,
+		people: null,
+		role: role ?? null
+	};
 }
 
 /**
- * Подпись под номинантом: у человека — работа и роль («Оппенгеймер · режиссёр»), у работы —
- * только роль. Нечего сказать — null, строку не рисуем.
+ * `name` — подпись номинации: иногда это просто имя из `person`, иногда список соавторов
+ * («Такаси Ямадзаки, Киёко Сибуя, …»). Одиночное имя, которое уже показано, не повторяем.
  */
-export function nomineeNote(nomination: SchemaNomination): string | null {
-	const parts = [
-		nomination.person && nomination.entity ? nomination.entity.title : null,
-		nomination.role
-	];
-	const note = parts.filter(Boolean).join(' · ');
-	return note || null;
+function coauthors(
+	name: string | null | undefined,
+	person: string | undefined,
+	title: string | undefined
+): string | null {
+	const value = name?.trim();
+	if (!value || value === person || value === title) return null;
+	const names = value
+		.split(',')
+		.map((n) => n.trim())
+		.filter(Boolean);
+	const rest = person ? names.filter((n) => n !== person) : names;
+	return rest.length ? rest.join(', ') : null;
 }
 
 /** Название категории в этот год: премии переименовывают их, в номинации лежит старое. */
