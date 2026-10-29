@@ -32,7 +32,9 @@
 	     Файл обрезан по верхние 62% холста — видна всё равно только эта часть, зато пикселей
 	     хватает на широкий экран без апскейла, и размытие больше не нужно.
 	     AVIF с webp-запаской: то же разрешение почти без потерь и вдвое легче. -->
-	<div class="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[170%] overflow-hidden">
+	<div
+		class="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[170%] overflow-hidden sm:h-[125%]"
+	>
 		<picture class="hero-art block size-full sm:ml-auto sm:w-[86%]">
 			<source
 				type="image/avif"
@@ -49,7 +51,7 @@
 				alt=""
 				aria-hidden="true"
 				fetchpriority="high"
-				class="size-full scale-105 object-cover object-[46%_0%] brightness-[0.92] saturate-[0.78] sm:object-[50%_82%]"
+				class="size-full scale-105 object-cover object-[46%_0%] brightness-[0.92] saturate-[0.78] sm:object-[50%_55%]"
 			/>
 		</picture>
 		<!-- Затемнение вниз: к «Подборкам» от картины остаётся лишь тёмный отсвет. -->
