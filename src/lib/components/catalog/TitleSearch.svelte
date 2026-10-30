@@ -52,7 +52,7 @@
 			try {
 				const page = await unwrap(
 					guestApi.catalog.GET('/api/v1/catalog/search', {
-						params: { query: { q, kind, limit: LIMIT } }
+						params: { query: { q, kind: kind ? [kind] : undefined, limit: LIMIT } }
 					})
 				);
 				if (n !== request) return;

@@ -13,15 +13,17 @@ export function searchPage(
 	api: Api,
 	f: CatalogFilters,
 	options: {
-		kind?: SchemaEntityKind;
+		/** Один тип или несколько: API принимает повторяющийся `kind` (ИЛИ между типами). */
+		kind?: SchemaEntityKind | readonly SchemaEntityKind[];
 		sort?: SchemaSearchSort;
 		studioSlug?: string;
 		limit: number;
 		offset: number;
 	}
 ) {
+	const kinds = options.kind === undefined ? [] : [options.kind].flat();
 	const query = {
-		kind: options.kind,
+		kind: kinds.length ? kinds : undefined,
 		q: f.q,
 		tag: f.tag,
 		year: f.year,
@@ -70,7 +72,7 @@ export function listPage(
 	api: Api,
 	f: Pick<CatalogFilters, 'tag'>,
 	options: {
-		kind?: SchemaEntityKind;
+		kind?: SchemaEntityKind | readonly SchemaEntityKind[];
 		studioSlug?: string;
 		sort: SchemaSearchSort;
 		limit: number;

@@ -21,6 +21,17 @@ export function kindBySlug(slug: string) {
 	return KINDS.find((k) => k.slug === slug);
 }
 
+/** Разделы из адреса: `kind=films,games` (несколько типов — ИЛИ). Мусор отбрасываем. */
+export function kindsBySlugs(param: string | undefined) {
+	const slugs = (param ?? '').split(',');
+	return KINDS.filter((k) => slugs.includes(k.slug));
+}
+
+/** Обратно в адрес: пусто — параметра нет (значит, везде). */
+export function kindsParam(kinds: readonly { slug: string }[]): string | null {
+	return kinds.length ? kinds.map((k) => k.slug).join(',') : null;
+}
+
 export function kindByApi(kind: SchemaEntityKind) {
 	return KINDS.find((k) => k.kind === kind)!;
 }

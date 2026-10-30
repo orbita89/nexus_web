@@ -643,7 +643,12 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** Новые публичные коллекции. */
+		/**
+		 * Новые публичные коллекции, а с `?q=` — поиск по названию и описанию.
+		 * @description Поиск идёт через Meilisearch (индекс [`crate::collection_search`]): опечатки, сортировка по
+		 *     релевантности, при равной — свежие выше. В индексе только публичные коллекции, поэтому
+		 *     приватные не найдёт и их владелец. Страница ответа та же, что и без запроса.
+		 */
 		get: operations['list_public'];
 		put?: never;
 		/** Создать коллекцию. */
@@ -6527,6 +6532,12 @@ export interface operations {
 	list_public: {
 		parameters: {
 			query?: {
+				/**
+				 * @description Поиск по названию и описанию (Meilisearch, опечатки допустимы). Пустой или не передан —
+				 *     новые публичные коллекции, как и раньше.
+				 * @example фильмы про космос
+				 */
+				q?: string;
 				/** @description 1–100, по умолчанию 20. */
 				limit?: number;
 				/** @description С 0. */
@@ -6545,6 +6556,24 @@ export interface operations {
 				};
 				content: {
 					'application/json': components['schemas']['Page_Collection'];
+				};
+			};
+			/** @description Слишком длинный запрос */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Meilisearch недоступен */
+			503: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
 				};
 			};
 		};

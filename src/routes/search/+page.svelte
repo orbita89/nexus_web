@@ -24,13 +24,17 @@
 	const EXAMPLES = ['Интерстеллар', 'Дюна', 'Брат', 'Pixar'];
 	/** Есть запрос или фильтр — показываем выдачу, иначе подсказки. */
 	const searching = $derived(hasFilters(data.filters));
-	const archiveKind = $derived(!data.kind || data.kind.kind === 'movie');
+	const archiveKind = $derived(!data.kinds.length || data.kind?.kind === 'movie');
 	/** Архив (archive=1) по названию: в той же выдаче, после фильмов сайта. */
 	const archiveOn = $derived(archiveKind && readArchive(page.url));
 	const feed = archiveFeed(() => (archiveOn && data.q ? data.q : null));
 	const archive = $derived(feed.archive);
 	const more = (offset: number) =>
-		searchPage(guestApi, data.filters, { kind: data.kind?.kind, limit: PAGE_SIZE, offset });
+		searchPage(guestApi, data.filters, {
+			kind: data.kinds.map((k) => k.kind),
+			limit: PAGE_SIZE,
+			offset
+		});
 
 	function submit(event: SubmitEvent & { currentTarget: HTMLFormElement }) {
 		event.preventDefault();
@@ -78,7 +82,7 @@
 />
 
 {#if searching}
-	<div class="mb-8 overflow-x-auto"><KindTabs current={data.kind?.slug} /></div>
+	<div class="mb-8 overflow-x-auto"><KindTabs current={data.kinds} /></div>
 {/if}
 
 {#if data.people.length}
@@ -133,7 +137,7 @@
 		ratings={data.ratings}
 		{archive}
 		archivePage={ARCHIVE_PAGE}
-		showKind={!data.kind}
+		showKind={data.kinds.length !== 1}
 	/>
 {:else if feed.loading}
 	<p class="flex items-center gap-2 py-10 text-sm text-base-content/50" role="status">

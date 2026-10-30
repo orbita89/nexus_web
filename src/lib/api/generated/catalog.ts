@@ -886,7 +886,7 @@ export interface paths {
 		/**
 		 * Полнотекстовый поиск по активным сущностям каталога: опечатки, ранжирование, фильтры. Весь
 		 *     поиск на сайте идёт сюда (в `GET /entities` поиска по названию нет).
-		 * @description Фильтры (через AND): `kind`, `tag`, год (`year` — ровно, `year_from` / `year_to` — диапазон
+		 * @description Фильтры (через AND): `tag`, год (`year` — ровно, `year_from` / `year_to` — диапазон
 		 *     включительно), `studio` (точное название, без учёта регистра), `person` (slug участника) и
 		 *     `role` (его роль в этой сущности; без `person` — 400), `award` (slug премии), `award_year`
 		 *     (год церемонии) и `awarded` (только с наградой).
@@ -6012,7 +6012,6 @@ export interface operations {
 				q?: string;
 				/** @description Не передан — по релевантности. */
 				sort?: components['schemas']['SearchSort'];
-				kind?: components['schemas']['EntityKind'];
 				/** @description Slug тега. */
 				tag?: string;
 				/**
@@ -6068,6 +6067,8 @@ export interface operations {
 				limit?: number;
 				/** @description С 0. */
 				offset?: number;
+				/** @description Типы работ: можно повторить (`kind=movie&kind=game`) или перечислить через запятую. Несколько — ИЛИ между собой и И с остальными фильтрами. Не передан — все типы */
+				kind?: components['schemas']['EntityKind'][];
 			};
 			header?: never;
 			path?: never;

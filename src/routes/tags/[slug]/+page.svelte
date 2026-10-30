@@ -47,12 +47,16 @@
 	</div>
 </header>
 
-<div class="mb-8 overflow-x-auto"><KindTabs current={data.kind?.slug} /></div>
+<div class="mb-8 overflow-x-auto"><KindTabs current={data.kinds} /></div>
 
 {#if data.list.error}
 	<LoadError message={data.list.error} />
 {:else if data.list.data?.items.length}
-	<EntityGrid entities={data.list.data.items} showKind={!data.kind} ratings={data.ratings} />
+	<EntityGrid
+		entities={data.list.data.items}
+		showKind={data.kinds.length !== 1}
+		ratings={data.ratings}
+	/>
 	<Pagination
 		total={data.list.data.total}
 		limit={data.list.data.limit}

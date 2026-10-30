@@ -3,25 +3,35 @@
 	import { unwrap } from '#lib/api/errors.ts';
 	import type { SchemaEntitySummary, SchemaPersonHit } from '#lib/api/generated/catalog.ts';
 	import { guestApi } from '#lib/auth/session.svelte.ts';
-	import { entityHref, KINDS, kindByApi } from '#lib/catalog/kinds.ts';
+	import { entityHref, KINDS, kindByApi, kindsParam } from '#lib/catalog/kinds.ts';
 	import { yearOf } from '#lib/catalog/labels.ts';
+	import { buildFeaturedUrl } from '#lib/social/featured.ts';
 
 	// Поиск на главной: чипы под полем — не ссылки на разделы (они и так есть в шапке), а область
 	// поиска, и подсказки приходят прямо на наборе — до того, как человек нажал «Найти».
 	// Только Meilisearch: в GET /entities поиска по названию нет.
 	// Отдельного «Везде» нет: ничего не выбрано — ищем везде, повторный клик снимает выбор.
+	// Типов можно выбрать несколько («фильмы и игры» — ИЛИ, API принимает повторяющийся kind),
+	// а «Люди» и «Коллекции» — отдельные области: с типами они не складываются.
+	const SOLO = ['people', 'collections'];
 	const SCOPES = [
 		...KINDS.map((k) => ({ id: k.slug, title: k.title })),
-		{ id: 'people', title: 'Люди' }
+		{ id: 'people', title: 'Люди' },
+		{ id: 'collections', title: 'Коллекции' }
 	];
 	const SHOWN = 6;
 
-	type Hit =
-		| { type: 'entity'; href: string; title: string; note: string; image?: string | null }
-		| { type: 'person'; href: string; title: string; note: string; image?: string | null };
+	interface Hit {
+		/** Круглая картинка у людей, постер у произведений, обложка 16:9 у коллекций. */
+		type: 'entity' | 'person' | 'collection';
+		href: string;
+		title: string;
+		note: string;
+		image?: string | null;
+	}
 
 	/** Пусто — везде (произведения + пара людей). */
-	let scope = $state('');
+	let scopes = $state<string[]>([]);
 	let query = $state('');
 	let hits = $state<Hit[]>([]);
 	let open = $state(false);
@@ -29,12 +39,15 @@
 	let timer: ReturnType<typeof setTimeout> | undefined;
 	let box: HTMLDivElement;
 
-	const kind = $derived(KINDS.find((k) => k.slug === scope)?.kind);
-	/** Куда ведёт «Найти»: люди живут на своей странице, остальное — на общей выдаче. */
-	const action = $derived(scope === 'people' ? '/people' : '/search');
+	const solo = $derived(SOLO.find((id) => scopes.includes(id)));
+	const kinds = $derived(KINDS.filter((k) => scopes.includes(k.slug)));
+	/** Куда ведёт «Найти»: люди и коллекции живут на своих страницах, типы — на общей выдаче. */
+	const action = $derived(
+		solo === 'people' ? '/people' : solo === 'collections' ? '/collections' : '/search'
+	);
 
 	async function entities(q: string): Promise<Hit[]> {
-		const params = { query: { q, kind, limit: SHOWN } };
+		const params = { query: { q, kind: kinds.map((k) => k.kind), limit: SHOWN } };
 		const found = await unwrap(guestApi.catalog.GET('/api/v1/catalog/search', { params }));
 		return found.items.map((e: SchemaEntitySummary) => ({
 			type: 'entity' as const,
@@ -57,6 +70,18 @@
 		}));
 	}
 
+	async function collections(q: string): Promise<Hit[]> {
+		const params = { query: { q, limit: SHOWN } };
+		const found = await unwrap(guestApi.social.GET('/api/v1/social/collections', { params }));
+		return found.items.map((c) => ({
+			type: 'collection' as const,
+			href: buildFeaturedUrl(c),
+			title: c.title,
+			note: `${c.items_count} в коллекции`,
+			image: c.cover_url
+		}));
+	}
+
 	function onInput() {
 		clearTimeout(timer);
 		const q = query.trim();
@@ -70,9 +95,11 @@
 			try {
 				// «Везде» — произведения, а под ними пара людей: имя ищут не реже названия.
 				const found =
-					scope === 'people'
+					solo === 'people'
 						? await people(q, SHOWN)
-						: (await Promise.all([entities(q), scope ? [] : people(q, 2)])).flat();
+						: solo === 'collections'
+							? await collections(q)
+							: (await Promise.all([entities(q), kinds.length ? [] : people(q, 2)])).flat();
 				if (q !== query.trim()) return;
 				hits = found.slice(0, SHOWN + 2);
 				open = hits.length > 0;
@@ -84,8 +111,11 @@
 		}, 200);
 	}
 
-	function pick(scopeId: string) {
-		scope = scope === scopeId ? '' : scopeId;
+	/** Клик по чипу: типы копятся, «Люди» и «Коллекции» вытесняют всё остальное и друг друга. */
+	function pick(id: string) {
+		if (scopes.includes(id)) scopes = scopes.filter((s) => s !== id);
+		else if (SOLO.includes(id)) scopes = [id];
+		else scopes = [...scopes.filter((s) => !SOLO.includes(s)), id];
 		if (query.trim().length >= 2) onInput();
 	}
 
@@ -123,7 +153,8 @@
 		role="search"
 		class="flex items-center gap-2 rounded-full bg-base-100/40 p-2 pl-3 ring-1 ring-base-content/10 backdrop-blur-md focus-within:ring-2 focus-within:ring-primary/60"
 	>
-		{#if kind}<input type="hidden" name="kind" value={scope} />{/if}
+		<!-- kind=films,games — несколько разделов разом; у людей и коллекций своего фильтра нет. -->
+		{#if !solo && kinds.length}<input type="hidden" name="kind" value={kindsParam(kinds)} />{/if}
 		<input
 			type="search"
 			name="q"
@@ -131,7 +162,11 @@
 			oninput={onInput}
 			onkeydown={onKey}
 			onfocus={() => (open = hits.length > 0)}
-			placeholder={scope === 'people' ? 'Нолан, Кинг, Миядзаки…' : 'Дюна, Кинг, киберпанк…'}
+			placeholder={solo === 'people'
+				? 'Нолан, Кинг, Миядзаки…'
+				: solo === 'collections'
+					? 'Фильмы про космос…'
+					: 'Дюна, Кинг, киберпанк…'}
 			aria-label="Найти в каталоге"
 			role="combobox"
 			aria-expanded={open}
@@ -148,11 +183,11 @@
 		{#each SCOPES as s (s.id)}
 			<button
 				type="button"
-				aria-pressed={scope === s.id}
+				aria-pressed={scopes.includes(s.id)}
 				onclick={() => pick(s.id)}
 				class={[
 					'btn h-8 min-h-0 rounded-full px-4 font-normal backdrop-blur-md btn-sm',
-					scope === s.id
+					scopes.includes(s.id)
 						? 'border-primary/60 bg-primary/15 text-primary'
 						: 'border-base-content/10 bg-base-100/30 hover:border-primary/40 hover:text-primary'
 				]}>{s.title}</button
@@ -180,7 +215,11 @@
 						<span
 							class={[
 								'shrink-0 overflow-hidden bg-base-300',
-								hit.type === 'person' ? 'size-9 rounded-full' : 'h-12 w-8 rounded'
+								hit.type === 'person'
+									? 'size-9 rounded-full'
+									: hit.type === 'collection'
+										? 'h-9 w-16 rounded'
+										: 'h-12 w-8 rounded'
 							]}
 						>
 							{#if hit.image}
