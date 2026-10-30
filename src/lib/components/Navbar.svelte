@@ -88,6 +88,9 @@
 					{#each sections as s (s.href)}
 						<li><a href={s.href} class={{ 'menu-active': isActive(s.href) }}>{s.title}</a></li>
 					{/each}
+					<!-- «О приложении» в верхний ряд не ставим — шапка перестаёт помещаться; в этом
+					     меню, в меню пользователя и в подвале её видно с любого экрана. -->
+					<li><a href="/about" class={{ 'menu-active': isActive('/about') }}>О приложении</a></li>
 				</ul>
 			</details>
 			<a href="/" class="btn btn-ghost px-2 text-lg font-black tracking-[0.2em] uppercase btn-sm"
@@ -163,6 +166,7 @@
 						<li><a href="/u/{session.user.username}">Профиль</a></li>
 						<li><a href="/settings">Настройки</a></li>
 						{#if session.user.role === 'admin'}<li><a href="/admin">Админка</a></li>{/if}
+						<li><a href="/about">О приложении</a></li>
 						<li><button type="button" onclick={signOut}>Выйти</button></li>
 					</ul>
 				</div>

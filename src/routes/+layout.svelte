@@ -68,7 +68,11 @@
 				class="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-8 text-sm text-base-content/50 sm:flex-row sm:items-center sm:justify-between"
 			>
 				<p>
-					<span class="font-black tracking-widest text-base-content uppercase">Кассандра</span>
+					<a
+						href="/about"
+						class="font-black tracking-widest text-base-content uppercase hover:text-primary"
+						>Кассандра</a
+					>
 					<span class="text-primary">·</span> фильмы, сериалы, книги и игры
 				</p>
 				<nav aria-label="Каталог" class="flex flex-wrap gap-x-4 gap-y-1">
@@ -79,9 +83,10 @@
 					<a href="/collections" class="link link-hover">Коллекции</a>
 					<a href="/forum" class="link link-hover">Форум</a>
 					<a href="/tags" class="link link-hover">Теги</a>
-					<a href="/about" class="link link-hover">О приложении</a>
 				</nav>
 				<p class="text-xs">
+					<a href="/about" class="link link-hover">О приложении</a>
+					<span class="mx-1 text-base-content/30">·</span>
 					Постеры:
 					<a href="https://www.themoviedb.org/" class="link link-hover" rel="noopener external"
 						>TMDB</a
