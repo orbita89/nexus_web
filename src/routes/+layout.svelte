@@ -50,11 +50,16 @@
 		chat.collapsed ? 'lg:pr-16' : 'lg:pr-80'
 	]}
 >
-	<!-- Фиолетовый отсвет от «Кассандры» держится на фоне всей страницы, куда бы её ни пролистали.
-	     Два красных пятна поверх — еле заметные, «мухоморные»: фон перестаёт быть ровно
-	     сиреневым, но цвет не читается как отдельный акцент и не спорит с оранжевым. -->
+	<!-- Фиолетовый отсвет от «Кассандры» держится на фоне всей страницы, куда бы её ни пролистали. -->
 	<div
-		class="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(70%_55%_at_75%_12%,rgba(139,92,246,0.18),transparent_72%),radial-gradient(60%_50%_at_8%_75%,rgba(109,76,235,0.13),transparent_72%),radial-gradient(34%_26%_at_88%_34%,rgba(200,38,48,0.09),transparent_70%),radial-gradient(28%_22%_at_16%_58%,rgba(186,32,46,0.06),transparent_70%)]"
+		class="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(70%_55%_at_75%_12%,rgba(139,92,246,0.18),transparent_72%),radial-gradient(60%_50%_at_8%_75%,rgba(109,76,235,0.13),transparent_72%)]"
+		aria-hidden="true"
+	></div>
+	<!-- Красные пятна — отдельным слоем: еле заметные, «мухоморные», и очень медленно дышат
+	     (полминуты на цикл), чтобы фон переливался, а не мигал. Движение — только opacity и
+	     transform, они не вызывают перерисовку страницы. -->
+	<div
+		class="embers pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(34%_26%_at_88%_34%,rgba(200,38,48,0.1),transparent_70%),radial-gradient(28%_22%_at_16%_58%,rgba(186,32,46,0.07),transparent_70%)]"
 		aria-hidden="true"
 	></div>
 	<main class="mx-auto w-full max-w-6xl flex-1 px-4 py-6">
@@ -100,3 +105,34 @@
 	<ReplyToasts />
 </div>
 <ChatPanel />
+
+<style>
+	/* Красный отсвет переливается: пятна чуть расходятся и меняют силу. Полный цикл — 36 с,
+	   поэтому движение замечаешь, только если задержаться на странице. */
+	@keyframes embers {
+		0% {
+			opacity: 0.75;
+			transform: scale(1) translate3d(0, 0, 0);
+		}
+		50% {
+			opacity: 1;
+			transform: scale(1.12) translate3d(-1.5%, 1%, 0);
+		}
+		100% {
+			opacity: 0.75;
+			transform: scale(1) translate3d(0, 0, 0);
+		}
+	}
+
+	.embers {
+		animation: embers 36s ease-in-out infinite;
+		will-change: opacity, transform;
+	}
+
+	/* Кому движение мешает — ровный фон без анимации. */
+	@media (prefers-reduced-motion: reduce) {
+		.embers {
+			animation: none;
+		}
+	}
+</style>
