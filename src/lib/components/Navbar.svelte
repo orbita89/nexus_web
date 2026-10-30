@@ -17,7 +17,7 @@
 		{ href: '/collections', title: 'Коллекции' },
 		{ href: '/feed', title: 'Лента' },
 		{ href: '/forum', title: 'Форум' },
-		{ href: '/about', title: 'О приложении' }
+		{ href: '/about', title: 'О нас' }
 	];
 
 	// На главной шапка лежит поверх арта «Кассандры» и остаётся прозрачной, пока страницу
@@ -71,7 +71,7 @@
 >
 	<nav class="navbar w-full gap-2 px-4" aria-label="Основная навигация">
 		<div class="navbar-start w-auto gap-1">
-			<details class="dropdown md:hidden" bind:this={menuEl} bind:open={menuOpen}>
+			<details class="dropdown lg:hidden" bind:this={menuEl} bind:open={menuOpen}>
 				<summary class="btn btn-square btn-ghost btn-sm" aria-label="Меню">☰</summary>
 				<ul class="menu dropdown-content z-10 mt-2 w-48 rounded-box bg-base-200 shadow-sm">
 					<li>
@@ -96,7 +96,8 @@
 			>
 		</div>
 
-		<ul class="menu menu-horizontal hidden gap-1 menu-sm md:flex">
+		<!-- Полный ряд разделов — только там, где он помещается целиком; уже — меню «☰». -->
+		<ul class="menu menu-horizontal hidden flex-nowrap gap-1 menu-sm whitespace-nowrap lg:flex">
 			<li>
 				<details bind:this={catalogEl} bind:open={catalogOpen}>
 					<summary class={{ 'menu-active': catalogActive }}>Каталог</summary>
@@ -113,7 +114,7 @@
 		</ul>
 
 		<div class="ml-auto navbar-end w-auto flex-1 gap-2">
-			<form action="/search" method="GET" role="search" class="w-full max-w-56">
+			<form action="/search" method="GET" role="search" class="w-full max-w-56 min-w-24">
 				<TitleSearch
 					value={page.url.pathname === '/search' ? (page.url.searchParams.get('q') ?? '') : ''}
 					placeholder="Поиск"
