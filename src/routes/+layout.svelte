@@ -79,6 +79,7 @@
 					<a href="/collections" class="link link-hover">Коллекции</a>
 					<a href="/forum" class="link link-hover">Форум</a>
 					<a href="/tags" class="link link-hover">Теги</a>
+					<a href="/about" class="link link-hover">О приложении</a>
 				</nav>
 				<p class="text-xs">
 					Постеры:

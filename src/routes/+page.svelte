@@ -2,10 +2,10 @@
 	import FeaturedCollectionCard from '#lib/components/social/FeaturedCollectionCard.svelte';
 	import EmptyState from '#lib/components/catalog/EmptyState.svelte';
 	import LoadError from '#lib/components/catalog/LoadError.svelte';
+	import HeroSearch from '#lib/components/catalog/HeroSearch.svelte';
 	import PosterStrip from '#lib/components/catalog/PosterStrip.svelte';
 	import Seo from '#lib/components/catalog/Seo.svelte';
 	import TagChips from '#lib/components/catalog/TagChips.svelte';
-	import { KINDS } from '#lib/catalog/kinds.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -65,35 +65,21 @@
 	</div>
 
 	<div class="relative mx-auto w-full max-w-6xl px-4">
-		<h1 class="max-w-xl text-4xl leading-tight font-black tracking-[-0.02em] sm:text-6xl">
+		<h1
+			class="max-w-2xl text-4xl leading-[1.05] font-black tracking-[-0.02em] text-balance drop-shadow-[0_2px_12px_rgba(9,9,11,0.6)] sm:text-5xl lg:text-6xl"
+		>
 			Всё, что смотрят, читают и проходят
 		</h1>
-		<!-- Стеклянная плашка: подзаголовок и поиск не лежат голым текстом на картине. -->
-		<div
-			class="mt-6 max-w-xl rounded-box bg-base-100/35 p-5 ring-1 ring-base-content/10 backdrop-blur-md"
+		<!-- Одна строка: разделы каталога и так названы чипами под поиском, здесь — только то,
+		     чего в них нет: оценки, рецензии и связь книги с экранизацией. -->
+		<p
+			class="mt-4 max-w-lg text-base-content/70 drop-shadow-[0_1px_8px_rgba(9,9,11,0.8)] sm:text-lg"
 		>
-			<p class="text-base-content/80">
-				Фильмы, сериалы, книги и игры в одном каталоге — с оценками, рецензиями и обсуждениями,
-				которые связывают книгу с её экранизацией.
-			</p>
-			<form action="/search" method="GET" role="search" class="mt-4 flex gap-2">
-				<input
-					type="search"
-					name="q"
-					placeholder="Дюна, Кинг, киберпанк…"
-					aria-label="Найти в каталоге"
-					class="input w-full bg-base-100/70 input-lg"
-				/>
-				<button class="btn btn-lg btn-primary">Найти</button>
-			</form>
-			<!-- Охват каталога виден сразу, до скролла. -->
-			<nav aria-label="Разделы каталога" class="mt-4 flex flex-wrap gap-2">
-				{#each KINDS as k (k.slug)}
-					<a href="/{k.slug}" class="btn btn-ghost btn-sm">{k.title}</a>
-				{/each}
-				<a href="/collections" class="btn btn-ghost btn-sm">Коллекции</a>
-			</nav>
-		</div>
+			Оценки, рецензии и обсуждения — от книги до её экранизации.
+		</p>
+		<!-- Поиск — единственная стеклянная плашка на картине: пилюля «поле + кнопка»,
+		     чипы под ней задают, где искать, и подсказки приходят прямо на наборе. -->
+		<div class="mt-7"><HeroSearch /></div>
 	</div>
 </section>
 
