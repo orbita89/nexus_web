@@ -50,9 +50,11 @@
 		chat.collapsed ? 'lg:pr-16' : 'lg:pr-80'
 	]}
 >
-	<!-- Фиолетовый отсвет от «Кассандры» держится на фоне всей страницы, куда бы её ни пролистали. -->
+	<!-- Фиолетовый отсвет от «Кассандры» держится на фоне всей страницы, куда бы её ни пролистали.
+	     Два красных пятна поверх — еле заметные, «мухоморные»: фон перестаёт быть ровно
+	     сиреневым, но цвет не читается как отдельный акцент и не спорит с оранжевым. -->
 	<div
-		class="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(70%_55%_at_75%_12%,rgba(139,92,246,0.18),transparent_72%),radial-gradient(60%_50%_at_8%_75%,rgba(109,76,235,0.13),transparent_72%)]"
+		class="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(70%_55%_at_75%_12%,rgba(139,92,246,0.18),transparent_72%),radial-gradient(60%_50%_at_8%_75%,rgba(109,76,235,0.13),transparent_72%),radial-gradient(34%_26%_at_88%_34%,rgba(200,38,48,0.09),transparent_70%),radial-gradient(28%_22%_at_16%_58%,rgba(186,32,46,0.06),transparent_70%)]"
 		aria-hidden="true"
 	></div>
 	<main class="mx-auto w-full max-w-6xl flex-1 px-4 py-6">
