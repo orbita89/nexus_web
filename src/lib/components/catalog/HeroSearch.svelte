@@ -155,6 +155,8 @@
 	>
 		<!-- kind=films,games — несколько разделов разом; у людей и коллекций своего фильтра нет. -->
 		{#if !solo && kinds.length}<input type="hidden" name="kind" value={kindsParam(kinds)} />{/if}
+		<!-- Поле без класса `input`: его рамка и подсветка фокуса рисовали вторую обводку внутри
+		     пилюли. Кольцо фокуса — у всей пилюли (focus-within на форме). -->
 		<input
 			type="search"
 			name="q"
@@ -173,7 +175,7 @@
 			aria-controls="hero-suggestions"
 			aria-autocomplete="list"
 			autocomplete="off"
-			class="input h-11 w-full border-0 bg-transparent text-base focus:outline-none"
+			class="h-11 w-full bg-transparent px-2 text-base placeholder:text-base-content/50 focus:outline-none"
 		/>
 		<button class="btn h-11 min-h-0 rounded-full px-6 btn-primary">Найти</button>
 	</form>

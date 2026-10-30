@@ -887,7 +887,8 @@ export interface paths {
 		 * Полнотекстовый поиск по активным сущностям каталога: опечатки, ранжирование, фильтры. Весь
 		 *     поиск на сайте идёт сюда (в `GET /entities` поиска по названию нет).
 		 * @description Фильтры (через AND): `tag`, год (`year` — ровно, `year_from` / `year_to` — диапазон
-		 *     включительно), `studio` (точное название, без учёта регистра), `person` (slug участника) и
+		 *     включительно), `studio` (точное название, без учёта регистра), `publisher` (издательство книги,
+		 *     издатель или разработчик игры — тоже точное название), `person` (slug участника) и
 		 *     `role` (его роль в этой сущности; без `person` — 400), `award` (slug премии), `award_year`
 		 *     (год церемонии) и `awarded` (только с наградой).
 		 *
@@ -928,6 +929,26 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/catalog/search/publishers': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Подсказки издателей для фильтра `publisher` (facet search по полю `publishers`): издательство
+		 *     книги, издатель или разработчик игры. `kind` сужает до раздела — у книг и игр свои издатели.
+		 */
+		get: operations['search_publishers'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/catalog/search/studios': {
 		parameters: {
 			query?: never;
@@ -940,6 +961,28 @@ export interface paths {
 		 *     названия с опечатками; без `q` — самые частые. `count` — сколько видимых сущностей в индексе.
 		 */
 		get: operations['search_studios'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/search/tags': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Подсказки тегов и жанров для фильтра `tag` (facet search по полю `tags`): только те, что есть
+		 *     у сущностей этого типа — жанры фильмов не предлагаются в книгах. Фасет хранит slug'и, поэтому
+		 *     названия и `kind` тегов дочитываются из `tags` одним запросом на ответ. Запрос `q` по названию
+		 *     бессмысленен (в фасете slug'и), фильтровать по названию — на стороне клиента.
+		 */
+		get: operations['search_tags'];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -2315,6 +2358,13 @@ export interface components {
 			 */
 			total: number;
 		};
+		/** @description Издатель в подсказках: название (значение для `publisher`) и сколько сущностей в индексе. */
+		PublisherHit: {
+			/** Format: int64 */
+			count: number;
+			/** @example АСТ */
+			name: string;
+		};
 		/** @description Церемония целиком: прежние номинации заменяются этими. */
 		PutNominations: {
 			categories: components['schemas']['CategoryNominations'][];
@@ -2644,6 +2694,23 @@ export interface components {
 			/** @example sci-fi */
 			slug: string;
 		};
+		/** @description Тег или жанр в подсказках: slug (значение для `tag`), название и сколько сущностей типа. */
+		TagHit: {
+			/** Format: int64 */
+			count: number;
+			/**
+			 * @description `genre` или `tag`.
+			 * @example genre
+			 */
+			kind: string;
+			/**
+			 * @description Название из `tags`; у тега, которого уже нет в БД, — его slug.
+			 * @example Драма
+			 */
+			name: string;
+			/** @example drama */
+			slug: string;
+		};
 		/**
 		 * @description Вид тега: `genre` — жанр («Драма», «Космическая опера»), `tag` — остальные метки
 		 *     («Экранизация», «Открытый мир»).
@@ -2848,6 +2915,7 @@ export type SchemaPersonRef = components['schemas']['PersonRef'];
 export type SchemaPersonSummary = components['schemas']['PersonSummary'];
 export type SchemaPlannedStep = components['schemas']['PlannedStep'];
 export type SchemaProgressEvent = components['schemas']['ProgressEvent'];
+export type SchemaPublisherHit = components['schemas']['PublisherHit'];
 export type SchemaPutNominations = components['schemas']['PutNominations'];
 export type SchemaPutRelation = components['schemas']['PutRelation'];
 export type SchemaRankPreviewRow = components['schemas']['RankPreviewRow'];
@@ -2868,6 +2936,7 @@ export type SchemaStudioDetail = components['schemas']['StudioDetail'];
 export type SchemaStudioHit = components['schemas']['StudioHit'];
 export type SchemaStudioRef = components['schemas']['StudioRef'];
 export type SchemaTag = components['schemas']['Tag'];
+export type SchemaTagHit = components['schemas']['TagHit'];
 export type SchemaTagKind = components['schemas']['TagKind'];
 export type SchemaTagWithCount = components['schemas']['TagWithCount'];
 export type SchemaTrailerProvider = components['schemas']['TrailerProvider'];
@@ -6041,6 +6110,12 @@ export interface operations {
 				 */
 				studio_slug?: string;
 				/**
+				 * @description Издатель — точное название (без учёта регистра): издательство книги, издатель или
+				 *     разработчик игры. Подсказки — `GET /search/publishers`.
+				 * @example АСТ
+				 */
+				publisher?: string;
+				/**
 				 * @description Slug человека: сущности с его участием (в любой роли).
 				 * @example christopher-nolan
 				 */
@@ -6158,6 +6233,54 @@ export interface operations {
 			};
 		};
 	};
+	search_publishers: {
+		parameters: {
+			query?: {
+				/**
+				 * @description Начало или часть названия, опечатки допустимы. Пустой — самые частые.
+				 * @example аст
+				 */
+				q?: string;
+				/** @description Только у сущностей этого типа: жанры фильмов не предлагаются в книгах. */
+				kind?: components['schemas']['EntityKind'];
+				/** @description 1–50, по умолчанию 10. Вне диапазона приводится к границам. */
+				limit?: number;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Издатели */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['PublisherHit'][];
+				};
+			};
+			/** @description Слишком длинный `q` */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Meilisearch недоступен */
+			503: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
 	search_studios: {
 		parameters: {
 			query?: {
@@ -6184,6 +6307,54 @@ export interface operations {
 				};
 				content: {
 					'application/json': components['schemas']['StudioHit'][];
+				};
+			};
+			/** @description Слишком длинный `q` */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Meilisearch недоступен */
+			503: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	search_tags: {
+		parameters: {
+			query?: {
+				/**
+				 * @description Начало или часть названия, опечатки допустимы. Пустой — самые частые.
+				 * @example аст
+				 */
+				q?: string;
+				/** @description Только у сущностей этого типа: жанры фильмов не предлагаются в книгах. */
+				kind?: components['schemas']['EntityKind'];
+				/** @description 1–50, по умолчанию 10. Вне диапазона приводится к границам. */
+				limit?: number;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Теги и жанры */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['TagHit'][];
 				};
 			};
 			/** @description Слишком длинный `q` */

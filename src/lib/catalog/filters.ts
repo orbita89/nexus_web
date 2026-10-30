@@ -10,7 +10,7 @@
 // сайта в той же выдаче, только по названию (без названия и фильтров — весь архив); выключен по
 // умолчанию, включённый — archive=1. Его читает страница (readArchive), не load: переключатель не
 // перезапрашивает выдачу сайта.
-import type { SchemaSearchSort } from '#lib/api/generated/catalog.ts';
+import type { SchemaEntityKind, SchemaSearchSort } from '#lib/api/generated/catalog.ts';
 import { DEFAULT_SORT, LIST_SORTS } from './sort.ts';
 import { readText, readYear, type UrlLike } from './url.ts';
 
@@ -23,8 +23,91 @@ export const PERSON_ROLES = [
 	{ value: 'producer', title: 'Продюсер' },
 	{ value: 'composer', title: 'Композитор' },
 	{ value: 'cinematographer', title: 'Оператор' },
-	{ value: 'editor', title: 'Монтажёр' }
+	{ value: 'editor', title: 'Монтажёр' },
+	{ value: 'author', title: 'Автор' },
+	{ value: 'translator', title: 'Переводчик' },
+	{ value: 'illustrator', title: 'Иллюстратор' }
 ] as const;
+
+export type PersonRole = (typeof PERSON_ROLES)[number]['value'];
+
+/**
+ * Набор фильтров раздела: он свой у каждого типа. У книг нет студии (её место — издательство), у
+ * игр нет титров, а роль по умолчанию у фильма и книги разная: «Актёр» против «Автора».
+ */
+export interface FilterSet {
+	/** Роли в выпадающем списке; пустой список — поля «Человек» в разделе нет. */
+	roles: readonly PersonRole[];
+	/** Роль, выбранная заранее: по ней ищут чаще всего. Пустая — любая. */
+	defaultRole: PersonRole;
+	/** Студия производства (`metadata.studios`, страница студии). */
+	studio: boolean;
+	/** Издатель: издательство книги, издатель или разработчик игры. `null` — поля нет. */
+	publisherLabel: string | null;
+	/** «Архив» — холодный архив фильмов. */
+	archive: boolean;
+}
+
+const FILM_ROLES = [
+	'actor',
+	'director',
+	'writer',
+	'producer',
+	'composer',
+	'cinematographer',
+	'editor'
+] as const satisfies readonly PersonRole[];
+
+const SETS: Record<SchemaEntityKind, FilterSet> = {
+	movie: {
+		roles: FILM_ROLES,
+		defaultRole: 'actor',
+		studio: true,
+		publisherLabel: null,
+		archive: true
+	},
+	series: {
+		roles: FILM_ROLES,
+		defaultRole: 'actor',
+		studio: true,
+		publisherLabel: null,
+		archive: false
+	},
+	book: {
+		roles: ['author', 'translator', 'illustrator'],
+		defaultRole: 'author',
+		studio: false,
+		publisherLabel: 'Издательство',
+		archive: false
+	},
+	game: {
+		// Титров у игр нет, поэтому нет и поля «Человек»; студию заменяют издатель и разработчик.
+		roles: [],
+		defaultRole: '',
+		studio: false,
+		publisherLabel: 'Издатель или разработчик',
+		archive: false
+	}
+};
+
+/** Общая страница поиска (`/search`): раздел не выбран — показываем всё и без умолчаний. */
+const ALL: FilterSet = {
+	roles: [...FILM_ROLES, 'author', 'translator', 'illustrator'],
+	defaultRole: '',
+	studio: true,
+	publisherLabel: 'Издатель',
+	archive: true
+};
+
+/** Набор фильтров раздела; без раздела (общий поиск) — все поля. */
+export function filterSet(kind?: SchemaEntityKind): FilterSet {
+	return kind ? SETS[kind] : ALL;
+}
+
+/** Роли выпадающего списка раздела: первой всегда «Любая роль». */
+export function roleOptions(set: FilterSet) {
+	return PERSON_ROLES.filter((r) => !r.value || set.roles.includes(r.value));
+}
 
 /** Порядок поиска: «по релевантности» — когда sort не передан. */
 export type SearchSort = SchemaSearchSort | 'relevance';
@@ -45,6 +128,8 @@ export interface CatalogFilters {
 	yearTo?: number;
 	/** Точное название студии (из подсказок GET /search/studios). */
 	studio?: string;
+	/** Точное название издателя: издательство книги, издатель или разработчик игры. */
+	publisher?: string;
 	/** Slug человека. */
 	person?: string;
 	/** Роль человека; без person не используется. */
@@ -72,6 +157,7 @@ export function readFilters(url: UrlLike): CatalogFilters {
 		yearFrom,
 		yearTo,
 		studio: readText(url, 'studio'),
+		publisher: readText(url, 'publisher'),
 		person,
 		role: person && PERSON_ROLES.some((r) => r.value === role) ? role : undefined,
 		award,
