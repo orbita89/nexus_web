@@ -134,7 +134,11 @@
 	<div bind:this={heroElement} class="relative z-15">
 		<Hero {entity} {trailers}>
 			{#snippet marks()}
-				<MarkButtons marks={viewing} kind={entity.kind} />
+				<!-- Отметки «посмотреть позже» и «просмотрено» — про фильмы, книги и игры; у картины
+				     их смысла нет: её не «проходят» и не откладывают на вечер. -->
+				{#if entity.kind !== 'painting'}
+					<MarkButtons marks={viewing} kind={entity.kind} />
+				{/if}
 			{/snippet}
 			{#snippet actions()}
 				<AverageRating {average} total={rating.current?.data?.count ?? 0} />
