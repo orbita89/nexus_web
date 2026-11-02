@@ -132,6 +132,7 @@
 		])}
 	</p>
 	<ResultsFeed
+		wall={data.kind?.kind === 'painting'}
 		first={data.result}
 		{more}
 		ratings={data.ratings}

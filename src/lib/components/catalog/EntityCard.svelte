@@ -10,6 +10,7 @@
 		entity,
 		caption,
 		showKind = false,
+		wall = false,
 		rating
 	}: {
 		entity: SchemaEntitySummary;
@@ -19,7 +20,13 @@
 		caption?: string;
 		/** Подписать раздел (в выдаче, где перемешаны фильмы и книги). */
 		showKind?: boolean;
+		/** Стена картин: холст во всю ширину карточки, высота — по его пропорциям. */
+		wall?: boolean;
 	} = $props();
+
+	let failed = $state(false);
+	/** Стена — только для картин с изображением; без него карточка обычная, с заглушкой. */
+	const onWall = $derived(wall && entity.kind === 'painting' && !!entity.cover_url && !failed);
 
 	const meta = $derived(
 		[yearOf(entity.release_date), showKind ? kindByApi(entity.kind).one : null]
@@ -32,7 +39,18 @@
 	<div
 		class="rounded-box transition duration-300 group-hover:-translate-y-1 group-hover:shadow-xl group-hover:ring-2 group-hover:shadow-primary/20 group-hover:ring-primary group-focus-visible:ring-2 group-focus-visible:ring-primary"
 	>
-		<Poster title={entity.title} kind={entity.kind} coverUrl={entity.cover_url} />
+		{#if onWall}
+			<img
+				src={entity.cover_url}
+				alt=""
+				loading="lazy"
+				decoding="async"
+				class="w-full rounded-box ring-1 ring-base-content/10"
+				onerror={() => (failed = true)}
+			/>
+		{:else}
+			<Poster title={entity.title} kind={entity.kind} coverUrl={entity.cover_url} />
+		{/if}
 	</div>
 	<div class="mt-2 px-0.5">
 		<h3

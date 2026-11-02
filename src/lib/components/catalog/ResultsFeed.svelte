@@ -21,7 +21,8 @@
 		ratings = {},
 		archive = null,
 		archivePage = 24,
-		showKind = false
+		showKind = false,
+		wall = false
 	}: {
 		first: Page<SchemaEntitySummary>;
 		/** Следующая порция сайта с этого offset. */
@@ -31,6 +32,8 @@
 		archive?: { q: string; first: { items: SchemaArchiveDoc[]; total: number } } | null;
 		archivePage?: number;
 		showKind?: boolean;
+		/** Стена картин: колонки вместо сетки, высота карточки — по холсту. */
+		wall?: boolean;
 	} = $props();
 
 	/** Бэкенд листает архив только до offset 1000. */
@@ -74,10 +77,15 @@
 	}
 </script>
 
-<ul class="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+<!-- Стена картин — колонки (masonry): карточки разной высоты встают без дыр. -->
+<ul
+	class={wall
+		? 'columns-2 gap-4 sm:columns-3 lg:columns-4 [&>li]:mb-6 [&>li]:break-inside-avoid'
+		: 'grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6'}
+>
 	{#each site as entity (entity.id)}
 		<li>
-			<EntityCard {entity} {showKind} rating={allRatings[entity.slug]} />
+			<EntityCard {entity} {showKind} {wall} rating={allRatings[entity.slug]} />
 		</li>
 	{/each}
 	{#if siteDone}

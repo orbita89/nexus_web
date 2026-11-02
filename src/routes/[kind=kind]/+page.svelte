@@ -97,6 +97,7 @@
 		<LoadError message={data.list.error} />
 	{:else if data.list.data && (data.list.data.items.length || archive?.first.items.length)}
 		<ResultsFeed
+			wall={data.kind.kind === 'painting'}
 			first={data.list.data}
 			{more}
 			ratings={data.ratings}

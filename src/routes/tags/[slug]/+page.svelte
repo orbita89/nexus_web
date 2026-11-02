@@ -53,6 +53,7 @@
 	<LoadError message={data.list.error} />
 {:else if data.list.data?.items.length}
 	<EntityGrid
+		wall={data.kind?.kind === 'painting'}
 		entities={data.list.data.items}
 		showKind={data.kinds.length !== 1}
 		ratings={data.ratings}
