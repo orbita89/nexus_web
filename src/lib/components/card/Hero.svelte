@@ -59,33 +59,33 @@
 	<CardHero sources={trailers} title={entity.title} kind={entity.kind} coverUrl={entity.cover_url}>
 		{@render content()}
 	</CardHero>
+{:else if entity.kind === 'painting' && entity.cover_url}
+	<!-- Картина — сама страница: холст во всю ширину и почти во всю высоту экрана, название и
+	     кнопки под ним. Щелчок открывает её во весь экран с увеличением. -->
+	<section aria-label="Шапка: {entity.title}" class="mb-12">
+		<ArtViewer src={entity.cover_url} title={entity.title}>
+			<img
+				src={entity.cover_url}
+				alt="Картина: {entity.title}"
+				fetchpriority="high"
+				class="mx-auto max-h-[72vh] w-auto max-w-full rounded-box shadow-2xl ring-1 ring-base-content/10"
+			/>
+		</ArtViewer>
+		<div class="mx-auto mt-8 max-w-3xl">{@render content()}</div>
+	</section>
 {:else}
-	<!-- У картины холст — главное на странице, поэтому колонка шире постерной. -->
 	<section
 		aria-label="Шапка: {entity.title}"
-		class={[
-			'mb-12 grid items-start gap-6 md:gap-10',
-			entity.kind === 'painting'
-				? 'sm:grid-cols-[16rem_1fr] md:grid-cols-[24rem_1fr]'
-				: 'sm:grid-cols-[12rem_1fr] md:grid-cols-[16rem_1fr]'
-		]}
+		class="mb-12 grid items-start gap-6 sm:grid-cols-[12rem_1fr] md:grid-cols-[16rem_1fr] md:gap-10"
 	>
-		<div class={entity.kind === 'painting' ? 'w-56 sm:w-auto' : 'w-40 sm:w-auto'}>
-			{#snippet poster()}
-				<Poster
-					title={entity.title}
-					kind={entity.kind}
-					coverUrl={entity.cover_url}
-					alt="{entity.kind === 'painting' ? 'Картина' : 'Постер'}: {entity.title}"
-					eager
-				/>
-			{/snippet}
-			<!-- Картину можно открыть во весь экран и разглядеть вблизи; постеру это ни к чему. -->
-			{#if entity.kind === 'painting' && entity.cover_url}
-				<ArtViewer src={entity.cover_url} title={entity.title}>{@render poster()}</ArtViewer>
-			{:else}
-				{@render poster()}
-			{/if}
+		<div class="w-40 sm:w-auto">
+			<Poster
+				title={entity.title}
+				kind={entity.kind}
+				coverUrl={entity.cover_url}
+				alt="{entity.kind === 'painting' ? 'Картина' : 'Постер'}: {entity.title}"
+				eager
+			/>
 		</div>
 		<div class="max-w-2xl min-w-0 md:pt-4">{@render content()}</div>
 	</section>
