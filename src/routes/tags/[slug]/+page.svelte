@@ -54,11 +54,7 @@
 	<LoadError message={data.list.error} />
 {:else if data.list.data?.items.length}
 	<EntityGrid
-		row={{
-			label: data.tag.name,
-			total: data.list.data.total,
-			more: { filters: { tag: data.tag.slug }, kind: data.kind?.kind, sort: DEFAULT_SORT }
-		}}
+		row={{ filters: { tag: data.tag.slug }, kind: data.kind?.kind, sort: DEFAULT_SORT }}
 		wall={data.kind?.kind === 'painting'}
 		entities={data.list.data.items}
 		showKind={data.kinds.length !== 1}

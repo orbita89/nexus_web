@@ -37,11 +37,7 @@
 		});
 
 	// Ряд листания на карточке: та же выдача поиска.
-	const row = $derived({
-		label: data.q ? `Поиск: ${data.q}` : 'Поиск',
-		total: data.result?.total ?? 0,
-		more: { filters: data.filters, kind: data.kind?.kind }
-	});
+	const row = $derived({ filters: data.filters, kind: data.kind?.kind });
 
 	function submit(event: SubmitEvent & { currentTarget: HTMLFormElement }) {
 		event.preventDefault();

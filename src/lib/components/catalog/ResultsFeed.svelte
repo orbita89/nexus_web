@@ -4,7 +4,7 @@
 	import { guestApi } from '#lib/auth/session.svelte.ts';
 	import { ratingsFor, type Ratings } from '#lib/catalog/load.ts';
 	import { archivePage as fetchArchive } from '#lib/catalog/search.ts';
-	import { buildRow, type RowSource } from '#lib/catalog/row.ts';
+	import type { Row } from '#lib/catalog/row.ts';
 	import ArchiveCard from './ArchiveCard.svelte';
 	import ArtWall from './ArtWall.svelte';
 	import EntityCard from './EntityCard.svelte';
@@ -37,8 +37,8 @@
 		showKind?: boolean;
 		/** Стена картин: колонки вместо сетки, высота карточки — по холсту. */
 		wall?: boolean;
-		/** Эта выдача как ряд листания на карточке (row.ts); «Показать ещё» удлиняет и ряд. */
-		row?: RowSource;
+		/** Параметры этой выдачи: по ним карточка листает соседние работы (row.ts). */
+		row?: Row;
 	} = $props();
 
 	/** Бэкенд листает архив только до offset 1000. */
@@ -55,15 +55,6 @@
 	let error = $state('');
 
 	const allRatings = $derived({ ...ratings, ...moreRatings });
-	// Ряд — это всё, что сейчас на экране: дописали карточки кнопкой — удлинился и ряд.
-	const listRow = $derived(
-		row
-			? buildRow(
-					row,
-					site.map((e) => e.slug)
-				)
-			: undefined
-	);
 	const archiveLeft = $derived(
 		!!archive && archived.length < archive.first.total && archived.length <= ARCHIVE_MAX_OFFSET
 	);
@@ -92,7 +83,7 @@
 </script>
 
 {#snippet tile(entity: SchemaEntitySummary)}
-	<EntityCard {entity} {showKind} {wall} row={listRow} rating={allRatings[entity.slug]} />
+	<EntityCard {entity} {showKind} {wall} {row} rating={allRatings[entity.slug]} />
 {/snippet}
 
 {#if wall}

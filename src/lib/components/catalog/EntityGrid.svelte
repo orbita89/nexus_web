@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { SchemaEntitySummary } from '#lib/api/generated/catalog.ts';
 	import type { Ratings } from '#lib/catalog/load.ts';
-	import { buildRow, type RowSource } from '#lib/catalog/row.ts';
+	import type { Row } from '#lib/catalog/row.ts';
 	import ArtWall from './ArtWall.svelte';
 	import EntityCard from './EntityCard.svelte';
 
@@ -19,20 +19,11 @@
 		showKind?: boolean;
 		/** Стена картин: колонки вместо сетки, высота карточки — по холсту. */
 		wall?: boolean;
-		/** Этот список как ряд листания на карточке (row.ts); слоты берутся из показанных работ. */
-		row?: RowSource;
+		/** Параметры этой выдачи: по ним карточка листает соседние работы (row.ts). */
+		row?: Row;
 		/** Оценки по slug (ratingsFor). */
 		ratings?: Ratings;
 	} = $props();
-
-	const listRow = $derived(
-		row
-			? buildRow(
-					row,
-					entities.map((e) => e.slug)
-				)
-			: undefined
-	);
 </script>
 
 {#snippet tile(entity: SchemaEntitySummary)}
@@ -40,7 +31,7 @@
 		{entity}
 		{showKind}
 		{wall}
-		row={listRow}
+		{row}
 		caption={caption?.(entity)}
 		rating={ratings[entity.slug]}
 	/>

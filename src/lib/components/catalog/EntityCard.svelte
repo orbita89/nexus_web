@@ -31,6 +31,12 @@
 	let failed = $state(false);
 	/** Холст загрузился — до этого держим под него место, иначе в стене висят голые подписи. */
 	let loaded = $state(false);
+	/** Пропорции обложки из API; нет размеров — null, и место держит заглушка. */
+	const ratio = $derived(
+		entity.cover_width && entity.cover_height
+			? `${entity.cover_width} / ${entity.cover_height}`
+			: null
+	);
 	/** Стена — только для картин с изображением; без него карточка обычная, с заглушкой. */
 	const onWall = $derived(wall && entity.kind === 'painting' && !!entity.cover_url && !failed);
 
@@ -52,16 +58,18 @@
 		class="relative rounded-box transition duration-300 group-hover:-translate-y-1 group-hover:shadow-xl group-hover:ring-2 group-hover:shadow-primary/20 group-hover:ring-primary group-focus-visible:ring-2 group-focus-visible:ring-primary"
 	>
 		{#if onWall}
-			<!-- Пропорции холста заранее неизвестны (их нет в API), поэтому до загрузки место держит
-			     заглушка 4:5 — высота карточки меняется один раз, а не рисуется с нуля. -->
+			<!-- Пропорции холста знает API (cover_width/cover_height) — место под него держится точно,
+			     и стена складывается с первого прохода. Размеров нет (старый импорт) — прежние 4:5. -->
 			<img
 				src={entity.cover_url}
 				alt=""
 				loading="lazy"
 				decoding="async"
+				style={ratio ? `aspect-ratio: ${ratio}` : undefined}
 				class={[
 					'w-full rounded-box object-cover ring-1 ring-base-content/10',
-					!loaded && 'aspect-4/5 bg-base-300'
+					!ratio && !loaded && 'aspect-4/5',
+					!loaded && 'bg-base-300'
 				]}
 				onload={() => (loaded = true)}
 				onerror={() => (failed = true)}

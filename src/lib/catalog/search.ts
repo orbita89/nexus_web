@@ -8,21 +8,21 @@ import type { SchemaEntityKind, SchemaSearchSort } from '#lib/api/generated/cata
 import { searchSortParam, type CatalogFilters, type Mode } from './filters.ts';
 import { PAGE_SIZE } from './url.ts';
 
-/** Страница поиска с фильтрами из адреса; studioSlug — фильмы страницы студии. */
-export function searchPage(
-	api: Api,
-	f: CatalogFilters,
-	options: {
-		/** Один тип или несколько: API принимает повторяющийся `kind` (ИЛИ между типами). */
-		kind?: SchemaEntityKind | readonly SchemaEntityKind[];
-		sort?: SchemaSearchSort;
-		studioSlug?: string;
-		limit: number;
-		offset: number;
-	}
-) {
+export interface SearchOptions {
+	/** Один тип или несколько: API принимает повторяющийся `kind` (ИЛИ между типами). */
+	kind?: SchemaEntityKind | readonly SchemaEntityKind[];
+	sort?: SchemaSearchSort;
+	/** Фильмы страницы студии. */
+	studioSlug?: string;
+}
+
+/**
+ * Фильтры из адреса в параметры API. Отдельно от запроса, потому что та же выдача нужна и соседям
+ * работы (GET /entities/{slug}/neighbors): у них те же фильтры, только без limit и offset.
+ */
+export function searchQuery(f: CatalogFilters, options: SearchOptions) {
 	const kinds = options.kind === undefined ? [] : [options.kind].flat();
-	const query = {
+	return {
 		kind: kinds.length ? kinds : undefined,
 		q: f.q,
 		tag: f.tag,
@@ -30,17 +30,36 @@ export function searchPage(
 		year_from: f.yearFrom,
 		year_to: f.yearTo,
 		studio: f.studio,
+		publisher: f.publisher,
+		museum: f.museum,
 		studio_slug: options.studioSlug,
 		person: f.person,
 		role: f.person ? f.role : undefined,
 		award: f.award,
 		award_year: f.award ? f.awardYear : undefined,
 		awarded: f.awarded,
-		sort: options.sort,
-		limit: options.limit,
-		offset: options.offset
+		sort: options.sort
 	};
+}
+
+/** Страница поиска с фильтрами из адреса; studioSlug — фильмы страницы студии. */
+export function searchPage(
+	api: Api,
+	f: CatalogFilters,
+	options: SearchOptions & { limit: number; offset: number }
+) {
+	const query = { ...searchQuery(f, options), limit: options.limit, offset: options.offset };
 	return unwrap(api.catalog.GET('/api/v1/catalog/search', { params: { query } }));
+}
+
+/** Соседи работы в той же выдаче: листание на карточке. Края ряда и чужая работа — null. */
+export function neighbours(api: Api, slug: string, f: CatalogFilters, options: SearchOptions) {
+	const query = searchQuery(f, options);
+	return unwrap(
+		api.catalog.GET('/api/v1/catalog/entities/{slug}/neighbors', {
+			params: { path: { slug }, query }
+		})
+	);
 }
 
 /** Имя человека для плашки фильтра: в адресе только slug; не нашёлся — сам slug. */

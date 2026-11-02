@@ -35,11 +35,11 @@
 	const more = (offset: number) =>
 		sectionPage(guestApi, data.kind.kind, data.filters, data.mode, offset);
 
-	// Ряд листания на карточке: подпись — музей, если фильтруем по нему, иначе раздел.
+	// Ряд листания на карточке: та же выдача, с теми же фильтрами и порядком.
 	const row = $derived({
-		label: data.filters.museum ?? data.kind.title,
-		total: data.list.data?.total ?? 0,
-		more: { filters: data.filters, kind: data.kind.kind, sort: searchSortParam(data.mode.sort) }
+		filters: data.filters,
+		kind: data.kind.kind,
+		sort: searchSortParam(data.mode.sort)
 	});
 
 	function sortBy(value: string) {

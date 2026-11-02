@@ -479,6 +479,29 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/catalog/admin/search/entities': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Дослать в поисковый индекс только указанные сущности — вместо полной перестройки.
+		 * @description Нужно после загрузки данных в БД в обход API (импорты `scripts/`, `make seed`): перестройка
+		 *     обоих индексов идёт десятки минут, а сотне новых карточек хватает одного запроса. Делает то
+		 *     же, что правка в админке ([`update_index`]), но без ISR: видимые сущности переотправляются
+		 *     (и в теневой индекс, если идёт перестройка), скрытые и удалённые — удаляются из индекса.
+		 */
+		post: operations['index_entities'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/catalog/admin/search/reindex': {
 		parameters: {
 			query?: never;
@@ -817,6 +840,35 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/catalog/entities/{slug}/neighbors': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Предыдущая и следующая работа в той же выдаче, что отдаёт `GET /search`: листание на карточке
+		 *     идёт по тому списку, откуда человек пришёл (художник, тег, музей, поиск).
+		 * @description Фильтры, запрос и сортировка — ровно как у `GET /search` (`limit` и `offset` не нужны и
+		 *     игнорируются), поэтому порядок совпадает со списком. `sort=random` — 400: у случайного
+		 *     порядка соседей нет.
+		 *
+		 *     Работы нет в выдаче (фильтры ей не подходят, слишком длинный ряд) — `{"prev": null,
+		 *     "next": null}`, а не 404: фронт в этом случае показывает похожие.
+		 *
+		 *     Позиции и длины ряда здесь нет намеренно: Meilisearch не умеет «дай номер документа в
+		 *     выдаче», а счётчика «14 из 142» в интерфейсе нет.
+		 */
+		get: operations['entity_neighbors'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/catalog/entities/{slug}/similar': {
 		parameters: {
 			query?: never;
@@ -888,18 +940,39 @@ export interface paths {
 		 *     поиск на сайте идёт сюда (в `GET /entities` поиска по названию нет).
 		 * @description Фильтры (через AND): `tag`, год (`year` — ровно, `year_from` / `year_to` — диапазон
 		 *     включительно), `studio` (точное название, без учёта регистра), `publisher` (издательство книги,
-		 *     издатель или разработчик игры — тоже точное название), `person` (slug участника) и
+		 *     издатель или разработчик игры — тоже точное название), `museum` (музей картины),
+		 *     `person` (slug участника) и
 		 *     `role` (его роль в этой сущности; без `person` — 400), `award` (slug премии), `award_year`
 		 *     (год церемонии) и `awarded` (только с наградой).
 		 *
 		 *     Сортировка по релевантности; `sort=recommended` / `trending` / `top_rated` — по баллу
 		 *     «Рекомендуемые», TMDB popularity, рейтингу IMDb (у кого значения нет — в конце); `new` — только
 		 *     вышедшие, новые сверху; `soon` — только не вышедшие, ближайшие сверху; `title` — по названию;
-		 *     `awarded` — больше наград сверху.
+		 *     `awarded` — больше наград сверху; `random` — случайное окно выдачи (`limit=1` — одна случайная
+		 *     работа под те же фильтры: ею заканчивается листание, когда ряд и похожие кончились).
+		 *
+		 *     Соседей работы в этой же выдаче отдаёт `GET /entities/{slug}/neighbors`.
 		 *
 		 *     Индекс обновляется после изменений в админке с задержкой в доли секунды.
 		 */
 		get: operations['search'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/search/museums': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Подсказки музеев для фильтра `museum` (facet search по полю `museums`): где хранится картина. */
+		get: operations['search_museums'];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -1504,8 +1577,16 @@ export interface components {
 		CreateEntity: {
 			/** @description Видна на сайте. По умолчанию `true`. */
 			active?: boolean | null;
+			/** Format: int32 */
+			cover_height?: number | null;
 			/** @description `http(s)://...` */
 			cover_url?: string | null;
+			/**
+			 * Format: int32
+			 * @description Размеры файла обложки в пикселях, 1–100000. Принимаются только вместе с `cover_url`
+			 *     (без него — 400): размеры от прежней картинки хуже, чем их отсутствие.
+			 */
+			cover_width?: number | null;
 			description?: string | null;
 			kind: components['schemas']['EntityKind'];
 			metadata?: components['schemas']['Metadata'] | null;
@@ -1590,7 +1671,14 @@ export interface components {
 			 *     карточка — 404 для всех, кроме админа.
 			 */
 			active: boolean;
+			/** Format: int32 */
+			cover_height?: number | null;
 			cover_url?: string | null;
+			/**
+			 * Format: int32
+			 * @description Размеры файла обложки в пикселях; неизвестны — `null`. См. [`EntitySummary`].
+			 */
+			cover_width?: number | null;
 			/** Format: date-time */
 			created_at: string;
 			description?: string | null;
@@ -1689,7 +1777,7 @@ export interface components {
 		 * @description Тип сущности (Postgres enum `entity_kind`).
 		 * @enum {string}
 		 */
-		EntityKind: 'movie' | 'series' | 'book' | 'game';
+		EntityKind: 'movie' | 'series' | 'book' | 'game' | 'painting';
 		/**
 		 * @description Порядок списка сущностей.
 		 * @enum {string}
@@ -1698,7 +1786,19 @@ export interface components {
 			'recommended' | 'trending' | 'top_rated' | 'new' | 'soon' | 'popular' | 'rating' | 'title';
 		/** @description Сущность в списке. */
 		EntitySummary: {
+			/**
+			 * Format: int32
+			 * @example 1493
+			 */
+			cover_height?: number | null;
 			cover_url?: string | null;
+			/**
+			 * Format: int32
+			 * @description Размеры файла обложки в пикселях: карточка получает точное `aspect-ratio` ещё до
+			 *     загрузки картинки (важно для картин — у них пропорции свои у каждой). Неизвестны — `null`.
+			 * @example 1000
+			 */
+			cover_width?: number | null;
 			/** Format: uuid */
 			id: string;
 			/**
@@ -1786,6 +1886,31 @@ export interface components {
 			 */
 			trivia?: string[] | null;
 		};
+		/** @description Какие сущности дослать в поисковый индекс: `slugs` или `ids`, ровно одно из двух. */
+		IndexEntities: {
+			/** @description Id сущностей: до 1000. */
+			ids?: string[] | null;
+			/**
+			 * @description Slug'и сущностей: до 1000.
+			 * @example [
+			 *       "mona-lisa",
+			 *       "guernica"
+			 *     ]
+			 */
+			slugs?: string[] | null;
+		};
+		IndexResult: {
+			/**
+			 * @description Сколько документов ушло в индекс.
+			 * @example 100
+			 */
+			indexed: number;
+			/**
+			 * @description Сколько из запрошенных в индексе нет: удалены из БД или скрыты (`active = false`).
+			 * @example 0
+			 */
+			removed: number;
+		};
 		/** @description Событие потока. */
 		JobEvent:
 			| {
@@ -1840,7 +1965,8 @@ export interface components {
 			| components['schemas']['MovieMetadata']
 			| components['schemas']['SeriesMetadata']
 			| components['schemas']['BookMetadata']
-			| components['schemas']['GameMetadata'];
+			| components['schemas']['GameMetadata']
+			| components['schemas']['PaintingMetadata'];
 		/**
 		 * @description Строчка награды в `metadata.awards` — текст блока «Производство и факты», а не раздел
 		 *     «Награды»: тот живёт в таблицах `award_*` и отдаётся схемой `Award` (`catalog::awards`).
@@ -1923,6 +2049,11 @@ export interface components {
 			 *     ]
 			 */
 			trivia?: string[] | null;
+		};
+		/** @description Соседи работы в той же выдаче (`GET /entities/{slug}/neighbors`). Края ряда — `null`. */
+		Neighbors: {
+			next?: components['schemas']['EntitySummary'] | null;
+			prev?: components['schemas']['EntitySummary'] | null;
 		};
 		/** @description Номинация: работа и человек сразу (актёрская категория), либо просто имя. */
 		Nomination: {
@@ -2142,7 +2273,19 @@ export interface components {
 		/** @description Страница списка. */
 		Page_EntitySummary: {
 			items: {
+				/**
+				 * Format: int32
+				 * @example 1493
+				 */
+				cover_height?: number | null;
 				cover_url?: string | null;
+				/**
+				 * Format: int32
+				 * @description Размеры файла обложки в пикселях: карточка получает точное `aspect-ratio` ещё до
+				 *     загрузки картинки (важно для картин — у них пропорции свои у каждой). Неизвестны — `null`.
+				 * @example 1000
+				 */
+				cover_width?: number | null;
 				/** Format: uuid */
 				id: string;
 				/**
@@ -2251,6 +2394,47 @@ export interface components {
 			 * @example 137
 			 */
 			total: number;
+		};
+		/**
+		 * @description Поля картины. Художник — не здесь, а в титрах (`entity_credits`, роль `artist`): у него своя
+		 *     страница и фильтр поиска, как у режиссёра. Год создания — `entities.release_date`.
+		 */
+		PaintingMetadata: {
+			/** @description Награды и номинации: до 50 (у картин почти не бывает, но форма админки общая). */
+			awards?: components['schemas']['MetadataAward'][] | null;
+			/**
+			 * @description Город музея.
+			 * @example Париж
+			 */
+			city?: string | null;
+			/**
+			 * Format: double
+			 * @description Размер в сантиметрах: высота × ширина.
+			 * @example 77
+			 */
+			height_cm?: number | null;
+			/**
+			 * @description Где хранится: музей или собрание. Фильтр `museum` в поиске.
+			 * @example Лувр
+			 */
+			museum?: string | null;
+			/**
+			 * @description Техника и материал: «холст, масло».
+			 * @example холст, масло
+			 */
+			technique?: string | null;
+			/**
+			 * @description Факты: до 30, каждый 1–1000 символов.
+			 * @example [
+			 *       "Украдена из Лувра в 1911 году."
+			 *     ]
+			 */
+			trivia?: string[] | null;
+			/**
+			 * Format: double
+			 * @example 53
+			 */
+			width_cm?: number | null;
 		};
 		/** @description Человек целиком (строка `people`). */
 		Person: {
@@ -2515,7 +2699,8 @@ export interface components {
 			| 'title'
 			| 'popular'
 			| 'rating'
-			| 'awarded';
+			| 'awarded'
+			| 'random';
 		/** @description Поля сериала. */
 		SeriesMetadata: {
 			/** @description Награды и номинации: до 50. */
@@ -2819,7 +3004,15 @@ export interface components {
 			 *     активные» эту сущность больше не трогает.
 			 */
 			active?: boolean | null;
+			/** Format: int32 */
+			cover_height?: number | null;
 			cover_url?: string | null;
+			/**
+			 * Format: int32
+			 * @description Размеры новой обложки в пикселях, 1–100000. Только вместе с `cover_url` (иначе 400);
+			 *     `cover_url` без них стирает прежние — от другой картинки они всё равно неверны.
+			 */
+			cover_width?: number | null;
 			description?: string | null;
 			metadata?: components['schemas']['Metadata'] | null;
 			original_title?: string | null;
@@ -2892,12 +3085,15 @@ export type SchemaEntitySort = components['schemas']['EntitySort'];
 export type SchemaEntitySummary = components['schemas']['EntitySummary'];
 export type SchemaErrorBody = components['schemas']['ErrorBody'];
 export type SchemaGameMetadata = components['schemas']['GameMetadata'];
+export type SchemaIndexEntities = components['schemas']['IndexEntities'];
+export type SchemaIndexResult = components['schemas']['IndexResult'];
 export type SchemaJobEvent = components['schemas']['JobEvent'];
 export type SchemaLibgenFile = components['schemas']['LibgenFile'];
 export type SchemaLibgenSource = components['schemas']['LibgenSource'];
 export type SchemaMetadata = components['schemas']['Metadata'];
 export type SchemaMetadataAward = components['schemas']['MetadataAward'];
 export type SchemaMovieMetadata = components['schemas']['MovieMetadata'];
+export type SchemaNeighbors = components['schemas']['Neighbors'];
 export type SchemaNomination = components['schemas']['Nomination'];
 export type SchemaNominationInput = components['schemas']['NominationInput'];
 export type SchemaPageAdminEntitySummary = components['schemas']['Page_AdminEntitySummary'];
@@ -2907,6 +3103,7 @@ export type SchemaPageBanner = components['schemas']['Page_Banner'];
 export type SchemaPageEntitySummary = components['schemas']['Page_EntitySummary'];
 export type SchemaPagePersonHit = components['schemas']['Page_PersonHit'];
 export type SchemaPagePersonSummary = components['schemas']['Page_PersonSummary'];
+export type SchemaPaintingMetadata = components['schemas']['PaintingMetadata'];
 export type SchemaPerson = components['schemas']['Person'];
 export type SchemaPersonCredit = components['schemas']['PersonCredit'];
 export type SchemaPersonDetail = components['schemas']['PersonDetail'];
@@ -5088,6 +5285,66 @@ export interface operations {
 			};
 		};
 	};
+	index_entities: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['IndexEntities'];
+			};
+		};
+		responses: {
+			/** @description Отправлено в индекс */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['IndexResult'];
+				};
+			};
+			/** @description Нужен ровно один из `slugs` / `ids`, не больше 1000 */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Meilisearch недоступен */
+			503: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
 	reindex_handler: {
 		parameters: {
 			query?: {
@@ -5812,7 +6069,10 @@ export interface operations {
 			query?: {
 				/** @description Путь страницы сайта: `/films/dune-2021` (query и `#` отбрасываются). Нужен `path` или `page`. */
 				path?: string;
-				/** @description Совместимость: `home`, `films`, `series`, `books`, `games`, `people` (= путь `/`, `/films`, …). */
+				/**
+				 * @description Совместимость: `home`, `films`, `series`, `books`, `games`, `paintings`, `people`
+				 *     (= путь `/`, `/films`, …).
+				 */
 				page?: string;
 			};
 			header?: never;
@@ -5931,6 +6191,125 @@ export interface operations {
 			};
 			/** @description Не найдена или скрыта */
 			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	entity_neighbors: {
+		parameters: {
+			query?: {
+				/**
+				 * @description Поисковый запрос: название, оригинальное название, студии. Опечатки допустимы. Пустой —
+				 *     все, кто подходит под фильтры.
+				 * @example дюан
+				 */
+				q?: string;
+				/** @description Не передан — по релевантности. */
+				sort?: components['schemas']['SearchSort'];
+				/** @description Slug тега. */
+				tag?: string;
+				/**
+				 * @description Ровно этот год выхода. Вместе с `year_from` / `year_to` — 400.
+				 * @example 2001
+				 */
+				year?: number;
+				/**
+				 * @description Год выхода от (включительно).
+				 * @example 2000
+				 */
+				year_from?: number;
+				/**
+				 * @description Год выхода до (включительно).
+				 * @example 2010
+				 */
+				year_to?: number;
+				/**
+				 * @description Студия — точное название (без учёта регистра); подсказки — `GET /search/studios`.
+				 * @example Warner Bros. Pictures
+				 */
+				studio?: string;
+				/**
+				 * @description Slug студии (`GET /studios/{slug}`): её фильмы, без запроса названия. Неизвестный slug —
+				 *     пустая выдача.
+				 * @example warner-bros-pictures
+				 */
+				studio_slug?: string;
+				/**
+				 * @description Издатель — точное название (без учёта регистра): издательство книги, издатель или
+				 *     разработчик игры. Подсказки — `GET /search/publishers`.
+				 * @example АСТ
+				 */
+				publisher?: string;
+				/**
+				 * @description Музей или собрание картины — точное название (без учёта регистра). Подсказки —
+				 *     `GET /search/museums`.
+				 * @example Лувр
+				 */
+				museum?: string;
+				/**
+				 * @description Slug человека: сущности с его участием (в любой роли).
+				 * @example christopher-nolan
+				 */
+				person?: string;
+				/**
+				 * @description Роль человека из `person` в этой сущности: `actor`, `director`, `producer`, `writer`, ...
+				 *     Без `person` — 400.
+				 * @example director
+				 */
+				role?: string;
+				/**
+				 * @description Slug премии (`GET /awards/{slug}`): работы с её наградой или номинацией.
+				 * @example oscar
+				 */
+				award?: string;
+				/**
+				 * @description Год церемонии: вместе с `award` — «лауреаты и номинанты „Оскара“ 2024».
+				 * @example 2024
+				 */
+				award_year?: number;
+				/** @description `true` — только полученные награды (у работы есть хотя бы одна победа). */
+				awarded?: boolean;
+				/** @description 1–100, по умолчанию 20. */
+				limit?: number;
+				/** @description С 0. */
+				offset?: number;
+				/** @description Типы работ, как в `GET /search` */
+				kind?: components['schemas']['EntityKind'][];
+			};
+			header?: never;
+			path: {
+				/** @description Slug работы */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Соседи; на краях ряда — `null` */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Neighbors'];
+				};
+			};
+			/** @description Неверный фильтр или `sort=random` */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Meilisearch недоступен */
+			503: {
 				headers: {
 					[name: string]: unknown;
 				};
@@ -6116,6 +6495,12 @@ export interface operations {
 				 */
 				publisher?: string;
 				/**
+				 * @description Музей или собрание картины — точное название (без учёта регистра). Подсказки —
+				 *     `GET /search/museums`.
+				 * @example Лувр
+				 */
+				museum?: string;
+				/**
 				 * @description Slug человека: сущности с его участием (в любой роли).
 				 * @example christopher-nolan
 				 */
@@ -6161,6 +6546,54 @@ export interface operations {
 				};
 			};
 			/** @description Неверный фильтр */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Meilisearch недоступен */
+			503: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	search_museums: {
+		parameters: {
+			query?: {
+				/**
+				 * @description Начало или часть названия, опечатки допустимы. Пустой — самые частые.
+				 * @example аст
+				 */
+				q?: string;
+				/** @description Только у сущностей этого типа: жанры фильмов не предлагаются в книгах. */
+				kind?: components['schemas']['EntityKind'];
+				/** @description 1–50, по умолчанию 10. Вне диапазона приводится к границам. */
+				limit?: number;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Музеи */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['PublisherHit'][];
+				};
+			};
+			/** @description Слишком длинный `q` */
 			400: {
 				headers: {
 					[name: string]: unknown;
