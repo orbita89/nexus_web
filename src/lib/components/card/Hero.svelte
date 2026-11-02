@@ -3,6 +3,7 @@
 	import type { SchemaEntityDetail } from '#lib/api/generated/catalog.ts';
 	import type { TrailerSource } from '#lib/catalog/trailer.ts';
 	import CardHero from '#lib/components/catalog/CardHero.svelte';
+	import ArtViewer from '#lib/components/catalog/ArtViewer.svelte';
 	import Poster from '#lib/components/catalog/Poster.svelte';
 
 	// Первый экран карточки:
@@ -70,13 +71,21 @@
 		]}
 	>
 		<div class={entity.kind === 'painting' ? 'w-56 sm:w-auto' : 'w-40 sm:w-auto'}>
-			<Poster
-				title={entity.title}
-				kind={entity.kind}
-				coverUrl={entity.cover_url}
-				alt="{entity.kind === 'painting' ? 'Картина' : 'Постер'}: {entity.title}"
-				eager
-			/>
+			{#snippet poster()}
+				<Poster
+					title={entity.title}
+					kind={entity.kind}
+					coverUrl={entity.cover_url}
+					alt="{entity.kind === 'painting' ? 'Картина' : 'Постер'}: {entity.title}"
+					eager
+				/>
+			{/snippet}
+			<!-- Картину можно открыть во весь экран и разглядеть вблизи; постеру это ни к чему. -->
+			{#if entity.kind === 'painting' && entity.cover_url}
+				<ArtViewer src={entity.cover_url} title={entity.title}>{@render poster()}</ArtViewer>
+			{:else}
+				{@render poster()}
+			{/if}
 		</div>
 		<div class="max-w-2xl min-w-0 md:pt-4">{@render content()}</div>
 	</section>
