@@ -1,5 +1,13 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { extendRow, neighbours, readRow, rememberRow, type Row } from './row';
+import {
+	extendRow,
+	markSeen,
+	neighbours,
+	readRow,
+	recentlySeen,
+	rememberRow,
+	type Row
+} from './row';
 
 // sessionStorage в node-окружении нет — подменяем простейшим хранилищем в памяти.
 const data = new Map<string, string>();
@@ -52,5 +60,23 @@ describe('ряд листания', () => {
 		const whole = { ...row, total: 3 };
 		expect(neighbours(whole, 'c').canExtend).toBe(false);
 		expect(neighbours(row, 'z')).toMatchObject({ at: -1, prev: null, next: null });
+	});
+});
+
+describe('недавно показанные', () => {
+	beforeEach(() => data.clear());
+
+	it('свежие первыми, без повторов', () => {
+		markSeen('a');
+		markSeen('b');
+		markSeen('a');
+		expect(recentlySeen()).toEqual(['a', 'b']);
+	});
+
+	it('испорченное хранилище — пустой список', () => {
+		data.set('nexus:seen', '{не json');
+		expect(recentlySeen()).toEqual([]);
+		data.set('nexus:seen', JSON.stringify(['a', 7, 'b']));
+		expect(recentlySeen()).toEqual(['a', 'b']);
 	});
 });

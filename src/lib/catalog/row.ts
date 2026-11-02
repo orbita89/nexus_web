@@ -6,8 +6,11 @@ import type { SchemaEntityKind, SchemaSearchSort } from '#lib/api/generated/cata
 import type { CatalogFilters } from './filters.ts';
 
 const KEY = 'nexus:row';
+const SEEN_KEY = 'nexus:seen';
 /** Больше слотов не храним: sessionStorage — не база, а ряд всё равно дочитывается порциями. */
 const MAX_SLUGS = 500;
+/** Сколько последних работ помним, чтобы листание не ходило по кругу между двумя карточками. */
+const MAX_SEEN = 30;
 
 /** Чем дочитать ряд дальше — те же параметры, с которыми список грузила страница. */
 export interface RowQuery {
@@ -85,4 +88,24 @@ export function neighbours(row: Row, slug: string) {
 		/** Показанных слотов меньше, чем всего в ряду, и есть чем дочитать. */
 		canExtend: row.slugs.length < row.total && !!row.more
 	};
+}
+
+/** Эту работу уже показывали: следующая постарается её не предлагать. */
+export function markSeen(slug: string): void {
+	try {
+		const seen = [slug, ...recentlySeen().filter((s) => s !== slug)].slice(0, MAX_SEEN);
+		sessionStorage.setItem(SEEN_KEY, JSON.stringify(seen));
+	} catch {
+		// Без хранилища листание просто иногда повторится.
+	}
+}
+
+/** Недавно показанные работы, свежие первыми. */
+export function recentlySeen(): string[] {
+	try {
+		const raw: unknown = JSON.parse(sessionStorage.getItem(SEEN_KEY) ?? '[]');
+		return Array.isArray(raw) ? raw.filter((s): s is string => typeof s === 'string') : [];
+	} catch {
+		return [];
+	}
 }
