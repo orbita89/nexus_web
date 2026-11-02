@@ -25,6 +25,8 @@
 	} = $props();
 
 	let failed = $state(false);
+	/** Холст загрузился — до этого держим под него место, иначе в стене висят голые подписи. */
+	let loaded = $state(false);
 	/** Стена — только для картин с изображением; без него карточка обычная, с заглушкой. */
 	const onWall = $derived(wall && entity.kind === 'painting' && !!entity.cover_url && !failed);
 
@@ -37,30 +39,45 @@
 
 <a href={entityHref(entity)} class="group relative block rounded-box outline-offset-4">
 	<div
-		class="rounded-box transition duration-300 group-hover:-translate-y-1 group-hover:shadow-xl group-hover:ring-2 group-hover:shadow-primary/20 group-hover:ring-primary group-focus-visible:ring-2 group-focus-visible:ring-primary"
+		class="relative rounded-box transition duration-300 group-hover:-translate-y-1 group-hover:shadow-xl group-hover:ring-2 group-hover:shadow-primary/20 group-hover:ring-primary group-focus-visible:ring-2 group-focus-visible:ring-primary"
 	>
 		{#if onWall}
+			<!-- Пропорции холста заранее неизвестны (их нет в API), поэтому до загрузки место держит
+			     заглушка 4:5 — высота карточки меняется один раз, а не рисуется с нуля. -->
 			<img
 				src={entity.cover_url}
 				alt=""
 				loading="lazy"
 				decoding="async"
-				class="w-full rounded-box ring-1 ring-base-content/10"
+				class={[
+					'w-full rounded-box object-cover ring-1 ring-base-content/10',
+					!loaded && 'aspect-4/5 bg-base-300'
+				]}
+				onload={() => (loaded = true)}
 				onerror={() => (failed = true)}
 			/>
+			<!-- Подпись поверх холста: появляется на наведении, на сенсорных экранах видна всегда. -->
+			<div
+				class="pointer-events-none absolute inset-x-0 bottom-0 rounded-b-box bg-linear-to-t from-black/85 via-black/55 to-transparent px-3 pt-8 pb-2.5 opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100 [@media(hover:none)]:opacity-100"
+			>
+				<h3 class="line-clamp-2 text-sm leading-snug font-semibold text-white">{entity.title}</h3>
+				{#if meta}<p class="mt-0.5 text-xs text-white/70">{meta}</p>{/if}
+			</div>
 		{:else}
 			<Poster title={entity.title} kind={entity.kind} coverUrl={entity.cover_url} />
 		{/if}
 	</div>
-	<div class="mt-2 px-0.5">
-		<h3
-			class="line-clamp-2 text-sm leading-snug font-semibold transition-colors group-hover:text-primary"
-		>
-			{entity.title}
-		</h3>
-		{#if meta}<p class="mt-0.5 text-xs text-base-content/50">{meta}</p>{/if}
-		{#if caption}<p class="mt-0.5 line-clamp-2 text-xs text-primary/80">{caption}</p>{/if}
-	</div>
+	{#if !onWall}
+		<div class="mt-2 px-0.5">
+			<h3
+				class="line-clamp-2 text-sm leading-snug font-semibold transition-colors group-hover:text-primary"
+			>
+				{entity.title}
+			</h3>
+			{#if meta}<p class="mt-0.5 text-xs text-base-content/50">{meta}</p>{/if}
+			{#if caption}<p class="mt-0.5 line-clamp-2 text-xs text-primary/80">{caption}</p>{/if}
+		</div>
+	{/if}
 	<!-- Бейдж — в углу постера, но в разметке после названия: имя ссылки начинается с названия. -->
 	{#if rating?.count && rating.average != null}
 		<span
