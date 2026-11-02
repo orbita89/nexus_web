@@ -59,16 +59,22 @@
 		{@render content()}
 	</CardHero>
 {:else}
+	<!-- У картины холст — главное на странице, поэтому колонка шире постерной. -->
 	<section
 		aria-label="Шапка: {entity.title}"
-		class="mb-12 grid items-start gap-6 sm:grid-cols-[12rem_1fr] md:grid-cols-[16rem_1fr] md:gap-10"
+		class={[
+			'mb-12 grid items-start gap-6 md:gap-10',
+			entity.kind === 'painting'
+				? 'sm:grid-cols-[16rem_1fr] md:grid-cols-[24rem_1fr]'
+				: 'sm:grid-cols-[12rem_1fr] md:grid-cols-[16rem_1fr]'
+		]}
 	>
-		<div class="w-40 sm:w-auto">
+		<div class={entity.kind === 'painting' ? 'w-56 sm:w-auto' : 'w-40 sm:w-auto'}>
 			<Poster
 				title={entity.title}
 				kind={entity.kind}
 				coverUrl={entity.cover_url}
-				alt="Постер: {entity.title}"
+				alt="{entity.kind === 'painting' ? 'Картина' : 'Постер'}: {entity.title}"
 				eager
 			/>
 		</div>

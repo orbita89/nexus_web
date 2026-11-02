@@ -23,12 +23,34 @@
 
 	let failed = $state(false);
 	const showImage = $derived(!!coverUrl && !failed);
+	/**
+	 * Картину нельзя кадрировать: «Ночной дозор» в пропорциях постера — уже не «Ночной дозор».
+	 * Поэтому у картин холст не обрезается, а висит целиком на тёмной стене, в раме.
+	 */
+	const art = $derived(kind === 'painting');
 </script>
 
 <div
-	class="relative aspect-2/3 w-full overflow-hidden rounded-box bg-base-300 shadow-md ring-1 ring-base-content/5"
+	class={[
+		'relative w-full overflow-hidden rounded-box',
+		art
+			? // Стена чуть темнее фона карточек, пропорции площе постерных: вертикальные холсты
+				// занимают её целиком, горизонтальным остаётся воздух по бокам — как при развеске.
+				'flex aspect-4/5 items-center justify-center bg-base-300/40 p-2 ring-1 ring-base-content/5'
+			: 'aspect-2/3 bg-base-300 shadow-md ring-1 ring-base-content/5'
+	]}
 >
-	{#if showImage}
+	{#if showImage && art}
+		<!-- Размер по самому холсту (max-* + w/h auto), поэтому рама облегает картину, а не ячейку. -->
+		<img
+			src={coverUrl}
+			{alt}
+			loading={eager ? 'eager' : 'lazy'}
+			decoding="async"
+			class="max-h-full max-w-full rounded-[2px] border-2 border-base-content/15 object-contain shadow-[0_6px_16px_-4px_rgba(0,0,0,0.75)] ring-1 ring-black/40"
+			onerror={() => (failed = true)}
+		/>
+	{:else if showImage}
 		<img
 			src={coverUrl}
 			{alt}
@@ -46,7 +68,8 @@
 					'from-primary/35': kind === 'movie',
 					'from-secondary/35': kind === 'series',
 					'from-accent/30': kind === 'book',
-					'from-info/30': kind === 'game'
+					'from-info/30': kind === 'game',
+					'from-warning/25': kind === 'painting'
 				}
 			]}
 			role={alt ? 'img' : undefined}
