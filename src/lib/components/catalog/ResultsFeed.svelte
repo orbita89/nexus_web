@@ -5,6 +5,7 @@
 	import { ratingsFor, type Ratings } from '#lib/catalog/load.ts';
 	import { archivePage as fetchArchive } from '#lib/catalog/search.ts';
 	import ArchiveCard from './ArchiveCard.svelte';
+	import ArtWall from './ArtWall.svelte';
 	import EntityCard from './EntityCard.svelte';
 
 	// Выдача одной сеткой: сначала фильмы сайта, за ними — из архива (с надписью «Архив»).
@@ -77,23 +78,25 @@
 	}
 </script>
 
-<!-- Стена картин — колонки (masonry): карточки разной высоты встают без дыр. -->
-<ul
-	class={wall
-		? 'columns-2 gap-4 sm:columns-3 lg:columns-4 [&>li]:mb-6 [&>li]:break-inside-avoid'
-		: 'grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6'}
->
-	{#each site as entity (entity.id)}
-		<li>
-			<EntityCard {entity} {showKind} {wall} rating={allRatings[entity.slug]} />
-		</li>
-	{/each}
-	{#if siteDone}
-		{#each archived as doc (doc.slug)}
-			<li><ArchiveCard {doc} /></li>
+{#snippet tile(entity: SchemaEntitySummary)}
+	<EntityCard {entity} {showKind} {wall} rating={allRatings[entity.slug]} />
+{/snippet}
+
+{#if wall}
+	<!-- Стена картин: «Показать ещё» дописывает холсты, уже показанные не переезжают. -->
+	<ArtWall items={site} key={(entity) => entity.id} {tile} />
+{:else}
+	<ul class="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+		{#each site as entity (entity.id)}
+			<li>{@render tile(entity)}</li>
 		{/each}
-	{/if}
-</ul>
+		{#if siteDone}
+			{#each archived as doc (doc.slug)}
+				<li><ArchiveCard {doc} /></li>
+			{/each}
+		{/if}
+	</ul>
+{/if}
 
 {#if error}<p class="mt-4 text-sm text-error">{error}</p>{/if}
 {#if canMore}
