@@ -3,6 +3,7 @@
 	import type { SchemaEntityDetail } from '#lib/api/generated/catalog.ts';
 	import type { TrailerSource } from '#lib/catalog/trailer.ts';
 	import CardHero from '#lib/components/catalog/CardHero.svelte';
+	import ArtNav from '#lib/components/card/ArtNav.svelte';
 	import ArtViewer from '#lib/components/catalog/ArtViewer.svelte';
 	import Poster from '#lib/components/catalog/Poster.svelte';
 
@@ -71,6 +72,8 @@
 				class="mx-auto max-h-[72vh] w-auto max-w-full rounded-box shadow-2xl ring-1 ring-base-content/10"
 			/>
 		</ArtViewer>
+		<!-- Листание холстов: следующая картина того ряда, из которого сюда пришли. -->
+		<ArtNav slug={entity.slug} />
 		<div class="mx-auto mt-8 max-w-3xl">{@render content()}</div>
 	</section>
 {:else}

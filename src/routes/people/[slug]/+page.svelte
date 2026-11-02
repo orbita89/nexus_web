@@ -90,6 +90,7 @@
 				<span class="text-sm font-normal text-base-content/40">{role.works.length}</span>
 			</h3>
 			<EntityGrid
+				row={{ label: data.person.full_name, total: role.works.length }}
 				entities={(all ? role.works : role.works.slice(0, WORKS_SHOWN)).map((w) => w.entity)}
 				caption={(e) => captions.get(e.id)}
 				ratings={data.ratings}

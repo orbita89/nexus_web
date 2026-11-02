@@ -36,15 +36,24 @@
 			offset
 		});
 
+	// Ряд листания на карточке: та же выдача поиска.
+	const row = $derived({
+		label: data.q ? `Поиск: ${data.q}` : 'Поиск',
+		total: data.result?.total ?? 0,
+		more: { filters: data.filters, kind: data.kind?.kind }
+	});
+
 	function submit(event: SubmitEvent & { currentTarget: HTMLFormElement }) {
 		event.preventDefault();
 		goto(formUrl(page.url.pathname, new FormData(event.currentTarget)), { reset: false });
 	}
 </script>
 
+<!-- Выдача поиска в индексе не нужна: это не страница, а ответ на запрос. -->
 <Seo
 	title={data.q ? `Поиск: ${data.q}` : 'Поиск'}
 	description="Поиск фильмов в Кассандра по названию, оригинальному названию и студии."
+	noindex
 />
 
 <h1 class="mb-6 text-3xl font-black sm:text-4xl">{data.q ? `Поиск: ${data.q}` : 'Поиск'}</h1>
@@ -132,6 +141,7 @@
 		])}
 	</p>
 	<ResultsFeed
+		{row}
 		wall={data.kind?.kind === 'painting'}
 		first={data.result}
 		{more}

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { count } from '#lib/catalog/labels.ts';
+	import { DEFAULT_SORT } from '#lib/catalog/sort.ts';
 	import EmptyState from '#lib/components/catalog/EmptyState.svelte';
 	import EntityGrid from '#lib/components/catalog/EntityGrid.svelte';
 	import KindTabs from '#lib/components/catalog/KindTabs.svelte';
@@ -53,6 +54,11 @@
 	<LoadError message={data.list.error} />
 {:else if data.list.data?.items.length}
 	<EntityGrid
+		row={{
+			label: data.tag.name,
+			total: data.list.data.total,
+			more: { filters: { tag: data.tag.slug }, kind: data.kind?.kind, sort: DEFAULT_SORT }
+		}}
 		wall={data.kind?.kind === 'painting'}
 		entities={data.list.data.items}
 		showKind={data.kinds.length !== 1}

@@ -2,6 +2,7 @@
 	import type { SchemaEntitySummary } from '#lib/api/generated/catalog.ts';
 	import type { SchemaRatingBrief } from '#lib/api/generated/social.ts';
 	import { entityHref, kindByApi } from '#lib/catalog/kinds.ts';
+	import { rememberRow, type Row } from '#lib/catalog/row.ts';
 	import { yearOf } from '#lib/catalog/labels.ts';
 	import RatingBadge from '#lib/components/social/RatingBadge.svelte';
 	import Poster from './Poster.svelte';
@@ -11,6 +12,7 @@
 		caption,
 		showKind = false,
 		wall = false,
+		row,
 		rating
 	}: {
 		entity: SchemaEntitySummary;
@@ -22,6 +24,8 @@
 		showKind?: boolean;
 		/** Стена картин: холст во всю ширину карточки, высота — по его пропорциям. */
 		wall?: boolean;
+		/** Список, из которого открыли карточку: по нему там листают соседние работы. */
+		row?: Row;
 	} = $props();
 
 	let failed = $state(false);
@@ -37,7 +41,13 @@
 	);
 </script>
 
-<a href={entityHref(entity)} class="group relative block rounded-box outline-offset-4">
+<!-- Ряд запоминаем на клике, а не на отрисовке: на странице человека списков несколько, и важно,
+     из какого именно ушли. Адрес ссылки при этом не меняется — он остаётся чистым. -->
+<a
+	href={entityHref(entity)}
+	onclick={() => row && rememberRow(row)}
+	class="group relative block rounded-box outline-offset-4"
+>
 	<div
 		class="relative rounded-box transition duration-300 group-hover:-translate-y-1 group-hover:shadow-xl group-hover:ring-2 group-hover:shadow-primary/20 group-hover:ring-primary group-focus-visible:ring-2 group-focus-visible:ring-primary"
 	>

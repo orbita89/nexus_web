@@ -2,7 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { navigating, page } from '$app/state';
 	import { ARCHIVE_PAGE, archiveFeed } from '#lib/catalog/archive.svelte.ts';
-	import { hasFilters, readArchive, yearLabel } from '#lib/catalog/filters.ts';
+	import { hasFilters, readArchive, searchSortParam, yearLabel } from '#lib/catalog/filters.ts';
 	import { count } from '#lib/catalog/labels.ts';
 	import { sectionPage } from '#lib/catalog/search.ts';
 	import { filterUrl } from '#lib/catalog/url.ts';
@@ -34,6 +34,13 @@
 
 	const more = (offset: number) =>
 		sectionPage(guestApi, data.kind.kind, data.filters, data.mode, offset);
+
+	// Ряд листания на карточке: подпись — музей, если фильтруем по нему, иначе раздел.
+	const row = $derived({
+		label: data.filters.museum ?? data.kind.title,
+		total: data.list.data?.total ?? 0,
+		more: { filters: data.filters, kind: data.kind.kind, sort: searchSortParam(data.mode.sort) }
+	});
 
 	function sortBy(value: string) {
 		const sort = value === data.mode.fallback ? null : value;
@@ -97,6 +104,7 @@
 		<LoadError message={data.list.error} />
 	{:else if data.list.data && (data.list.data.items.length || archive?.first.items.length)}
 		<ResultsFeed
+			{row}
 			wall={data.kind.kind === 'painting'}
 			first={data.list.data}
 			{more}
