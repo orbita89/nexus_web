@@ -1,5 +1,17 @@
-<script lang="ts">
+<script module lang="ts">
 	import type { SchemaEntitySummary } from '#lib/api/generated/catalog.ts';
+
+	/**
+	 * Что карточке нужно от сущности. Шире `EntitySummary`: в отметках и лентах social приходит
+	 * `EntityRef` — те же поля, но без размеров обложки (стена картин тогда держит место сама).
+	 */
+	export type CardEntity = Pick<
+		SchemaEntitySummary,
+		'id' | 'slug' | 'kind' | 'title' | 'cover_url' | 'release_date'
+	> & { cover_width?: number | null; cover_height?: number | null };
+</script>
+
+<script lang="ts">
 	import type { SchemaRatingBrief } from '#lib/api/generated/social.ts';
 	import { entityHref, kindByApi } from '#lib/catalog/kinds.ts';
 	import { rememberRow, type Row } from '#lib/catalog/row.ts';
@@ -15,7 +27,7 @@
 		row,
 		rating
 	}: {
-		entity: SchemaEntitySummary;
+		entity: CardEntity;
 		/** Средняя оценка (пакетно на страницу); нет оценок — без бейджа. */
 		rating?: SchemaRatingBrief;
 		/** Строка под названием: роль человека в работе. */

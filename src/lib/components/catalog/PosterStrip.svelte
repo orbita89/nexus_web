@@ -1,22 +1,24 @@
 <script lang="ts">
-	import type { SchemaEntitySummary } from '#lib/api/generated/catalog.ts';
 	import type { Ratings } from '#lib/catalog/load.ts';
-	import EntityCard from './EntityCard.svelte';
+	import EntityCard, { type CardEntity } from './EntityCard.svelte';
 
 	let {
 		entities,
 		label,
 		ratings = {},
 		badges = {},
-		wide = false
+		wide = false,
+		showKind = false
 	}: {
-		entities: SchemaEntitySummary[];
+		entities: CardEntity[];
 		label: string;
 		ratings?: Ratings;
 		/** Подпись над постером по id: «Сиквел», «Ремейк». */
 		badges?: Record<string, string>;
 		/** Широкие карточки: квадратная плитка картины в постерной ширине читается как марка. */
 		wide?: boolean;
+		/** Подписать раздел: в общей ленте книга и фильм идут вперемешку. */
+		showKind?: boolean;
 	} = $props();
 
 	let box = $state<HTMLDivElement | undefined>(undefined);
@@ -78,7 +80,7 @@
 				{#if badges[entity.id]}
 					<span class="mb-1.5 badge badge-ghost badge-sm">{badges[entity.id]}</span>
 				{/if}
-				<EntityCard {entity} rating={ratings[entity.slug]} />
+				<EntityCard {entity} rating={ratings[entity.slug]} {showKind} />
 			</li>
 		{/each}
 	</ul>

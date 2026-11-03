@@ -2,6 +2,9 @@
 	import FeaturedCollectionCard from '#lib/components/social/FeaturedCollectionCard.svelte';
 	import EmptyState from '#lib/components/catalog/EmptyState.svelte';
 	import GenreTiles from '#lib/components/catalog/GenreTiles.svelte';
+	import ContinueStrip from '#lib/components/catalog/ContinueStrip.svelte';
+	import PeopleStrip from '#lib/components/catalog/PeopleStrip.svelte';
+	import ThreadItem from '#lib/components/social/ThreadItem.svelte';
 	import LoadError from '#lib/components/catalog/LoadError.svelte';
 	import HeroSearch from '#lib/components/catalog/HeroSearch.svelte';
 	import PosterStrip from '#lib/components/catalog/PosterStrip.svelte';
@@ -88,6 +91,9 @@
 	</div>
 </section>
 
+<!-- Своё — выше общего: вошедший продолжает с отложенного, гость этого блока не видит. -->
+<ContinueStrip />
+
 {#if data.featured.length}
 	<section class="mb-10" aria-labelledby="featured-collections">
 		<div class="mb-3 flex items-baseline justify-between gap-4">
@@ -135,6 +141,49 @@
 		</section>
 	{/if}
 {/each}
+
+<!-- Дальше — то, чего нет в разделах: общая лента по оценкам, люди и живой форум. Без них
+     страница кончалась пятью полосами каталога и footer'ом. -->
+{#if data.rated.data?.items.length}
+	<section class="mb-10" aria-labelledby="top-rated">
+		<div class="mb-3 flex items-baseline justify-between gap-4">
+			<!-- Без пояснения «фильмы и книги вместе»: порядок top_rated ведёт рейтинг IMDb, и на
+			     деле в ленте одни фильмы — подпись обещала бы то, чего в ней нет. -->
+			<h2 id="top-rated" class="text-xl font-bold">Высокий рейтинг</h2>
+			<a href="/search?sort=top_rated" class="link text-sm link-primary link-hover">Все →</a>
+		</div>
+		<PosterStrip
+			entities={data.rated.data.items}
+			label="Высокий рейтинг"
+			ratings={data.ratings}
+			showKind
+		/>
+	</section>
+{/if}
+
+{#if data.people.length}
+	<section class="mb-10" aria-labelledby="people">
+		<div class="mb-3 flex items-baseline justify-between gap-4">
+			<h2 id="people" class="text-xl font-bold">Люди</h2>
+			<a href="/people" class="link text-sm link-primary link-hover">Все люди →</a>
+		</div>
+		<PeopleStrip people={data.people} label="Популярные люди" />
+	</section>
+{/if}
+
+{#if data.threads.length}
+	<section class="mb-10" aria-labelledby="discussed">
+		<div class="mb-3 flex items-baseline justify-between gap-4">
+			<h2 id="discussed" class="text-xl font-bold">Обсуждают сейчас</h2>
+			<a href="/forum" class="link text-sm link-primary link-hover">Весь форум →</a>
+		</div>
+		<ul class="flex flex-col gap-3" aria-label="Обсуждают сейчас">
+			{#each data.threads as thread (thread.id)}
+				<li><ThreadItem {thread} /></li>
+			{/each}
+		</ul>
+	</section>
+{/if}
 
 {#if !failed && filled.length === 0}
 	<EmptyState title="Каталог пока пуст"

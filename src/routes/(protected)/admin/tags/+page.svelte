@@ -132,9 +132,18 @@
 		<textarea
 			class="textarea w-full textarea-sm"
 			rows="1"
+			maxlength={ABOUT_MAX * 2}
 			placeholder="Описание: одно-два предложения"
 			bind:value={created.description}></textarea>
 	</label>
+	{#if created.description.length}
+		<span
+			class={[
+				'self-center text-xs',
+				created.description.length > ABOUT_MAX ? 'text-warning' : 'text-base-content/40'
+			]}>{created.description.length}/{ABOUT_MAX}</span
+		>
+	{/if}
 	<button class="btn btn-primary btn-sm">Добавить тег</button>
 </form>
 
@@ -166,8 +175,15 @@
 									id="tag-about-{tag.id}"
 									class="textarea grow basis-64 textarea-sm"
 									rows="1"
+									maxlength={ABOUT_MAX * 2}
 									placeholder="Описание: одно-два предложения"
 									bind:value={draft.description}></textarea>
+								<span
+									class={[
+										'text-xs',
+										draft.description.length > ABOUT_MAX ? 'text-warning' : 'text-base-content/40'
+									]}>{draft.description.length}/{ABOUT_MAX}</span
+								>
 								<button class="btn btn-primary btn-xs">Сохранить</button>
 								<button type="button" class="btn btn-ghost btn-xs" onclick={() => (editing = null)}
 									>Отмена</button
