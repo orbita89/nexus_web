@@ -1,5 +1,6 @@
 import { publicApi } from '#lib/api/client.ts';
 import { unwrap } from '#lib/api/errors.ts';
+import type { SchemaEntityKind } from '#lib/api/generated/catalog.ts';
 import { KINDS } from '#lib/catalog/kinds.ts';
 import { ratingsFor, settle } from '#lib/catalog/load.ts';
 import { listPage } from '#lib/catalog/search.ts';
@@ -17,6 +18,26 @@ const ROOMS_SIZE = 4;
 const GENRES_PER_KIND = 2;
 /** Тем в блоке: по три на раздел — иначе список занимает один раздел целиком. */
 const THEMES_PER_KIND = 3;
+
+/**
+ * Жанры для плиток: по очереди разделами, самые крупные в своём разделе. Тег, уже взятый другим
+ * разделом, пропускаем — иначе «Драма» занимает две плитки подряд с одним и тем же описанием.
+ */
+function takenGenres(all: TagEntry[]) {
+	const used = new Set<string>();
+	return KINDS.flatMap((k) => {
+		const picked: { tag: TagEntry; kind: SchemaEntityKind }[] = [];
+		for (const tag of all
+			.filter((t) => t.kind === 'genre' && (t.by_kind?.[k.kind] ?? 0) > 0)
+			.toSorted((a, b) => (b.by_kind?.[k.kind] ?? 0) - (a.by_kind?.[k.kind] ?? 0))) {
+			if (picked.length === GENRES_PER_KIND) break;
+			if (used.has(tag.slug)) continue;
+			used.add(tag.slug);
+			picked.push({ tag, kind: k.kind });
+		}
+		return picked;
+	});
+}
 
 export const load: PageLoad = async ({ fetch, url }) => {
 	const api = publicApi(fetch, url);
@@ -66,14 +87,9 @@ export const load: PageLoad = async ({ fetch, url }) => {
 		featured: featured.data ?? [],
 		ratings,
 		// Жанры — по два на раздел, иначе блок целиком занимают фильмы: у них тегов на порядок
-		// больше, и «Драма» с «Комедией» вытесняют и книги, и картины.
-		genres: KINDS.flatMap((k) =>
-			all
-				.filter((t) => t.kind === 'genre' && (t.by_kind?.[k.kind] ?? 0) > 0)
-				.toSorted((a, b) => (b.by_kind?.[k.kind] ?? 0) - (a.by_kind?.[k.kind] ?? 0))
-				.slice(0, GENRES_PER_KIND)
-				.map((tag) => ({ tag, kind: k.kind }))
-		),
+		// больше, и «Драма» с «Комедией» вытесняют и книги, и картины. Жанр берём только раз:
+		// «Драма» есть и в фильмах, и в сериалах — две одинаковые плитки читались как сбой.
+		genres: takenGenres(all),
 		// Темы — всё, что не жанр: чипами и без чисел. Набираем так же по разделам: по общему
 		// счётчику весь блок заняли бы стили живописи — у фильмов таких меток почти нет.
 		themes: [

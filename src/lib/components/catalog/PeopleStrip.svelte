@@ -17,7 +17,10 @@
 				<span class="transition duration-300 group-hover:scale-105">
 					<PersonAvatar name={person.full_name} photoUrl={person.photo_url} />
 				</span>
-				<span class="line-clamp-2 text-xs leading-snug font-medium group-hover:text-primary"
+				<!-- Две строки всегда: «Роберт Дауни-младший» рядом с «Брэдом Питтом» иначе
+				     сдвигает соседей и ломает общую линию подписей. -->
+				<span
+					class="line-clamp-2 min-h-[2rem] text-xs leading-snug font-medium group-hover:text-primary"
 					>{person.full_name}</span
 				>
 			</a>
