@@ -4,13 +4,22 @@
 	import { filterUrl } from '#lib/catalog/url.ts';
 
 	/** Фильтр по разделам ссылками: ?kind=films,games. Выбранные — из адреса; «Все» снимает выбор. */
-	let { current = [] }: { current?: readonly { slug: string }[] } = $props();
+	let {
+		current = [],
+		single = false
+	}: {
+		current?: readonly { slug: string }[];
+		/** Ровно один раздел или «Все»: выбор вкладки заменяет прежний, а не добавляется к нему. */
+		single?: boolean;
+	} = $props();
 
 	const chosen = $derived(new Set(current.map((k) => k.slug)));
 
-	/** Ссылка вкладки: выбранную снимает, невыбранную добавляет к остальным. */
+	/** Ссылка вкладки: выбранную снимает, невыбранную добавляет к остальным (в single — заменяет). */
 	function toggleUrl(slug: string) {
-		const next = KINDS.filter((k) => (k.slug === slug ? !chosen.has(slug) : chosen.has(k.slug)));
+		const next = single
+			? KINDS.filter((k) => k.slug === slug && !chosen.has(slug))
+			: KINDS.filter((k) => (k.slug === slug ? !chosen.has(slug) : chosen.has(k.slug)));
 		return filterUrl(page.url, { kind: kindsParam(next) });
 	}
 </script>

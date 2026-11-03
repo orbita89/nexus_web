@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { count } from '#lib/catalog/labels.ts';
+	import type { TagEntry } from '#lib/catalog/tags.ts';
 	import { DEFAULT_SORT } from '#lib/catalog/sort.ts';
 	import EmptyState from '#lib/components/catalog/EmptyState.svelte';
 	import EntityGrid from '#lib/components/catalog/EntityGrid.svelte';
@@ -20,13 +21,16 @@
 		'tags'
 	);
 	const heading = $derived(data.kind ? `${data.tag.name} · ${data.kind.title}` : data.tag.name);
+	// description у тега бэкенд ещё не отдаёт (docs/backend-tasks/tags-by-kind.md).
+	const about = $derived((data.tag as TagEntry).description || '');
 </script>
 
 <Seo
 	title={heading}
-	description="{data.tag.name}: {data.kind
-		? data.kind.title.toLowerCase()
-		: 'фильмы, сериалы, книги и игры'} в каталоге Кассандра."
+	description={about ||
+		`${data.tag.name}: ${
+			data.kind ? data.kind.title.toLowerCase() : 'фильмы, сериалы, книги и игры'
+		} в каталоге Кассандра.`}
 />
 
 <header class="mb-6">
@@ -35,6 +39,9 @@
 	<p class="mt-1 text-sm text-base-content/50">
 		{count(data.tag.entities_count, ['произведение', 'произведения', 'произведений'])} в каталоге
 	</p>
+	{#if about}
+		<p class="mt-2 max-w-2xl text-sm text-base-content/70">{about}</p>
+	{/if}
 	<div class="mt-4 flex flex-wrap items-center gap-2">
 		<WatchButton {watch} />
 		<ChatButton

@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { errorMessage, unwrap } from '#lib/api/errors.ts';
-	import type { SchemaTagKind, SchemaTagWithCount } from '#lib/api/generated/catalog.ts';
+	import type { SchemaTagKind } from '#lib/api/generated/catalog.ts';
 	import { api } from '#lib/auth/session.svelte.ts';
 	import { slugError, slugify } from '#lib/admin/slug.ts';
+	import { listTags, tagBody, type TagEntry } from '#lib/catalog/tags.ts';
 	import Alert from '#lib/components/Alert.svelte';
 
 	// Теги: создать, переименовать, сменить slug или вид (жанр — в шапке карточки, тег — над
@@ -11,28 +12,19 @@
 		{ value: 'genre', title: 'Жанр' },
 		{ value: 'tag', title: 'Тег' }
 	];
+	type Draft = { name: string; slug: string; kind: SchemaTagKind; description: string };
 	const kindTitle = (kind: SchemaTagKind) => KINDS.find((k) => k.value === kind)?.title ?? kind;
-	let tags = $state<SchemaTagWithCount[]>([]);
+	let tags = $state<TagEntry[]>([]);
 	let error = $state('');
 	let editing = $state<string | null>(null);
-	let draft = $state<{ name: string; slug: string; kind: SchemaTagKind }>({
-		name: '',
-		slug: '',
-		kind: 'tag'
-	});
-	let created = $state<{ name: string; slug: string; kind: SchemaTagKind }>({
-		name: '',
-		slug: '',
-		kind: 'tag'
-	});
+	let draft = $state<Draft>({ name: '', slug: '', kind: 'tag', description: '' });
+	let created = $state<Draft>({ name: '', slug: '', kind: 'tag', description: '' });
 	let slugTouched = $state(false);
 	let confirmDelete = $state<string | null>(null);
 
 	async function load() {
 		try {
-			tags = (await unwrap(api.catalog.GET('/api/v1/catalog/tags'))).toSorted((a, b) =>
-				a.name.localeCompare(b.name, 'ru')
-			);
+			tags = (await listTags(api)).toSorted((a, b) => a.name.localeCompare(b.name, 'ru'));
 		} catch (e) {
 			error = errorMessage(e);
 		}
@@ -53,18 +45,24 @@
 
 	async function create(event: SubmitEvent) {
 		event.preventDefault();
-		const body = { name: created.name.trim(), slug: created.slug.trim(), kind: created.kind };
+		const body = tagBody(
+			{ name: created.name.trim(), slug: created.slug.trim(), kind: created.kind },
+			created.description
+		);
 		error = (!body.name && 'Введите название.') || slugError(body.slug) || '';
 		if (error) return;
 		if (await run(() => unwrap(api.catalog.POST('/api/v1/catalog/admin/tags', { body })))) {
-			created = { name: '', slug: '', kind: created.kind };
+			created = { name: '', slug: '', kind: created.kind, description: '' };
 			slugTouched = false;
 		}
 	}
 
 	async function save(event: SubmitEvent, id: string) {
 		event.preventDefault();
-		const body = { name: draft.name.trim(), slug: draft.slug.trim(), kind: draft.kind };
+		const body = tagBody(
+			{ name: draft.name.trim(), slug: draft.slug.trim(), kind: draft.kind },
+			draft.description
+		);
 		error = (!body.name && 'Введите название.') || slugError(body.slug) || '';
 		if (error) return;
 		if (
@@ -115,6 +113,14 @@
 	<select id="tag-kind-new" class="select w-28 select-sm" bind:value={created.kind}>
 		{#each KINDS as k (k.value)}<option value={k.value}>{k.title}</option>{/each}
 	</select>
+	<label class="floating-label grow basis-64">
+		<span>Описание</span>
+		<textarea
+			class="textarea w-full textarea-sm"
+			rows="1"
+			placeholder="Описание: одно-два предложения"
+			bind:value={created.description}></textarea>
+	</label>
 	<button class="btn btn-primary btn-sm">Добавить тег</button>
 </form>
 
@@ -141,6 +147,13 @@
 								>
 									{#each KINDS as k (k.value)}<option value={k.value}>{k.title}</option>{/each}
 								</select>
+								<label class="sr-only" for="tag-about-{tag.id}">Описание</label>
+								<textarea
+									id="tag-about-{tag.id}"
+									class="textarea grow basis-64 textarea-sm"
+									rows="1"
+									placeholder="Описание: одно-два предложения"
+									bind:value={draft.description}></textarea>
 								<button class="btn btn-primary btn-xs">Сохранить</button>
 								<button type="button" class="btn btn-ghost btn-xs" onclick={() => (editing = null)}
 									>Отмена</button
@@ -148,9 +161,12 @@
 							</form>
 						</td>
 					{:else}
-						<td class="font-medium"
-							><a href="/tags/{tag.slug}" class="hover:text-primary">{tag.name}</a></td
-						>
+						<td class="font-medium">
+							<a href="/tags/{tag.slug}" class="hover:text-primary">{tag.name}</a>
+							{#if tag.description}
+								<p class="max-w-md text-xs font-normal text-base-content/50">{tag.description}</p>
+							{/if}
+						</td>
 						<td class="font-mono text-sm text-base-content/60">{tag.slug}</td>
 						<td class="text-sm">{kindTitle(tag.kind)}</td>
 						<td class="tabular-nums">{tag.entities_count}</td>
@@ -168,7 +184,12 @@
 									class="btn btn-ghost btn-xs"
 									aria-label="Изменить тег {tag.name}"
 									onclick={() => {
-										draft = { name: tag.name, slug: tag.slug, kind: tag.kind };
+										draft = {
+											name: tag.name,
+											slug: tag.slug,
+											kind: tag.kind,
+											description: tag.description ?? ''
+										};
 										editing = tag.id;
 									}}>Изменить</button
 								>
