@@ -7,13 +7,16 @@
 		entities,
 		label,
 		ratings = {},
-		badges = {}
+		badges = {},
+		wide = false
 	}: {
 		entities: SchemaEntitySummary[];
 		label: string;
 		ratings?: Ratings;
 		/** Подпись над постером по id: «Сиквел», «Ремейк». */
 		badges?: Record<string, string>;
+		/** Широкие карточки: квадратная плитка картины в постерной ширине читается как марка. */
+		wide?: boolean;
 	} = $props();
 
 	let box = $state<HTMLDivElement | undefined>(undefined);
@@ -71,7 +74,7 @@
 		aria-label={label}
 	>
 		{#each entities as entity (entity.id)}
-			<li class="w-32 shrink-0 snap-start sm:w-36 lg:w-40">
+			<li class={['shrink-0 snap-start', wide ? 'w-40 sm:w-48 lg:w-56' : 'w-32 sm:w-36 lg:w-40']}>
 				{#if badges[entity.id]}
 					<span class="mb-1.5 badge badge-ghost badge-sm">{badges[entity.id]}</span>
 				{/if}
@@ -80,19 +83,27 @@
 		{/each}
 	</ul>
 
+	<!-- Кнопки не лежат на постере: у края лента гаснет в фон, кнопка стоит в этом затухании
+	     и наполовину вынесена за ленту. Затухание — только там, где есть куда листать. -->
 	{#if scrollable && !atStart}
+		<div
+			class="pointer-events-none absolute inset-y-3 left-0 z-10 w-24 bg-linear-to-r from-base-100 via-base-100/85 to-transparent"
+		></div>
 		<button
 			type="button"
-			class="absolute left-3 z-20 flex size-12 -translate-y-1/2 items-center justify-center rounded-xl border-0 bg-white/35 text-xl text-white transition hover:bg-white/50"
+			class="absolute -left-2 z-20 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-base-100/90 text-lg shadow-lg ring-1 ring-base-content/10 transition hover:bg-base-100 hover:text-primary hover:ring-primary/50"
 			style="top: {centerY}px"
 			aria-label="Назад"
 			onclick={() => scroll(-1)}>&lt;</button
 		>
 	{/if}
 	{#if scrollable && !atEnd}
+		<div
+			class="pointer-events-none absolute inset-y-3 right-0 z-10 w-24 bg-linear-to-l from-base-100 via-base-100/85 to-transparent"
+		></div>
 		<button
 			type="button"
-			class="absolute right-3 z-20 flex size-12 -translate-y-1/2 items-center justify-center rounded-xl border-0 bg-white/35 text-xl text-white transition hover:bg-white/50"
+			class="absolute -right-2 z-20 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-base-100/90 text-lg shadow-lg ring-1 ring-base-content/10 transition hover:bg-base-100 hover:text-primary hover:ring-primary/50"
 			style="top: {centerY}px"
 			aria-label="Вперёд"
 			onclick={() => scroll(1)}>&gt;</button

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import FeaturedCollectionCard from '#lib/components/social/FeaturedCollectionCard.svelte';
 	import EmptyState from '#lib/components/catalog/EmptyState.svelte';
+	import GenreTiles from '#lib/components/catalog/GenreTiles.svelte';
 	import LoadError from '#lib/components/catalog/LoadError.svelte';
 	import HeroSearch from '#lib/components/catalog/HeroSearch.svelte';
 	import PosterStrip from '#lib/components/catalog/PosterStrip.svelte';
@@ -13,6 +14,9 @@
 	// Пустой раздел на главной не показываем; ошибку — показываем один раз, а не в каждой полосе.
 	const filled = $derived(data.sections.filter((s) => s.result.data?.items.length));
 	const failed = $derived(data.sections.find((s) => s.result.error)?.result.error);
+	// Блок жанров — не в конце страницы, а между полосами: пять одинаковых лент подряд читаются
+	// как одна. После второй полосы он даёт паузу и второй способ войти в каталог.
+	const BREAK_AFTER = 2;
 </script>
 
 <Seo
@@ -24,7 +28,7 @@
      без панели чата) и подтягивается под шапку. Не на всю высоту окна (88vh): из-за нижнего
      края выглядывает заголовок «Подборок» — видно, что страница продолжается. -->
 <section
-	class="relative mx-[calc(50%-50cqw)] -mt-[5.5rem] mb-10 flex min-h-[32rem] w-[100cqw] flex-col justify-center pt-[9rem] pb-14 sm:min-h-[88vh]"
+	class="relative mx-[calc(50%-50cqw)] -mt-[5.5rem] mb-10 flex min-h-[30rem] w-[100cqw] flex-col justify-center pt-[8rem] pb-12 sm:min-h-[70vh]"
 >
 	<!-- «Кассандра» Эвелин де Морган в авторской неоновой гамме — она даёт глубину, которой
 	     нет у плоской перекраски. Чуть приглушена по насыщенности, чтобы не спорить с
@@ -103,7 +107,7 @@
 	<div class="mb-8"><LoadError message={failed} /></div>
 {/if}
 
-{#each filled as section (section.slug)}
+{#each filled as section, i (section.slug)}
 	<section class="mb-10" aria-labelledby="new-{section.slug}">
 		<div class="mb-3 flex items-baseline justify-between gap-4">
 			<h2 id="new-{section.slug}" class="text-xl font-bold">
@@ -112,12 +116,25 @@
 			</h2>
 			<a href="/{section.slug}" class="link text-sm link-primary link-hover">Все →</a>
 		</div>
+		<!-- Картины — широкими карточками: холст вписан в плитку целиком, и в постерной ширине
+		     «Герника» не отличалась от марки на конверте. -->
 		<PosterStrip
 			entities={section.result.data!.items}
 			label="Новинки: {section.title}"
 			ratings={data.ratings}
+			wide={i === 0 || section.kind === 'painting'}
 		/>
 	</section>
+
+	{#if i === BREAK_AFTER - 1 && data.genres.length}
+		<section class="mb-10" aria-labelledby="genres">
+			<div class="mb-3 flex items-baseline justify-between gap-4">
+				<h2 id="genres" class="text-xl font-bold">Жанры</h2>
+				<a href="/tags" class="link text-sm link-primary link-hover">Все жанры →</a>
+			</div>
+			<GenreTiles tiles={data.genres} />
+		</section>
+	{/if}
 {/each}
 
 {#if !failed && filled.length === 0}
@@ -126,13 +143,15 @@
 	>
 {/if}
 
-{#if data.tags.length}
-	<section aria-labelledby="popular-tags" class="mb-6">
+{#if data.themes.length}
+	<section aria-labelledby="popular-themes" class="mb-6">
 		<div class="mb-3 flex items-baseline justify-between gap-4">
-			<h2 id="popular-tags" class="text-xl font-bold">Популярные теги</h2>
-			<a href="/tags" class="link text-sm link-primary link-hover">Все теги →</a>
+			<h2 id="popular-themes" class="text-xl font-bold">Темы</h2>
+			<a href="/tags" class="link text-sm link-primary link-hover">Все темы →</a>
 		</div>
-		<TagChips tags={data.tags} label="Популярные теги" />
+		<!-- Темы — поперёк разделов («Экранизация», «Открытый мир»), поэтому без чисел: здесь
+		     важно само название, а счётчик уводит взгляд с него. -->
+		<TagChips tags={data.themes} label="Популярные темы" counts={false} />
 	</section>
 {/if}
 

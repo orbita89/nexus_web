@@ -141,7 +141,7 @@
 
 <!-- Весь блок — один focus-группа: клик по подсказке не должен закрывать список раньше перехода. -->
 <div
-	class="relative max-w-xl"
+	class="relative w-full max-w-2xl"
 	bind:this={box}
 	onfocusout={(e) => {
 		if (!box.contains(e.relatedTarget as Node | null)) open = false;
@@ -151,7 +151,7 @@
 		{action}
 		method="GET"
 		role="search"
-		class="flex items-center gap-2 rounded-full bg-base-100/40 p-2 pl-3 ring-1 ring-base-content/10 backdrop-blur-md focus-within:ring-2 focus-within:ring-primary/60"
+		class="flex max-w-xl items-center gap-2 rounded-full bg-base-100/40 p-2 pl-3 ring-1 ring-base-content/10 backdrop-blur-md focus-within:ring-2 focus-within:ring-primary/60"
 	>
 		<!-- kind=films,games — несколько разделов разом; у людей и коллекций своего фильтра нет. -->
 		{#if !solo && kinds.length}<input type="hidden" name="kind" value={kindsParam(kinds)} />{/if}
@@ -180,15 +180,20 @@
 		<button class="btn h-11 min-h-0 rounded-full px-6 btn-primary">Найти</button>
 	</form>
 
-	<!-- Чипы — область поиска, а не переход в раздел: выбранная подсвечена. -->
-	<div class="mt-4 flex flex-wrap gap-2" role="group" aria-label="Где искать">
+	<!-- Чипы — область поиска, а не переход в раздел: выбранная подсвечена. Строка одна: перенос
+	     оставлял «Коллекции» одиноко висеть вторым рядом, поэтому узкий экран её листает. -->
+	<div
+		class="scrollbar-hide -mx-1 mt-4 flex gap-2 overflow-x-auto px-1 py-1"
+		role="group"
+		aria-label="Где искать"
+	>
 		{#each SCOPES as s (s.id)}
 			<button
 				type="button"
 				aria-pressed={scopes.includes(s.id)}
 				onclick={() => pick(s.id)}
 				class={[
-					'btn h-8 min-h-0 rounded-full px-4 font-normal backdrop-blur-md btn-sm',
+					'btn h-8 min-h-0 shrink-0 rounded-full px-4 font-normal backdrop-blur-md btn-sm',
 					scopes.includes(s.id)
 						? 'border-primary/60 bg-primary/15 text-primary'
 						: 'border-base-content/10 bg-base-100/30 hover:border-primary/40 hover:text-primary'
@@ -202,7 +207,7 @@
 			id="hero-suggestions"
 			role="listbox"
 			aria-label="Подсказки"
-			class="absolute top-full right-0 left-0 z-20 mt-2 overflow-hidden rounded-box border border-base-300 bg-base-200/95 shadow-xl backdrop-blur-md"
+			class="absolute top-full left-0 z-20 mt-2 w-full max-w-xl overflow-hidden rounded-box border border-base-300 bg-base-200/95 shadow-xl backdrop-blur-md"
 		>
 			{#each hits as hit, i (hit.href)}
 				<li role="option" aria-selected={i === active}>

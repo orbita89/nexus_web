@@ -1,8 +1,14 @@
 <script lang="ts">
 	let {
 		tags,
-		label = 'Теги'
-	}: { tags: { slug: string; name: string; entities_count?: number }[]; label?: string } = $props();
+		label = 'Теги',
+		counts = true
+	}: {
+		tags: { slug: string; name: string; entities_count?: number }[];
+		label?: string;
+		/** Числа у чипов: в подборке тем они шум — важно название, а не «15 818». */
+		counts?: boolean;
+	} = $props();
 </script>
 
 <ul class="flex flex-wrap gap-2" aria-label={label}>
@@ -13,7 +19,7 @@
 				class="badge gap-1.5 border-base-300 bg-base-200 badge-lg transition-colors hover:border-primary hover:text-primary"
 			>
 				{tag.name}
-				{#if tag.entities_count !== undefined}
+				{#if counts && tag.entities_count !== undefined}
 					<span class="text-xs text-base-content/40">{tag.entities_count}</span>
 				{/if}
 			</a>
