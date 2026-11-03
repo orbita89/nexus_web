@@ -100,10 +100,12 @@
 			<Poster title={entity.title} kind={entity.kind} coverUrl={entity.cover_url} />
 			<!-- Название и год — поверх постера, а не строкой под ним: на обложке название уже
 			     написано, и вторая подпись дублировала картинку. Появляется на наведении и на
-			     фокусе, на сенсорных экранах видна всегда (как у стены картин). Над заглушкой
-			     тоже: иначе год ложился на её собственное название. -->
+			     фокусе — и только там. На телефоне наведения нет, а подпись, включённая насовсем,
+			     ложилась поверх названия, уже написанного на самой обложке: два названия подряд.
+			     Над заглушкой оверлей тоже есть — иначе год ложился на её собственное название,
+			     но и он ждёт нажатия. -->
 			<div
-				class="pointer-events-none absolute inset-x-0 bottom-0 rounded-b-box bg-linear-to-t from-black/90 via-black/60 to-transparent px-3 pt-10 pb-2.5 opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100 [@media(hover:none)]:opacity-100"
+				class="pointer-events-none absolute inset-x-0 bottom-0 rounded-b-box bg-linear-to-t from-black/90 via-black/60 to-transparent px-3 pt-10 pb-2.5 opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100"
 			>
 				<h3 class="line-clamp-2 text-sm leading-snug font-semibold text-white">
 					{entity.title}
