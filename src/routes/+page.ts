@@ -11,8 +11,8 @@ import type { PageLoad } from './$types';
 const STRIP_SIZE = 12;
 /** Людей в ленте: круглые портреты мельче постеров, их влезает больше. */
 const PEOPLE_SIZE = 14;
-/** Тем с форума: три штуки показывают, что там живут, и не превращают главную в форум. */
-const THREADS_SIZE = 3;
+/** Каналов: четыре штуки — две строки по две, показывают, что в чате живут. */
+const ROOMS_SIZE = 4;
 /** Жанров в блоке: по два на раздел — ровно две строки плиток по четыре. */
 const GENRES_PER_KIND = 2;
 /** Тем в блоке: по три на раздел — иначе список занимает один раздел целиком. */
@@ -20,7 +20,7 @@ const THEMES_PER_KIND = 3;
 
 export const load: PageLoad = async ({ fetch, url }) => {
 	const api = publicApi(fetch, url);
-	const [sections, tags, featured, rated, people, threads] = await Promise.all([
+	const [sections, tags, featured, rated, people, rooms] = await Promise.all([
 		Promise.all(
 			KINDS.map(async (k) => ({
 				...k,
@@ -41,10 +41,12 @@ export const load: PageLoad = async ({ fetch, url }) => {
 				})
 			)
 		),
+		// Форум ещё не доделан, а каналы работают — на главной показываем живые комнаты:
+		// порядок «active» ставит вперёд те, где писали за сутки.
 		settle(
 			unwrap(
-				api.social.GET('/api/v1/social/threads', {
-					params: { query: { sort: 'active', limit: THREADS_SIZE } }
+				api.social.GET('/api/v1/social/chat/rooms', {
+					params: { query: { sort: 'active', limit: ROOMS_SIZE } }
 				})
 			)
 		)
@@ -59,7 +61,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
 		sections,
 		rated,
 		people: people.data?.items ?? [],
-		threads: threads.data?.items ?? [],
+		rooms: rooms.data?.items ?? [],
 		// Подборки редакции — порядок как пришёл; ошибка или пусто — блок скрыт.
 		featured: featured.data ?? [],
 		ratings,

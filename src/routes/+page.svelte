@@ -4,10 +4,12 @@
 	import GenreTiles from '#lib/components/catalog/GenreTiles.svelte';
 	import ContinueStrip from '#lib/components/catalog/ContinueStrip.svelte';
 	import PeopleStrip from '#lib/components/catalog/PeopleStrip.svelte';
-	import ThreadItem from '#lib/components/social/ThreadItem.svelte';
+	import RoomIcon from '#lib/components/chat/RoomIcon.svelte';
 	import LoadError from '#lib/components/catalog/LoadError.svelte';
 	import HeroSearch from '#lib/components/catalog/HeroSearch.svelte';
 	import PosterStrip from '#lib/components/catalog/PosterStrip.svelte';
+	import { activityLabel } from '#lib/chat/rooms.ts';
+	import { count } from '#lib/catalog/labels.ts';
 	import Seo from '#lib/components/catalog/Seo.svelte';
 	import TagChips from '#lib/components/catalog/TagChips.svelte';
 	import type { PageProps } from './$types';
@@ -171,15 +173,42 @@
 	</section>
 {/if}
 
-{#if data.threads.length}
-	<section class="mb-10" aria-labelledby="discussed">
+{#if data.rooms.length}
+	<section class="mb-10" aria-labelledby="chat-rooms">
 		<div class="mb-3 flex items-baseline justify-between gap-4">
-			<h2 id="discussed" class="text-xl font-bold">Обсуждают сейчас</h2>
-			<a href="/forum" class="link text-sm link-primary link-hover">Весь форум →</a>
+			<h2 id="chat-rooms" class="text-xl font-bold">Каналы</h2>
+			<a href="/chat" class="link text-sm link-primary link-hover">Все каналы →</a>
 		</div>
-		<ul class="flex flex-col gap-3" aria-label="Обсуждают сейчас">
-			{#each data.threads as thread (thread.id)}
-				<li><ThreadItem {thread} /></li>
+		<!-- Каналы, а не темы форума: форум ещё не доделан, а в чате уже разговаривают.
+		     Карточка — как в каталоге комнат, только без кнопок вступления. -->
+		<ul class="grid gap-3 sm:grid-cols-2" aria-label="Каналы">
+			{#each data.rooms as room (room.id)}
+				{@const meta = { room: `room:${room.slug}`, title: room.title, href: '/chat', image: null }}
+				<li>
+					<a
+						href="/chat"
+						class="flex h-full items-start gap-4 rounded-box bg-base-200 p-4 ring-1 ring-base-300 transition hover:-translate-y-0.5 hover:ring-primary"
+					>
+						<RoomIcon {meta} size="size-12" />
+						<span class="min-w-0 flex-1">
+							<span class="flex items-center gap-2 font-bold">
+								<span class="truncate">{room.title}</span>
+								{#if room.system}<span class="badge shrink-0 badge-ghost badge-sm">общая</span>{/if}
+							</span>
+							{#if room.description}
+								<span class="mt-1 line-clamp-2 block text-sm text-base-content/70"
+									>{room.description}</span
+								>
+							{/if}
+							<span class="mt-1 block text-xs text-base-content/50">
+								{count(room.members_count, ['участник', 'участника', 'участников'])}
+								{#if activityLabel(room)}
+									· <span class="font-bold text-success">{activityLabel(room)}</span>
+								{/if}
+							</span>
+						</span>
+					</a>
+				</li>
 			{/each}
 		</ul>
 	</section>
