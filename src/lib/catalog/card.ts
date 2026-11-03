@@ -136,6 +136,21 @@ export function aboutRows(entity: SchemaEntityDetail): FactRow[] {
 	return rows.filter((r): r is FactRow => !!r);
 }
 
+/**
+ * Короткая строка под названием в шапке: год, длительность (сезоны у сериала, страницы у книги),
+ * возрастной рейтинг и страна. Это то, что спрашивают первым, — ради них не надо уходить в
+ * «О фильме»; подробности остаются там.
+ */
+export function heroFacts(entity: SchemaEntityDetail): string[] {
+	const keep = ['Длительность', 'Сезоны', 'Страниц', 'Возрастной рейтинг', 'Техника'];
+	const fields = metadataFields(entity.kind, entity.metadata)
+		.filter((f) => keep.includes(f.label))
+		.map((f) => f.value);
+	return [yearOf(entity.release_date), ...fields, countries(entity)].filter(
+		(v): v is string => !!v
+	);
+}
+
 /** Связанные произведения: приквелы, сиквелы, ремейки — по порядку выхода. */
 export interface Production {
 	studiosTitle: string;

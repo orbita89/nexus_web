@@ -5,9 +5,9 @@
 	import Clamp from '#lib/components/catalog/Clamp.svelte';
 	import Credits from './Credits.svelte';
 
-	// «О фильме» — две плашки. Первая — одна таблица с подписями, как у Кинопоиска: оригинальное
-	// название, описание (в шапке их нет), год, страна, съёмочная группа (по трое в строке),
-	// премьера, длительность. Вторая, отдельно: полные титры с фото по группам (Credits). Справа
+	// «О фильме» — две плашки. Первая: описание текстом, под ним факты парами подпись/значение
+	// (оригинальное название, год, страна, съёмочная группа по трое в строке, премьера,
+	// длительность). Вторая, отдельно: полные титры с фото по группам (Credits). Справа
 	// от таблицы — aside (страница кладёт туда «Производство и факты»). Хронология — отдельно и
 	// только когда она есть.
 	let { entity, aside }: { entity: SchemaEntityDetail; aside?: Snippet } = $props();
@@ -25,43 +25,53 @@
 	<div class="flex flex-col gap-4">
 		<!-- Плашка 1 и справа от неё (с lg) боковая колонка aside — «Производство и факты». -->
 		<div class={['grid gap-4', aside && 'lg:grid-cols-[minmax(0,1fr)_20rem]']}>
-			<!-- Плашка 1: одна таблица — оригинальное название, описание и факты, все строки с подписью. -->
+			<!-- Описание — не строка таблицы, а текст: читают его, а не сканируют. Поэтому оно
+			     идёт первым, крупнее остального и в колонке ограниченной ширины (длинная строка
+			     на широком экране теряется при переходе на следующую). Факты — ниже, парами
+			     подпись/значение с тонкими разделителями: так их видно по диагонали. -->
 			{#if original || entity.description || rows.length}
-				<dl
-					class="grid grid-cols-[8.5rem_minmax(0,1fr)] gap-x-4 gap-y-3 rounded-box bg-base-200 p-5 text-sm ring-1 ring-base-content/5 sm:grid-cols-[11rem_minmax(0,1fr)] sm:p-7"
-				>
-					{#if original}
-						<dt class="text-base-content/50">Оригинальное название</dt>
-						<dd class="font-medium">{original}</dd>
-					{/if}
+				<div class="rounded-box bg-base-200 p-5 ring-1 ring-base-content/5 sm:p-7">
 					{#if entity.description}
-						<dt class="text-base-content/50">Описание</dt>
-						<dd class="max-w-3xl">
-							<Clamp lines={4} class="leading-relaxed text-base-content/90">
-								<p class="whitespace-pre-line">{entity.description}</p>
-							</Clamp>
-						</dd>
+						<Clamp lines={6} class="max-w-[65ch] text-base leading-7 text-base-content/90">
+							<p class="whitespace-pre-line">{entity.description}</p>
+						</Clamp>
 					{/if}
-					{#each rows as row (row.label)}
-						<dt class="text-base-content/50">{row.label}</dt>
-						<dd>
-							{#if row.links}
-								{#each row.links as link, i (link.href)}{i ? ', ' : ''}<a
-										href={link.href}
-										class="font-medium decoration-primary/40 underline-offset-4 hover:text-primary hover:underline"
-										>{link.text}</a
-									>{/each}{#if row.more}<a
-										href="#credits"
-										class="text-base-content/50 hover:text-primary hover:underline"
-									>
-										и ещё {row.more}</a
-									>{/if}
-							{:else}
-								{row.text}
-							{/if}
-						</dd>
-					{/each}
-				</dl>
+
+					<dl
+						class={[
+							'grid gap-x-4 text-sm sm:grid-cols-[11rem_minmax(0,1fr)]',
+							entity.description && 'mt-6 border-t border-base-content/10 pt-5'
+						]}
+					>
+						{#if original}
+							<dt class="pt-3 text-base-content/50">Оригинальное название</dt>
+							<dd class="pb-3 font-medium sm:pt-3">{original}</dd>
+						{/if}
+						{#each rows as row (row.label)}
+							<dt
+								class="border-t border-base-content/5 pt-3 text-base-content/50 first:border-0 sm:border-t"
+							>
+								{row.label}
+							</dt>
+							<dd class="pb-3 sm:border-t sm:border-base-content/5 sm:pt-3">
+								{#if row.links}
+									{#each row.links as link, i (link.href)}{i ? ', ' : ''}<a
+											href={link.href}
+											class="font-medium decoration-primary/40 underline-offset-4 hover:text-primary hover:underline"
+											>{link.text}</a
+										>{/each}{#if row.more}<a
+											href="#credits"
+											class="ml-1 text-primary/80 underline decoration-dotted underline-offset-4 hover:text-primary"
+										>
+											и ещё {row.more}</a
+										>{/if}
+								{:else}
+									{row.text}
+								{/if}
+							</dd>
+						{/each}
+					</dl>
+				</div>
 			{/if}
 			{@render aside?.()}
 		</div>
