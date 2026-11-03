@@ -3,7 +3,7 @@ import { unwrap } from '#lib/api/errors.ts';
 import type { SchemaEntityKind } from '#lib/api/generated/catalog.ts';
 import { KINDS } from '#lib/catalog/kinds.ts';
 import { ratingsFor, settle } from '#lib/catalog/load.ts';
-import { listPage } from '#lib/catalog/search.ts';
+import { archiveMovies, listPage } from '#lib/catalog/search.ts';
 import { DEFAULT_SORT } from '#lib/catalog/sort.ts';
 import { listTags, type TagEntry } from '#lib/catalog/tags.ts';
 import { getFeaturedCollections } from '#lib/social/collections.ts';
@@ -43,7 +43,7 @@ function takenGenres(all: TagEntry[]) {
 
 export const load: PageLoad = async ({ fetch, url }) => {
 	const api = publicApi(fetch, url);
-	const [sections, tags, featured, rated, people, rooms] = await Promise.all([
+	const [sections, tags, featured, rated, people, archive, rooms] = await Promise.all([
 		Promise.all(
 			KINDS.map(async (k) => ({
 				...k,
@@ -69,6 +69,9 @@ export const load: PageLoad = async ({ fetch, url }) => {
 				})
 			)
 		),
+		// Сколько фильмов в холодном архиве: их на порядок больше, чем на сайте, и в строке под
+		// поиском это главная цифра. Архив лежит отдельно (Tantivy), недоступен — просто молчим.
+		archiveMovies(fetch, url.origin),
 		// Форум ещё не доделан, а каналы работают — на главной показываем живые комнаты:
 		// порядок «active» ставит вперёд те, где писали за сутки.
 		settle(
@@ -96,6 +99,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
 		rated: mixed,
 		// Сколько всего в каталоге: сумма total по разделам — цифра под поиском.
 		total: sections.reduce((sum, s) => sum + (s.result.data?.total ?? 0), 0),
+		archive,
 		people: people.data?.items ?? [],
 		rooms: rooms.data?.items ?? [],
 		// Подборки редакции — порядок как пришёл; ошибка или пусто — блок скрыт.

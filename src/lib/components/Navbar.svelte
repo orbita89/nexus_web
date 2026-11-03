@@ -113,8 +113,28 @@
 			{/each}
 		</ul>
 
-		<div class="ml-auto navbar-end w-auto flex-1 gap-2">
-			<form action="/search" method="GET" role="search" class="w-full max-w-56 min-w-24">
+		<div class="ml-auto navbar-end w-auto min-w-0 flex-1 gap-2">
+			<!-- На узком экране вместо поля — лупа: поиск, чат и «Войти» в одну строку не влезали
+			     (страница ехала вбок), а сжатое до полоски поле всё равно бесполезно. -->
+			<a href="/search" class="btn btn-circle btn-ghost btn-sm sm:hidden" aria-label="Поиск">
+				<svg
+					class="size-5"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					aria-hidden="true"
+				>
+					<circle cx="11" cy="11" r="7" />
+					<path d="m20 20-3.5-3.5" stroke-linecap="round" />
+				</svg>
+			</a>
+			<form
+				action="/search"
+				method="GET"
+				role="search"
+				class="hidden w-full max-w-56 min-w-0 shrink sm:block"
+			>
 				<TitleSearch
 					value={page.url.pathname === '/search' ? (page.url.searchParams.get('q') ?? '') : ''}
 					placeholder="Поиск"

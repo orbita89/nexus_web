@@ -68,9 +68,11 @@
 		<div
 			class="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(9,9,11,0.15)_0%,rgba(9,9,11,0.4)_42%,rgba(9,9,11,0.85)_62%,rgba(9,9,11,0.97)_82%,#09090b_100%)]"
 		></div>
-		<!-- Подложка под текстом слева — арт по краям остаётся виден. -->
+		<!-- Подложка под текстом: на широком экране слева (арт по краям остаётся виден), на узком
+		     текст лежит прямо на картине — там она затемняется целиком, иначе подзаголовок
+		     попадал на светлое лицо и не читался. -->
 		<div
-			class="absolute inset-0 bg-[linear-gradient(to_right,rgba(9,9,11,0.88)_0%,rgba(9,9,11,0.6)_28%,transparent_55%)]"
+			class="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(9,9,11,0.55)_0%,rgba(9,9,11,0.75)_60%,rgba(9,9,11,0.85)_100%)] sm:bg-[linear-gradient(to_right,rgba(9,9,11,0.88)_0%,rgba(9,9,11,0.6)_28%,transparent_55%)]"
 		></div>
 	</div>
 
@@ -94,7 +96,9 @@
 		     запроса не стоит, а на вопрос «что тут вообще есть» отвечает сразу. -->
 		{#if data.total}
 			<p class="mt-4 text-sm text-base-content/50 drop-shadow-[0_1px_8px_rgba(9,9,11,0.8)]">
-				{data.total.toLocaleString('ru-RU')} произведений · фильмы, сериалы, книги, игры и картины
+				{count(data.total, ['произведение', 'произведения', 'произведений'])} на сайте{#if data.archive}
+					<span class="mx-1 text-base-content/30">·</span>ещё
+					{count(data.archive, ['фильм', 'фильма', 'фильмов'])} в архиве{/if}
 			</p>
 		{/if}
 	</div>
