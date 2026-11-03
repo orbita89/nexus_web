@@ -61,9 +61,12 @@
 
 <!-- Ряд запоминаем на клике, а не на отрисовке: на странице человека списков несколько, и важно,
      из какого именно ушли. Адрес ссылки при этом не меняется — он остаётся чистым. -->
+<!-- Имя ссылки задаём явно: видимого текста под постером больше нет, а скринридер и поиск по
+     странице должны по-прежнему находить карточку по названию. -->
 <a
 	href={entityHref(entity)}
 	onclick={() => row && rememberRow(row)}
+	aria-label={[entity.title, meta, caption].filter(Boolean).join(' · ')}
 	class="group relative block rounded-box outline-offset-4"
 >
 	<div
@@ -95,22 +98,22 @@
 			</div>
 		{:else}
 			<Poster title={entity.title} kind={entity.kind} coverUrl={entity.cover_url} />
+			<!-- Название и год — поверх постера, а не строкой под ним: на обложке название уже
+			     написано, и вторая подпись дублировала картинку. Появляется на наведении и на
+			     фокусе, на сенсорных экранах видна всегда (как у стены картин). Над заглушкой
+			     тоже: иначе год ложился на её собственное название. -->
+			<div
+				class="pointer-events-none absolute inset-x-0 bottom-0 rounded-b-box bg-linear-to-t from-black/90 via-black/60 to-transparent px-3 pt-10 pb-2.5 opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100 [@media(hover:none)]:opacity-100"
+			>
+				<h3 class="line-clamp-2 text-sm leading-snug font-semibold text-white">
+					{entity.title}
+				</h3>
+				{#if meta}<p class="mt-0.5 text-xs text-white/70">{meta}</p>{/if}
+				{#if caption}<p class="mt-0.5 line-clamp-2 text-xs text-primary/90">{caption}</p>{/if}
+			</div>
 		{/if}
 	</div>
-	{#if !onWall}
-		<!-- Подпись держит высоту двух строк названия всегда: иначе в полосе ряд прыгает, и год
-		     одной карточки оказывается на уровне названия соседней. -->
-		<div class="mt-2 px-0.5">
-			<h3
-				class="line-clamp-2 min-h-[2.25rem] text-sm leading-snug font-semibold transition-colors group-hover:text-primary"
-			>
-				{entity.title}
-			</h3>
-			{#if meta}<p class="text-xs text-base-content/50">{meta}</p>{/if}
-			{#if caption}<p class="mt-0.5 line-clamp-2 text-xs text-primary/80">{caption}</p>{/if}
-		</div>
-	{/if}
-	<!-- Бейдж — в углу постера, но в разметке после названия: имя ссылки начинается с названия. -->
+	<!-- Бейдж — в углу постера; имя ссылки задано aria-label, порядок разметки на него не влияет. -->
 	{#if rating?.count && rating.average != null}
 		<span
 			class="absolute top-2 right-2 shadow-md transition duration-300 group-hover:-translate-y-1"
