@@ -110,10 +110,9 @@
 {#each filled as section, i (section.slug)}
 	<section class="mb-10" aria-labelledby="new-{section.slug}">
 		<div class="mb-3 flex items-baseline justify-between gap-4">
-			<h2 id="new-{section.slug}" class="text-xl font-bold">
-				{section.title}
-				<span class="ml-1 text-sm font-normal text-base-content/40">новинки</span>
-			</h2>
+			<!-- Без приписки «новинки»: полосы грузятся порядком «Рекомендуемые», и новым тут
+			     оказывается не всё — подпись обещала то, чего в полосе нет. -->
+			<h2 id="new-{section.slug}" class="text-xl font-bold">{section.title}</h2>
 			<a href="/{section.slug}" class="link text-sm link-primary link-hover">Все →</a>
 		</div>
 		<!-- Картины — широкими карточками: холст вписан в плитку целиком, и в постерной ширине
@@ -144,14 +143,14 @@
 {/if}
 
 {#if data.themes.length}
-	<section aria-labelledby="popular-themes" class="mb-6">
+	<section aria-labelledby="popular-tags" class="mb-6">
 		<div class="mb-3 flex items-baseline justify-between gap-4">
-			<h2 id="popular-themes" class="text-xl font-bold">Темы</h2>
-			<a href="/tags" class="link text-sm link-primary link-hover">Все темы →</a>
+			<h2 id="popular-tags" class="text-xl font-bold">Теги</h2>
+			<a href="/tags" class="link text-sm link-primary link-hover">Все теги →</a>
 		</div>
-		<!-- Темы — поперёк разделов («Экранизация», «Открытый мир»), поэтому без чисел: здесь
-		     важно само название, а счётчик уводит взгляд с него. -->
-		<TagChips tags={data.themes} label="Популярные темы" counts={false} />
+		<!-- Теги — поперёк разделов («Экранизация», «Открытый мир»), поэтому без чисел: здесь
+		     важно само название, а счётчик уводит взгляд с него. Жанры выше, отдельным блоком. -->
+		<TagChips tags={data.themes} label="Популярные теги" counts={false} />
 	</section>
 {/if}
 

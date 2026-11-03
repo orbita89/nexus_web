@@ -1,11 +1,28 @@
 import type { SchemaEntityKind } from '#lib/api/generated/catalog.ts';
 
+/** Формы для счётчиков: одна, две, пять. */
+export type Words = readonly [string, string, string];
+
+const FILMS: Words = ['фильм', 'фильма', 'фильмов'];
+const SERIES: Words = ['сериал', 'сериала', 'сериалов'];
+const BOOKS: Words = ['книга', 'книги', 'книг'];
+const GAMES: Words = ['игра', 'игры', 'игр'];
+const PAINTINGS: Words = ['картина', 'картины', 'картин'];
+/** Раздел не выбран (общий поиск, несколько типов разом). */
+const WORKS: Words = ['работа', 'работы', 'работ'];
+
+/** Слова счётчика раздела: без раздела — нейтральные «работы». */
+export function kindWords(kind?: SchemaEntityKind): Words {
+	return KINDS.find((k) => k.kind === kind)?.words ?? WORKS;
+}
+
 /** Разделы каталога: адрес в URL ↔ тип сущности в API. */
 export const KINDS = [
-	{ slug: 'films', kind: 'movie', title: 'Фильмы', one: 'Фильм' },
-	{ slug: 'series', kind: 'series', title: 'Сериалы', one: 'Сериал' },
-	{ slug: 'books', kind: 'book', title: 'Книги', one: 'Книга' },
-	{ slug: 'games', kind: 'game', title: 'Игры', one: 'Игра' }
+	{ slug: 'films', kind: 'movie', title: 'Фильмы', one: 'Фильм', words: FILMS },
+	{ slug: 'series', kind: 'series', title: 'Сериалы', one: 'Сериал', words: SERIES },
+	{ slug: 'books', kind: 'book', title: 'Книги', one: 'Книга', words: BOOKS },
+	{ slug: 'games', kind: 'game', title: 'Игры', one: 'Игра', words: GAMES },
+	{ slug: 'paintings', kind: 'painting', title: 'Картины', one: 'Картина', words: PAINTINGS }
 ] as const satisfies readonly {
 	slug: string;
 	kind: SchemaEntityKind;
@@ -13,6 +30,8 @@ export const KINDS = [
 	title: string;
 	/** Один элемент: подпись в выдаче поиска. */
 	one: string;
+	/** Счётчики: «1 картина», «2 картины», «100 картин». */
+	words: Words;
 }[];
 
 export type KindSlug = (typeof KINDS)[number]['slug'];

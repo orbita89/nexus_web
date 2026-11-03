@@ -39,6 +39,7 @@
 		series: 'Сериалы',
 		books: 'Книги',
 		games: 'Игры',
+		paintings: 'Картины',
 		people: 'Люди'
 	};
 	const KIND_TITLES: Record<BannerKind, string> = {

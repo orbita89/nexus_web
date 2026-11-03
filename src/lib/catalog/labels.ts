@@ -6,6 +6,7 @@ import type {
 	SchemaGameMetadata,
 	SchemaMetadata,
 	SchemaMovieMetadata,
+	SchemaPaintingMetadata,
 	SchemaSeriesMetadata
 } from '#lib/api/generated/catalog.ts';
 
@@ -39,7 +40,8 @@ const ROLES: Record<string, string> = {
 	illustrator: 'Иллюстратор',
 	narrator: 'Рассказчик',
 	showrunner: 'Шоураннер',
-	game_designer: 'Геймдизайнер'
+	game_designer: 'Геймдизайнер',
+	artist: 'Художник'
 };
 
 /**
@@ -56,7 +58,8 @@ export const ROLE_GROUPS: readonly { role: string; title: string }[] = [
 	{ role: 'actor', title: 'В ролях' },
 	{ role: 'voice_actor', title: 'Роли озвучивали' },
 	{ role: 'author', title: 'Авторы' },
-	{ role: 'creator', title: 'Создатели' }
+	{ role: 'creator', title: 'Создатели' },
+	{ role: 'artist', title: 'Художники' }
 ];
 
 /** Место роли в ROLE_GROUPS; неизвестная — после всех. */
@@ -131,6 +134,14 @@ export interface Field {
 	value: string;
 }
 
+/** «77 × 53 см»: размер картины, если известны обе стороны (иначе одна или ничего). */
+function sizeOf(m: SchemaPaintingMetadata): string | null {
+	const cm = (v: number | null | undefined) => (v == null ? null : v.toLocaleString('ru-RU'));
+	const [h, w] = [cm(m.height_cm), cm(m.width_cm)];
+	if (h && w) return `${h} × ${w} см`;
+	return h ? `${h} см в высоту` : w ? `${w} см в ширину` : null;
+}
+
 const list = (items: readonly string[] | null | undefined, label: (s: string) => string) =>
 	items?.length ? items.map(label).join(', ') : null;
 
@@ -175,6 +186,16 @@ export function metadataFields(kind: SchemaEntityKind, metadata: SchemaMetadata)
 				['Платформы', list(m.platforms, platformLabel)],
 				['Разработчик', m.developer],
 				['Издатель', m.publisher]
+			);
+			break;
+		}
+		case 'painting': {
+			const m = metadata as SchemaPaintingMetadata;
+			rows.push(
+				['Техника', m.technique],
+				['Музей', m.museum],
+				['Город', m.city],
+				['Размер', sizeOf(m)]
 			);
 			break;
 		}
@@ -292,6 +313,11 @@ export function keyFacts(
 			facts.push(m.developer);
 			break;
 		}
+		case 'painting': {
+			const m = metadata as SchemaPaintingMetadata;
+			facts.push(m.technique);
+			break;
+		}
 	}
 	return facts.filter((f): f is string => !!f);
 }
@@ -306,7 +332,8 @@ const LEAD_ROLES: Record<SchemaEntityKind, string[]> = {
 	movie: ['director'],
 	series: ['creator', 'director'],
 	book: ['author'],
-	game: ['director', 'developer', 'creator']
+	game: ['director', 'developer', 'creator'],
+	painting: ['artist']
 };
 
 /** Главная роль, которая есть у произведения: director, у книг author и т. д.; нет — null. */

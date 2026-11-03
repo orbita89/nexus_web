@@ -35,6 +35,12 @@ export interface MetadataForm {
 	publisher: string;
 	platforms: string;
 	developer: string;
+	/** Картина: техника, музей, город и размер в сантиметрах. */
+	technique: string;
+	museum: string;
+	city: string;
+	height_cm: string;
+	width_cm: string;
 	trailers: TrailerRow[];
 	/** Студии — по одной в строке. */
 	studios: string;
@@ -54,6 +60,11 @@ export const emptyMetadataForm = (): MetadataForm => ({
 	publisher: '',
 	platforms: '',
 	developer: '',
+	technique: '',
+	museum: '',
+	city: '',
+	height_cm: '',
+	width_cm: '',
 	trailers: [],
 	studios: '',
 	awards: [],
@@ -116,6 +127,8 @@ export function detectProvider(text: string): SchemaTrailerProvider | null {
 }
 
 const int = (s: string) => (s.trim() ? Number(s.trim()) : null);
+/** Размер картины: «77,5» и «77.5» — одно и то же число. */
+const decimal = (s: string) => (s.trim() ? Number(s.trim().replace(',', '.')) : null);
 const text = (s: string) => s.trim() || null;
 
 /** Форма → metadata для API: только поля этого типа и только заполненные. */
@@ -157,6 +170,13 @@ export function toMetadata(kind: SchemaEntityKind, form: MetadataForm): SchemaMe
 			put('publisher', text(form.publisher));
 			put('trailers', trailers);
 			break;
+		case 'painting':
+			put('technique', text(form.technique));
+			put('museum', text(form.museum));
+			put('city', text(form.city));
+			put('height_cm', decimal(form.height_cm));
+			put('width_cm', decimal(form.width_cm));
+			break;
 	}
 	return entries as SchemaMetadata;
 }
@@ -177,6 +197,11 @@ export function fromMetadata(kind: SchemaEntityKind, metadata: SchemaMetadata): 
 	form.publisher = m.publisher ?? '';
 	form.platforms = (m.platforms ?? []).join(', ');
 	form.developer = m.developer ?? '';
+	form.technique = m.technique ?? '';
+	form.museum = m.museum ?? '';
+	form.city = m.city ?? '';
+	form.height_cm = n(m.height_cm);
+	form.width_cm = n(m.width_cm);
 	form.trailers = WITH_TRAILERS.includes(kind)
 		? (m.trailers ?? []).map((t) => ({ provider: t.provider, id: t.id }))
 		: [];
@@ -198,6 +223,13 @@ export function metadataError(kind: SchemaEntityKind, form: MetadataForm): strin
 		return Number.isInteger(n) && n >= 1 && n <= max
 			? null
 			: `${label}: целое от 1 до ${max.toLocaleString('ru-RU')}.`;
+	};
+	const size = (value: string, label: string) => {
+		if (!value.trim()) return null;
+		const n = Number(value.trim().replace(',', '.'));
+		return Number.isFinite(n) && n >= 0.1 && n <= 10_000
+			? null
+			: `${label}: число от 0,1 до 10 000 см.`;
 	};
 	const countries = () =>
 		splitList(form.countries, true).find((c) => !/^[A-Z]{2}$/.test(c))
@@ -244,6 +276,8 @@ export function metadataError(kind: SchemaEntityKind, form: MetadataForm): strin
 				return range(form.pages, 'Страниц', 100_000);
 			case 'game':
 				return trailers();
+			case 'painting':
+				return size(form.height_cm, 'Высота') ?? size(form.width_cm, 'Ширина');
 		}
 	}
 }

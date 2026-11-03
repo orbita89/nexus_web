@@ -5,12 +5,14 @@
 	import type { SchemaTagWithCount } from '#lib/api/generated/catalog.ts';
 	import { guestApi } from '#lib/auth/session.svelte.ts';
 	import {
+		filterSet,
 		hasFilters,
 		PERSON_ROLES,
+		roleOptions,
 		yearLabel,
 		type CatalogFilters
 	} from '#lib/catalog/filters.ts';
-	import type { KINDS } from '#lib/catalog/kinds.ts';
+	import { kindWords, type KINDS } from '#lib/catalog/kinds.ts';
 	import { count, roleLabel, yearOf } from '#lib/catalog/labels.ts';
 	import { studioHref } from '#lib/catalog/studios.ts';
 	import { filterUrl, type Query } from '#lib/catalog/url.ts';
@@ -18,8 +20,10 @@
 	import SuggestInput, { type Suggestion } from './SuggestInput.svelte';
 	import TitleSearch from './TitleSearch.svelte';
 
-	// Панель фильтров: название, человек (с ролью), студия, жанр или тег, год (ровно или период),
-	// «Архив» (выключен по умолчанию; включённый — фильмы архива за фильмами сайта). Каждое
+	// Панель фильтров: название, человек (с ролью), студия или издатель, жанр или тег, год (ровно
+	// или период), «Архив» (выключен по умолчанию; включённый — фильмы архива за фильмами сайта).
+	// Набор полей и роль по умолчанию — свои у каждого раздела (filterSet): у книг вместо студии
+	// издательство и роль «Автор», у игр нет титров, у фильмов роль «Актёр». Каждое
 	// изменение — новый адрес (фильтры в query, см. filters.ts);
 	// выбранное — плашками с ✕. Новый текст, студия или человек сбрасывают порядок: выдача
 	// поиска — по релевантности. На /search своё поле запроса — там панель без него.
@@ -31,7 +35,7 @@
 		personName,
 		tags,
 		titleField = true,
-		archiveField = !kind || kind.kind === 'movie'
+		archiveField = filterSet(kind?.kind).archive
 	}: {
 		/** Раздел; на общей странице поиска — не выбран. */
 		kind?: (typeof KINDS)[number];
@@ -48,8 +52,15 @@
 
 	const YEAR_KEYS = { year: null, year_from: null, year_to: null };
 
-	/** Роль выбирают до или после человека: без человека она просто ждёт выбора. */
-	let role = $derived(filters.role ?? '');
+	/** Набор полей раздела: что показываем и какая роль стоит заранее. */
+	const set = $derived(filterSet(kind?.kind));
+	const roles = $derived(roleOptions(set));
+	/**
+	 * Роль выбирают до или после человека. Пока человек не выбран, в списке стоит роль раздела
+	 * («Актёр» у фильмов, «Автор» у книг) — её и применит выбор человека. Когда человек уже
+	 * выбран, источник правды — адрес: «Любая роль» там выглядит как отсутствие `role`.
+	 */
+	let role = $derived(filters.person ? (filters.role ?? '') : (filters.role ?? set.defaultRole));
 	const roleTitle = $derived(
 		PERSON_ROLES.find((r) => r.value === (filters.role ?? ''))?.title ?? 'Любая роль'
 	);
@@ -95,7 +106,8 @@
 		}));
 	}
 
-	const FILMS = ['фильм', 'фильма', 'фильмов'] as const;
+	/** Счётчик подсказки — словами раздела: «3 книги», а не «3 фильма». */
+	const FILMS = $derived(kindWords(kind?.kind));
 
 	async function studios(q: string): Promise<Suggestion[]> {
 		const found = await unwrap(
@@ -106,18 +118,58 @@
 		return found.map((s) => ({ value: s.name, label: s.name, hint: count(s.count, FILMS) }));
 	}
 
-	// Жанры и теги — одна выборка (у поиска один фильтр `tag`), но разделами. Их немного и они уже
-	// загружены, поэтому сужаем список на месте; пустые (без фильмов) не предлагаем.
+	async function museums(q: string): Promise<Suggestion[]> {
+		const found = await unwrap(
+			guestApi.catalog.GET('/api/v1/catalog/search/museums', {
+				params: { query: { q: q || undefined, kind: kind?.kind, limit: 8 } }
+			})
+		);
+		return found.map((m) => ({ value: m.name, label: m.name, hint: count(m.count, FILMS) }));
+	}
+
+	async function publishers(q: string): Promise<Suggestion[]> {
+		const found = await unwrap(
+			guestApi.catalog.GET('/api/v1/catalog/search/publishers', {
+				params: { query: { q: q || undefined, kind: kind?.kind, limit: 8 } }
+			})
+		);
+		return found.map((p) => ({ value: p.name, label: p.name, hint: count(p.count, FILMS) }));
+	}
+
+	// Жанры и теги — одна выборка (у поиска один фильтр `tag`), но разделами. В разделе предлагаем
+	// только те, что есть у его типа (GET /search/tags — фасет Meilisearch): жанры фильмов не
+	// должны попадать в книги. Названий в фасете нет, они из общего списка `tags`; его же счётчики
+	// заменяем счётчиками раздела. Ответ кэшируем: он не зависит от введённого (в фасете slug'и,
+	// а ищут по названию — на месте).
 	const norm = (s: string) => s.toLocaleLowerCase('ru').replaceAll('ё', 'е');
+	let kindTags: Promise<Map<string, number>> | null = null;
+	let kindTagsFor: string | undefined = undefined;
+	function tagsOfKind(): Promise<Map<string, number>> {
+		if (!kindTags || kindTagsFor !== kind?.kind) {
+			kindTagsFor = kind?.kind;
+			kindTags = unwrap(
+				guestApi.catalog.GET('/api/v1/catalog/search/tags', {
+					params: { query: { kind: kind?.kind, limit: 50 } }
+				})
+			)
+				.then((found) => new Map(found.map((t) => [t.slug, t.count])))
+				// Поиск недоступен — остаётся общий список тегов со своими счётчиками.
+				.catch(() => new Map<string, number>());
+		}
+		return kindTags;
+	}
 	async function tagOptions(q: string): Promise<Suggestion[]> {
 		const needle = norm(q.trim());
+		const counts = await tagsOfKind();
+		const inKind = (t: SchemaTagWithCount) =>
+			counts.size ? counts.has(t.slug) : !!t.entities_count;
 		const pick = (k: SchemaTagWithCount['kind'], group: string) =>
 			tags
-				.filter((t) => t.kind === k && t.entities_count && norm(t.name).includes(needle))
+				.filter((t) => t.kind === k && inKind(t) && norm(t.name).includes(needle))
 				.map((t) => ({
 					value: t.slug,
 					label: t.name,
-					hint: count(t.entities_count, FILMS),
+					hint: count(counts.get(t.slug) ?? t.entities_count, FILMS),
 					group
 				}));
 		return [...pick('genre', 'Жанры'), ...pick('tag', 'Теги')];
@@ -173,6 +225,13 @@
 			const href = studioPage.current?.data ?? undefined;
 			list.push({ label: `Студия: ${f.studio}`, remove: { studio: null }, href });
 		}
+		if (f.publisher) {
+			const what = set.publisherLabel === 'Издательство' ? 'Издательство' : 'Издатель';
+			list.push({ label: `${what}: ${f.publisher}`, remove: { publisher: null } });
+		}
+		if (f.museum) {
+			list.push({ label: `Музей: ${f.museum}`, remove: { museum: null } });
+		}
 		if (f.tag) {
 			const what = selectedTag?.kind === 'genre' ? 'Жанр' : 'Тег';
 			list.push({ label: `${what}: ${selectedTag?.name ?? f.tag}`, remove: { tag: null } });
@@ -201,7 +260,7 @@
 	{#if titleField}
 		<form method="GET" action={path} onsubmit={submitTitle} class="flex gap-2" role="search">
 			<!-- Без JS форма уходит обычным GET: остальные фильтры — скрытыми полями. -->
-			{#each ['tag', 'year', 'year_from', 'year_to', 'studio', 'person', 'role', 'archive', 'award', 'award_year', 'awarded'] as key (key)}
+			{#each ['tag', 'year', 'year_from', 'year_to', 'studio', 'publisher', 'museum', 'person', 'role', 'archive', 'award', 'award_year', 'awarded'] as key (key)}
 				{@const value = page.url.searchParams.get(key)}
 				{#if value}<input type="hidden" name={key} {value} />{/if}
 			{/each}
@@ -221,31 +280,53 @@
 		class="grid gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)_auto]"
 	>
 		<!-- Роль и человек — одно поле, как год: роль слева, имя с подсказками справа. -->
-		<div class="flex w-full">
-			<select
-				class="select w-36 shrink-0 rounded-r-none"
-				aria-label="Роль человека"
-				bind:value={role}
-				onchange={() => filters.person && apply({ role: role || null })}
-			>
-				{#each PERSON_ROLES as r (r.value)}<option value={r.value}>{r.title}</option>{/each}
-			</select>
+		{#if set.roles.length}
+			<div class="flex w-full">
+				<select
+					class="select w-36 shrink-0 rounded-r-none"
+					aria-label="Роль человека"
+					bind:value={role}
+					onchange={() => filters.person && apply({ role: role || null })}
+				>
+					{#each roles as r (r.value)}<option value={r.value}>{r.title}</option>{/each}
+				</select>
+				<SuggestInput
+					class="min-w-0 flex-1"
+					inputClass="input w-full rounded-l-none border-l-0"
+					label="Человек"
+					placeholder={set.personPlaceholder}
+					load={people}
+					onselect={(s) => apply({ person: s.value, role: role || null }, true)}
+				/>
+			</div>
+		{/if}
+		{#if set.studio}
 			<SuggestInput
-				class="min-w-0 flex-1"
-				inputClass="input w-full rounded-l-none border-l-0"
-				label="Человек"
-				placeholder="Актёр, режиссёр…"
-				load={people}
-				onselect={(s) => apply({ person: s.value, role: role || null }, true)}
+				label="Студия"
+				placeholder="Студия"
+				load={studios}
+				minLength={0}
+				onselect={(s) => apply({ studio: s.value }, true)}
 			/>
-		</div>
-		<SuggestInput
-			label="Студия"
-			placeholder="Студия"
-			load={studios}
-			minLength={0}
-			onselect={(s) => apply({ studio: s.value }, true)}
-		/>
+		{/if}
+		{#if set.museum}
+			<SuggestInput
+				label="Музей"
+				placeholder="Музей или собрание"
+				load={museums}
+				minLength={0}
+				onselect={(s) => apply({ museum: s.value }, true)}
+			/>
+		{/if}
+		{#if set.publisherLabel}
+			<SuggestInput
+				label={set.publisherLabel}
+				placeholder={set.publisherLabel}
+				load={publishers}
+				minLength={0}
+				onselect={(s) => apply({ publisher: s.value }, true)}
+			/>
+		{/if}
 		<SuggestInput
 			label="Жанр или тег"
 			placeholder="Жанр или тег"

@@ -26,7 +26,8 @@ export const PERSON_ROLES = [
 	{ value: 'editor', title: 'Монтажёр' },
 	{ value: 'author', title: 'Автор' },
 	{ value: 'translator', title: 'Переводчик' },
-	{ value: 'illustrator', title: 'Иллюстратор' }
+	{ value: 'illustrator', title: 'Иллюстратор' },
+	{ value: 'artist', title: 'Художник' }
 ] as const;
 
 export type PersonRole = (typeof PERSON_ROLES)[number]['value'];
@@ -40,10 +41,14 @@ export interface FilterSet {
 	roles: readonly PersonRole[];
 	/** Роль, выбранная заранее: по ней ищут чаще всего. Пустая — любая. */
 	defaultRole: PersonRole;
+	/** Подсказка в поле «Человек»: кого тут обычно ищут. */
+	personPlaceholder: string;
 	/** Студия производства (`metadata.studios`, страница студии). */
 	studio: boolean;
 	/** Издатель: издательство книги, издатель или разработчик игры. `null` — поля нет. */
 	publisherLabel: string | null;
+	/** Музей или собрание картины. */
+	museum: boolean;
 	/** «Архив» — холодный архив фильмов. */
 	archive: boolean;
 }
@@ -62,40 +67,60 @@ const SETS: Record<SchemaEntityKind, FilterSet> = {
 	movie: {
 		roles: FILM_ROLES,
 		defaultRole: 'actor',
+		personPlaceholder: 'Актёр, режиссёр…',
 		studio: true,
 		publisherLabel: null,
+		museum: false,
 		archive: true
 	},
 	series: {
 		roles: FILM_ROLES,
 		defaultRole: 'actor',
+		personPlaceholder: 'Актёр, режиссёр…',
 		studio: true,
 		publisherLabel: null,
+		museum: false,
 		archive: false
 	},
 	book: {
 		roles: ['author', 'translator', 'illustrator'],
 		defaultRole: 'author',
+		personPlaceholder: 'Автор, переводчик…',
 		studio: false,
 		publisherLabel: 'Издательство',
+		museum: false,
 		archive: false
 	},
 	game: {
 		// Титров у игр нет, поэтому нет и поля «Человек»; студию заменяют издатель и разработчик.
 		roles: [],
 		defaultRole: '',
+		personPlaceholder: '',
 		studio: false,
 		publisherLabel: 'Издатель или разработчик',
+		museum: false,
+		archive: false
+	},
+	painting: {
+		// У картины один человек — художник, а вместо студии музей, где она висит.
+		roles: ['artist'],
+		defaultRole: 'artist',
+		personPlaceholder: 'Художник…',
+		studio: false,
+		publisherLabel: null,
+		museum: true,
 		archive: false
 	}
 };
 
 /** Общая страница поиска (`/search`): раздел не выбран — показываем всё и без умолчаний. */
 const ALL: FilterSet = {
-	roles: [...FILM_ROLES, 'author', 'translator', 'illustrator'],
+	roles: [...FILM_ROLES, 'author', 'translator', 'illustrator', 'artist'],
 	defaultRole: '',
+	personPlaceholder: 'Актёр, режиссёр, автор…',
 	studio: true,
 	publisherLabel: 'Издатель',
+	museum: true,
 	archive: true
 };
 
@@ -130,6 +155,8 @@ export interface CatalogFilters {
 	studio?: string;
 	/** Точное название издателя: издательство книги, издатель или разработчик игры. */
 	publisher?: string;
+	/** Точное название музея или собрания картины. */
+	museum?: string;
 	/** Slug человека. */
 	person?: string;
 	/** Роль человека; без person не используется. */
@@ -158,6 +185,7 @@ export function readFilters(url: UrlLike): CatalogFilters {
 		yearTo,
 		studio: readText(url, 'studio'),
 		publisher: readText(url, 'publisher'),
+		museum: readText(url, 'museum'),
 		person,
 		role: person && PERSON_ROLES.some((r) => r.value === role) ? role : undefined,
 		award,
@@ -183,6 +211,8 @@ export function hasFilters(f: CatalogFilters): boolean {
 		f.yearFrom ||
 		f.yearTo ||
 		f.studio ||
+		f.publisher ||
+		f.museum ||
 		f.person ||
 		f.award ||
 		f.awarded

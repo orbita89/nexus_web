@@ -51,7 +51,15 @@ export const isBannerTheme = (value: unknown): value is BannerTheme =>
 	typeof value === 'string' && (BANNER_THEMES as readonly string[]).includes(value);
 
 /** Страницы для target {type:'page'}. 'films' — ровно /films; страницы фильмов — path '/films/*'. */
-export const BANNER_PAGES = ['home', 'films', 'series', 'books', 'games', 'people'] as const;
+export const BANNER_PAGES = [
+	'home',
+	'films',
+	'series',
+	'books',
+	'games',
+	'paintings',
+	'people'
+] as const;
 export type BannerPage = (typeof BANNER_PAGES)[number];
 export const isBannerPage = (value: string): value is BannerPage =>
 	(BANNER_PAGES as readonly string[]).includes(value);

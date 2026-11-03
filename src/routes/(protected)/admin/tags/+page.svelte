@@ -13,6 +13,9 @@
 		{ value: 'tag', title: 'Тег' }
 	];
 	type Draft = { name: string; slug: string; kind: SchemaTagKind; description: string };
+	// Описание живёт в плитке жанра и в шапке страницы тега: там видно две строки, остальное
+	// обрезается. Поэтому мягкий предел — пара предложений, за ним счётчик краснеет.
+	const ABOUT_MAX = 200;
 	const kindTitle = (kind: SchemaTagKind) => KINDS.find((k) => k.value === kind)?.title ?? kind;
 	let tags = $state<TagEntry[]>([]);
 	let error = $state('');

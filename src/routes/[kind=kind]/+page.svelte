@@ -72,10 +72,10 @@
 			<span class="loading loading-xs loading-spinner"></span>Загружаем…
 		{:else if data.list.data}
 			{#if archiveOn && !data.filters.q}
-				{count(total + (data.archiveSize ?? 0), ['фильм', 'фильма', 'фильмов'])}
+				{count(total + (data.archiveSize ?? 0), data.kind.words)}
 				· в архиве поиск только по названию
 			{:else}
-				{count(total + archiveTotal, ['фильм', 'фильма', 'фильмов'])}
+				{count(total + archiveTotal, data.kind.words)}
 				{#if feed.loading}
 					<span class="loading loading-xs loading-spinner"></span>ищем в архиве…
 				{/if}

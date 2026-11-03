@@ -7,6 +7,7 @@ import type {
 	SchemaEntityDetail,
 	SchemaEntityKind,
 	SchemaGameMetadata,
+	SchemaPaintingMetadata,
 	SchemaMovieMetadata,
 	SchemaPersonRef,
 	SchemaRelatedWork,
@@ -45,9 +46,15 @@ export function originalTitle(entity: { title: string; original_title?: string |
 		: null;
 }
 
-/** «О фильме», «О сериале», «Об игре», «О книге». */
+/** «О фильме», «О сериале», «Об игре», «О книге», «О картине». */
 export function aboutTitle(kind: SchemaEntityKind): string {
-	return { movie: 'О фильме', series: 'О сериале', book: 'О книге', game: 'Об игре' }[kind];
+	return {
+		movie: 'О фильме',
+		series: 'О сериале',
+		book: 'О книге',
+		game: 'Об игре',
+		painting: 'О картине'
+	}[kind];
 }
 
 function countries(entity: SchemaEntityDetail): string | null {
@@ -144,7 +151,8 @@ export interface Production {
 export type AnyMetadata = SchemaMovieMetadata &
 	SchemaSeriesMetadata &
 	SchemaBookMetadata &
-	SchemaGameMetadata;
+	SchemaGameMetadata &
+	SchemaPaintingMetadata;
 
 /**
  * «Производство и факты»: студии (у фильмов и сериалов — EntityDetail.studios со страницами, у игр —
@@ -161,11 +169,14 @@ export function productionOf(
 			? plain([m.developer, m.publisher])
 			: entity.kind === 'book'
 				? plain([m.publisher])
-				: entity.studios.map((s) => ({
-						name: s.name,
-						href: studioHref(s.slug),
-						logoUrl: s.logo_url
-					}));
+				: entity.kind === 'painting'
+					? // У картины «производство» — где она сейчас: музей и его город.
+						plain([m.museum, m.city])
+					: entity.studios.map((s) => ({
+							name: s.name,
+							href: studioHref(s.slug),
+							logoUrl: s.logo_url
+						}));
 	const awards = (m.awards ?? [])
 		.map((a) => ({ title: a.title, year: a.year ?? null, won: a.won ?? false }))
 		.toSorted((a, b) => Number(b.won) - Number(a.won) || (a.year ?? 0) - (b.year ?? 0));
@@ -177,11 +188,13 @@ export function productionOf(
 				? 'Издательство'
 				: entity.kind === 'game'
 					? 'Разработка и издание'
-					: 'Студии',
+					: entity.kind === 'painting'
+						? 'Где хранится'
+						: 'Студии',
 		studios,
 		awards,
 		triviaTitle:
-			entity.kind === 'book'
+			entity.kind === 'book' || entity.kind === 'painting'
 				? 'Интересные факты'
 				: entity.kind === 'game'
 					? 'Факты о разработке'

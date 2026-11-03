@@ -86,13 +86,15 @@
 		{/if}
 	</div>
 	{#if !onWall}
+		<!-- Подпись держит высоту двух строк названия всегда: иначе в полосе ряд прыгает, и год
+		     одной карточки оказывается на уровне названия соседней. -->
 		<div class="mt-2 px-0.5">
 			<h3
-				class="line-clamp-2 text-sm leading-snug font-semibold transition-colors group-hover:text-primary"
+				class="line-clamp-2 min-h-[2.25rem] text-sm leading-snug font-semibold transition-colors group-hover:text-primary"
 			>
 				{entity.title}
 			</h3>
-			{#if meta}<p class="mt-0.5 text-xs text-base-content/50">{meta}</p>{/if}
+			{#if meta}<p class="text-xs text-base-content/50">{meta}</p>{/if}
 			{#if caption}<p class="mt-0.5 line-clamp-2 text-xs text-primary/80">{caption}</p>{/if}
 		</div>
 	{/if}

@@ -268,6 +268,44 @@
 							bind:value={form.metadata.publisher}
 						/></label
 					>
+				{:else if form.kind === 'painting'}
+					<label class="floating-label"
+						><span>Техника</span><input
+							class="input w-full"
+							placeholder="Техника: холст, масло"
+							bind:value={form.metadata.technique}
+						/></label
+					>
+					<label class="floating-label"
+						><span>Музей</span><input
+							class="input w-full"
+							placeholder="Музей или собрание"
+							bind:value={form.metadata.museum}
+						/></label
+					>
+					<label class="floating-label"
+						><span>Город</span><input
+							class="input w-full"
+							placeholder="Город"
+							bind:value={form.metadata.city}
+						/></label
+					>
+					<label class="floating-label"
+						><span>Высота, см</span><input
+							class="input w-full"
+							inputmode="decimal"
+							placeholder="Высота, см"
+							bind:value={form.metadata.height_cm}
+						/></label
+					>
+					<label class="floating-label"
+						><span>Ширина, см</span><input
+							class="input w-full"
+							inputmode="decimal"
+							placeholder="Ширина, см"
+							bind:value={form.metadata.width_cm}
+						/></label
+					>
 				{:else}
 					<label class="floating-label"
 						><span>Платформы</span><input

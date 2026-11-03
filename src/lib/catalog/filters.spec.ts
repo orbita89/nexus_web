@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+	filterSet,
 	hasFilters,
 	readArchive,
 	readFilters,
 	readMode,
+	roleOptions,
 	searchSortParam,
 	yearLabel
 } from './filters';
@@ -65,5 +67,44 @@ describe('readMode', () => {
 		const mode = readMode(url, readFilters(url));
 		expect(mode).toMatchObject({ sort: 'recommended', fallback: 'recommended' });
 		expect(mode.options.map((o) => o.value)).not.toContain('relevance');
+	});
+});
+
+describe('filterSet', () => {
+	it('у каждого раздела свой набор полей и своя роль по умолчанию', () => {
+		expect(filterSet('movie')).toMatchObject({
+			defaultRole: 'actor',
+			studio: true,
+			publisherLabel: null,
+			archive: true
+		});
+		expect(filterSet('series')).toMatchObject({ defaultRole: 'actor', archive: false });
+		// У книги вместо студии — издательство, роль по умолчанию «Автор».
+		expect(filterSet('book')).toMatchObject({
+			defaultRole: 'author',
+			studio: false,
+			publisherLabel: 'Издательство'
+		});
+		// У игры титров нет: поля «Человек» тоже нет.
+		expect(filterSet('game').roles).toEqual([]);
+		expect(filterSet('game').studio).toBe(false);
+		// Общий поиск (без раздела) — все поля и без умолчаний.
+		expect(filterSet().defaultRole).toBe('');
+		expect(filterSet().studio).toBe(true);
+	});
+
+	it('в списке ролей — «Любая роль» и только роли раздела', () => {
+		expect(roleOptions(filterSet('book')).map((r) => r.value)).toEqual([
+			'',
+			'author',
+			'translator',
+			'illustrator'
+		]);
+		expect(roleOptions(filterSet('movie')).map((r) => r.value)).not.toContain('author');
+	});
+
+	it('издатель читается из адреса и считается фильтром', () => {
+		expect(readFilters(at('?publisher=%D0%90%D0%A1%D0%A2')).publisher).toBe('АСТ');
+		expect(hasFilters(readFilters(at('?publisher=АСТ')))).toBe(true);
 	});
 });
