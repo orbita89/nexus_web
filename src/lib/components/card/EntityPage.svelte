@@ -12,7 +12,6 @@
 	import AverageRating from '#lib/components/card/AverageRating.svelte';
 	import Hero from '#lib/components/card/Hero.svelte';
 	import MarkButtons from '#lib/components/card/MarkButtons.svelte';
-	import Production from '#lib/components/card/Production.svelte';
 	import RateButton from '#lib/components/card/RateButton.svelte';
 	import Recommendations from '#lib/components/card/Recommendations.svelte';
 	import Related from '#lib/components/card/Related.svelte';
@@ -24,7 +23,7 @@
 	import CardCollections from '#lib/components/social/CardCollections.svelte';
 
 	import WatchButton from '#lib/components/social/WatchButton.svelte';
-	import ChatButton from '#lib/components/chat/ChatButton.svelte';
+	import ChatActivity from '#lib/components/chat/ChatActivity.svelte';
 	import { useRealtime } from '#lib/realtime/realtime.svelte.ts';
 	import { browserApi, CardLive, liveQuery } from '#lib/social/card-live.svelte.ts';
 	import { Marks } from '#lib/social/marks.svelte.ts';
@@ -151,7 +150,11 @@
 				/>
 				<AddToCollection slug={entity.slug} title={entity.title} onchange={() => live.refresh()} />
 				<WatchButton {watch} />
-				<ChatButton
+				<!-- Рядом с кнопкой — признак, что произведение обсуждают: без него комната с
+				     четырьмя сотнями сообщений выглядит так же, как пустая. -->
+				<ChatActivity
+					kind="entity"
+					slug={entity.slug}
 					meta={{
 						room: `entity:${entity.slug}`,
 						title: entity.title,
@@ -168,13 +171,9 @@
 		<div class="mb-10"><TagChips tags={plainTags} /></div>
 	{/if}
 
-	{#if production}
-		<About {entity}>
-			{#snippet aside()}<Production {production} />{/snippet}
-		</About>
-	{:else}
-		<About {entity} />
-	{/if}
+	<!-- Студии, награды и факты — внутрь «О фильме» третьей колонкой: отдельной карточкой
+	     справа они были вдвое короче соседнего блока и оставляли под собой пустоту. -->
+	<About {entity} {production} />
 
 	<!-- Награды — из award_nominations, ссылками на церемонии; пусто — блока нет. -->
 	{#if entity.awards.length}
