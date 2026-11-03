@@ -26,9 +26,14 @@ export async function listTags(api: Api, kind?: SchemaEntityKind): Promise<TagEn
 	return unwrap(api.catalog.GET('/api/v1/catalog/tags', { params: { query } }));
 }
 
-/** Тело создания и правки тега с описанием: пустая строка — `null` (бэкенд так и трактует). */
-export function tagBody<T extends object>(body: T, description: string): T {
-	return { ...body, description: description.trim() || null };
+/**
+ * Тело создания и правки тега с описанием: пустая строка — `null` (бэкенд так и трактует).
+ * Если описание не менялось (`was` совпадает) — поля в теле нет, бэкенд оставит как было.
+ */
+export function tagBody<T extends object>(body: T, description: string, was?: string): T {
+	const next = description.trim();
+	if (was !== undefined && next === was.trim()) return body;
+	return { ...body, description: next || null };
 }
 
 /** Счётчик на карточке: в разделе — его словами («391 картина»), без раздела — нейтрально. */

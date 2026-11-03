@@ -59,12 +59,23 @@
 
 	async function save(event: SubmitEvent, id: string) {
 		event.preventDefault();
-		const body = tagBody(
-			{ name: draft.name.trim(), slug: draft.slug.trim(), kind: draft.kind },
-			draft.description
-		);
-		error = (!body.name && 'Введите название.') || slugError(body.slug) || '';
+		const name = draft.name.trim();
+		const slug = draft.slug.trim();
+		error = (!name && 'Введите название.') || slugError(slug) || '';
 		if (error) return;
+		// Шлём только изменённое: переименование и смена slug на большом теге перетряхивают все
+		// его сущности (у «Боевика» их 13 тысяч — PATCH не укладывается в таймаут nginx), а
+		// правка одного описания столько не стоит. Пропущенное поле бэкенд оставляет как было.
+		const was = tags.find((t) => t.id === id);
+		const body = tagBody(
+			{
+				...(name !== was?.name && { name }),
+				...(slug !== was?.slug && { slug }),
+				...(draft.kind !== was?.kind && { kind: draft.kind })
+			},
+			draft.description,
+			was?.description ?? ''
+		);
 		if (
 			await run(() =>
 				unwrap(
