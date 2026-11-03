@@ -27,15 +27,22 @@
 	 * Картину нельзя кадрировать: «Ночной дозор» в пропорциях постера — уже не «Ночной дозор».
 	 * Поэтому у картин квадратная плитка, как в ленте: холст целиком в своих пропорциях, а пустоту
 	 * вокруг заполняет размытая копия его самого — ни обрезки, ни чёрных полей.
+	 *
+	 * У игр обложки тоже не постерные: квадратные иконки, широкие ключ-арты, логотипы на пустом
+	 * фоне. В 2:3 они обрезались до неузнаваемости, поэтому тот же приём, но в 3:4 — ближе к
+	 * привычной коробке.
 	 */
-	const art = $derived(kind === 'painting');
+	const art = $derived(kind === 'painting' || kind === 'game');
 </script>
 
 <div
 	class={[
 		'relative w-full overflow-hidden rounded-box',
 		art
-			? 'flex aspect-square items-center justify-center bg-base-300 ring-1 ring-base-content/5'
+			? [
+					'flex items-center justify-center bg-base-300 ring-1 ring-base-content/5',
+					kind === 'game' ? 'aspect-3/4' : 'aspect-square'
+				]
 			: 'aspect-2/3 bg-base-300 shadow-md ring-1 ring-base-content/5'
 	]}
 >

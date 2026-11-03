@@ -70,34 +70,66 @@
 		{@render children()}
 	</main>
 	{#if !hideFooter}
+		<!-- Футер — последний экран страницы, а не строка ссылок: три колонки по смыслу
+		     (каталог, сообщество, о проекте) и копирайт отдельной строкой. -->
 		<footer class="mt-10 border-t border-base-300 bg-base-200/40">
-			<div
-				class="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-8 text-sm text-base-content/50 sm:flex-row sm:items-center sm:justify-between"
-			>
-				<p>
-					<a
-						href="/about"
-						class="font-black tracking-widest text-base-content uppercase hover:text-primary"
-						>Кассандра</a
-					>
-					<span class="text-primary">·</span> фильмы, сериалы, книги и игры
-				</p>
-				<nav aria-label="Каталог" class="flex flex-wrap gap-x-4 gap-y-1">
-					{#each KINDS as k (k.slug)}
-						<a href="/{k.slug}" class="link link-hover">{k.title}</a>
-					{/each}
-					<a href="/people" class="link link-hover">Люди</a>
-					<a href="/collections" class="link link-hover">Коллекции</a>
-					<a href="/forum" class="link link-hover">Форум</a>
-					<a href="/tags" class="link link-hover">Теги</a>
-				</nav>
-				<p class="text-xs">
-					<a href="/about" class="link link-hover">О приложении</a>
-					<span class="mx-1 text-base-content/30">·</span>
-					Постеры:
-					<a href="https://www.themoviedb.org/" class="link link-hover" rel="noopener external"
-						>TMDB</a
-					>
+			<div class="mx-auto w-full max-w-6xl px-4 py-10">
+				<div class="flex flex-col gap-8 sm:flex-row sm:justify-between">
+					<div class="max-w-xs">
+						<a
+							href="/about"
+							class="font-black tracking-widest text-base-content uppercase hover:text-primary"
+							>Кассандра</a
+						>
+						<p class="mt-2 text-sm text-base-content/50">
+							Фильмы, сериалы, книги, игры и картины: оценки, рецензии и обсуждения — от книги до её
+							экранизации.
+						</p>
+					</div>
+					<div class="flex flex-wrap gap-x-12 gap-y-8 text-sm">
+						<nav aria-label="Каталог">
+							<h2 class="mb-2 text-xs font-semibold tracking-widest text-base-content/40 uppercase">
+								Каталог
+							</h2>
+							<ul class="flex flex-col gap-1 text-base-content/60">
+								{#each KINDS as k (k.slug)}
+									<li><a href="/{k.slug}" class="link link-hover">{k.title}</a></li>
+								{/each}
+								<li><a href="/genres" class="link link-hover">Жанры</a></li>
+								<li><a href="/tags" class="link link-hover">Теги</a></li>
+							</ul>
+						</nav>
+						<nav aria-label="Сообщество">
+							<h2 class="mb-2 text-xs font-semibold tracking-widest text-base-content/40 uppercase">
+								Сообщество
+							</h2>
+							<ul class="flex flex-col gap-1 text-base-content/60">
+								<li><a href="/people" class="link link-hover">Люди</a></li>
+								<li><a href="/collections" class="link link-hover">Коллекции</a></li>
+								<li><a href="/chat" class="link link-hover">Каналы</a></li>
+								<li><a href="/forum" class="link link-hover">Форум</a></li>
+								<li><a href="/awards" class="link link-hover">Награды</a></li>
+							</ul>
+						</nav>
+						<nav aria-label="О проекте">
+							<h2 class="mb-2 text-xs font-semibold tracking-widest text-base-content/40 uppercase">
+								О проекте
+							</h2>
+							<ul class="flex flex-col gap-1 text-base-content/60">
+								<li><a href="/about" class="link link-hover">О приложении</a></li>
+								<li>
+									<a
+										href="https://www.themoviedb.org/"
+										class="link link-hover"
+										rel="noopener external">Постеры: TMDB</a
+									>
+								</li>
+							</ul>
+						</nav>
+					</div>
+				</div>
+				<p class="mt-8 border-t border-base-300 pt-4 text-xs text-base-content/40">
+					© {new Date().getFullYear()} Кассандра
 				</p>
 			</div>
 		</footer>

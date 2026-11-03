@@ -90,6 +90,13 @@
 		<!-- Поиск — единственная стеклянная плашка на картине: пилюля «поле + кнопка»,
 		     чипы под ней задают, где искать, и подсказки приходят прямо на наборе. -->
 		<div class="mt-7"><HeroSearch /></div>
+		<!-- Цифра под поиском: сумма разделов из тех же запросов, что и полосы — отдельного
+		     запроса не стоит, а на вопрос «что тут вообще есть» отвечает сразу. -->
+		{#if data.total}
+			<p class="mt-4 text-sm text-base-content/50 drop-shadow-[0_1px_8px_rgba(9,9,11,0.8)]">
+				{data.total.toLocaleString('ru-RU')} произведений · фильмы, сериалы, книги, игры и картины
+			</p>
+		{/if}
 	</div>
 </section>
 
@@ -137,7 +144,7 @@
 		<section class="mb-10" aria-labelledby="genres">
 			<div class="mb-3 flex items-baseline justify-between gap-4">
 				<h2 id="genres" class="text-xl font-bold">Жанры</h2>
-				<a href="/tags" class="link text-sm link-primary link-hover">Все жанры →</a>
+				<a href="/genres" class="link text-sm link-primary link-hover">Все жанры →</a>
 			</div>
 			<GenreTiles tiles={data.genres} />
 		</section>
@@ -146,7 +153,7 @@
 
 <!-- Дальше — то, чего нет в разделах: общая лента по оценкам, люди и живой форум. Без них
      страница кончалась пятью полосами каталога и footer'ом. -->
-{#if data.rated.data?.items.length}
+{#if data.rated.length}
 	<section class="mb-10" aria-labelledby="top-rated">
 		<div class="mb-3 flex items-baseline justify-between gap-4">
 			<!-- Без пояснения «фильмы и книги вместе»: порядок top_rated ведёт рейтинг IMDb, и на
@@ -154,63 +161,74 @@
 			<h2 id="top-rated" class="text-xl font-bold">Высокий рейтинг</h2>
 			<a href="/search?sort=top_rated" class="link text-sm link-primary link-hover">Все →</a>
 		</div>
-		<PosterStrip
-			entities={data.rated.data.items}
-			label="Высокий рейтинг"
-			ratings={data.ratings}
-			showKind
-		/>
+		<PosterStrip entities={data.rated} label="Высокий рейтинг" ratings={data.ratings} showKind />
 	</section>
 {/if}
 
-{#if data.people.length}
-	<section class="mb-10" aria-labelledby="people">
-		<div class="mb-3 flex items-baseline justify-between gap-4">
-			<h2 id="people" class="text-xl font-bold">Люди</h2>
-			<a href="/people" class="link text-sm link-primary link-hover">Все люди →</a>
-		</div>
-		<PeopleStrip people={data.people} label="Популярные люди" />
-	</section>
-{/if}
+<!-- Сообщество — отдельная зона: своя подложка во всю ширину окна отделяет «кто здесь» от
+     каталожных полос выше, и страница читается как три части — найти, посмотреть, поговорить. -->
+{#if data.people.length || data.rooms.length}
+	<section
+		class="relative mx-[calc(50%-50cqw)] mb-10 w-[100cqw] border-y border-base-300 bg-base-200/40 py-10"
+	>
+		<div class="mx-auto w-full max-w-6xl px-4">
+			{#if data.people.length}
+				<section class="mb-10" aria-labelledby="people">
+					<div class="mb-3 flex items-baseline justify-between gap-4">
+						<h2 id="people" class="text-xl font-bold">Люди</h2>
+						<a href="/people" class="link text-sm link-primary link-hover">Все люди →</a>
+					</div>
+					<PeopleStrip people={data.people} label="Популярные люди" />
+				</section>
+			{/if}
 
-{#if data.rooms.length}
-	<section class="mb-10" aria-labelledby="chat-rooms">
-		<div class="mb-3 flex items-baseline justify-between gap-4">
-			<h2 id="chat-rooms" class="text-xl font-bold">Каналы</h2>
-			<a href="/chat" class="link text-sm link-primary link-hover">Все каналы →</a>
-		</div>
-		<!-- Каналы, а не темы форума: форум ещё не доделан, а в чате уже разговаривают.
-		     Карточка — как в каталоге комнат, только без кнопок вступления. -->
-		<ul class="grid gap-3 sm:grid-cols-2" aria-label="Каналы">
-			{#each data.rooms as room (room.id)}
-				{@const meta = { room: `room:${room.slug}`, title: room.title, href: '/chat', image: null }}
-				<li>
-					<a
-						href="/chat"
-						class="flex h-full items-start gap-4 rounded-box bg-base-200 p-4 ring-1 ring-base-300 transition hover:-translate-y-0.5 hover:ring-primary"
-					>
-						<RoomIcon {meta} size="size-12" />
-						<span class="min-w-0 flex-1">
-							<span class="flex items-center gap-2 font-bold">
-								<span class="truncate">{room.title}</span>
-								{#if room.system}<span class="badge shrink-0 badge-ghost badge-sm">общая</span>{/if}
-							</span>
-							{#if room.description}
-								<span class="mt-1 line-clamp-2 block text-sm text-base-content/70"
-									>{room.description}</span
+			{#if data.rooms.length}
+				<section class="mb-10" aria-labelledby="chat-rooms">
+					<div class="mb-3 flex items-baseline justify-between gap-4">
+						<h2 id="chat-rooms" class="text-xl font-bold">Каналы</h2>
+						<a href="/chat" class="link text-sm link-primary link-hover">Все каналы →</a>
+					</div>
+					<!-- Каналы, а не темы форума: форум ещё не доделан, а в чате уже разговаривают.
+			     Карточка — как в каталоге комнат, только без кнопок вступления. -->
+					<ul class="grid gap-3 sm:grid-cols-2" aria-label="Каналы">
+						{#each data.rooms as room (room.id)}
+							{@const meta = {
+								room: `room:${room.slug}`,
+								title: room.title,
+								href: '/chat',
+								image: null
+							}}
+							<li>
+								<a
+									href="/chat"
+									class="flex h-full items-start gap-4 rounded-box bg-base-200 p-4 ring-1 ring-base-300 transition hover:-translate-y-0.5 hover:ring-primary"
 								>
-							{/if}
-							<span class="mt-1 block text-xs text-base-content/50">
-								{count(room.members_count, ['участник', 'участника', 'участников'])}
-								{#if activityLabel(room)}
-									· <span class="font-bold text-success">{activityLabel(room)}</span>
-								{/if}
-							</span>
-						</span>
-					</a>
-				</li>
-			{/each}
-		</ul>
+									<RoomIcon {meta} size="size-12" />
+									<span class="min-w-0 flex-1">
+										<span class="flex items-center gap-2 font-bold">
+											<span class="truncate">{room.title}</span>
+											{#if room.system}<span class="badge shrink-0 badge-ghost badge-sm">общая</span
+												>{/if}
+										</span>
+										{#if room.description}
+											<span class="mt-1 line-clamp-2 block text-sm text-base-content/70"
+												>{room.description}</span
+											>
+										{/if}
+										<span class="mt-1 block text-xs text-base-content/50">
+											{count(room.members_count, ['участник', 'участника', 'участников'])}
+											{#if activityLabel(room)}
+												· <span class="font-bold text-success">{activityLabel(room)}</span>
+											{/if}
+										</span>
+									</span>
+								</a>
+							</li>
+						{/each}
+					</ul>
+				</section>
+			{/if}
+		</div>
 	</section>
 {/if}
 
