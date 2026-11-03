@@ -5,16 +5,17 @@
 // только `value: 1`: дизлайк ничего не добавляет к «что мне нравится», а кнопок становится
 // вдвое больше. У старых записей в ленте `value: -1` ещё попадается — показываем как есть.
 //
-// У произведений лайков нет и не будет: там оценки 1–10, отметки и реакции. Бэкенд принимает
-// `target=entity` (чтобы не ломать контракт), но всегда отдаёт пустую страницу, а
-// `likes_given.entities` всегда 0 — поэтому в интерфейсе такого фильтра нет.
+// У произведений сердечко тоже появилось (бэкенд `5b5b22e`): оценка 1–10 — это рецензия, а
+// «нравится» ставят в одно нажатие, и оно наполняет «Что нравится» фильмами и книгами.
 import type { SchemaLikeTarget } from '#lib/api/generated/social.ts';
+import { entityHref, kindByApi } from '#lib/catalog/kinds.ts';
+import type { SchemaEntityKind } from '#lib/api/generated/catalog.ts';
 
-/** Что показываем в ленте «Что нравится»; `entity` сознательно не предлагаем (см. выше). */
-export type LikeFilter = 'collection' | 'person';
+export type LikeFilter = 'collection' | 'person' | 'entity';
 
 export const LIKE_FILTERS: readonly { value: LikeFilter | undefined; title: string }[] = [
 	{ value: undefined, title: 'Все' },
+	{ value: 'entity', title: 'Произведения' },
 	{ value: 'collection', title: 'Подборки' },
 	{ value: 'person', title: 'Люди' }
 ];
@@ -25,6 +26,20 @@ export interface LikePlace {
 	href: string | null;
 	title: string;
 	note: string;
+}
+
+/** Ключ строки в ленте «Что нравится»: у каждой цели он свой. */
+export function likeKey(target: SchemaLikeTarget): string {
+	switch (target.kind) {
+		case 'person':
+			return `person:${target.person.id}`;
+		case 'entity':
+			return `entity:${target.entity.id}`;
+		case 'collection':
+			return `collection:${target.collection_id}`;
+		default:
+			return 'unknown';
+	}
 }
 
 export function likePlace(target: SchemaLikeTarget): LikePlace {
@@ -41,6 +56,17 @@ export function likePlace(target: SchemaLikeTarget): LikePlace {
 				title: target.person.full_name,
 				note: 'Человек'
 			};
+		case 'entity': {
+			// В social `EntityRef.kind` — строка: незнакомый тип ведём без ссылки, а не в никуда.
+			const kind = kindByApi(target.entity.kind as SchemaEntityKind);
+			return kind
+				? {
+						href: entityHref({ kind: kind.kind, slug: target.entity.slug }),
+						title: target.entity.title,
+						note: kind.one
+					}
+				: { href: null, title: target.entity.title, note: 'Произведение' };
+		}
 		default:
 			return { href: null, title: 'Неизвестно что', note: 'Лайк' };
 	}

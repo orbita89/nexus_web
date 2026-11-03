@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { unwrap } from '#lib/api/errors.ts';
-	import { LIKE_FILTERS, likePlace, type LikeFilter } from '#lib/social/likes.ts';
+	import { likeKey, LIKE_FILTERS, likePlace, type LikeFilter } from '#lib/social/likes.ts';
 	import { profileList } from '#lib/social/profile-list.svelte.ts';
 	import StatsSection from './StatsSection.svelte';
 	import TimeAgo from './TimeAgo.svelte';
@@ -37,7 +37,7 @@
 	{/snippet}
 
 	<ul class="flex flex-col gap-2" aria-label="Что нравится">
-		{#each list.items as like (like.target.kind + (like.target.kind === 'person' ? like.target.person.id : like.target.collection_id))}
+		{#each list.items as like (likeKey(like.target))}
 			{@const place = likePlace(like.target)}
 			<li class="flex items-center gap-3 rounded-box bg-base-200 px-4 py-3 ring-1 ring-base-300">
 				<!-- Дизлайк поставить больше нельзя, но у старых записей он ещё встречается:

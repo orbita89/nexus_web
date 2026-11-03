@@ -1,100 +1,162 @@
 <script lang="ts">
-	import { ApiError, errorMessage, unwrap } from '#lib/api/errors.ts';
-	import { api, session } from '#lib/auth/session.svelte.ts';
+	import { errorMessage, unwrap } from '#lib/api/errors.ts';
+	import { api, guestApi, session } from '#lib/auth/session.svelte.ts';
 	import {
 		applyReaction,
-		REACTIONS,
-		type Reaction,
-		type ReactionCounts
+		EMOJI_PALETTE,
+		isMine,
+		SHOWN_REACTIONS,
+		type ReactionItem
 	} from '#lib/social/reactions.ts';
 
-	// Быстрые реакции вместо графиков: 🔥 😢 🤔 😴, одна на зрителя: другая заменяет, повторный
-	// клик снимает. Числа — из сводки оценок (counts), своя — отдельным запросом с токеном. Нажатие
-	// меняет числа сразу; ошибка (в т. ч. 409 до премьеры) — откат и сообщение.
+	// Реакции как в чате: что уже поставили — видно всем, со счётчиками; «+» открывает палитру и
+	// добавляет свою. Своих может быть несколько, повторное нажатие снимает. Числа приходят одним
+	// запросом (у вошедшего с «моя»), нажатие меняет их сразу, ошибка — откат и сообщение.
 	let {
 		slug,
-		counts,
-		released = true
+		released = true,
+		version = 0
 	}: {
 		slug: string;
-		/** Из RatingSummary.reactions; ещё не загрузились — без чисел. */
-		counts?: ReactionCounts;
 		released?: boolean;
+		/** Меняется при событии entity.reacted — строку перечитываем. */
+		version?: number;
 	} = $props();
 
-	const ZERO: ReactionCounts = { fire: 0, sad: 0, think: 0, bored: 0 };
-	// Числа — из сводки; после своего нажатия — свои, пока сводку не перечитали.
-	let shown = $derived(counts);
-	let mine = $state<Reaction | null>(null);
-	let busy = $state(false);
+	let items = $state<ReactionItem[]>([]);
+	let busy = $state('');
 	let error = $state('');
+	let open = $state(false);
+	let box = $state<HTMLDivElement>();
 
+	const shown = $derived(items.slice(0, SHOWN_REACTIONS));
+	const rest = $derived(Math.max(0, items.length - SHOWN_REACTIONS));
+	const canReact = $derived(released && session.status === 'authed');
+
+	// Список публичный: гостю тоже видно, кто чем ответил. С токеном в нём есть «моя».
 	$effect(() => {
 		const current = slug;
-		mine = null;
-		error = '';
-		if (session.status !== 'authed') return;
+		void version;
+		void session.status;
 		let stale = false;
 		unwrap(
-			api.social.GET('/api/v1/social/entities/{slug}/reaction', {
-				params: { path: { slug: current } }
-			})
+			(session.status === 'authed' ? api : guestApi).social.GET(
+				'/api/v1/social/entities/{slug}/reactions',
+				{ params: { path: { slug: current } } }
+			)
 		)
-			.then((r) => !stale && (mine = r.kind))
-			.catch((e) => {
-				if (!stale && !(e instanceof ApiError && e.status === 404)) error = errorMessage(e);
-			});
+			.then((r) => !stale && (items = r.items))
+			.catch(() => {});
 		return () => {
 			stale = true;
 		};
 	});
 
-	async function pick(key: Reaction) {
-		if (busy) return;
-		const before = { counts: shown, mine };
-		const next = applyReaction(shown ?? ZERO, mine, key);
-		if (shown) shown = next.counts;
-		mine = next.mine;
-		busy = true;
+	async function toggle(emoji: string) {
+		if (busy || !canReact) return;
+		const on = !isMine(items, emoji);
+		const before = items;
+		items = applyReaction(items, emoji, on);
+		busy = emoji;
 		error = '';
 		const params = { path: { slug } };
 		try {
-			if (next.mine) {
-				await unwrap(
-					api.social.PUT('/api/v1/social/entities/{slug}/reaction', {
-						params,
-						body: { kind: next.mine }
-					})
-				);
-			} else {
-				await unwrap(api.social.DELETE('/api/v1/social/entities/{slug}/reaction', { params }));
-			}
+			await unwrap(
+				on
+					? api.social.PUT('/api/v1/social/entities/{slug}/reaction', { params, body: { emoji } })
+					: api.social.DELETE('/api/v1/social/entities/{slug}/reaction', {
+							params,
+							body: { emoji }
+						})
+			);
 		} catch (e) {
-			shown = before.counts;
-			mine = before.mine;
+			items = before;
 			error = errorMessage(e);
 		} finally {
-			busy = false;
+			busy = '';
 		}
+	}
+
+	function pick(emoji: string) {
+		open = false;
+		void toggle(emoji);
 	}
 </script>
 
-<div class="flex flex-wrap gap-1.5" role="group" aria-label="Реакции">
-	{#each REACTIONS as r (r.key)}
-		<button
-			class={[
-				'btn h-9 min-h-0 gap-1.5 rounded-full px-3 btn-sm',
-				mine === r.key ? 'border-primary/60 bg-primary/15' : 'border-base-300 bg-base-100 btn-ghost'
-			]}
-			aria-pressed={mine === r.key}
-			aria-label={r.label}
-			title={r.label}
-			disabled={!released || session.status !== 'authed'}
-			onclick={() => pick(r.key)}
-		>
-			<span class="text-lg leading-none transition-transform active:scale-125">{r.emoji}</span>
-			{#if shown?.[r.key]}<span class="text-xs tabular-nums">{shown[r.key]}</span>{/if}
-		</button>
-	{/each}
+<svelte:window
+	onclick={(e) => {
+		if (open && box && !box.contains(e.target as Node)) open = false;
+	}}
+	onkeydown={(e) => {
+		if (open && e.key === 'Escape') open = false;
+	}}
+/>
+
+<div class="flex flex-wrap items-center gap-1.5" bind:this={box}>
+	<div class="flex flex-wrap gap-1.5" role="group" aria-label="Реакции">
+		{#each shown as item (item.emoji)}
+			<button
+				class={[
+					'btn h-9 min-h-0 gap-1.5 rounded-full px-3 btn-sm',
+					item.mine ? 'border-primary/60 bg-primary/15' : 'border-base-300 bg-base-100 btn-ghost'
+				]}
+				aria-pressed={item.mine}
+				aria-label="{item.emoji} — {item.count}"
+				disabled={!canReact || busy === item.emoji}
+				onclick={() => toggle(item.emoji)}
+			>
+				<span class="text-lg leading-none transition-transform active:scale-125">{item.emoji}</span>
+				<span class="text-xs tabular-nums">{item.count}</span>
+			</button>
+		{/each}
+		{#if rest}
+			<span class="self-center text-xs text-base-content/50">ещё {rest}</span>
+		{/if}
+	</div>
+
+	<!-- «+» — своя реакция: палитра частых эмодзи. Бэкенд принимает любой, но выбор из тысячи
+	     никому не нужен; у гостя и до премьеры кнопки нет. -->
+	{#if canReact}
+		<div class="relative">
+			<button
+				class="btn h-9 min-h-0 rounded-full border-base-300 bg-base-100 btn-ghost px-3 btn-sm"
+				aria-label="Добавить реакцию"
+				aria-expanded={open}
+				title="Добавить реакцию"
+				onclick={() => (open = !open)}
+			>
+				<svg
+					class="size-4"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					aria-hidden="true"
+				>
+					<circle cx="12" cy="12" r="9" />
+					<path d="M9 10h.01M15 10h.01M8.5 14.5a4.5 4.5 0 0 0 7 0" stroke-linecap="round" />
+				</svg>
+				<span class="text-base leading-none">+</span>
+			</button>
+			{#if open}
+				<div
+					class="absolute bottom-full left-0 z-30 mb-2 grid w-64 grid-cols-6 gap-1 rounded-box border border-base-300 bg-base-200 p-2 shadow-xl"
+					role="group"
+					aria-label="Выбор реакции"
+				>
+					{#each EMOJI_PALETTE as emoji (emoji)}
+						<button
+							class={[
+								'rounded-lg p-1.5 text-xl leading-none transition hover:bg-base-300',
+								isMine(items, emoji) && 'bg-primary/20'
+							]}
+							aria-label={emoji}
+							onclick={() => pick(emoji)}>{emoji}</button
+						>
+					{/each}
+				</div>
+			{/if}
+		</div>
+	{/if}
 </div>
 {#if error}<p role="alert" class="mt-2 text-sm text-error">{error}</p>{/if}

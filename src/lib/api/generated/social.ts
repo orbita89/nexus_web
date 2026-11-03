@@ -930,6 +930,48 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/social/entities/{slug}/like': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/**
+		 * Лайкнуть произведение. Повторный лайк ничего не меняет. Дизлайка нет — как у людей.
+		 * @description 409 `not_released` здесь не нужен (в отличие от оценок и реакций): понравиться может и
+		 *     трейлер ещё не вышедшего фильма.
+		 */
+		put: operations['like_entity'];
+		post?: never;
+		/** Снять свой лайк с произведения → 204 (даже если его не было). */
+		delete: operations['unlike_entity'];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/social/entities/{slug}/likes': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Сколько лайков у произведения и свой. То же число — в сводке оценок (`likes_count`),
+		 *     чтобы карточке хватало одного запроса.
+		 */
+		get: operations['get_entity_likes'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/social/entities/{slug}/mark': {
 		parameters: {
 			query?: never;
@@ -973,13 +1015,40 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** Своя реакция на произведение. */
+		/**
+		 * Своя реакция одним из четырёх старых видов.
+		 * @description Устарело: реакций у зрителя теперь может быть несколько, и эмодзи — любое. Отдаёт самую
+		 *     раннюю свою реакцию, если это 🔥 😢 🤔 😴, иначе 404; весь набор — в `GET …/reactions`.
+		 */
 		get: operations['get_own_reaction'];
-		/** Поставить реакцию; другая заменяет прежнюю. До выхода — нельзя, как и оценки. */
+		/**
+		 * Поставить реакцию. Несколько разных можно, повторная та же ничего не меняет.
+		 *     До выхода — нельзя, как и оценки.
+		 */
 		put: operations['put_reaction'];
 		post?: never;
-		/** Убрать свою реакцию → 204 (даже если её не было). */
+		/**
+		 * Убрать свою реакцию → 204 (даже если её не было). С телом `{"emoji": "❤️"}` снимается
+		 *     именно она, без тела — все свои реакции на это произведение.
+		 */
 		delete: operations['delete_reaction'];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/social/entities/{slug}/reactions': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Реакции произведения и своя отметка. Публичный: у гостя все `mine: false`. */
+		get: operations['list_entity_reactions'];
+		put?: never;
+		post?: never;
+		delete?: never;
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -1827,6 +1896,25 @@ export interface components {
 			kind: string;
 			last_message?: components['schemas']['ChatMessage'] | null;
 			me?: components['schemas']['ChatRoomMe'] | null;
+			/**
+			 * Format: int64
+			 * @description Участников: у сущности, человека и тега — у кого они в интересах, у своей комнаты —
+			 *     вступившие (у системной — все пользователи), у переписки — двое.
+			 * @example 58
+			 */
+			members_count: number;
+			/**
+			 * Format: int64
+			 * @description Сообщений за последние сутки — «обсуждают сейчас».
+			 * @example 37
+			 */
+			messages_24h: number;
+			/**
+			 * Format: int64
+			 * @description Всего сообщений в комнате, без удалённых насовсем.
+			 * @example 412
+			 */
+			messages_count: number;
 			person?: components['schemas']['PersonRef'] | null;
 			/**
 			 * @description Имя канала и комнаты для WebSocket.
@@ -2240,6 +2328,14 @@ export interface components {
 			/** @example Киберпанк */
 			title: string;
 		};
+		/** @description Тело `DELETE /entities/{slug}/reaction`: какую снять. Пустое тело снимает все свои. */
+		DeleteReaction: {
+			/**
+			 * @description Эмодзи; не передано — снимаются все свои реакции на это произведение.
+			 * @example ❤️
+			 */
+			emoji?: string | null;
+		};
 		/**
 		 * @description Кто может начать переписку с пользователем.
 		 * @enum {string}
@@ -2250,6 +2346,28 @@ export interface components {
 			/** Format: uuid */
 			id: string;
 			peer: components['schemas']['UserRef'];
+		};
+		/** @description Какую реакцию ставят или снимают: любое эмодзи. */
+		EmojiReaction: {
+			/**
+			 * @description Одно эмодзи: 🔥, ❤️, 👍🏽, 👩‍👩‍👧. Не эмодзи — 400 `bad_emoji`.
+			 * @example ❤️
+			 */
+			emoji: string;
+		};
+		/** @description Лайки произведения: сколько всего и свой. */
+		EntityLikes: {
+			/**
+			 * Format: int64
+			 * @example 128
+			 */
+			likes: number;
+			/** @description Лайкнул ли текущий пользователь; у гостя `false`. */
+			mine: boolean;
+		};
+		/** @description Реакции произведения: по убыванию числа, при равенстве — кто появился раньше. */
+		EntityReactions: {
+			items: components['schemas']['ReactionItem'][];
 		};
 		/** @description Сущность каталога в чужих ответах: ровно столько, сколько нужно для ссылки на карточку. */
 		EntityRef: {
@@ -2436,7 +2554,7 @@ export interface components {
 			since: string;
 			user: components['schemas']['UserRef'];
 		};
-		/** @description Цель лайка. `kind` — `collection` или `person`; остальные поля зависят от него. */
+		/** @description Цель лайка. `kind` — `collection`, `person` или `entity`; остальные поля зависят от него. */
 		LikeTarget:
 			| {
 					/** Format: uuid */
@@ -2449,6 +2567,11 @@ export interface components {
 					/** @enum {string} */
 					kind: 'person';
 					person: components['schemas']['PersonRef'];
+			  }
+			| {
+					entity: components['schemas']['EntityRef'];
+					/** @enum {string} */
+					kind: 'entity';
 			  };
 		/** @description Сколько лайков пользователь поставил сам. */
 		LikesGiven: {
@@ -2459,8 +2582,7 @@ export interface components {
 			collections: number;
 			/**
 			 * Format: int64
-			 * @description Лайков у произведений нет — всегда `0`.
-			 * @example 0
+			 * @example 8
 			 */
 			entities: number;
 			/**
@@ -3430,12 +3552,48 @@ export interface components {
 			 *     ]
 			 */
 			distribution: number[];
-			/** @description Реакции зрителей. Своя — `GET /entities/{slug}/reaction`. */
+			/**
+			 * Format: int64
+			 * @description Сколько раз произведению поставили «нравится» (`PUT /entities/{slug}/like`).
+			 * @example 128
+			 */
+			likes_count: number;
+			/**
+			 * @description Все реакции произведения, по убыванию числа; при равенстве раньше та, что появилась
+			 *     первой. Своя отметка — `GET /entities/{slug}/reactions`: сводка одинакова для всех.
+			 */
+			reaction_items: components['schemas']['ReactionCount'][];
+			/**
+			 * @description Реакции зрителей четырьмя старыми видами. Устарело: это те же 🔥 😢 🤔 😴 из
+			 *     `reaction_items`. Своя — `GET /entities/{slug}/reactions` (поле `mine`).
+			 */
 			reactions: components['schemas']['Reactions'];
 		};
 		/** @description Своя реакция. */
 		Reaction: {
 			kind: components['schemas']['ReactionKind'];
+		};
+		/** @description Сколько зрителей поставили это эмодзи. */
+		ReactionCount: {
+			/**
+			 * Format: int64
+			 * @example 128
+			 */
+			count: number;
+			/** @example 🔥 */
+			emoji: string;
+		};
+		/** @description Реакция произведения с отметкой «моя»: строка реакций на карточке. */
+		ReactionItem: {
+			/**
+			 * Format: int64
+			 * @example 128
+			 */
+			count: number;
+			/** @example 🔥 */
+			emoji: string;
+			/** @description Поставил ли её текущий пользователь; у гостя всегда `false`. */
+			mine: boolean;
 		};
 		/**
 		 * @description Реакция на произведение: 🔥 `fire`, 😢 `sad`, 🤔 `think`, 😴 `bored`.
@@ -3910,8 +4068,12 @@ export type SchemaCreateRoom = components['schemas']['CreateRoom'];
 export type SchemaCreateTargetComment = components['schemas']['CreateTargetComment'];
 export type SchemaCreateThread = components['schemas']['CreateThread'];
 export type SchemaCustomRoom = components['schemas']['CustomRoom'];
+export type SchemaDeleteReaction = components['schemas']['DeleteReaction'];
 export type SchemaDmPolicy = components['schemas']['DmPolicy'];
 export type SchemaDmRef = components['schemas']['DmRef'];
+export type SchemaEmojiReaction = components['schemas']['EmojiReaction'];
+export type SchemaEntityLikes = components['schemas']['EntityLikes'];
+export type SchemaEntityReactions = components['schemas']['EntityReactions'];
 export type SchemaEntityRef = components['schemas']['EntityRef'];
 export type SchemaErrorBody = components['schemas']['ErrorBody'];
 export type SchemaFeatureCollection = components['schemas']['FeatureCollection'];
@@ -3960,6 +4122,8 @@ export type SchemaRatedEntity = components['schemas']['RatedEntity'];
 export type SchemaRatingBrief = components['schemas']['RatingBrief'];
 export type SchemaRatingSummary = components['schemas']['RatingSummary'];
 export type SchemaReaction = components['schemas']['Reaction'];
+export type SchemaReactionCount = components['schemas']['ReactionCount'];
+export type SchemaReactionItem = components['schemas']['ReactionItem'];
 export type SchemaReactionKind = components['schemas']['ReactionKind'];
 export type SchemaReactions = components['schemas']['Reactions'];
 export type SchemaRecalcResult = components['schemas']['RecalcResult'];
@@ -7788,6 +7952,134 @@ export interface operations {
 			};
 		};
 	};
+	like_entity: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug сущности
+				 * @example dune-2021
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Лайкнуто */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Сущность не найдена */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	unlike_entity: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug сущности
+				 * @example dune-2021
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Лайка нет */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Сущность не найдена */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	get_entity_likes: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug сущности
+				 * @example dune-2021
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Лайки */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['EntityLikes'];
+				};
+			};
+			/** @description Неверный токен */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Сущность не найдена */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
 	get_own_mark: {
 		parameters: {
 			query?: never;
@@ -7999,7 +8291,7 @@ export interface operations {
 					'application/json': components['schemas']['ErrorBody'];
 				};
 			};
-			/** @description Сущность не найдена или реакции нет */
+			/** @description Сущность не найдена или своей реакции из четырёх нет */
 			404: {
 				headers: {
 					[name: string]: unknown;
@@ -8025,20 +8317,18 @@ export interface operations {
 		};
 		requestBody: {
 			content: {
-				'application/json': components['schemas']['Reaction'];
+				'application/json': components['schemas']['EmojiReaction'];
 			};
 		};
 		responses: {
 			/** @description Реакция сохранена */
-			200: {
+			204: {
 				headers: {
 					[name: string]: unknown;
 				};
-				content: {
-					'application/json': components['schemas']['Reaction'];
-				};
+				content?: never;
 			};
-			/** @description Неизвестная реакция */
+			/** @description Не эмодзи (`code`: `bad_emoji`) */
 			400: {
 				headers: {
 					[name: string]: unknown;
@@ -8065,7 +8355,7 @@ export interface operations {
 					'application/json': components['schemas']['ErrorBody'];
 				};
 			};
-			/** @description Ещё не вышла (`code`: `not_released`) */
+			/** @description Ещё не вышла (`not_released`) или у произведения уже 30 разных эмодзи (`reaction_limit`) */
 			409: {
 				headers: {
 					[name: string]: unknown;
@@ -8089,7 +8379,12 @@ export interface operations {
 			};
 			cookie?: never;
 		};
-		requestBody?: never;
+		/** @description Какую снять; без тела — все свои */
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['DeleteReaction'];
+			};
+		};
 		responses: {
 			/** @description Реакции нет */
 			204: {
@@ -8098,7 +8393,60 @@ export interface operations {
 				};
 				content?: never;
 			};
+			/** @description Не эмодзи (`code`: `bad_emoji`) */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
 			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Сущность не найдена */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	list_entity_reactions: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug сущности
+				 * @example dune-2021
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Реакции */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['EntityReactions'];
+				};
+			};
+			/** @description Неверный токен */
 			401: {
 				headers: {
 					[name: string]: unknown;

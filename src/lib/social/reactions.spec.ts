@@ -1,21 +1,40 @@
 import { describe, expect, it } from 'vitest';
-import { applyReaction } from './reactions';
+import { applyReaction, isMine, type ReactionItem } from './reactions';
 
-const counts = { fire: 2, sad: 0, think: 1, bored: 0 };
+const items: ReactionItem[] = [
+	{ emoji: '🔥', count: 2, mine: false },
+	{ emoji: '😢', count: 1, mine: true }
+];
 
 describe('applyReaction', () => {
-	it('ставит, переносит и снимает', () => {
-		expect(applyReaction(counts, null, 'sad')).toEqual({
-			counts: { fire: 2, sad: 1, think: 1, bored: 0 },
-			mine: 'sad'
-		});
-		expect(applyReaction(counts, 'fire', 'think')).toEqual({
-			counts: { fire: 1, sad: 0, think: 2, bored: 0 },
-			mine: 'think'
-		});
-		expect(applyReaction(counts, 'fire', 'fire')).toEqual({
-			counts: { fire: 1, sad: 0, think: 1, bored: 0 },
-			mine: null
-		});
+	it('ставит новую реакцию в конец строки', () => {
+		expect(applyReaction(items, '❤️', true)).toEqual([
+			{ emoji: '🔥', count: 2, mine: false },
+			{ emoji: '😢', count: 1, mine: true },
+			{ emoji: '❤️', count: 1, mine: true }
+		]);
+	});
+
+	it('добавляет свою к чужой, не трогая порядок', () => {
+		expect(applyReaction(items, '🔥', true)).toEqual([
+			{ emoji: '🔥', count: 3, mine: true },
+			{ emoji: '😢', count: 1, mine: true }
+		]);
+	});
+
+	it('снимает свою, а последнюю убирает из строки', () => {
+		expect(applyReaction(items, '😢', false)).toEqual([{ emoji: '🔥', count: 2, mine: false }]);
+	});
+
+	it('снятие несуществующей ничего не ломает', () => {
+		expect(applyReaction(items, '👍', false)).toEqual(items);
+	});
+});
+
+describe('isMine', () => {
+	it('различает свою и чужую', () => {
+		expect(isMine(items, '😢')).toBe(true);
+		expect(isMine(items, '🔥')).toBe(false);
+		expect(isMine(items, '👍')).toBe(false);
 	});
 });

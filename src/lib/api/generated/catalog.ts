@@ -1095,8 +1095,8 @@ export interface paths {
 		};
 		/**
 		 * Все теги по алфавиту с числом активных сущностей (счётчик держат триггеры); `?kind=genre` —
-		 *     только жанры. Тегов немного, поэтому
-		 *     без пагинации.
+		 *     только жанры, `?entity_kind=painting` — только теги с активными картинами. Тегов немного,
+		 *     поэтому без пагинации.
 		 */
 		get: operations['list_tags'];
 		put?: never;
@@ -1625,6 +1625,8 @@ export interface components {
 			slug: string;
 		};
 		CreateTag: {
+			/** @description 1–2 предложения, до 20 000 символов; пусто — `null`. */
+			description?: string | null;
 			/** @description По умолчанию `tag`. */
 			kind?: components['schemas']['TagKind'];
 			/** @example Научная фантастика */
@@ -2871,6 +2873,11 @@ export interface components {
 			slug: string;
 		};
 		Tag: {
+			/**
+			 * @description 1–2 предложения о жанре или метке; пишется руками через админку.
+			 * @example Сцены повседневной жизни: кухни, рынки, мастерские.
+			 */
+			description?: string | null;
 			/** Format: uuid */
 			id: string;
 			kind: components['schemas']['TagKind'];
@@ -2883,6 +2890,8 @@ export interface components {
 		TagHit: {
 			/** Format: int64 */
 			count: number;
+			/** @description Описание из `tags`; у тега, которого уже нет в БД, — `null`. */
+			description?: string | null;
 			/**
 			 * @description `genre` или `tag`.
 			 * @example genre
@@ -2904,8 +2913,20 @@ export interface components {
 		TagKind: 'genre' | 'tag';
 		TagWithCount: {
 			/**
+			 * @description Разбивка по типу работы; типы без активных сущностей не отдаются (`{"movie": 10,
+			 *     "book": 2}`).
+			 */
+			by_kind: {
+				[key: string]: number;
+			};
+			/**
+			 * @description 1–2 предложения о жанре или метке; пишется руками через админку.
+			 * @example Сцены повседневной жизни: кухни, рынки, мастерские.
+			 */
+			description?: string | null;
+			/**
 			 * Format: int64
-			 * @description Сколько активных сущностей с этим тегом.
+			 * @description Сколько активных сущностей с этим тегом — сумма [`TagWithCount::by_kind`].
 			 * @example 12
 			 */
 			entities_count: number;
@@ -3032,6 +3053,8 @@ export interface components {
 			slug?: string | null;
 		};
 		UpdateTag: {
+			/** @description `null` стирает описание, пропущенное поле — оставляет как было. */
+			description?: string | null;
 			kind?: components['schemas']['TagKind'] | null;
 			name?: string | null;
 			slug?: string | null;
@@ -6850,6 +6873,13 @@ export interface operations {
 			query?: {
 				/** @description Только жанры или только остальные теги; не передан — все. */
 				kind?: 'genre' | 'tag';
+				/**
+				 * @description Только теги, у которых есть активные работы этого типа (`by_kind[entity_kind] > 0`):
+				 *     вкладки разделов на `/tags`. `kind` у этого эндпойнта занят видом тега, поэтому тип
+				 *     работы — отдельный параметр.
+				 * @example painting
+				 */
+				entity_kind?: 'movie' | 'series' | 'book' | 'game' | 'painting';
 			};
 			header?: never;
 			path?: never;
@@ -6866,7 +6896,7 @@ export interface operations {
 					'application/json': components['schemas']['TagWithCount'][];
 				};
 			};
-			/** @description Неверный `kind` */
+			/** @description Неверный `kind` или `entity_kind` */
 			400: {
 				headers: {
 					[name: string]: unknown;

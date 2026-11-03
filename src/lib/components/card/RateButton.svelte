@@ -5,26 +5,21 @@
 	import type { MyReviewState } from '#lib/social/my-review.svelte.ts';
 	import { loginUrl } from '#lib/utils/redirect.ts';
 	import { HERO_GLASS as GLASS, HERO_PRIMARY as PRIMARY } from './buttons.ts';
-	import Reactions from './Reactions.svelte';
-	import type { ReactionCounts } from '#lib/social/reactions.ts';
 
-	// «Оценить» в шапке карточки: по нажатию — панель с 1–10 и быстрыми реакциями. Поставили —
+	// «Оценить» в шапке карточки: по нажатию — панель с оценкой 1–10. Реакции отсюда ушли в саму
+	// шапку: их ставят и читают все, а спрятанные в панель они были видны только тому, кто собрался
+	// оценивать. Поставили —
 	// кнопка показывает «Ваша: 8» цветом оценки. Отдельного блока оценок на странице нет: сводка —
 	// бейдж рядом, рецензия — в ленте («Написать рецензию» открывает там форму). До премьеры —
 	// «Оценки после премьеры», кнопка неактивна.
 	let {
 		my,
-		slug,
 		released,
-		releaseDate,
-		reactions
+		releaseDate
 	}: {
 		my: MyReviewState;
-		slug: string;
 		released: boolean;
 		releaseDate?: string | null;
-		/** Счётчики реакций из сводки оценок. */
-		reactions?: ReactionCounts;
 	} = $props();
 
 	let details = $state<HTMLDetailsElement>();
@@ -149,13 +144,6 @@
 				</div>
 				{#if my.error}<p role="alert" class="mt-2 text-sm text-error">{my.error}</p>{/if}
 			</section>
-
-			<div class="mt-4 border-t border-base-300 pt-3">
-				<p class="mb-2 text-xs font-semibold tracking-widest text-base-content/50 uppercase">
-					Впечатление
-				</p>
-				<Reactions {slug} counts={reactions} {released} />
-			</div>
 		</div>
 	</details>
 {/if}

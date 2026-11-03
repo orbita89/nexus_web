@@ -22,6 +22,15 @@ describe('likePlace', () => {
 		).toEqual({ href: '/people/denis-villeneuve', title: 'Дени Вильнёв', note: 'Человек' });
 	});
 
+	it('произведение — его карточка, подпись по разделу', () => {
+		expect(
+			likePlace({
+				kind: 'entity',
+				entity: { id: 'e1', slug: 'dune-2021', title: 'Дюна', kind: 'movie' }
+			} as SchemaLikeTarget)
+		).toEqual({ href: '/films/dune-2021', title: 'Дюна', note: 'Фильм' });
+	});
+
 	// Бэкенд может завести лайки чему-то ещё раньше, чем фронтенд о них узнает.
 	it('незнакомый вид — подпись без ссылки', () => {
 		expect(likePlace({ kind: 'wat' } as unknown as SchemaLikeTarget).href).toBeNull();
@@ -29,9 +38,8 @@ describe('likePlace', () => {
 });
 
 describe('LIKE_FILTERS', () => {
-	// Лайков у произведений нет: target=entity всегда отдаёт пустую страницу, и предлагать
-	// такой фильтр значило бы вести пользователя в заведомо пустой список.
-	it('произведений среди фильтров нет', () => {
-		expect(LIKE_FILTERS.map((f) => f.value)).toEqual([undefined, 'collection', 'person']);
+	// Сердечко у произведений появилось (бэкенд 5b5b22e) — фильтр ведёт в непустой список.
+	it('произведения идут первыми после «Все»', () => {
+		expect(LIKE_FILTERS.map((f) => f.value)).toEqual([undefined, 'entity', 'collection', 'person']);
 	});
 });

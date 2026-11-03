@@ -10,10 +10,12 @@
 	import ActivityFeed from '#lib/components/card/ActivityFeed.svelte';
 	import Awards from '#lib/components/card/Awards.svelte';
 	import AverageRating from '#lib/components/card/AverageRating.svelte';
+	import EntityLike from '#lib/components/card/EntityLike.svelte';
 	import Hero from '#lib/components/card/Hero.svelte';
 	import MarkButtons from '#lib/components/card/MarkButtons.svelte';
 	import Production from '#lib/components/card/Production.svelte';
 	import RateButton from '#lib/components/card/RateButton.svelte';
+	import Reactions from '#lib/components/card/Reactions.svelte';
 	import Recommendations from '#lib/components/card/Recommendations.svelte';
 	import Related from '#lib/components/card/Related.svelte';
 	import StickyHeader from '#lib/components/card/StickyHeader.svelte';
@@ -106,7 +108,14 @@
 		() => [`entity:${entity.slug}`],
 		(event) => {
 			if (event.data.author_id === session.user?.id) return;
-			if (event.event.startsWith('review.') || event.event.startsWith('thread.')) refreshSoon();
+			// entity.reacted — кто-то поставил эмодзи: в событии только id, какое именно — узнаём,
+			// перечитав строку реакций (её версия меняется вместе с live).
+			if (
+				event.event.startsWith('review.') ||
+				event.event.startsWith('thread.') ||
+				event.event === 'entity.reacted'
+			)
+				refreshSoon();
 		},
 		refreshSoon
 	);
@@ -139,16 +148,19 @@
 				{#if entity.kind !== 'painting'}
 					<MarkButtons marks={viewing} kind={entity.kind} />
 				{/if}
+				<!-- Реакции — на виду, а не внутри панели «Оценить»: их ставят в одно нажатие, и
+				     читают их все, включая гостей. Своя реакция снимается повторным нажатием,
+				     разных может быть сколько угодно. -->
+				<div class="mt-4">
+					<Reactions slug={entity.slug} {released} version={live.version} />
+				</div>
 			{/snippet}
 			{#snippet actions()}
 				<AverageRating {average} total={rating.current?.data?.count ?? 0} />
-				<RateButton
-					{my}
-					slug={entity.slug}
-					{released}
-					releaseDate={entity.release_date}
-					reactions={rating.current?.data?.reactions}
-				/>
+				<RateButton {my} {released} releaseDate={entity.release_date} />
+				<!-- Сердечко рядом с оценкой: «понравилось» ставят в одно нажатие, не раздумывая,
+				     а оценку 1–10 — обдумав. Это разные сигналы, и второй нужен чаще. -->
+				<EntityLike slug={entity.slug} />
 				<AddToCollection slug={entity.slug} title={entity.title} onchange={() => live.refresh()} />
 				<WatchButton {watch} />
 				<!-- Рядом с кнопкой — признак, что произведение обсуждают: без него комната с
