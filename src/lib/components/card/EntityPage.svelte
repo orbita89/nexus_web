@@ -12,6 +12,7 @@
 	import AverageRating from '#lib/components/card/AverageRating.svelte';
 	import Hero from '#lib/components/card/Hero.svelte';
 	import MarkButtons from '#lib/components/card/MarkButtons.svelte';
+	import Production from '#lib/components/card/Production.svelte';
 	import RateButton from '#lib/components/card/RateButton.svelte';
 	import Recommendations from '#lib/components/card/Recommendations.svelte';
 	import Related from '#lib/components/card/Related.svelte';
@@ -171,9 +172,13 @@
 		<div class="mb-10"><TagChips tags={plainTags} /></div>
 	{/if}
 
-	<!-- Студии, награды и факты — внутрь «О фильме» третьей колонкой: отдельной карточкой
-	     справа они были вдвое короче соседнего блока и оставляли под собой пустоту. -->
-	<About {entity} {production} />
+	{#if production}
+		<About {entity}>
+			{#snippet aside()}<Production {production} />{/snippet}
+		</About>
+	{:else}
+		<About {entity} />
+	{/if}
 
 	<!-- Награды — из award_nominations, ссылками на церемонии; пусто — блока нет. -->
 	{#if entity.awards.length}

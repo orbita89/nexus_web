@@ -8,14 +8,7 @@
 	// издатель, у книг — издательство), награды, факты. Данные — productionOf(); пустой раздел не
 	// рисуется, пустой блок целиком — тоже (страница). Первое открытие студии бэкенд дополняет из
 	// TMDB (1–2 с) — пока идёт переход, на месте логотипа крутится индикатор.
-	let {
-		production,
-		bare = false
-	}: {
-		production: Production;
-		/** Колонка внутри «О фильме»: без своей плашки и заголовка, только содержимое. */
-		bare?: boolean;
-	} = $props();
+	let { production }: { production: Production } = $props();
 
 	const wins = $derived(production.awards.filter((a) => a.won));
 	const nominations = $derived(production.awards.filter((a) => !a.won));
@@ -40,20 +33,11 @@
 	</ul>
 {/snippet}
 
-<section
+<aside
 	aria-labelledby="production-title"
-	class={bare
-		? 'flex flex-col gap-5 text-sm'
-		: 'flex h-fit flex-col divide-y divide-base-content/10 rounded-box bg-base-200 p-5 text-sm ring-1 ring-base-content/5 sm:p-7 [&>*]:py-4 [&>*:first-child]:pt-0 [&>*:last-child]:pb-0'}
+	class="flex h-fit flex-col divide-y divide-base-content/10 rounded-box bg-base-200 p-5 text-sm ring-1 ring-base-content/5 sm:p-7 [&>*]:py-4 [&>*:first-child]:pt-0 [&>*:last-child]:pb-0"
 >
-	<h2
-		id="production-title"
-		class={bare
-			? 'text-xs font-semibold tracking-widest text-base-content/40 uppercase'
-			: 'font-bold'}
-	>
-		Производство и факты
-	</h2>
+	<h2 id="production-title" class="font-bold">Производство и факты</h2>
 
 	{#if production.studios.length}
 		<div>
@@ -109,4 +93,4 @@
 			</ul>
 		</div>
 	{/if}
-</section>
+</aside>

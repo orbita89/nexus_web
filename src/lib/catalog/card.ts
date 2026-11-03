@@ -136,49 +136,6 @@ export function aboutRows(entity: SchemaEntityDetail): FactRow[] {
 	return rows.filter((r): r is FactRow => !!r);
 }
 
-/** Группа фактов в «О фильме»: заголовок колонки и её строки. */
-export interface FactGroup {
-	title: string;
-	rows: FactRow[];
-}
-
-/**
- * «О фильме» колонками: слева — что это за работа (оригинальное название, год, страна, премьера,
- * длительность, возраст), справа — кто её сделал. Одним списком это двенадцать строк на полтора
- * экрана, а так — две коротких колонки, и глазу есть за что зацепиться.
- */
-export function aboutGroups(entity: SchemaEntityDetail): FactGroup[] {
-	const year = yearOf(entity.release_date);
-	const original = originalTitle(entity);
-	const main: (FactRow | null)[] = [
-		original ? { label: 'Оригинальное название', text: original } : null,
-		year
-			? { label: entity.kind === 'book' ? 'Год издания' : 'Год производства', text: year }
-			: null,
-		countries(entity) ? { label: 'Страна', text: countries(entity)! } : null,
-		entity.release_date
-			? {
-					label: entity.kind === 'game' || entity.kind === 'book' ? 'Дата выхода' : 'Премьера',
-					text: formatDate(entity.release_date)
-				}
-			: null,
-		...metadataFields(entity.kind, entity.metadata)
-			.filter((f) => f.label !== 'Страны')
-			.map((f) => ({ label: f.label, text: f.value }))
-	];
-	const crew = creditGroups(entity.credits)
-		.filter((g) => !CAST_ROLES.includes(g.role))
-		.map((g) => ({
-			label: CREW_LABEL[g.role] ?? roleLabel(g.role),
-			links: personLinks(g.credits.slice(0, ROW_PEOPLE).map((c) => c.person)),
-			more: Math.max(0, g.credits.length - ROW_PEOPLE) || undefined
-		}));
-	return [
-		{ title: 'Главное', rows: main.filter((r): r is FactRow => !!r) },
-		{ title: 'Съёмочная группа', rows: crew }
-	].filter((g) => g.rows.length);
-}
-
 /**
  * Короткая строка под названием в шапке: год, длительность (сезоны у сериала, страницы у книги),
  * возрастной рейтинг и страна. Это то, что спрашивают первым, — ради них не надо уходить в
