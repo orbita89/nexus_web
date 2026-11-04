@@ -5,14 +5,37 @@
 	import { markLabels, type Mark } from '#lib/social/marks.ts';
 	import type { Marks } from '#lib/social/marks.svelte.ts';
 	import { loginUrl } from '#lib/utils/redirect.ts';
+	import { HERO_GLASS } from './buttons.ts';
 
-	// «Посмотреть позже» (закладка) и «Просмотрено» (глаз) в шапке, под кнопками. Маленькие
-	// пилюли-переключатели: включённая — оранжевая. Гостю — вход.
+	// Отметка одна на карточку: «Посмотреть позже» и «Просмотрено» взаимоисключающие, поэтому и
+	// кнопка одна — иконка состояния плюс стрелка, за которой вторая отметка и «Снять». Двумя
+	// пилюлями с подписями это занимало целый ряд ради одного значения; подпись — в подсказке.
 	let { marks, kind }: { marks: Marks; kind: SchemaEntityKind } = $props();
 
 	const labels = $derived(markLabels(kind));
-	const MARKS: Mark[] = ['later', 'done'];
+	const current = $derived(marks.mark);
+	const label = $derived(current ? labels[current] : labels.later);
+	let open = $state(false);
+	let box = $state<HTMLDetailsElement>();
+
+	function choose(mark: Mark | null) {
+		open = false;
+		if (mark === current || mark === null) {
+			if (current) marks.toggle(current);
+			return;
+		}
+		marks.toggle(mark);
+	}
 </script>
+
+<svelte:window
+	onclick={(e) => {
+		if (open && box && !box.contains(e.target as Node)) open = false;
+	}}
+	onkeydown={(e) => {
+		if (open && e.key === 'Escape') open = false;
+	}}
+/>
 
 {#snippet icon(mark: Mark, on: boolean)}
 	<svg
@@ -35,28 +58,49 @@
 	</svg>
 {/snippet}
 
-<div class="mt-5 flex flex-wrap gap-2" role="group" aria-label="Мои отметки">
-	{#each MARKS as mark (mark)}
-		{@const on = marks.mark === mark}
-		{#if session.status === 'guest'}
-			<a
-				href={loginUrl(page.url)}
-				class="btn h-8 min-h-0 gap-1.5 rounded-full border-base-content/10 bg-base-content/5 px-3 text-sm font-medium backdrop-blur-md btn-sm hover:border-base-content/25"
-				>{@render icon(mark, false)}{labels[mark]}</a
+{#if session.status === 'guest'}
+	<a href={loginUrl(page.url)} class={HERO_GLASS} aria-label={labels.later} title={labels.later}>
+		{@render icon('later', false)}
+	</a>
+{:else}
+	<details class="dropdown" bind:this={box} bind:open>
+		<summary
+			class={[
+				HERO_GLASS,
+				'gap-1.5',
+				current && 'border-primary/40 bg-primary/15 text-primary hover:bg-primary/25'
+			]}
+			aria-label={label}
+			title={label}
+		>
+			{@render icon(current ?? 'later', !!current)}
+			<svg
+				class="size-3.5 opacity-60"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2.5"
+				stroke-linecap="round"
+				aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg
 			>
-		{:else}
-			<button
-				class={[
-					'btn h-8 min-h-0 gap-1.5 rounded-full px-3 text-sm font-medium backdrop-blur-md transition btn-sm',
-					on
-						? 'border-primary/40 bg-primary/15 text-primary hover:bg-primary/25'
-						: 'border-base-content/10 bg-base-content/5 hover:border-base-content/25'
-				]}
-				aria-pressed={on}
-				disabled={session.status !== 'authed'}
-				onclick={() => marks.toggle(mark)}>{@render icon(mark, on)}{labels[mark]}</button
-			>
-		{/if}
-	{/each}
-</div>
+		</summary>
+		<ul
+			class="menu dropdown-content z-30 mt-2 w-56 rounded-box border border-base-300 bg-base-200 p-2 shadow-xl"
+		>
+			{#each ['later', 'done'] as const as mark (mark)}
+				<li>
+					<button class={{ 'menu-active': current === mark }} onclick={() => choose(mark)}>
+						{@render icon(mark, current === mark)}
+						{labels[mark]}
+					</button>
+				</li>
+			{/each}
+			{#if current}
+				<li>
+					<button class="text-base-content/60" onclick={() => choose(null)}>Снять отметку</button>
+				</li>
+			{/if}
+		</ul>
+	</details>
+{/if}
 {#if marks.error}<p role="alert" class="mt-2 text-sm text-error">{marks.error}</p>{/if}

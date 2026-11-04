@@ -11,7 +11,24 @@
 
 	// «В коллекцию» на карточке: свои коллекции с отметками, где произведение уже есть, и быстрое
 	// создание новой. Отметки — одним запросом: ?contains={slug} даёт contains у каждой коллекции.
-	let { slug, title, onchange }: { slug: string; title: string; onchange?: () => void } = $props();
+	let {
+		slug,
+		title,
+		onchange,
+		menu = false
+	}: {
+		slug: string;
+		title: string;
+		onchange?: () => void;
+		/** Пункт меню «⋯» вместо кнопки шапки: строка с подписью во всю ширину. */
+		menu?: boolean;
+	} = $props();
+
+	const CLS = $derived(
+		menu
+			? 'flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-base-300'
+			: HERO_GLASS
+	);
 
 	let dialog: HTMLDialogElement;
 	let collections = $state<SchemaCollection[] | null>(null);
@@ -96,9 +113,9 @@
 {/snippet}
 
 {#if session.status === 'guest'}
-	<a href={loginUrl(page.url)} class={HERO_GLASS}>{@render plus()} В коллекцию</a>
+	<a href={loginUrl(page.url)} class={CLS}>{@render plus()} В коллекцию</a>
 {:else if session.status === 'authed'}
-	<button class={HERO_GLASS} onclick={open}>{@render plus()} В коллекцию</button>
+	<button class={CLS} onclick={open}>{@render plus()} В коллекцию</button>
 {/if}
 
 <dialog bind:this={dialog} class="modal" aria-label="Добавить в коллекцию: {title}">

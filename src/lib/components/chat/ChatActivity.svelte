@@ -31,7 +31,7 @@
 </script>
 
 <span class="inline-flex items-center gap-2">
-	<ChatButton {meta} />
+	<ChatButton {meta} short />
 	{#if recent}
 		<!-- Писали за сутки — здесь разговор идёт прямо сейчас, а не «был когда-то». -->
 		<span class="text-xs font-bold text-success" title="{recent} за сутки">обсуждают</span>

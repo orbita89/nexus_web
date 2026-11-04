@@ -137,6 +137,17 @@ export function aboutRows(entity: SchemaEntityDetail): FactRow[] {
 }
 
 /**
+ * Есть ли чего ждать: фильм ещё не вышел или сериал продолжается. Только тогда «Следить» стоит
+ * отдельной кнопки — у вышедшего фильма новостей не будет, и колокольчик уходит в меню «⋯».
+ */
+export function worthWatching(entity: SchemaEntityDetail, released: boolean): boolean {
+	if (!released) return true;
+	if (entity.kind !== 'series') return false;
+	const status = (entity.metadata as SchemaSeriesMetadata).status;
+	return status === 'ongoing';
+}
+
+/**
  * Короткая строка под названием в шапке: год, длительность (сезоны у сериала, страницы у книги),
  * возрастной рейтинг и страна. Это то, что спрашивают первым, — ради них не надо уходить в
  * «О фильме»; подробности остаются там.

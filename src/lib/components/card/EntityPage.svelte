@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { page } from '$app/state';
 	import { unwrap } from '#lib/api/errors.ts';
 	import { session } from '#lib/auth/session.svelte.ts';
-	import { isReleased, productionOf } from '#lib/catalog/card.ts';
+	import { isReleased, productionOf, worthWatching } from '#lib/catalog/card.ts';
 	import { entityHref, kindByApi } from '#lib/catalog/kinds.ts';
 	import { summary, yearOf } from '#lib/catalog/labels.ts';
 	import { trailerSources } from '#lib/catalog/trailer.ts';
@@ -13,6 +14,7 @@
 	import EntityLike from '#lib/components/card/EntityLike.svelte';
 	import Hero from '#lib/components/card/Hero.svelte';
 	import MarkButtons from '#lib/components/card/MarkButtons.svelte';
+	import MoreMenu from '#lib/components/card/MoreMenu.svelte';
 	import Production from '#lib/components/card/Production.svelte';
 	import RateButton from '#lib/components/card/RateButton.svelte';
 	import Reactions from '#lib/components/card/Reactions.svelte';
@@ -25,6 +27,7 @@
 	import AddToCollection from '#lib/components/social/AddToCollection.svelte';
 	import CardCollections from '#lib/components/social/CardCollections.svelte';
 
+	import ShareMenu from '#lib/components/social/ShareMenu.svelte';
 	import WatchButton from '#lib/components/social/WatchButton.svelte';
 	import ChatActivity from '#lib/components/chat/ChatActivity.svelte';
 	import { useRealtime } from '#lib/realtime/realtime.svelte.ts';
@@ -62,6 +65,9 @@
 	let today = $state<string | null>(null);
 	onMount(() => (today = new Date().toISOString().slice(0, 10)));
 	const released = $derived(today === null || isReleased(entity.release_date, today));
+	// «Следить» отдельной кнопкой — только когда есть чего ждать: до премьеры и у идущего
+	// сериала. У вышедшего фильма новостей не будет, и колокольчик уходит в меню «⋯».
+	const waiting = $derived(worthWatching(entity, released));
 
 	// Чужие рецензии, комментарии к ним (review.commented / review.comment_deleted — у рецензии
 	// меняется comments_count, открытый список перечитывается сам) и темы — тихо перечитываем всё
@@ -143,11 +149,6 @@
 	<div bind:this={heroElement} class="relative z-15">
 		<Hero {entity} {trailers}>
 			{#snippet marks()}
-				<!-- Отметки «посмотреть позже» и «просмотрено» — про фильмы, книги и игры; у картины
-				     их смысла нет: её не «проходят» и не откладывают на вечер. -->
-				{#if entity.kind !== 'painting'}
-					<MarkButtons marks={viewing} kind={entity.kind} />
-				{/if}
 				<!-- Реакции — на виду, а не внутри панели «Оценить»: их ставят в одно нажатие, и
 				     читают их все, включая гостей. Своя реакция снимается повторным нажатием,
 				     разных может быть сколько угодно. -->
@@ -156,15 +157,18 @@
 				</div>
 			{/snippet}
 			{#snippet actions()}
+				<!-- Один ряд вместо трёх: главное — «Оценить», рядом сердечко, отметка и чат, всё
+				     редкое — в «⋯». Восемь равных кнопок не давали глазу зацепиться ни за одну. -->
 				<AverageRating {average} total={rating.current?.data?.count ?? 0} />
 				<RateButton {my} {released} releaseDate={entity.release_date} />
 				<!-- Сердечко рядом с оценкой: «понравилось» ставят в одно нажатие, не раздумывая,
 				     а оценку 1–10 — обдумав. Это разные сигналы, и второй нужен чаще. -->
 				<EntityLike slug={entity.slug} />
-				<AddToCollection slug={entity.slug} title={entity.title} onchange={() => live.refresh()} />
-				<WatchButton {watch} />
-				<!-- Рядом с кнопкой — признак, что произведение обсуждают: без него комната с
-				     четырьмя сотнями сообщений выглядит так же, как пустая. -->
+				<!-- Отметка одна: «позже» и «просмотрено» взаимоисключающие. У картины её нет —
+				     холст не откладывают на вечер. -->
+				{#if entity.kind !== 'painting'}
+					<MarkButtons marks={viewing} kind={entity.kind} />
+				{/if}
 				<ChatActivity
 					kind="entity"
 					slug={entity.slug}
@@ -175,6 +179,22 @@
 						image: entity.cover_url ?? null
 					}}
 				/>
+				{#if waiting}
+					<!-- Ждём премьеру или новый сезон — тогда «Следить» на виду. -->
+					<WatchButton {watch} />
+				{/if}
+				<MoreMenu>
+					<AddToCollection
+						slug={entity.slug}
+						title={entity.title}
+						onchange={() => live.refresh()}
+						menu
+					/>
+					{#if !waiting}
+						<WatchButton {watch} menu />
+					{/if}
+					<ShareMenu url={page.url.href} title={entity.title} />
+				</MoreMenu>
 			{/snippet}
 		</Hero>
 	</div>

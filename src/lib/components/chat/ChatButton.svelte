@@ -5,10 +5,24 @@
 
 	// «Открыть чат» — комната карточки, человека или тега в правой панели. Читать можно и без
 	// интереса и без входа: панель сама подпишет канал комнаты.
-	let { meta, class: className = HERO_GLASS }: { meta: RoomMeta; class?: string } = $props();
+	let {
+		meta,
+		class: className = HERO_GLASS,
+		short = false
+	}: {
+		meta: RoomMeta;
+		class?: string;
+		/** В тесном ряду шапки подпись прячем до широкого экрана — остаётся иконка. */
+		short?: boolean;
+	} = $props();
 </script>
 
-<button class={className} onclick={() => chat.open({ ...meta })}>
+<button
+	class={className}
+	aria-label="Открыть чат"
+	title={short ? 'Открыть чат' : undefined}
+	onclick={() => chat.open({ ...meta })}
+>
 	<svg
 		class="size-4"
 		viewBox="0 0 24 24"
@@ -18,5 +32,5 @@
 		aria-hidden="true"
 		><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg
 	>
-	Открыть чат
+	{#if !short}<span>Открыть чат</span>{/if}
 </button>

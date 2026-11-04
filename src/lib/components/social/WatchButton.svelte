@@ -7,7 +7,19 @@
 
 	// Колокольчик «Следить». Состояние — общее на карточку (Watch). Круглая иконка: в шапке — в
 	// стиле её кнопок с тултипом, compact — маленькая для липкой мобильной шапки.
-	let { watch, compact = false }: { watch: Watch; compact?: boolean } = $props();
+	let {
+		watch,
+		compact = false,
+		menu = false
+	}: {
+		watch: Watch;
+		compact?: boolean;
+		/** Пункт меню «⋯»: строка с подписью, а не круглая иконка. */
+		menu?: boolean;
+	} = $props();
+
+	const MENU_CLS =
+		'flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-base-300';
 
 	const hintId = $props.id();
 	const hint = $derived(
@@ -33,7 +45,20 @@
 	>
 {/snippet}
 
-{#if compact}
+{#if menu}
+	{#if session.status === 'guest'}
+		<a href={loginUrl(page.url)} class={MENU_CLS}>{@render bell(false)} Следить за новостями</a>
+	{:else if session.status === 'authed' && watch.watching !== null}
+		<button
+			class={[MENU_CLS, { 'text-primary': watch.watching }]}
+			aria-pressed={watch.watching}
+			disabled={watch.busy}
+			onclick={() => watch.toggle()}
+			>{@render bell(watch.watching)}
+			{watch.watching ? 'Вы следите' : 'Следить за новостями'}</button
+		>
+	{/if}
+{:else if compact}
 	{#if session.status === 'guest'}
 		<a href={loginUrl(page.url)} class="btn btn-circle btn-ghost btn-sm" aria-label="Следить"
 			>{@render bell(false)}</a
