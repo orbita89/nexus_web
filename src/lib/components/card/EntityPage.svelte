@@ -17,6 +17,7 @@
 	import MoreMenu from '#lib/components/card/MoreMenu.svelte';
 	import Production from '#lib/components/card/Production.svelte';
 	import RateButton from '#lib/components/card/RateButton.svelte';
+	import SectionNav from '#lib/components/card/SectionNav.svelte';
 	import Reactions from '#lib/components/card/Reactions.svelte';
 	import Recommendations from '#lib/components/card/Recommendations.svelte';
 	import Related from '#lib/components/card/Related.svelte';
@@ -68,6 +69,21 @@
 	// «Следить» отдельной кнопкой — только когда есть чего ждать: до премьеры и у идущего
 	// сериала. У вышедшего фильма новостей не будет, и колокольчик уходит в меню «⋯».
 	const waiting = $derived(worthWatching(entity, released));
+	// Разделы для навигации — только те, что действительно будут на странице. «Рекомендации»
+	// грузятся в браузере и могут оказаться пустыми, поэтому их в полосе нет.
+	const hasCast = $derived(
+		entity.credits.some((c) => c.role === 'actor' || c.role === 'voice_actor')
+	);
+	const sections = $derived(
+		[
+			{ id: 'about', title: kind.kind === 'book' ? 'О книге' : 'О фильме' },
+			hasCast ? { id: 'credits', title: 'В ролях' } : null,
+			entity.awards.length ? { id: 'awards', title: 'Награды' } : null,
+			entity.related.length ? { id: 'related', title: 'Связанные' } : null,
+			{ id: 'activity', title: 'Рецензии' },
+			{ id: 'collections', title: 'В коллекциях' }
+		].filter((s): s is { id: string; title: string } => !!s)
+	);
 
 	// Чужие рецензии, комментарии к ним (review.commented / review.comment_deleted — у рецензии
 	// меняется comments_count, открытый список перечитывается сам) и темы — тихо перечитываем всё
@@ -199,14 +215,20 @@
 		</Hero>
 	</div>
 
+	<!-- Полоса разделов: карточка длинная, и без неё не видно, что на ней есть. -->
+	<SectionNav hero={heroElement} {sections} />
+
 	<!-- Теги — над «О фильме»; жанры — в шапке под названием. -->
 	{#if plainTags.length}
 		<div class="mb-10"><TagChips tags={plainTags} /></div>
 	{/if}
 
-	{#if production}
+	<!-- Боковая колонка — «паспорт» работы: рейтинг IMDb, студии, награды и факты. Постера здесь
+	     нет: при трейлере в шапке он не нужен, а без трейлера уже стоит слева. Пусто во всём —
+	     колонки нет, таблица идёт на всю ширину. -->
+	{#if production || entity.imdb_rating}
 		<About {entity}>
-			{#snippet aside()}<Production {production} />{/snippet}
+			{#snippet aside()}<Production {entity} {production} />{/snippet}
 		</About>
 	{:else}
 		<About {entity} />

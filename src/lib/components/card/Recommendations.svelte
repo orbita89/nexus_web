@@ -28,7 +28,11 @@
 </script>
 
 {#if loading || items.length}
-	<section aria-labelledby="recommendations-title" class="mb-14">
+	<section
+		id="recommendations"
+		aria-labelledby="recommendations-title"
+		class="mb-14 scroll-mt-32 md:scroll-mt-28"
+	>
 		<h2 id="recommendations-title" class="mb-4 text-2xl font-bold">Рекомендации</h2>
 		{#if loading}
 			<ul class="flex gap-4 overflow-hidden pt-1.5 pb-3" aria-hidden="true">

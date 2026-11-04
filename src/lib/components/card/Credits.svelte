@@ -35,7 +35,7 @@
 
 <div
 	id="credits"
-	class="grid scroll-mt-32 gap-x-8 gap-y-6 rounded-box bg-base-200 p-5 ring-1 ring-base-content/5 sm:grid-cols-2 sm:p-7 md:scroll-mt-20 lg:grid-cols-3"
+	class="grid scroll-mt-32 gap-x-8 gap-y-6 rounded-box bg-base-200 p-5 ring-1 ring-base-content/5 sm:grid-cols-2 sm:p-7 md:scroll-mt-28 lg:grid-cols-3"
 	role="group"
 	aria-label="Съёмочная группа и актёры"
 >

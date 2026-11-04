@@ -45,7 +45,7 @@
 	bind:this={section}
 	{id}
 	aria-labelledby="{id}-title"
-	class="mb-12 scroll-mt-32 md:scroll-mt-20"
+	class="mb-12 scroll-mt-32 md:scroll-mt-28"
 >
 	<div class="mb-4 flex flex-wrap items-baseline justify-between gap-3">
 		<h2 id="{id}-title" class="text-2xl font-bold">{title}</h2>

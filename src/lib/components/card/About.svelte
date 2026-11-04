@@ -19,7 +19,7 @@
 	const original = $derived(originalTitle(entity));
 </script>
 
-<section id="about" aria-labelledby="about-title" class="mb-14 scroll-mt-32 md:scroll-mt-20">
+<section id="about" aria-labelledby="about-title" class="mb-14 scroll-mt-32 md:scroll-mt-28">
 	<h2 id="about-title" class="mb-4 text-2xl font-bold">{title}</h2>
 
 	<div class="flex flex-col gap-4">
@@ -27,34 +27,38 @@
 		<div class={['grid gap-4', aside && 'lg:grid-cols-[minmax(0,1fr)_20rem]']}>
 			<!-- Плашка 1: одна таблица — оригинальное название, описание и факты, все строки с подписью. -->
 			{#if original || entity.description || rows.length}
+				<!-- На телефоне подписи забирали половину ширины, и значения ломались по два слова:
+				     там подпись идёт над значением, две колонки возвращаются с sm. -->
 				<dl
-					class="grid grid-cols-[8.5rem_minmax(0,1fr)] gap-x-4 gap-y-3 rounded-box bg-base-200 p-5 text-sm ring-1 ring-base-content/5 sm:grid-cols-[11rem_minmax(0,1fr)] sm:p-7"
+					class="grid gap-x-4 gap-y-3 rounded-box bg-base-200 p-5 text-sm ring-1 ring-base-content/5 max-sm:gap-y-1 sm:grid-cols-[11rem_minmax(0,1fr)] sm:p-7"
 				>
 					{#if original}
-						<dt class="text-base-content/50">Оригинальное название</dt>
-						<dd class="font-medium">{original}</dd>
+						<dt class="text-base-content/50 max-sm:text-xs">Оригинальное название</dt>
+						<dd class="font-medium max-sm:mb-2">{original}</dd>
 					{/if}
 					{#if entity.description}
-						<dt class="text-base-content/50">Описание</dt>
-						<dd class="max-w-3xl">
-							<Clamp lines={4} class="leading-relaxed text-base-content/90">
+						<dt class="text-base-content/50 max-sm:text-xs">Описание</dt>
+						<dd class="max-sm:mb-2">
+							<Clamp lines={6} class="leading-7 text-base-content/90">
 								<p class="whitespace-pre-line">{entity.description}</p>
 							</Clamp>
 						</dd>
 					{/if}
 					{#each rows as row (row.label)}
-						<dt class="text-base-content/50">{row.label}</dt>
-						<dd>
+						<dt class="text-base-content/50 max-sm:text-xs">{row.label}</dt>
+						<dd class="max-sm:mb-2">
 							{#if row.links}
+								<!-- Люди — ссылки, и это должно быть видно без наведения: приглушённое
+								     подчёркивание, цветное на наведении. «Ещё N» ведёт к полным титрам и
+								     отделено запятой — раньше оно слипалось с последним именем. -->
 								{#each row.links as link, i (link.href)}{i ? ', ' : ''}<a
 										href={link.href}
-										class="font-medium decoration-primary/40 underline-offset-4 hover:text-primary hover:underline"
+										class="font-medium underline decoration-base-content/20 underline-offset-4 transition-colors hover:text-primary hover:decoration-primary/60"
 										>{link.text}</a
-									>{/each}{#if row.more}<a
+									>{/each}{#if row.more}, <a
 										href="#credits"
-										class="text-base-content/50 hover:text-primary hover:underline"
-									>
-										и ещё {row.more}</a
+										class="whitespace-nowrap text-primary/80 hover:text-primary hover:underline"
+										>ещё {row.more}</a
 									>{/if}
 							{:else}
 								{row.text}

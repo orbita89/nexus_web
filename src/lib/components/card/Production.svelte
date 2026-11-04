@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { navigating } from '$app/state';
+	import type { SchemaEntityDetail } from '#lib/api/generated/catalog.ts';
 	import type { Production } from '#lib/catalog/card.ts';
+	import { compact } from '#lib/catalog/labels.ts';
 	import StudioLogo from '#lib/components/catalog/StudioLogo.svelte';
 
 	// Производство и факты — боковая колонка рядом с таблицей «О фильме» (на телефоне — под ней):
@@ -8,10 +10,19 @@
 	// издатель, у книг — издательство), награды, факты. Данные — productionOf(); пустой раздел не
 	// рисуется, пустой блок целиком — тоже (страница). Первое открытие студии бэкенд дополняет из
 	// TMDB (1–2 с) — пока идёт переход, на месте логотипа крутится индикатор.
-	let { production }: { production: Production } = $props();
+	let {
+		entity,
+		production
+	}: {
+		entity: SchemaEntityDetail;
+		/** Студии, награды и факты; null — их нет, но колонка может быть нужна ради рейтинга. */
+		production?: Production | null;
+	} = $props();
 
-	const wins = $derived(production.awards.filter((a) => a.won));
-	const nominations = $derived(production.awards.filter((a) => !a.won));
+	const wins = $derived(production?.awards.filter((a) => a.won) ?? []);
+	const nominations = $derived(production?.awards.filter((a) => !a.won) ?? []);
+	/** Рейтинг IMDb есть в каталоге, но на карточке его до сих пор не показывали. */
+	const imdb = $derived(entity.imdb_rating ?? null);
 </script>
 
 {#snippet heading(text: string)}
@@ -33,13 +44,24 @@
 	</ul>
 {/snippet}
 
+<!-- Заголовка у колонки нет: рядом стоит «О фильме», и второй заголовок в ряд читался как
+     отдельный раздел. Блоки внутри подписаны сами — IMDB, СТУДИИ, НАГРАДЫ, ФАКТЫ. -->
 <aside
-	aria-labelledby="production-title"
+	aria-label="Справка о работе"
 	class="flex h-fit flex-col divide-y divide-base-content/10 rounded-box bg-base-200 p-5 text-sm ring-1 ring-base-content/5 sm:p-7 [&>*]:py-4 [&>*:first-child]:pt-0 [&>*:last-child]:pb-0"
 >
-	<h2 id="production-title" class="font-bold">Производство и факты</h2>
+	<!-- Рейтинг IMDb — не наша оценка: подписан явно, чтобы не путали с оценкой в шапке. -->
+	{#if imdb}
+		<div class="flex items-baseline gap-2">
+			<span class="text-xs font-semibold tracking-widest text-base-content/50 uppercase">IMDb</span>
+			<span class="text-lg font-bold tabular-nums">{imdb.toFixed(1).replace('.', ',')}</span>
+			{#if entity.imdb_votes}
+				<span class="text-xs text-base-content/45">{compact(entity.imdb_votes)} голосов</span>
+			{/if}
+		</div>
+	{/if}
 
-	{#if production.studios.length}
+	{#if production?.studios.length}
 		<div>
 			{@render heading(production.studiosTitle)}
 			<ul class="flex flex-wrap gap-1.5">
@@ -68,7 +90,7 @@
 		</div>
 	{/if}
 
-	{#if production.awards.length}
+	{#if production?.awards.length}
 		<div class="flex flex-col gap-3">
 			{#if wins.length}
 				<div>
@@ -85,7 +107,7 @@
 		</div>
 	{/if}
 
-	{#if production.trivia.length}
+	{#if production?.trivia.length}
 		<div>
 			{@render heading(production.triviaTitle)}
 			<ul class="flex list-disc flex-col gap-1.5 pl-4 marker:text-primary">

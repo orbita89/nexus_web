@@ -13,7 +13,7 @@
 </script>
 
 {#if works.length}
-	<section aria-labelledby="related-title" class="mb-14">
+	<section id="related" aria-labelledby="related-title" class="mb-14 scroll-mt-32 md:scroll-mt-28">
 		<h2 id="related-title" class="mb-4 text-2xl font-bold">Связанные</h2>
 		<PosterStrip entities={works.map((w) => w.item)} label="Связанные" {badges} />
 	</section>
