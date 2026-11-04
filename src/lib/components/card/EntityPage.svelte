@@ -9,7 +9,6 @@
 	import { trailerSources } from '#lib/catalog/trailer.ts';
 	import About from '#lib/components/card/About.svelte';
 	import ActivityFeed from '#lib/components/card/ActivityFeed.svelte';
-	import Awards from '#lib/components/card/Awards.svelte';
 	import AverageRating from '#lib/components/card/AverageRating.svelte';
 	import EntityLike from '#lib/components/card/EntityLike.svelte';
 	import Hero from '#lib/components/card/Hero.svelte';
@@ -78,7 +77,6 @@
 		[
 			{ id: 'about', title: kind.kind === 'book' ? 'О книге' : 'О фильме' },
 			hasCast ? { id: 'credits', title: 'В ролях' } : null,
-			entity.awards.length ? { id: 'awards', title: 'Награды' } : null,
 			entity.related.length ? { id: 'related', title: 'Связанные' } : null,
 			{ id: 'activity', title: 'Рецензии' },
 			{ id: 'collections', title: 'В коллекциях' }
@@ -223,20 +221,16 @@
 		<div class="mb-10"><TagChips tags={plainTags} /></div>
 	{/if}
 
-	<!-- Боковая колонка — «паспорт» работы: рейтинг IMDb, студии, награды и факты. Постера здесь
-	     нет: при трейлере в шапке он не нужен, а без трейлера уже стоит слева. Пусто во всём —
-	     колонки нет, таблица идёт на всю ширину. -->
-	{#if production || entity.imdb_rating}
+	<!-- Боковая колонка — «паспорт» работы: рейтинг IMDb, студии, награды значками и факты.
+	     Постера здесь нет: при трейлере в шапке он не нужен, а без трейлера уже стоит слева.
+	     Отдельного раздела «Награды» на карточке больше нет — списком категорий он занимал
+	     экран, а премия узнаётся по значку. Пусто во всём — колонки нет, таблица на всю ширину. -->
+	{#if production || entity.imdb_rating || entity.awards.length}
 		<About {entity}>
 			{#snippet aside()}<Production {entity} {production} />{/snippet}
 		</About>
 	{:else}
 		<About {entity} />
-	{/if}
-
-	<!-- Награды — из award_nominations, ссылками на церемонии; пусто — блока нет. -->
-	{#if entity.awards.length}
-		<Awards awards={entity.awards} />
 	{/if}
 
 	<!-- Приквелы, сиквелы, ремейки — только если есть; рекомендации — заглушкой, пока нет API. -->

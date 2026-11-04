@@ -50,15 +50,16 @@
 {#if sections.length > 1}
 	<nav
 		class={[
-			// На телефоне под полосой уже висит липкая шапка карточки (StickyHeader) — встаём под
-			// неё, иначе она окажется перекрыта.
-			'sticky top-[6.75rem] z-10 -mx-4 mb-8 border-b border-base-300 bg-base-100/90 px-4 backdrop-blur-md transition duration-200 md:top-16',
+			// fixed, а не sticky: скрытая полоса не должна занимать место в потоке — из-за него
+			// между трейлером и «О фильме» зиял пустой экран. На телефоне встаёт под липкой
+			// шапкой карточки (StickyHeader), иначе перекрыла бы её.
+			'fixed inset-x-0 top-[6.75rem] z-10 border-b border-base-300 bg-base-100/90 backdrop-blur-md transition duration-200 md:top-16',
 			shown ? 'opacity-100' : 'pointer-events-none opacity-0'
 		]}
 		aria-label="Разделы страницы"
 	>
 		<!-- Узкий экран листает строку: разделов до семи, в 390 px они не помещаются. -->
-		<ul class="scrollbar-hide flex gap-1 overflow-x-auto py-2">
+		<ul class="scrollbar-hide mx-auto flex max-w-6xl gap-1 overflow-x-auto px-4 py-2">
 			{#each sections as section (section.id)}
 				<li>
 					<a

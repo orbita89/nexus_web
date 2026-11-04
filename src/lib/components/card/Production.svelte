@@ -2,7 +2,9 @@
 	import { navigating } from '$app/state';
 	import type { SchemaEntityDetail } from '#lib/api/generated/catalog.ts';
 	import type { Production } from '#lib/catalog/card.ts';
+	import { editionHref } from '#lib/catalog/awards.ts';
 	import { compact } from '#lib/catalog/labels.ts';
+	import AwardLogo from '#lib/components/catalog/AwardLogo.svelte';
 	import StudioLogo from '#lib/components/catalog/StudioLogo.svelte';
 
 	// Производство и факты — боковая колонка рядом с таблицей «О фильме» (на телефоне — под ней):
@@ -19,8 +21,19 @@
 		production?: Production | null;
 	} = $props();
 
-	const wins = $derived(production?.awards.filter((a) => a.won) ?? []);
-	const nominations = $derived(production?.awards.filter((a) => !a.won) ?? []);
+	// Награды — значками: логотип премии (или статуэтка), победы впереди. Что именно за награда,
+	// говорит подсказка при наведении — списком «Лучшие визуальные эффекты» они занимали экран,
+	// а сама премия узнаётся по значку.
+	const trophies = $derived(
+		entity.awards.toSorted(
+			(a, b) =>
+				Number(b.won) - Number(a.won) ||
+				a.year - b.year ||
+				a.award.title.localeCompare(b.award.title, 'ru')
+		)
+	);
+	/** Текстовые награды из metadata — запасной путь, когда структурированных нет. */
+	const plainAwards = $derived(trophies.length ? [] : (production?.awards ?? []));
 	/** Рейтинг IMDb есть в каталоге, но на карточке его до сих пор не показывали. */
 	const imdb = $derived(entity.imdb_rating ?? null);
 </script>
@@ -90,20 +103,35 @@
 		</div>
 	{/if}
 
-	{#if production?.awards.length}
-		<div class="flex flex-col gap-3">
-			{#if wins.length}
-				<div>
-					{@render heading('Награды')}
-					{@render awardList(wins, 'Награды')}
-				</div>
-			{/if}
-			{#if nominations.length}
-				<div>
-					{@render heading('Номинации')}
-					{@render awardList(nominations, 'Номинации')}
-				</div>
-			{/if}
+	{#if trophies.length}
+		<div>
+			{@render heading('Награды')}
+			<ul class="flex flex-wrap gap-2" aria-label="Награды и номинации">
+				{#each trophies as item, i (i)}
+					{@const what = `${item.award.title} ${item.year} · ${item.category.title}${item.won ? '' : ' · номинация'}`}
+					<li>
+						<!-- Подсказка видна при наведении, а для скринридера то же самое в aria-label. -->
+						<a
+							href={editionHref(item.award.slug, item.year)}
+							class={[
+								'tooltip block rounded-box ring-1 transition hover:ring-primary',
+								item.won ? 'ring-base-content/15' : 'opacity-60 ring-transparent grayscale'
+							]}
+							data-tip={what}
+							aria-label={what}
+						>
+							<AwardLogo title={item.award.title} logoUrl={item.award.logo_url} size="size-10" />
+						</a>
+					</li>
+				{/each}
+			</ul>
+		</div>
+	{/if}
+
+	{#if plainAwards.length}
+		<div>
+			{@render heading('Награды')}
+			{@render awardList(plainAwards, 'Награды')}
 		</div>
 	{/if}
 
