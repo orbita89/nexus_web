@@ -138,7 +138,10 @@
 <section
 	bind:this={root}
 	class={[
-		'relative bg-base-100',
+		// Своего фона у шапки нет: под растворяющимся низом кадра должен просвечивать фон
+		// страницы со свечением, иначе маска упирается в плоский base-100 и стык остаётся виден.
+		'relative',
+		fullscreen && 'bg-base-100',
 		// Во всю ширину страницы из контейнера — сдвигом на половину. Ширина — 100cqw (контейнер
 		// страницы в +layout.svelte), а не 100vw: справа закреплена панель чата, и по 100vw шапка
 		// уезжала бы влево на половину её ширины, обрезая название и кнопки. В полном экране сдвиг
@@ -157,7 +160,12 @@
 				? 'h-screen'
 				: sources.length
 					? 'aspect-video md:aspect-auto md:h-[min(56.25vw,82vh)] md:min-h-[30rem]'
-					: 'h-40 md:h-[26rem]'
+					: 'h-40 md:h-[26rem]',
+			// Низ кадра растворяется в странице маской прозрачности, а не затемнением в base-100:
+			// под шапкой лежит фон со свечением, и гашение в плоский цвет давало видимый стык —
+			// трейлер переставал читаться как одно целое со страницей.
+			!fullscreen &&
+				'[mask-image:linear-gradient(to_bottom,#000_62%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,#000_62%,transparent_100%)]'
 		]}
 	>
 		{#if coverUrl}
@@ -202,7 +210,7 @@
 		<!-- Затемнение к фону страницы: снизу и слева — под текст. В полном экране — только видео. -->
 		{#if !fullscreen}
 			<div
-				class="pointer-events-none absolute inset-0 bg-linear-to-t from-base-100 via-base-100/0 via-35% to-transparent"
+				class="pointer-events-none absolute inset-0 bg-linear-to-t from-base-100/80 via-base-100/0 via-45% to-transparent"
 				aria-hidden="true"
 			></div>
 			<div
