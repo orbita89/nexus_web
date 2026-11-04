@@ -8,19 +8,22 @@
 	let {
 		meta,
 		class: className = HERO_GLASS,
-		short = false
+		short = false,
+		title = undefined
 	}: {
 		meta: RoomMeta;
 		class?: string;
-		/** В тесном ряду шапки подпись прячем до широкого экрана — остаётся иконка. */
+		/** В тесном ряду шапки подписи нет — остаётся иконка с подсказкой. */
 		short?: boolean;
+		/** Подсказка: сколько в комнате сообщений и идёт ли разговор сейчас. */
+		title?: string;
 	} = $props();
 </script>
 
 <button
 	class={className}
-	aria-label="Открыть чат"
-	title={short ? 'Открыть чат' : undefined}
+	aria-label={title ?? 'Открыть чат'}
+	title={short ? (title ?? 'Открыть чат') : undefined}
 	onclick={() => chat.open({ ...meta })}
 >
 	<svg

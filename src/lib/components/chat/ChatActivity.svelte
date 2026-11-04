@@ -9,10 +9,23 @@
 	// как пустая, и по карточке не понять, что произведение обсуждают. Комната публичная
 	// (GET /chat/{kind}/{slug} без токена), поэтому спрашиваем её в браузере — страница карточки
 	// статическая, число в HTML зашивать нельзя.
+	//
+	// Число — бейджем на самой кнопке, а разговор за сутки — зелёной точкой: слово «обсуждают»
+	// рядом с иконкой читалось как чужая подпись в ряду кнопок.
 	let { meta, kind, slug }: { meta: RoomMeta; kind: string; slug: string } = $props();
 
 	let messages = $state(0);
 	let recent = $state(0);
+
+	const hint = $derived(
+		recent
+			? `Обсуждают: ${plural(recent, ['сообщение', 'сообщения', 'сообщений'])} за сутки`
+			: messages
+				? `Открыть чат: ${plural(messages, ['сообщение', 'сообщения', 'сообщений'])}`
+				: 'Открыть чат'
+	);
+	/** 1 240 на бейдже не помещается — после тысячи «1к». */
+	const badge = $derived(messages > 999 ? `${Math.floor(messages / 1000)}к` : String(messages));
 
 	$effect(() => {
 		const path = { kind, slug };
@@ -30,14 +43,14 @@
 	});
 </script>
 
-<span class="inline-flex items-center gap-2">
-	<ChatButton {meta} short />
-	{#if recent}
-		<!-- Писали за сутки — здесь разговор идёт прямо сейчас, а не «был когда-то». -->
-		<span class="text-xs font-bold text-success" title="{recent} за сутки">обсуждают</span>
-	{:else if messages}
-		<span class="text-xs text-base-content/50"
-			>{plural(messages, ['сообщение', 'сообщения', 'сообщений'])}</span
+<span class="indicator">
+	{#if messages}
+		<span
+			class={[
+				'indicator-item badge px-1.5 badge-xs',
+				recent ? 'badge-success' : 'border-base-300 bg-base-200 text-base-content/70'
+			]}>{badge}</span
 		>
 	{/if}
+	<ChatButton {meta} short title={hint} />
 </span>
