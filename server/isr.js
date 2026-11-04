@@ -16,10 +16,16 @@ const gz = promisify(gzip);
  * не попадут `..` и `%2e`. Те же адреса — в location статики deploy/nginx.conf.
  */
 export const STATIC_PAGE =
-	/^(\/(?:films|series|books|games|studios)\/[a-z0-9]+(?:-[a-z0-9]+)*|\/awards\/[a-z0-9]+(?:-[a-z0-9]+)*(?:\/\d{4})?)(\/__data\.json)?$/;
+	/^(\/(?:films|series|books|games|paintings|studios)\/[a-z0-9]+(?:-[a-z0-9]+)*|\/awards\/[a-z0-9]+(?:-[a-z0-9]+)*(?:\/\d{4})?)(\/__data\.json)?$/;
 
 /** Раздел в адресе по типу сущности — как KINDS в src/lib/catalog/kinds.ts. */
-const SECTION = { movie: 'films', series: 'series', book: 'books', game: 'games' };
+const SECTION = {
+	movie: 'films',
+	series: 'series',
+	book: 'books',
+	game: 'games',
+	painting: 'paintings'
+};
 /**
  * Каталоги статики на диске: разделы карточек, студии и награды (списка студий в API нет — только
  * диск; у наград внутри премии ещё и годы, поэтому обход рекурсивный).

@@ -4,7 +4,7 @@
 	import { plural } from '#lib/catalog/labels.ts';
 	import { byKindRows } from '#lib/social/profile.ts';
 	import { profileQuery } from '#lib/social/profile-data.svelte.ts';
-	import { REACTIONS } from '#lib/social/reactions.ts';
+	import { LEGACY_REACTIONS } from '#lib/social/reactions.ts';
 	import { displayName, formatRating } from '#lib/social/reviews.ts';
 	import Seo from '#lib/components/catalog/Seo.svelte';
 	import ProfileComments from '#lib/components/social/ProfileComments.svelte';
@@ -138,7 +138,7 @@
 				<section aria-labelledby="stats-reactions" class="rounded-box bg-base-200 p-5">
 					<h3 id="stats-reactions" class="mb-3 text-lg font-bold">Реакции</h3>
 					<ul class="flex flex-wrap gap-3">
-						{#each REACTIONS as r (r.key)}
+						{#each LEGACY_REACTIONS as r (r.key)}
 							<li class="flex items-center gap-1.5" title={r.label}>
 								<span class="text-lg" aria-hidden="true">{r.emoji}</span>
 								<span class="font-semibold tabular-nums">{s.reactions[r.key]}</span>
