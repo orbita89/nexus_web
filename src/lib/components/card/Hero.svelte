@@ -2,7 +2,6 @@
 	import type { Snippet } from 'svelte';
 	import type { SchemaEntityDetail } from '#lib/api/generated/catalog.ts';
 	import type { TrailerSource } from '#lib/catalog/trailer.ts';
-	import { heroFacts } from '#lib/catalog/card.ts';
 	import CardHero from '#lib/components/catalog/CardHero.svelte';
 	import ArtNav from '#lib/components/card/ArtNav.svelte';
 	import ArtViewer from '#lib/components/catalog/ArtViewer.svelte';
@@ -30,7 +29,6 @@
 	} = $props();
 
 	const genres = $derived(entity.tags.filter((t) => t.kind === 'genre'));
-	const facts = $derived(heroFacts(entity));
 </script>
 
 {#snippet content()}
@@ -51,17 +49,6 @@
 			{/each}
 		</ul>
 	{/if}
-	<!-- Год, длительность, возраст, страна — здесь: их спрашивают первыми, а идти за ними вниз
-	     в таблицу «О фильме» не должно быть нужно. -->
-	{#if facts.length}
-		<p class="mt-2 flex flex-wrap items-center gap-x-2 text-sm text-base-content/60">
-			{#each facts as fact, i (fact)}
-				{#if i}<span class="text-base-content/30" aria-hidden="true">·</span>{/if}<span>{fact}</span
-				>
-			{/each}
-		</p>
-	{/if}
-
 	<div class="mt-7 flex flex-wrap items-center gap-3">
 		{@render actions()}
 	</div>
