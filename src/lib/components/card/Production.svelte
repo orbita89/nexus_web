@@ -106,21 +106,28 @@
 	{#if trophies.length}
 		<div>
 			{@render heading('Награды')}
-			<ul class="flex flex-wrap gap-2" aria-label="Награды и номинации">
+			<!-- На широком экране — ряд значков, что за награда говорит подсказка при наведении.
+			     На телефоне наводить нечем, поэтому там значки идут списком с подписью рядом. -->
+			<ul
+				class="flex gap-2 max-sm:flex-col max-sm:gap-3 sm:flex-wrap"
+				aria-label="Награды и номинации"
+			>
 				{#each trophies as item, i (i)}
 					{@const what = `${item.award.title} ${item.year} · ${item.category.title}${item.won ? '' : ' · номинация'}`}
 					<li>
-						<!-- Подсказка видна при наведении, а для скринридера то же самое в aria-label. -->
 						<a
 							href={editionHref(item.award.slug, item.year)}
 							class={[
-								'tooltip block rounded-box ring-1 transition hover:ring-primary',
+								'flex items-center gap-3 rounded-box ring-1 transition hover:ring-primary max-sm:w-full sm:tooltip sm:block',
 								item.won ? 'ring-base-content/15' : 'opacity-60 ring-transparent grayscale'
 							]}
 							data-tip={what}
 							aria-label={what}
 						>
 							<AwardLogo title={item.award.title} logoUrl={item.award.logo_url} size="size-10" />
+							<span class="min-w-0 flex-1 text-xs leading-snug text-base-content/70 sm:hidden"
+								>{what}</span
+							>
 						</a>
 					</li>
 				{/each}
