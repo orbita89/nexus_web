@@ -43,7 +43,11 @@
 		{ href: `${base}/threads`, title: 'Темы', n: profile.threads_count },
 		{ href: `${base}/collections`, title: 'Коллекции', n: profile.collections_count },
 		// Оценки, отметки и комментарии — разделы «Статистики», своих вкладок у них нет.
-		...(stats ? [{ href: `${base}/stats`, title: 'Статистика', n: null }] : [])
+		...(stats ? [{ href: `${base}/stats`, title: 'Статистика', n: null }] : []),
+		// Заметки — только свои: чужих у бэкенда нет как маршрута, и вкладку чужому не показываем.
+		...(session.user?.username === user.username
+			? [{ href: `${base}/notes`, title: 'Заметки', n: null }]
+			: [])
 	]);
 	const isActive = (href: string) => page.url.pathname === href;
 

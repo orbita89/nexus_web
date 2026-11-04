@@ -14,6 +14,7 @@
 	import Hero from '#lib/components/card/Hero.svelte';
 	import MarkButtons from '#lib/components/card/MarkButtons.svelte';
 	import MoreMenu from '#lib/components/card/MoreMenu.svelte';
+	import MyNote from '#lib/components/card/MyNote.svelte';
 	import Production from '#lib/components/card/Production.svelte';
 	import RateButton from '#lib/components/card/RateButton.svelte';
 	import SectionNav from '#lib/components/card/SectionNav.svelte';
@@ -78,6 +79,7 @@
 			{ id: 'about', title: kind.kind === 'book' ? 'О книге' : 'О фильме' },
 			hasCast ? { id: 'credits', title: 'В ролях' } : null,
 			entity.related.length ? { id: 'related', title: 'Связанные' } : null,
+			session.status === 'authed' ? { id: 'note', title: 'Заметка' } : null,
 			{ id: 'activity', title: 'Рецензии' },
 			{ id: 'collections', title: 'В коллекциях' }
 		].filter((s): s is { id: string; title: string } => !!s)
@@ -239,6 +241,10 @@
 
 	<!-- Ленивая зона: в статический HTML входят только заголовки и заглушки. Блок монтируется,
 	     когда раздел подходит к экрану, и сам грузит данные из API. -->
+	<!-- Личная заметка — перед публичными рецензиями: это запись для себя, и её место рядом с
+	     произведением, а не в ленте. У гостя блока нет. -->
+	<MyNote slug={entity.slug} />
+
 	<ClientSection id="activity" title="Рецензии и обсуждения" placeholder="h-80">
 		<ActivityFeed slug={entity.slug} {live} {my} {released} />
 	</ClientSection>
