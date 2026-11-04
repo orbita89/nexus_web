@@ -27,17 +27,18 @@
 		<div class={['grid gap-4', aside && 'lg:grid-cols-[minmax(0,1fr)_20rem]']}>
 			<!-- Плашка 1: одна таблица — оригинальное название, описание и факты, все строки с подписью. -->
 			{#if original || entity.description || rows.length}
-				<!-- На телефоне подписи забирали половину ширины, и значения ломались по два слова:
-				     там подпись идёт над значением, две колонки возвращаются с sm. -->
+				<!-- Колонка подписей — по самой длинной из них (max-content), а сами подписи прижаты
+				     вправо: при фиксированных 11rem между «Страна» и значением зияла половина ширины.
+				     На телефоне подпись идёт над значением — там две колонки отнимали место у текста. -->
 				<dl
-					class="grid gap-x-4 gap-y-3 rounded-box bg-base-200 p-5 text-sm ring-1 ring-base-content/5 max-sm:gap-y-1 sm:grid-cols-[11rem_minmax(0,1fr)] sm:p-7"
+					class="grid gap-x-5 gap-y-2.5 rounded-box bg-base-200 p-5 text-sm ring-1 ring-base-content/5 max-sm:gap-y-1 sm:grid-cols-[max-content_minmax(0,1fr)] sm:p-7"
 				>
 					{#if original}
-						<dt class="text-base-content/50 max-sm:text-xs">Оригинальное название</dt>
+						<dt class="text-base-content/50 max-sm:text-xs sm:text-right">Оригинальное название</dt>
 						<dd class="font-medium max-sm:mb-2">{original}</dd>
 					{/if}
 					{#if entity.description}
-						<dt class="text-base-content/50 max-sm:text-xs">Описание</dt>
+						<dt class="text-base-content/50 max-sm:text-xs sm:text-right">Описание</dt>
 						<dd class="max-sm:mb-2">
 							<Clamp lines={6} class="leading-7 text-base-content/90">
 								<p class="whitespace-pre-line">{entity.description}</p>
@@ -45,7 +46,7 @@
 						</dd>
 					{/if}
 					{#each rows as row (row.label)}
-						<dt class="text-base-content/50 max-sm:text-xs">{row.label}</dt>
+						<dt class="text-base-content/50 max-sm:text-xs sm:text-right">{row.label}</dt>
 						<dd class="max-sm:mb-2">
 							{#if row.links}
 								<!-- Люди — ссылки, и это должно быть видно без наведения: приглушённое
