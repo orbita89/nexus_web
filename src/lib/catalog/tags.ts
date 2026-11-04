@@ -9,7 +9,7 @@ import type {
 	SchemaTagKind,
 	SchemaTagWithCount
 } from '#lib/api/generated/catalog.ts';
-import { count } from '#lib/catalog/labels.ts';
+import { compact, count } from '#lib/catalog/labels.ts';
 import { kindWords } from '#lib/catalog/kinds.ts';
 
 /** `TagWithCount` с полями, которых в контракте ещё нет. */
@@ -36,8 +36,21 @@ export function tagBody<T extends object>(body: T, description: string, was?: st
 	return { ...body, description: next || null };
 }
 
+/** Сколько работ у тега: в разделе — только его («391 картина»), иначе всего по каталогу. */
+export function tagTotal(tag: TagEntry, kind?: SchemaEntityKind): number {
+	return kind ? (tag.by_kind?.[kind] ?? 0) : tag.entities_count;
+}
+
 /** Счётчик на карточке: в разделе — его словами («391 картина»), без раздела — нейтрально. */
 export function tagCount(tag: TagEntry, kind?: SchemaEntityKind): string {
-	if (kind) return count(tag.by_kind?.[kind] ?? 0, kindWords(kind));
+	if (kind) return count(tagTotal(tag, kind), kindWords(kind));
 	return count(tag.entities_count, ['произведение', 'произведения', 'произведений']);
+}
+
+/**
+ * Счётчик в плитке справочника: одно короткое число. Слово «произведений» рядом с названием
+ * не помещается и переносит его на две строки, а точное число есть на странице тега.
+ */
+export function tagCountShort(tag: TagEntry, kind?: SchemaEntityKind): string {
+	return compact(tagTotal(tag, kind));
 }

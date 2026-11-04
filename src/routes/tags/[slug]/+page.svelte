@@ -34,7 +34,11 @@
 />
 
 <header class="mb-6">
-	<a href="/tags" class="link text-sm text-primary link-hover">Теги</a>
+	{#if data.tag.kind === 'genre'}
+		<a href="/genres" class="link text-sm text-primary link-hover">Жанры</a>
+	{:else}
+		<a href="/tags" class="link text-sm text-primary link-hover">Теги</a>
+	{/if}
 	<h1 class="mt-1 text-3xl font-black sm:text-4xl">{data.tag.name}</h1>
 	<p class="mt-1 text-sm text-base-content/50">
 		{count(data.tag.entities_count, ['произведение', 'произведения', 'произведений'])} в каталоге

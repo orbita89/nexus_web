@@ -24,6 +24,17 @@ export function count(n: number, forms: readonly [string, string, string]): stri
 	return `${n.toLocaleString('ru-RU')} ${plural(n, forms)}`;
 }
 
+/**
+ * Короткое число для плиток: «13 тыс.» вместо «13 333 произведения» — слово не влезает, а
+ * порядок величины читается с одного взгляда. Точное число — в подсказке и на самой странице.
+ */
+export function compact(n: number): string {
+	if (n < 1000) return n.toLocaleString('ru-RU');
+	const thousands = n / 1000;
+	const value = thousands < 10 ? Math.round(thousands * 10) / 10 : Math.round(thousands);
+	return `${value.toLocaleString('ru-RU')} тыс.`;
+}
+
 const ROLES: Record<string, string> = {
 	actor: 'Актёр',
 	voice_actor: 'Озвучивание',
