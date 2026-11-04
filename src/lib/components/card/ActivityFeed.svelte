@@ -167,19 +167,20 @@
 			{#if session.status === 'guest'}
 				<a
 					href={loginUrl(page.url)}
-					class="min-w-0 flex-1 truncate text-sm text-base-content/45 hover:text-base-content/70"
+					class="min-w-0 flex-1 truncate rounded-full bg-base-100 px-4 py-2 text-sm text-base-content/50 ring-1 ring-base-300 transition-colors hover:text-base-content hover:ring-primary/50"
 					>Войдите, чтобы написать рецензию или начать обсуждение</a
 				>
 			{:else if released && session.status === 'authed' && my.loaded}
+				<!-- Строка-приглашение выглядит полем ввода: серая надпись без рамки читалась как
+				     подпись, и нажать на неё никто не пробовал. -->
 				<button
-					class="min-w-0 flex-1 truncate text-left text-sm text-base-content/45 hover:text-base-content/70"
+					class="min-w-0 flex-1 truncate rounded-full bg-base-100 px-4 py-2 text-left text-sm text-base-content/50 ring-1 ring-base-300 transition-colors hover:text-base-content hover:ring-primary/50"
 					onclick={() => (my.composing = true)}
-					>{my.review?.body
-						? 'Ваша рецензия уже есть — дополнить?'
-						: 'Что думаете о фильме?'}</button
+					>{my.review?.body ? 'Дополнить свою рецензию…' : 'Что думаете о фильме?'}</button
 				>
 			{:else}
-				<span class="min-w-0 flex-1 truncate text-sm text-base-content/35"
+				<span
+					class="min-w-0 flex-1 truncate rounded-full bg-base-100/50 px-4 py-2 text-sm text-base-content/35 ring-1 ring-base-300"
 					>{released ? 'Что думаете о фильме?' : 'Рецензии откроются после премьеры'}</span
 				>
 			{/if}

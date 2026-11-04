@@ -70,7 +70,7 @@
 {#snippet voteButton(value: Vote, label: string, count: number)}
 	{@const on = myVote === value}
 	{#if session.status === 'guest'}
-		<a href={loginUrl(page.url)} class={action} aria-label={label}
+		<a href={loginUrl(page.url)} class={action} aria-label={label} title={label}
 			>{@render thumb(value === -1, false)}{#if count}<span class="tabular-nums">{count}</span
 				>{/if}</a
 		>
@@ -80,7 +80,7 @@
 			aria-label={label}
 			aria-pressed={on}
 			disabled={own || session.status !== 'authed'}
-			title={own ? 'Своя рецензия' : undefined}
+			title={own ? 'Своя рецензия' : label}
 			onclick={() => toggle(value)}
 			>{@render thumb(value === -1, on)}{#if count}<span class="tabular-nums">{count}</span
 				>{/if}</button
@@ -93,8 +93,10 @@
 	role="group"
 	aria-label="Реакции на рецензию"
 >
-	{@render voteButton(1, 'Нравится', likes)}
-	{@render voteButton(-1, 'Не нравится', dislikes)}
+	<!-- Подписи — в подсказке и для скринридера: «полезная» и «бесполезная» объясняют, за что
+	     голос, а 👍 без слов читался как «нравится фильм». -->
+	{@render voteButton(1, 'Полезная рецензия', likes)}
+	{@render voteButton(-1, 'Бесполезная рецензия', dislikes)}
 	<button
 		class={[action, { 'text-base-content': open }]}
 		aria-expanded={open}
