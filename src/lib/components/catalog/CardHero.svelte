@@ -153,71 +153,78 @@
 	<!-- Фон: видео или размытая обложка. На телефоне — полоса 16:9, на десктопе — под текстом. -->
 	<div
 		class={[
-			'relative w-full overflow-hidden bg-black',
+			'relative w-full overflow-hidden',
 			// В полном экране — весь экран и на телефоне. С трейлером — кадр 16:9 (на десктопе до
 			// 82vh), без него — невысокая полоса фона.
 			fullscreen
 				? 'h-screen'
 				: sources.length
 					? 'aspect-video md:aspect-auto md:h-[min(56.25vw,82vh)] md:min-h-[30rem]'
-					: 'h-40 md:h-[26rem]',
-			// Низ кадра растворяется в странице маской прозрачности, а не затемнением в base-100:
-			// под шапкой лежит фон со свечением, и гашение в плоский цвет давало видимый стык —
-			// трейлер переставал читаться как одно целое со страницей.
-			!fullscreen &&
-				'[mask-image:linear-gradient(to_bottom,#000_62%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,#000_62%,transparent_100%)]'
+					: 'h-40 md:h-[26rem]'
 		]}
 	>
-		{#if coverUrl}
-			<img
-				src={coverUrl}
-				alt=""
-				class="absolute inset-0 h-full w-full scale-125 object-cover opacity-50 blur-3xl"
-			/>
-		{:else}
-			<div
-				class={[
-					'absolute inset-0 bg-linear-to-br via-base-200 to-base-100',
-					{
-						'from-primary/30': kind === 'movie',
-						'from-secondary/30': kind === 'series',
-						'from-accent/25': kind === 'book',
-						'from-info/25': kind === 'game'
-					}
-				]}
-			></div>
-		{/if}
-
-		{#if showVideo}
-			{#key src}
-				<!-- Чуть крупнее кадра: срезает края плеера с подписями. Клики проходят мимо: это фон. -->
-				<iframe
-					bind:this={frame}
-					{src}
-					title="Трейлер: {title}"
-					tabindex="-1"
+		<!-- Под маской — только само изображение: низ кадра растворяется в странице, а не гаснет
+		     в плоский base-100 (иначе на стыке со свечением фона видна прямая линия). Кнопки
+		     плеера остались снаружи: маска делает слой наложения, и внутри неё они и блёкли,
+		     и уходили под блок с названием. -->
+		<div
+			class={[
+				'absolute inset-0 bg-black',
+				!fullscreen &&
+					'[mask-image:linear-gradient(to_bottom,#000_62%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,#000_62%,transparent_100%)]'
+			]}
+		>
+			{#if coverUrl}
+				<img
+					src={coverUrl}
+					alt=""
+					class="absolute inset-0 h-full w-full scale-125 object-cover opacity-50 blur-3xl"
+				/>
+			{:else}
+				<div
 					class={[
-						'pointer-events-none absolute top-1/2 left-0 aspect-video w-full -translate-y-1/2 scale-[1.35] transition-opacity duration-700',
-						playingSrc === src && !held && !away ? 'opacity-100' : 'opacity-0'
+						'absolute inset-0 bg-linear-to-br via-base-200 to-base-100',
+						{
+							'from-primary/30': kind === 'movie',
+							'from-secondary/30': kind === 'series',
+							'from-accent/25': kind === 'book',
+							'from-info/25': kind === 'game'
+						}
 					]}
-					allow="autoplay; encrypted-media; picture-in-picture"
-					referrerpolicy="strict-origin-when-cross-origin"
-					onload={onFrameLoad}
-				></iframe>
-			{/key}
-		{/if}
+				></div>
+			{/if}
 
-		<!-- Затемнение к фону страницы: снизу и слева — под текст. В полном экране — только видео. -->
-		{#if !fullscreen}
-			<div
-				class="pointer-events-none absolute inset-0 bg-linear-to-t from-base-100/80 via-base-100/0 via-45% to-transparent"
-				aria-hidden="true"
-			></div>
-			<div
-				class="pointer-events-none absolute inset-0 hidden bg-linear-to-r from-base-100/95 via-base-100/50 via-35% to-transparent to-70% md:block"
-				aria-hidden="true"
-			></div>
-		{/if}
+			{#if showVideo}
+				{#key src}
+					<!-- Чуть крупнее кадра: срезает края плеера с подписями. Клики проходят мимо: это фон. -->
+					<iframe
+						bind:this={frame}
+						{src}
+						title="Трейлер: {title}"
+						tabindex="-1"
+						class={[
+							'pointer-events-none absolute top-1/2 left-0 aspect-video w-full -translate-y-1/2 scale-[1.35] transition-opacity duration-700',
+							playingSrc === src && !held && !away ? 'opacity-100' : 'opacity-0'
+						]}
+						allow="autoplay; encrypted-media; picture-in-picture"
+						referrerpolicy="strict-origin-when-cross-origin"
+						onload={onFrameLoad}
+					></iframe>
+				{/key}
+			{/if}
+
+			<!-- Затемнение к фону страницы: снизу и слева — под текст. В полном экране — только видео. -->
+			{#if !fullscreen}
+				<div
+					class="pointer-events-none absolute inset-0 bg-linear-to-t from-base-100/80 via-base-100/0 via-45% to-transparent"
+					aria-hidden="true"
+				></div>
+				<div
+					class="pointer-events-none absolute inset-0 hidden bg-linear-to-r from-base-100/95 via-base-100/50 via-35% to-transparent to-70% md:block"
+					aria-hidden="true"
+				></div>
+			{/if}
+		</div>
 
 		{#if showVideo}
 			<div class="absolute right-4 bottom-4 z-20 flex gap-2 md:right-8 md:bottom-10">
