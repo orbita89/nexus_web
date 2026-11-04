@@ -5,6 +5,7 @@
 	import { displayName, isEdited, isSpoiler, reviewDate } from '#lib/social/reviews.ts';
 	import Avatar from '#lib/components/Avatar.svelte';
 	import Clamp from '#lib/components/catalog/Clamp.svelte';
+	import Markdown from './Markdown.svelte';
 	import RatingBadge from './RatingBadge.svelte';
 	import ReviewActions from './ReviewActions.svelte';
 	import ModerateButton from './ModerateButton.svelte';
@@ -18,6 +19,7 @@
 	// Под текстом — 👍 / 👎 и комментарии (ReviewActions).
 	let {
 		review,
+		onedit,
 		showEntity = false,
 		showAuthor = !showEntity,
 		flat = false,
@@ -35,6 +37,8 @@
 		lines?: 3 | 6;
 		/** После удаления модератором: перечитать список (по умолчанию — load страницы). */
 		onremoved?: () => unknown;
+		/** Своя рецензия: открыть её редактор прямо здесь, а не искать в панели «Оценить». */
+		onedit?: () => void;
 	} = $props();
 
 	let revealed = $state(false);
@@ -42,6 +46,8 @@
 	const entityLink = $derived(refHref(review.entity));
 	// Админ удаляет чужие рецензии (свою — через «Ваша оценка»).
 	const moderate = $derived(session.user?.role === 'admin' && session.user.id !== review.author.id);
+	/** Своя запись: правка — там же, где читаешь, а не в другом углу страницы. */
+	const own = $derived(!!onedit && session.user?.id === review.author.id);
 </script>
 
 <article class={flat ? 'py-4' : 'rounded-box bg-base-200 p-4 ring-1 ring-base-300'}>
@@ -104,8 +110,9 @@
 				aria-hidden={hidden || undefined}
 				data-testid="review-body"
 			>
-				<Clamp {lines} more="Читать полностью" class="leading-relaxed text-base-content/85">
-					<p class="whitespace-pre-line">{review.body}</p>
+				<!-- Лёгкая разметка: **жирный**, списки, цитаты. Без {@html} — см. lib/social/markdown.ts. -->
+				<Clamp {lines} more="Читать полностью" class="text-base-content/85">
+					<Markdown text={review.body} />
 				</Clamp>
 			</div>
 			{#if hidden}
@@ -119,7 +126,12 @@
 				</button>
 			{/if}
 		</div>
-		<ReviewActions {review} />
+		<div class="flex flex-wrap items-center gap-x-4">
+			<ReviewActions {review} />
+			{#if own}
+				<button class="mt-2 link text-sm text-primary link-hover" onclick={onedit}>Изменить</button>
+			{/if}
+		</div>
 	{:else if showEntity}
 		<p class="mt-2 text-sm text-base-content/50">Оценка без рецензии</p>
 	{/if}

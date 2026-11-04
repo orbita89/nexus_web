@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { ApiError, errorMessage } from '#lib/api/errors.ts';
 	import { api, session } from '#lib/auth/session.svelte.ts';
+	import Markdown from '#lib/components/social/Markdown.svelte';
+	import { MARKDOWN_HINT } from '#lib/social/markdown.ts';
+	import { noteComposer } from '#lib/social/note.svelte.ts';
 	import { getNote, NOTE_LIMIT, putNote, removeNote, type Note } from '#lib/social/notes.ts';
 
 	// «Моя заметка» — личная запись о произведении: её не видит никто, кроме автора. Пока заметки
@@ -43,6 +46,14 @@
 		error = '';
 		editing = true;
 	}
+
+	// Редактор открывают и отсюда, и из панели «Оценить» в шапке — через общее состояние.
+	$effect(() => {
+		if (noteComposer.open && !editing) {
+			start();
+			noteComposer.open = false;
+		}
+	});
 
 	async function save(event: SubmitEvent) {
 		event.preventDefault();
@@ -106,6 +117,7 @@
 					maxlength={NOTE_LIMIT}
 					placeholder="С чего начать, на что обратить внимание, кто советовал"
 					bind:value={draft}></textarea>
+				<p class="text-xs text-base-content/40">{MARKDOWN_HINT}</p>
 				<div class="flex flex-wrap items-center gap-3">
 					<button class="btn btn-primary btn-sm" disabled={busy || !draft.trim()}>Сохранить</button>
 					<button
@@ -143,19 +155,18 @@
 						{/if}
 					</div>
 				</div>
-				<p class="whitespace-pre-line text-base-content/90">{note.body}</p>
+				<Markdown text={note.body} class="text-base-content/90" />
 			</div>
 		{:else}
-			<!-- Пусто — одна строка, а не блок: предлагаем, но не занимаем экран. -->
+			<!-- Пусто — одна строка, а не блок. Но это именно кнопка с рамкой и плюсом: прежняя
+			     серая надпись выглядела подписью, и что сюда можно писать, никто не понимал. -->
 			<button
-				class="group flex w-full items-center gap-2 rounded-box px-1 py-2 text-left text-sm text-base-content/45 transition-colors hover:text-base-content/80"
+				class="flex w-full items-center gap-2 rounded-box border border-dashed border-base-content/15 px-4 py-3 text-left text-sm text-base-content/60 transition-colors hover:border-warning/40 hover:bg-warning/5 hover:text-base-content"
 				onclick={start}
 			>
+				<span class="text-lg leading-none text-warning/70" aria-hidden="true">+</span>
 				{@render lock()}
-				<span>Заметка для себя — видно только вам</span>
-				<span class="ml-auto text-primary opacity-0 transition-opacity group-hover:opacity-100"
-					>Добавить</span
-				>
+				<span>Добавить заметку для себя — видно только вам</span>
 			</button>
 		{/if}
 		{#if error}<p role="alert" class="mt-2 text-sm text-error">{error}</p>{/if}

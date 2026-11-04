@@ -3,6 +3,7 @@
 	import { session } from '#lib/auth/session.svelte.ts';
 	import { formatDate } from '#lib/catalog/labels.ts';
 	import type { MyReviewState } from '#lib/social/my-review.svelte.ts';
+	import { openNote } from '#lib/social/note.svelte.ts';
 	import { loginUrl } from '#lib/utils/redirect.ts';
 	import { HERO_GLASS as GLASS, HERO_PRIMARY as PRIMARY } from './buttons.ts';
 
@@ -134,6 +135,15 @@
 					<button class="link link-primary link-hover" onclick={writeReview}>
 						{my.review?.body ? 'Изменить рецензию' : 'Написать рецензию'}
 					</button>
+					<!-- Рядом с рецензией: это второе, что человек может записать о фильме, только
+					     для себя. Панель закрываем — редактор заметки ниже по странице. -->
+					<button
+						class="link link-primary link-hover"
+						onclick={() => {
+							close();
+							openNote();
+						}}>Заметка</button
+					>
 					{#if my.rating != null}
 						<button
 							class="link text-base-content/60 link-hover"

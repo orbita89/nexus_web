@@ -7,6 +7,7 @@
 	import EmptyState from '#lib/components/catalog/EmptyState.svelte';
 	import LoadError from '#lib/components/catalog/LoadError.svelte';
 	import Seo from '#lib/components/catalog/Seo.svelte';
+	import Markdown from '#lib/components/social/Markdown.svelte';
 	import TimeAgo from '#lib/components/social/TimeAgo.svelte';
 	import { listMyNotes, type NoteWithEntity } from '#lib/social/notes.ts';
 
@@ -89,7 +90,7 @@
 					{/if}
 					<span class="text-xs text-base-content/40"><TimeAgo iso={note.updated_at} /></span>
 				</div>
-				<p class="text-sm whitespace-pre-line text-base-content/80">{note.body}</p>
+				<Markdown text={note.body} class="text-sm text-base-content/80" />
 			</li>
 		{/each}
 	</ul>

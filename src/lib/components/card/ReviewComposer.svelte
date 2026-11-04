@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import type { MyReviewState } from '#lib/social/my-review.svelte.ts';
+	import { MARKDOWN_HINT } from '#lib/social/markdown.ts';
 	import { BODY_LIMIT } from '#lib/social/reviews.ts';
 	import Alert from '#lib/components/Alert.svelte';
 
@@ -36,7 +37,13 @@
 </script>
 
 {#if released && my.composing}
-	<form class="flex flex-col gap-2 py-4" onsubmit={submit} aria-label="Ваша рецензия">
+	<!-- Форма — отдельной плашкой: внутри ленты она сливалась с записями, и было непонятно,
+	     где заканчивается своя рецензия и начинаются чужие. -->
+	<form
+		class="my-4 flex flex-col gap-3 rounded-box bg-base-100 p-4 ring-1 ring-base-300"
+		onsubmit={submit}
+		aria-label="Ваша рецензия"
+	>
 		<div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
 			<label for="review-body" class="font-semibold">Ваша рецензия</label>
 			<div class="flex items-center gap-2">
@@ -62,10 +69,11 @@
 		</div>
 		<textarea
 			id="review-body"
-			class="textarea min-h-36 w-full"
+			class="textarea min-h-36 w-full resize-y bg-base-200 text-base leading-relaxed focus:outline-primary/60"
 			maxlength={BODY_LIMIT}
 			placeholder="Что понравилось, что нет — без спойлеров"
 			bind:value={draft}></textarea>
+		<p class="-mt-1 text-xs text-base-content/40">{MARKDOWN_HINT}</p>
 		<div class="flex flex-wrap items-center gap-2">
 			<label class="mr-2 flex cursor-pointer items-center gap-2 text-sm">
 				<input type="checkbox" class="checkbox checkbox-sm" bind:checked={spoiler} />
@@ -75,6 +83,7 @@
 			<button type="button" class="btn btn-ghost btn-sm" onclick={() => (my.composing = false)}
 				>Отмена</button
 			>
+			<span class="ml-auto"></span>
 			{#if my.review}
 				{#if confirmDelete}
 					<span class="flex items-center gap-2 text-sm">
@@ -94,7 +103,7 @@
 					>
 				{/if}
 			{/if}
-			<span class="ml-auto text-xs text-base-content/40 tabular-nums"
+			<span class="text-xs text-base-content/40 tabular-nums"
 				>{draft.length.toLocaleString('ru-RU')} / {BODY_LIMIT.toLocaleString('ru-RU')}</span
 			>
 		</div>

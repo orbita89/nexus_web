@@ -79,9 +79,9 @@ describe('ReviewCard', () => {
 		render(ReviewCard, { review: review() });
 		const actions = page.getByRole('group', { name: 'Реакции на рецензию' });
 		await expect
-			.element(actions.getByLabelText('Нравится', { exact: true }))
+			.element(actions.getByLabelText('Полезная рецензия', { exact: true }))
 			.toHaveTextContent('2');
-		await expect.element(actions.getByLabelText('Не нравится')).toHaveTextContent('1');
+		await expect.element(actions.getByLabelText('Бесполезная рецензия')).toHaveTextContent('1');
 		const toggle = actions.getByRole('button', { name: /Комментарии/ });
 		await expect.element(toggle).toHaveAttribute('aria-expanded', 'false');
 		expect(fetch).not.toHaveBeenCalled();

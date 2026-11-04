@@ -231,7 +231,13 @@
 			{#each entries as entry (entry.kind + (entry.kind === 'review' ? entry.review.id : entry.thread.id))}
 				<li class="min-w-0">
 					{#if entry.kind === 'review'}
-						<ReviewCard review={entry.review} flat lines={3} onremoved={() => live.refresh()} />
+						<ReviewCard
+							review={entry.review}
+							flat
+							lines={3}
+							onremoved={() => live.refresh()}
+							onedit={() => (my.composing = true)}
+						/>
 					{:else}
 						<ThreadItem thread={entry.thread} flat />
 					{/if}

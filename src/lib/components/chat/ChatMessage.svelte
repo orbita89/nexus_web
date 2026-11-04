@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { errorMessage } from '#lib/api/errors.ts';
 	import { session } from '#lib/auth/session.svelte.ts';
+	import MarkdownInline from '#lib/components/social/MarkdownInline.svelte';
+	import { parseInline } from '#lib/social/markdown.ts';
 	import { chat, type Item, type Message } from '#lib/chat/chat.svelte.ts';
 	import {
 		authorName,
@@ -240,13 +242,17 @@
 		{:else}
 			{#if text}
 				<p class="text-[13px] break-words whitespace-pre-wrap">
+					<!-- Упоминания разбирает чат, остальное — лёгкая разметка (**жирный**, `код`,
+					     ссылки): в сообщениях ею пользуются чаще всего. -->
 					{#each parts as part, i (i)}{#if part.t === 'mention'}<a
 								href="/u/{part.v}"
 								class={[
 									'link link-primary',
 									{ 'rounded bg-primary/15 px-0.5': part.v === session.user?.username }
 								]}>@{part.v}</a
-							>{:else}{part.v}{/if}{/each}{#if inlineTime}<span
+							>{:else}<MarkdownInline
+								parts={parseInline(part.v)}
+							/>{/if}{/each}{#if inlineTime}<span
 							class="float-right mt-1 ml-2 inline-flex translate-y-0.5 items-center gap-1 text-[11px] whitespace-nowrap text-white/50"
 						>
 							{#if item.edited_at}<span>изм.</span>{/if}
