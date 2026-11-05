@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import type { MyReviewState } from '#lib/social/my-review.svelte.ts';
-	import { MARKDOWN_HINT } from '#lib/social/markdown.ts';
 	import { BODY_LIMIT } from '#lib/social/reviews.ts';
 	import Alert from '#lib/components/Alert.svelte';
 
@@ -67,13 +66,14 @@
 				</div>
 			</div>
 		</div>
+		<!-- Поле без собственной рамки: плашка формы уже отделяет его от ленты, вторая обводка
+		     только утяжеляла. На фокусе — тонкое кольцо, а не толстая белая граница. -->
 		<textarea
 			id="review-body"
-			class="textarea min-h-36 w-full resize-y bg-base-200 text-base leading-relaxed focus:outline-primary/60"
+			class="min-h-36 w-full resize-y rounded-box bg-base-200 p-3 text-base leading-relaxed placeholder:text-base-content/35 focus:ring-1 focus:ring-primary/50 focus:outline-none"
 			maxlength={BODY_LIMIT}
 			placeholder="Что понравилось, что нет — без спойлеров"
 			bind:value={draft}></textarea>
-		<p class="-mt-1 text-xs text-base-content/40">{MARKDOWN_HINT}</p>
 		<div class="flex flex-wrap items-center gap-2">
 			<label class="mr-2 flex cursor-pointer items-center gap-2 text-sm">
 				<input type="checkbox" class="checkbox checkbox-sm" bind:checked={spoiler} />

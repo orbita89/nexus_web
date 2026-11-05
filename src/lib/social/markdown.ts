@@ -146,6 +146,3 @@ export function parseMarkdown(text: string): Block[] {
 	flushAll();
 	return blocks;
 }
-
-/** Подсказка под полем ввода: что из разметки понимает редактор. */
-export const MARKDOWN_HINT = '**жирный**, *курсив*, `код`, > цитата, списки и ссылки';

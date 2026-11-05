@@ -2,7 +2,6 @@
 	import { ApiError, errorMessage } from '#lib/api/errors.ts';
 	import { api, session } from '#lib/auth/session.svelte.ts';
 	import Markdown from '#lib/components/social/Markdown.svelte';
-	import { MARKDOWN_HINT } from '#lib/social/markdown.ts';
 	import { noteComposer } from '#lib/social/note.svelte.ts';
 	import { getNote, NOTE_LIMIT, putNote, removeNote, type Note } from '#lib/social/notes.ts';
 
@@ -112,12 +111,13 @@
 				<p class="flex items-center gap-2 text-xs text-base-content/50">
 					{@render lock()} Заметка для себя · видно только вам
 				</p>
+				<!-- Поле без рамки: рамка в рамке (плашка + обводка textarea) выглядела тяжело.
+				     Границу держит фон, на фокусе — тонкое кольцо. -->
 				<textarea
-					class="textarea min-h-28 w-full bg-base-100"
+					class="min-h-28 w-full resize-y rounded-box bg-base-100 p-3 leading-relaxed placeholder:text-base-content/35 focus:ring-1 focus:ring-warning/40 focus:outline-none"
 					maxlength={NOTE_LIMIT}
 					placeholder="С чего начать, на что обратить внимание, кто советовал"
 					bind:value={draft}></textarea>
-				<p class="text-xs text-base-content/40">{MARKDOWN_HINT}</p>
 				<div class="flex flex-wrap items-center gap-3">
 					<button class="btn btn-primary btn-sm" disabled={busy || !draft.trim()}>Сохранить</button>
 					<button
