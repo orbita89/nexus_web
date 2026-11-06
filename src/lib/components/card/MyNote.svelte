@@ -107,7 +107,7 @@
 			     должен выделяться среди публичных плашек, оставаясь спокойным. Приём обычный:
 			     внешний слой — градиент, внутренний — фон страницы поверх него. -->
 			<div
-				class="rounded-2xl bg-linear-to-r from-primary via-warning to-secondary p-px shadow-[0_0_45px_-18px] shadow-primary/60"
+				class="rounded-2xl bg-linear-to-r from-primary/60 via-warning/45 to-secondary/55 p-px shadow-[0_0_38px_-22px] shadow-primary/50"
 			>
 				<form
 					class="flex flex-col gap-4 rounded-[calc(1rem-1px)] bg-base-100 p-4 sm:p-5"
@@ -124,8 +124,10 @@
 						placeholder="С чего начать, на что обратить внимание, кто советовал"
 						bind:value={draft}></textarea>
 					<div class="flex flex-wrap items-center gap-3">
+						<!-- Кнопка переливается: тот же оранжевый (#f97316), но градиент медленно едет
+						     поперёк. Движение уважает prefers-reduced-motion — см. стиль ниже. -->
 						<button
-							class="rounded-full bg-linear-to-r from-primary to-warning px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-primary/25 transition hover:brightness-110 disabled:opacity-40 disabled:shadow-none"
+							class="save rounded-full px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-primary/25 transition hover:brightness-110 disabled:opacity-40 disabled:shadow-none"
 							disabled={busy || !draft.trim()}>Сохранить</button
 						>
 						<!-- Без класса btn: у него своя заливка, и «Отмена» получалась серой плашкой
@@ -207,3 +209,27 @@
 		{#if error}<p role="alert" class="mt-2 text-sm text-error">{error}</p>{/if}
 	</section>
 {/if}
+
+<style>
+	/* Оранжевый #f97316 с золотым отливом: лента градиента шире кнопки и едет по кругу. */
+	.save {
+		background-image: linear-gradient(100deg, #f97316, #fb923c, #fbbf24, #f97316);
+		background-size: 300% 100%;
+		animation: save-shimmer 7s linear infinite;
+	}
+
+	@keyframes save-shimmer {
+		to {
+			background-position: -300% 0;
+		}
+	}
+
+	/* Тем, кто просил систему не анимировать, — ровная заливка без движения. */
+	@media (prefers-reduced-motion: reduce) {
+		.save {
+			animation: none;
+			background-image: linear-gradient(100deg, #f97316, #fbbf24);
+			background-size: 100% 100%;
+		}
+	}
+</style>
