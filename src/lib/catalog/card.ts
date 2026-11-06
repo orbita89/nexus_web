@@ -58,10 +58,10 @@ export function aboutTitle(kind: SchemaEntityKind): string {
 	}[kind];
 }
 
-function countries(entity: SchemaEntityDetail): string | null {
-	if (entity.kind !== 'movie' && entity.kind !== 'series') return null;
-	const list = (entity.metadata as SchemaMovieMetadata | SchemaSeriesMetadata).countries;
-	return list?.length ? list.map(countryName).join(', ') : null;
+/** Страны производства кодами: по ним строим и подписи, и ссылки на выдачу. */
+function countryCodes(entity: SchemaEntityDetail): string[] {
+	if (entity.kind !== 'movie' && entity.kind !== 'series') return [];
+	return (entity.metadata as SchemaMovieMetadata | SchemaSeriesMetadata).countries ?? [];
 }
 
 export interface CreditGroup {
@@ -128,7 +128,17 @@ export function aboutRows(entity: SchemaEntityDetail): FactRow[] {
 					links: [{ href: `/${kindByApi(entity.kind).slug}?year=${year}`, text: year }]
 				}
 			: null,
-		countries(entity) ? { label: 'Страна', text: countries(entity)! } : null,
+		// Страна — ссылка в свой раздел: «что ещё снимали в этой стране» спрашивают так же часто,
+		// как «что ещё вышло в этом году».
+		countryCodes(entity).length
+			? {
+					label: countryCodes(entity).length > 1 ? 'Страны' : 'Страна',
+					links: countryCodes(entity).map((code) => ({
+						href: `/${kindByApi(entity.kind).slug}?country=${code.toUpperCase()}`,
+						text: countryName(code)
+					}))
+				}
+			: null,
 		...crewRows,
 		entity.release_date
 			? {

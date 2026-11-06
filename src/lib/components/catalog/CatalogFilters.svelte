@@ -13,7 +13,7 @@
 		type CatalogFilters
 	} from '#lib/catalog/filters.ts';
 	import { kindWords, type KINDS } from '#lib/catalog/kinds.ts';
-	import { count, roleLabel, yearOf } from '#lib/catalog/labels.ts';
+	import { count, countryName, roleLabel, yearOf } from '#lib/catalog/labels.ts';
 	import { studioHref } from '#lib/catalog/studios.ts';
 	import { filterUrl, type Query } from '#lib/catalog/url.ts';
 	import { liveQuery } from '#lib/social/card-live.svelte.ts';
@@ -232,6 +232,10 @@
 		if (f.museum) {
 			list.push({ label: `Музей: ${f.museum}`, remove: { museum: null } });
 		}
+		// Страна приходит ссылкой с карточки: в адресе код, в плашке — название.
+		if (f.country) {
+			list.push({ label: `Страна: ${countryName(f.country)}`, remove: { country: null } });
+		}
 		if (f.tag) {
 			const what = selectedTag?.kind === 'genre' ? 'Жанр' : 'Тег';
 			list.push({ label: `${what}: ${selectedTag?.name ?? f.tag}`, remove: { tag: null } });
@@ -260,7 +264,7 @@
 	{#if titleField}
 		<form method="GET" action={path} onsubmit={submitTitle} class="flex gap-2" role="search">
 			<!-- Без JS форма уходит обычным GET: остальные фильтры — скрытыми полями. -->
-			{#each ['tag', 'year', 'year_from', 'year_to', 'studio', 'publisher', 'museum', 'person', 'role', 'archive', 'award', 'award_year', 'awarded'] as key (key)}
+			{#each ['tag', 'year', 'year_from', 'year_to', 'studio', 'publisher', 'museum', 'country', 'person', 'role', 'archive', 'award', 'award_year', 'awarded'] as key (key)}
 				{@const value = page.url.searchParams.get(key)}
 				{#if value}<input type="hidden" name={key} {value} />{/if}
 			{/each}

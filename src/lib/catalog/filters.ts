@@ -157,6 +157,8 @@ export interface CatalogFilters {
 	publisher?: string;
 	/** Точное название музея или собрания картины. */
 	museum?: string;
+	/** Страна производства, код ISO 3166-1 alpha-2 («US»): ссылка со строки «Страна» в карточке. */
+	country?: string;
 	/** Slug человека. */
 	person?: string;
 	/** Роль человека; без person не используется. */
@@ -186,6 +188,10 @@ export function readFilters(url: UrlLike): CatalogFilters {
 		studio: readText(url, 'studio'),
 		publisher: readText(url, 'publisher'),
 		museum: readText(url, 'museum'),
+		// Код страны — две латинские буквы; мусор не отправляем, иначе бэкенд ответит 400.
+		country: /^[A-Za-z]{2}$/.test(readText(url, 'country') ?? '')
+			? readText(url, 'country')!.toUpperCase()
+			: undefined,
 		person,
 		role: person && PERSON_ROLES.some((r) => r.value === role) ? role : undefined,
 		award,
@@ -213,6 +219,7 @@ export function hasFilters(f: CatalogFilters): boolean {
 		f.studio ||
 		f.publisher ||
 		f.museum ||
+		f.country ||
 		f.person ||
 		f.award ||
 		f.awarded
