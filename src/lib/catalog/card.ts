@@ -22,6 +22,7 @@ import {
 	roleRank,
 	yearOf
 } from './labels.ts';
+import { kindByApi } from './kinds.ts';
 import { studioHref } from './studios.ts';
 
 /** Строка фактов: подпись и значение — текст или ссылки (люди). */
@@ -120,8 +121,12 @@ export function aboutRows(entity: SchemaEntityDetail): FactRow[] {
 		.filter((f) => f.label !== 'Страны')
 		.map((f) => ({ label: f.label, text: f.value }));
 	const rows: (FactRow | null)[] = [
+		// Год — ссылка в свой раздел с фильтром: «что ещё вышло в 2026-м» спрашивают чаще всего.
 		year
-			? { label: entity.kind === 'book' ? 'Год издания' : 'Год производства', text: year }
+			? {
+					label: entity.kind === 'book' ? 'Год издания' : 'Год производства',
+					links: [{ href: `/${kindByApi(entity.kind).slug}?year=${year}`, text: year }]
+				}
 			: null,
 		countries(entity) ? { label: 'Страна', text: countries(entity)! } : null,
 		...crewRows,
