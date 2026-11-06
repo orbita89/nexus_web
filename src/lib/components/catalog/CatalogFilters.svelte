@@ -13,6 +13,7 @@
 		type CatalogFilters
 	} from '#lib/catalog/filters.ts';
 	import { kindWords, type KINDS } from '#lib/catalog/kinds.ts';
+	import { countryOptions } from '#lib/catalog/countries.ts';
 	import { count, countryName, roleLabel, yearOf } from '#lib/catalog/labels.ts';
 	import { studioHref } from '#lib/catalog/studios.ts';
 	import { filterUrl, type Query } from '#lib/catalog/url.ts';
@@ -116,6 +117,13 @@
 			})
 		);
 		return found.map((s) => ({ value: s.name, label: s.name, hint: count(s.count, FILMS) }));
+	}
+
+	// Страны — словарь у нас (фасета у бэкенда пока нет), выдачу всё равно фильтрует Meilisearch.
+	async function countryList(q: string): Promise<Suggestion[]> {
+		return countryOptions(q)
+			.slice(0, 10)
+			.map((c) => ({ value: c.value, label: c.label, hint: c.value }));
 	}
 
 	async function museums(q: string): Promise<Suggestion[]> {
@@ -257,180 +265,204 @@
 	);
 </script>
 
-<section
-	class="mb-4 flex flex-col gap-3 rounded-box bg-base-200 p-3 ring-1 ring-base-300 sm:p-4"
-	aria-label="Фильтры"
->
-	{#if titleField}
-		<form method="GET" action={path} onsubmit={submitTitle} class="flex gap-2" role="search">
-			<!-- Без JS форма уходит обычным GET: остальные фильтры — скрытыми полями. -->
-			{#each ['tag', 'year', 'year_from', 'year_to', 'studio', 'publisher', 'museum', 'country', 'person', 'role', 'archive', 'award', 'award_year', 'awarded'] as key (key)}
-				{@const value = page.url.searchParams.get(key)}
-				{#if value}<input type="hidden" name={key} {value} />{/if}
-			{/each}
-			<div class="min-w-0 flex-1">
-				<TitleSearch
-					value={filters.q ?? ''}
-					kind={kind?.kind}
-					label="Название"
-					placeholder={kind?.kind === 'movie' ? 'Название фильма или студия' : 'Название'}
-				/>
-			</div>
-			<button class="btn btn-primary">Найти</button>
-		</form>
-	{/if}
+<!-- Тот же тонкий градиент, что у личных блоков карточки: фильтры — главный инструмент
+     раздела, и блок должен читаться как один предмет, а не как россыпь полей. -->
+<section class="gradient-frame mb-4 rounded-2xl" aria-label="Фильтры">
+	<div class="flex flex-col gap-3 rounded-[calc(1rem-1px)] bg-base-200 p-3 sm:p-4">
+		{#if titleField}
+			<form method="GET" action={path} onsubmit={submitTitle} class="flex gap-2" role="search">
+				<!-- Без JS форма уходит обычным GET: остальные фильтры — скрытыми полями. -->
+				{#each ['tag', 'year', 'year_from', 'year_to', 'studio', 'publisher', 'museum', 'country', 'person', 'role', 'archive', 'award', 'award_year', 'awarded'] as key (key)}
+					{@const value = page.url.searchParams.get(key)}
+					{#if value}<input type="hidden" name={key} {value} />{/if}
+				{/each}
+				<!-- Лупа внутри поля: строка поиска должна читаться как поиск с первого взгляда,
+				     а не как ещё одно поле фильтра рядом с остальными. -->
+				<div class="relative min-w-0 flex-1">
+					<svg
+						class="pointer-events-none absolute top-1/2 left-3.5 z-1 size-4.5 -translate-y-1/2 text-primary"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						aria-hidden="true"
+					>
+						<circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" />
+					</svg>
+					<TitleSearch
+						value={filters.q ?? ''}
+						kind={kind?.kind}
+						label="Название"
+						class="input w-full pl-11"
+						placeholder={kind?.kind === 'movie' ? 'Название фильма или студия' : 'Название'}
+					/>
+				</div>
+				<button class="btn btn-primary">Найти</button>
+			</form>
+		{/if}
 
-	<div
-		class="grid gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)_auto]"
-	>
-		<!-- Роль и человек — одно поле, как год: роль слева, имя с подсказками справа. -->
-		{#if set.roles.length}
-			<div class="flex w-full">
-				<select
-					class="select w-36 shrink-0 rounded-r-none"
-					aria-label="Роль человека"
-					bind:value={role}
-					onchange={() => filters.person && apply({ role: role || null })}
-				>
-					{#each roles as r (r.value)}<option value={r.value}>{r.title}</option>{/each}
-				</select>
+		<div
+			class="grid gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)_auto]"
+		>
+			<!-- Роль и человек — одно поле, как год: роль слева, имя с подсказками справа. -->
+			{#if set.roles.length}
+				<div class="flex w-full">
+					<select
+						class="select w-36 shrink-0 rounded-r-none"
+						aria-label="Роль человека"
+						bind:value={role}
+						onchange={() => filters.person && apply({ role: role || null })}
+					>
+						{#each roles as r (r.value)}<option value={r.value}>{r.title}</option>{/each}
+					</select>
+					<SuggestInput
+						class="min-w-0 flex-1"
+						inputClass="input w-full rounded-l-none border-l-0"
+						label="Человек"
+						placeholder={set.personPlaceholder}
+						load={people}
+						onselect={(s) => apply({ person: s.value, role: role || null }, true)}
+					/>
+				</div>
+			{/if}
+			{#if set.studio}
 				<SuggestInput
-					class="min-w-0 flex-1"
-					inputClass="input w-full rounded-l-none border-l-0"
-					label="Человек"
-					placeholder={set.personPlaceholder}
-					load={people}
-					onselect={(s) => apply({ person: s.value, role: role || null }, true)}
-				/>
-			</div>
-		{/if}
-		{#if set.studio}
-			<SuggestInput
-				label="Студия"
-				placeholder="Студия"
-				load={studios}
-				minLength={0}
-				onselect={(s) => apply({ studio: s.value }, true)}
-			/>
-		{/if}
-		{#if set.museum}
-			<SuggestInput
-				label="Музей"
-				placeholder="Музей или собрание"
-				load={museums}
-				minLength={0}
-				onselect={(s) => apply({ museum: s.value }, true)}
-			/>
-		{/if}
-		{#if set.publisherLabel}
-			<SuggestInput
-				label={set.publisherLabel}
-				placeholder={set.publisherLabel}
-				load={publishers}
-				minLength={0}
-				onselect={(s) => apply({ publisher: s.value }, true)}
-			/>
-		{/if}
-		<SuggestInput
-			label="Жанр или тег"
-			placeholder="Жанр или тег"
-			load={tagOptions}
-			minLength={0}
-			onselect={(s) => apply({ tag: s.value })}
-		/>
-		<div class="join w-full lg:w-auto">
-			<select
-				class="select join-item w-28 shrink-0"
-				aria-label="Год: ровно или период"
-				bind:value={yearMode}
-			>
-				<option value="exact">Год</option>
-				<option value="range">Период</option>
-			</select>
-			<!-- Год — текст с цифровой клавиатурой, не number: без стрелок и смены года колёсиком.
-			     Не четыре цифры — фильтр не ставится (asYear). -->
-			{#if yearMode === 'exact'}
-				<input
-					type="text"
-					class="input join-item w-full lg:w-24"
-					aria-label="Год"
-					value={filters.year ?? ''}
-					maxlength="4"
-					autocomplete="off"
-					placeholder="Любой"
-					inputmode="numeric"
-					onchange={(e) => apply({ ...YEAR_KEYS, year: asYear(e.currentTarget.value) })}
-				/>
-			{:else}
-				<input
-					type="text"
-					class="input join-item w-full lg:w-22"
-					aria-label="Год от"
-					value={filters.yearFrom ?? ''}
-					maxlength="4"
-					autocomplete="off"
-					placeholder="от"
-					inputmode="numeric"
-					onchange={(e) => setRange('from', e.currentTarget.value)}
-				/>
-				<input
-					type="text"
-					class="input join-item w-full lg:w-22"
-					aria-label="Год до"
-					value={filters.yearTo ?? ''}
-					maxlength="4"
-					autocomplete="off"
-					placeholder="до"
-					inputmode="numeric"
-					onchange={(e) => setRange('to', e.currentTarget.value)}
+					label="Студия"
+					placeholder="Студия"
+					load={studios}
+					minLength={0}
+					onselect={(s) => apply({ studio: s.value }, true)}
 				/>
 			{/if}
+			{#if set.museum}
+				<SuggestInput
+					label="Музей"
+					placeholder="Музей или собрание"
+					load={museums}
+					minLength={0}
+					onselect={(s) => apply({ museum: s.value }, true)}
+				/>
+			{/if}
+			{#if set.publisherLabel}
+				<SuggestInput
+					label={set.publisherLabel}
+					placeholder={set.publisherLabel}
+					load={publishers}
+					minLength={0}
+					onselect={(s) => apply({ publisher: s.value }, true)}
+				/>
+			{/if}
+			<SuggestInput
+				label="Жанр или тег"
+				placeholder="Жанр или тег"
+				load={tagOptions}
+				minLength={0}
+				onselect={(s) => apply({ tag: s.value })}
+			/>
+			{#if set.country}
+				<SuggestInput
+					label="Страна"
+					placeholder="Страна"
+					load={countryList}
+					minLength={0}
+					onselect={(s) => apply({ country: s.value })}
+				/>
+			{/if}
+			<div class="join w-full lg:w-auto">
+				<select
+					class="select join-item w-28 shrink-0"
+					aria-label="Год: ровно или период"
+					bind:value={yearMode}
+				>
+					<option value="exact">Год</option>
+					<option value="range">Период</option>
+				</select>
+				<!-- Год — текст с цифровой клавиатурой, не number: без стрелок и смены года колёсиком.
+			     Не четыре цифры — фильтр не ставится (asYear). -->
+				{#if yearMode === 'exact'}
+					<input
+						type="text"
+						class="input join-item w-full lg:w-24"
+						aria-label="Год"
+						value={filters.year ?? ''}
+						maxlength="4"
+						autocomplete="off"
+						placeholder="Любой"
+						inputmode="numeric"
+						onchange={(e) => apply({ ...YEAR_KEYS, year: asYear(e.currentTarget.value) })}
+					/>
+				{:else}
+					<input
+						type="text"
+						class="input join-item w-full lg:w-22"
+						aria-label="Год от"
+						value={filters.yearFrom ?? ''}
+						maxlength="4"
+						autocomplete="off"
+						placeholder="от"
+						inputmode="numeric"
+						onchange={(e) => setRange('from', e.currentTarget.value)}
+					/>
+					<input
+						type="text"
+						class="input join-item w-full lg:w-22"
+						aria-label="Год до"
+						value={filters.yearTo ?? ''}
+						maxlength="4"
+						autocomplete="off"
+						placeholder="до"
+						inputmode="numeric"
+						onchange={(e) => setRange('to', e.currentTarget.value)}
+					/>
+				{/if}
+			</div>
 		</div>
-	</div>
 
-	<!-- Нижняя строка есть всегда: в ней «С наградами», архив, плашки и сброс. -->
-	<div class="flex flex-wrap items-center gap-2">
-		{#if archiveField}
+		<!-- Нижняя строка есть всегда: в ней «С наградами», архив, плашки и сброс. -->
+		<div class="flex flex-wrap items-center gap-2">
+			{#if archiveField}
+				<label class="label mr-2 cursor-pointer text-sm text-base-content/80">
+					<input
+						type="checkbox"
+						class="toggle toggle-primary toggle-sm"
+						checked={archive}
+						onchange={(e) => apply({ archive: e.currentTarget.checked ? '1' : null })}
+					/>
+					Архив
+				</label>
+			{/if}
+			<!-- «С наградами» — у работы есть хотя бы одна победа (фасет Meilisearch). -->
 			<label class="label mr-2 cursor-pointer text-sm text-base-content/80">
 				<input
 					type="checkbox"
-					class="checkbox checkbox-sm checkbox-primary"
-					checked={archive}
-					onchange={(e) => apply({ archive: e.currentTarget.checked ? '1' : null })}
+					class="toggle toggle-primary toggle-sm"
+					checked={!!filters.awarded}
+					onchange={(e) => apply({ awarded: e.currentTarget.checked ? '1' : null })}
 				/>
-				Архив
+				С наградами
 			</label>
-		{/if}
-		<!-- «С наградами» — у работы есть хотя бы одна победа (фасет Meilisearch). -->
-		<label class="label mr-2 cursor-pointer text-sm text-base-content/80">
-			<input
-				type="checkbox"
-				class="checkbox checkbox-sm checkbox-primary"
-				checked={!!filters.awarded}
-				onchange={(e) => apply({ awarded: e.currentTarget.checked ? '1' : null })}
-			/>
-			С наградами
-		</label>
-		{#each chips as chip (chip.label)}
-			<span class="badge gap-1 badge-soft py-3 pr-1 badge-primary">
-				{#if chip.href}
-					<a href={chip.href} class="link link-hover" title="Страница студии">{chip.label}</a>
-				{:else}
-					{chip.label}
-				{/if}
-				<button
-					type="button"
-					class="btn btn-circle btn-ghost btn-xs"
-					aria-label="Убрать фильтр {chip.label}"
-					onclick={() => apply(chip.remove)}>✕</button
+			{#each chips as chip (chip.label)}
+				<span class="badge gap-1 badge-soft py-3 pr-1 badge-primary">
+					{#if chip.href}
+						<a href={chip.href} class="link link-hover" title="Страница студии">{chip.label}</a>
+					{:else}
+						{chip.label}
+					{/if}
+					<button
+						type="button"
+						class="btn btn-circle btn-ghost btn-xs"
+						aria-label="Убрать фильтр {chip.label}"
+						onclick={() => apply(chip.remove)}>✕</button
+					>
+				</span>
+			{/each}
+			{#if active}
+				<a
+					href={titleField ? path : `${path}?q=${encodeURIComponent(filters.q ?? '')}`}
+					class="btn ml-auto btn-ghost btn-sm">Сбросить фильтры</a
 				>
-			</span>
-		{/each}
-		{#if active}
-			<a
-				href={titleField ? path : `${path}?q=${encodeURIComponent(filters.q ?? '')}`}
-				class="btn ml-auto btn-ghost btn-sm">Сбросить фильтры</a
-			>
-		{/if}
+			{/if}
+		</div>
 	</div>
 </section>

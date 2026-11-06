@@ -49,6 +49,8 @@ export interface FilterSet {
 	publisherLabel: string | null;
 	/** Музей или собрание картины. */
 	museum: boolean;
+	/** Страна производства: есть у фильмов и сериалов (`metadata.countries`). */
+	country: boolean;
 	/** «Архив» — холодный архив фильмов. */
 	archive: boolean;
 }
@@ -71,6 +73,7 @@ const SETS: Record<SchemaEntityKind, FilterSet> = {
 		studio: true,
 		publisherLabel: null,
 		museum: false,
+		country: true,
 		archive: true
 	},
 	series: {
@@ -80,6 +83,7 @@ const SETS: Record<SchemaEntityKind, FilterSet> = {
 		studio: true,
 		publisherLabel: null,
 		museum: false,
+		country: true,
 		archive: false
 	},
 	book: {
@@ -89,6 +93,7 @@ const SETS: Record<SchemaEntityKind, FilterSet> = {
 		studio: false,
 		publisherLabel: 'Издательство',
 		museum: false,
+		country: false,
 		archive: false
 	},
 	game: {
@@ -99,6 +104,7 @@ const SETS: Record<SchemaEntityKind, FilterSet> = {
 		studio: false,
 		publisherLabel: 'Издатель или разработчик',
 		museum: false,
+		country: false,
 		archive: false
 	},
 	painting: {
@@ -109,6 +115,7 @@ const SETS: Record<SchemaEntityKind, FilterSet> = {
 		studio: false,
 		publisherLabel: null,
 		museum: true,
+		country: false,
 		archive: false
 	}
 };
@@ -121,6 +128,7 @@ const ALL: FilterSet = {
 	studio: true,
 	publisherLabel: 'Издатель',
 	museum: true,
+	country: true,
 	archive: true
 };
 
