@@ -103,34 +103,69 @@
 {#if session.status === 'authed' && loaded}
 	<section id="note" class="mb-12 scroll-mt-32 md:scroll-mt-28" aria-label="Моя заметка">
 		{#if editing}
-			<form
-				class="flex flex-col gap-3 rounded-box bg-warning/5 p-4 ring-1 ring-warning/20"
-				onsubmit={save}
-				aria-label="Моя заметка"
+			<!-- Градиентная рамка в один пиксель и мягкое свечение: заметка — личный блок, и он
+			     должен выделяться среди публичных плашек, оставаясь спокойным. Приём обычный:
+			     внешний слой — градиент, внутренний — фон страницы поверх него. -->
+			<div
+				class="rounded-2xl bg-linear-to-r from-primary via-warning to-secondary p-px shadow-[0_0_45px_-18px] shadow-primary/60"
 			>
-				<p class="flex items-center gap-2 text-xs text-base-content/50">
-					{@render lock()} Заметка для себя · видно только вам
-				</p>
-				<!-- Поле без рамки: рамка в рамке (плашка + обводка textarea) выглядела тяжело.
-				     Границу держит фон, на фокусе — тонкое кольцо. -->
-				<textarea
-					class="min-h-28 w-full resize-y rounded-box bg-base-100 p-3 leading-relaxed placeholder:text-base-content/35 focus:ring-1 focus:ring-warning/40 focus:outline-none"
-					maxlength={NOTE_LIMIT}
-					placeholder="С чего начать, на что обратить внимание, кто советовал"
-					bind:value={draft}></textarea>
-				<div class="flex flex-wrap items-center gap-3">
-					<button class="btn btn-primary btn-sm" disabled={busy || !draft.trim()}>Сохранить</button>
-					<button
-						type="button"
-						class="btn btn-ghost btn-sm"
-						disabled={busy}
-						onclick={() => (editing = false)}>Отмена</button
-					>
-					<span class="ml-auto text-xs text-base-content/40">
-						{draft.length.toLocaleString('ru-RU')} / {NOTE_LIMIT.toLocaleString('ru-RU')}
-					</span>
-				</div>
-			</form>
+				<form
+					class="flex flex-col gap-4 rounded-[calc(1rem-1px)] bg-base-100 p-4 sm:p-5"
+					onsubmit={save}
+					aria-label="Моя заметка"
+				>
+					<p class="flex items-center gap-2 text-xs text-warning/80">
+						{@render lock()} Заметка для себя • видно только вам
+					</p>
+					<!-- Поле без своего фона и рамки: рамка держит всю карточку, внутри — только текст. -->
+					<textarea
+						class="min-h-24 w-full resize-y bg-transparent text-lg leading-relaxed font-medium placeholder:font-normal placeholder:text-base-content/30 focus:outline-none"
+						maxlength={NOTE_LIMIT}
+						placeholder="С чего начать, на что обратить внимание, кто советовал"
+						bind:value={draft}></textarea>
+					<div class="flex flex-wrap items-center gap-3">
+						<button
+							class="rounded-full bg-linear-to-r from-primary to-warning px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-primary/25 transition hover:brightness-110 disabled:opacity-40 disabled:shadow-none"
+							disabled={busy || !draft.trim()}>Сохранить</button
+						>
+						<!-- Без класса btn: у него своя заливка, и «Отмена» получалась серой плашкой
+							 рядом с градиентной кнопкой. Здесь это просто текст. -->
+						<button
+							type="button"
+							class="rounded-full px-3 py-1.5 text-sm font-semibold text-base-content/60 transition-colors hover:bg-base-content/5 hover:text-base-content disabled:opacity-40"
+							disabled={busy}
+							onclick={() => (editing = false)}>Отмена</button
+						>
+						<!-- Счётчик кольцом: сколько места занято, видно и не читая цифр. -->
+						<span class="ml-auto flex items-center gap-2 text-xs text-base-content/40">
+							<svg class="size-4 -rotate-90" viewBox="0 0 20 20" aria-hidden="true">
+								<circle
+									cx="10"
+									cy="10"
+									r="8"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2.5"
+									class="text-base-content/15"
+								/>
+								<circle
+									cx="10"
+									cy="10"
+									r="8"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2.5"
+									stroke-linecap="round"
+									class="text-warning transition-[stroke-dashoffset] duration-300"
+									stroke-dasharray="50.3"
+									stroke-dashoffset={50.3 * (1 - Math.min(1, draft.length / NOTE_LIMIT))}
+								/>
+							</svg>
+							{draft.length.toLocaleString('ru-RU')} / {NOTE_LIMIT.toLocaleString('ru-RU')}
+						</span>
+					</div>
+				</form>
+			</div>
 		{:else if note}
 			<div class="rounded-box bg-warning/5 p-4 ring-1 ring-warning/20">
 				<div class="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1">
