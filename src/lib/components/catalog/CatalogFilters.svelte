@@ -66,9 +66,14 @@
 		PERSON_ROLES.find((r) => r.value === (filters.role ?? ''))?.title ?? 'Любая роль'
 	);
 	const selectedTag = $derived(tags.find((t) => t.slug === filters.tag));
-	/** Год: «ровно» или «период»; переключатель только меняет поля, адрес — по вводу года. */
-	let yearMode = $derived<'exact' | 'range'>(
-		filters.yearFrom || filters.yearTo ? 'range' : 'exact'
+	// Год — одно поле: «2020» или «2000-2010». Селект «Год/Период» и три элемента в ряду ломали
+	// строку фильтров, а период вводят редко — разделитель человек напишет сам.
+	const yearValue = $derived(
+		filters.year
+			? String(filters.year)
+			: filters.yearFrom || filters.yearTo
+				? `${filters.yearFrom ?? ''}-${filters.yearTo ?? ''}`
+				: ''
 	);
 
 	function apply(changes: Query, resetSort = false) {
@@ -85,12 +90,21 @@
 
 	const asYear = (raw: string) => (/^\d{4}$/.test(raw.trim()) ? Number(raw.trim()) : null);
 
-	function setRange(edge: 'from' | 'to', raw: string) {
-		let from = edge === 'from' ? asYear(raw) : (filters.yearFrom ?? null);
-		let to = edge === 'to' ? asYear(raw) : (filters.yearTo ?? null);
+	/**
+	 * Разбор поля года: «2020» — ровно; «2000-2010», «2000–2010», «2000..2010» — период. Край
+	 * можно опустить: «-2010» — всё до 2010-го. Мусор фильтр не ставит.
+	 */
+	function setYear(raw: string) {
+		const text = raw.trim();
+		if (!text) return apply(YEAR_KEYS);
+		const exact = asYear(text);
+		if (exact) return apply({ ...YEAR_KEYS, year: exact });
+		const parts = text.split(/\s*(?:-|–|—|\.\.)\s*/);
+		let from = asYear(parts[0] ?? '');
+		let to = asYear(parts[1] ?? '');
 		// «С 2010 по 2000» — тот же период: бэкенд на from > to ответил бы 400.
 		if (from && to && from > to) [from, to] = [to, from];
-		apply({ ...YEAR_KEYS, year_from: from, year_to: to });
+		apply(from || to ? { ...YEAR_KEYS, year_from: from, year_to: to } : YEAR_KEYS);
 	}
 
 	// Поиск людей Meilisearch: из одинаково подходящих выше известные («брэ» — Брэд Питт).
@@ -302,14 +316,17 @@
 			</form>
 		{/if}
 
-		<div
-			class="grid gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)_auto]"
-		>
+		<!-- Шесть равных колонок на широком экране: пара «роль + человек» занимает две, остальные
+		     поля по одной — тогда всё помещается в строку и одинокое поле не повисает отдельно.
+		     Уже — две колонки, на телефоне — одна. -->
+		<div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-6">
 			<!-- Роль и человек — одно поле, как год: роль слева, имя с подсказками справа. -->
 			{#if set.roles.length}
-				<div class="flex w-full">
+				<!-- Роль и человек — одна пара и занимает две колонки: в одной имя сжималось до
+				     «Актёр, р…», и поле становилось бесполезным. -->
+				<div class="flex w-full lg:col-span-2">
 					<select
-						class="select w-36 shrink-0 rounded-r-none"
+						class="select w-28 shrink-0 rounded-r-none"
 						aria-label="Роль человека"
 						bind:value={role}
 						onchange={() => filters.person && apply({ role: role || null })}
@@ -369,54 +386,19 @@
 					onselect={(s) => apply({ country: s.value })}
 				/>
 			{/if}
-			<div class="join w-full lg:w-auto">
-				<select
-					class="select join-item w-28 shrink-0"
-					aria-label="Год: ровно или период"
-					bind:value={yearMode}
-				>
-					<option value="exact">Год</option>
-					<option value="range">Период</option>
-				</select>
-				<!-- Год — текст с цифровой клавиатурой, не number: без стрелок и смены года колёсиком.
-			     Не четыре цифры — фильтр не ставится (asYear). -->
-				{#if yearMode === 'exact'}
-					<input
-						type="text"
-						class="input join-item w-full lg:w-24"
-						aria-label="Год"
-						value={filters.year ?? ''}
-						maxlength="4"
-						autocomplete="off"
-						placeholder="Любой"
-						inputmode="numeric"
-						onchange={(e) => apply({ ...YEAR_KEYS, year: asYear(e.currentTarget.value) })}
-					/>
-				{:else}
-					<input
-						type="text"
-						class="input join-item w-full lg:w-22"
-						aria-label="Год от"
-						value={filters.yearFrom ?? ''}
-						maxlength="4"
-						autocomplete="off"
-						placeholder="от"
-						inputmode="numeric"
-						onchange={(e) => setRange('from', e.currentTarget.value)}
-					/>
-					<input
-						type="text"
-						class="input join-item w-full lg:w-22"
-						aria-label="Год до"
-						value={filters.yearTo ?? ''}
-						maxlength="4"
-						autocomplete="off"
-						placeholder="до"
-						inputmode="numeric"
-						onchange={(e) => setRange('to', e.currentTarget.value)}
-					/>
-				{/if}
-			</div>
+			<!-- Год — текст с цифровой клавиатурой, не number: без стрелок и смены года колёсиком.
+			     Одно поле на оба случая: ровно год или период через дефис. -->
+			<input
+				type="text"
+				class="input w-full"
+				aria-label="Год или период"
+				value={yearValue}
+				maxlength="9"
+				autocomplete="off"
+				placeholder="Год / период"
+				inputmode="numeric"
+				onchange={(e) => setYear(e.currentTarget.value)}
+			/>
 		</div>
 
 		<!-- Нижняя строка есть всегда: в ней «С наградами», архив, плашки и сброс. -->
