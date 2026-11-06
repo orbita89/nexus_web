@@ -45,7 +45,9 @@
 			aria-label="Ваша рецензия"
 		>
 			<div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-				<label for="review-body" class="font-semibold">Ваша рецензия</label>
+				<!-- Заголовок виден только скринридеру: форма открывается по нажатию, и чья это
+				     рецензия, понятно без подписи — а строка съедала место над полем. -->
+				<label for="review-body" class="sr-only">Ваша рецензия</label>
 				<div class="flex items-center gap-2">
 					<span class="text-xs text-base-content/50">Оценка</span>
 					<div class="flex gap-1" role="group" aria-label="Оценка от 1 до 10">

@@ -100,8 +100,10 @@
 		session.status === 'guest' ||
 			(session.status === 'authed' && canCreateThreads(session.user?.role))
 	);
-	const pill =
-		'btn btn-sm h-8 min-h-0 gap-1.5 rounded-full border-base-content/10 bg-base-content/5 px-3 font-medium hover:border-primary/40 hover:bg-primary/10 hover:text-primary';
+	// Рецензия у человека одна: когда она уже написана, приглашение и кнопка «Рецензия» не нужны —
+	// правка идёт кнопкой «Изменить» на самой записи.
+	const mine = $derived(!!my.review?.body);
+
 	// «Рецензия» — главное действие строки: тот же переливающийся оранжевый, что у «Сохранить»
 	// в заметке. «Обсуждение» рядом остаётся спокойной кнопкой, чтобы они не спорили.
 	const pillPrimary =
@@ -162,6 +164,20 @@
 		<!-- «Что думаете о фильме?» — или форма рецензии на её месте. -->
 		{#if released && my.composing}
 			<ReviewComposer {my} {released} />
+		{:else if filter === 'thread'}
+			<!-- Вкладка обсуждений — своё действие: начать тему. Рецензии её не касаются. -->
+			{#if canThread}
+				<div class="flex py-3">
+					<a
+						href={session.status === 'guest' ? loginUrl(page.url) : newThread}
+						class={pillPrimary}
+						aria-label="Начать обсуждение">{@render bubble()}Обсуждение</a
+					>
+				</div>
+			{/if}
+		{:else if mine}
+			<!-- Рецензия у человека одна и она уже написана: ни приглашения, ни кнопки — правка
+			     идёт кнопкой «Изменить» на самой записи ниже. -->
 		{:else}
 			<div class="flex flex-wrap items-center gap-3 py-3">
 				{#if session.status === 'authed' && session.user}
@@ -180,8 +196,7 @@
 				     подпись, и нажать на неё никто не пробовал. -->
 					<button
 						class="min-w-0 flex-1 truncate rounded-full bg-base-100 px-4 py-2 text-left text-sm text-base-content/50 ring-1 ring-primary/35 transition-colors hover:text-base-content hover:ring-primary/60"
-						onclick={() => (my.composing = true)}
-						>{my.review?.body ? 'Дополнить свою рецензию…' : 'Что думаете о фильме?'}</button
+						onclick={() => (my.composing = true)}>Что думаете о фильме?</button
 					>
 				{:else}
 					<span
@@ -199,17 +214,10 @@
 						{:else if session.status === 'authed' && my.loaded}
 							<button
 								class={pillPrimary}
-								aria-label={my.review?.body ? 'Изменить рецензию' : 'Написать рецензию'}
+								aria-label="Написать рецензию"
 								onclick={() => (my.composing = true)}>{@render pen()}Рецензия</button
 							>
 						{/if}
-					{/if}
-					{#if canThread}
-						<a
-							href={session.status === 'guest' ? loginUrl(page.url) : newThread}
-							class={pill}
-							aria-label="Начать обсуждение">{@render bubble()}Обсуждение</a
-						>
 					{/if}
 				</div>
 			</div>
