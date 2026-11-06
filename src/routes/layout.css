@@ -60,3 +60,40 @@
 .scrollbar-hide::-webkit-scrollbar-thumb:hover {
 	background: rgba(255, 255, 255, 0.45);
 }
+
+/* Личные блоки карточки — заметка и своя рецензия — обведены тонким градиентом: они выделяются
+   среди публичных плашек, но не спорят с содержимым. Приём обычный: внешний слой — градиент,
+   внутренний — фон страницы поверх него. */
+.gradient-frame {
+	background-image: linear-gradient(
+		100deg,
+		color-mix(in oklab, var(--color-primary) 60%, transparent),
+		color-mix(in oklab, var(--color-warning) 45%, transparent),
+		color-mix(in oklab, var(--color-secondary) 55%, transparent)
+	);
+	padding: 1px;
+}
+
+/* Главная кнопка таких блоков: оранжевый #f97316 с золотым отливом, лента градиента шире кнопки
+   и медленно едет поперёк. */
+.btn-shimmer {
+	background-image: linear-gradient(100deg, #f97316, #fb923c, #fbbf24, #f97316);
+	background-size: 300% 100%;
+	animation: btn-shimmer 7s linear infinite;
+	color: #fff;
+}
+
+@keyframes btn-shimmer {
+	to {
+		background-position: -300% 0;
+	}
+}
+
+/* Кому система просила не анимировать — ровная заливка без движения. */
+@media (prefers-reduced-motion: reduce) {
+	.btn-shimmer {
+		animation: none;
+		background-image: linear-gradient(100deg, #f97316, #fbbf24);
+		background-size: 100% 100%;
+	}
+}

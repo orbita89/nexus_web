@@ -102,6 +102,10 @@
 	);
 	const pill =
 		'btn btn-sm h-8 min-h-0 gap-1.5 rounded-full border-base-content/10 bg-base-content/5 px-3 font-medium hover:border-primary/40 hover:bg-primary/10 hover:text-primary';
+	// «Рецензия» — главное действие строки: тот же переливающийся оранжевый, что у «Сохранить»
+	// в заметке. «Обсуждение» рядом остаётся спокойной кнопкой, чтобы они не спорили.
+	const pillPrimary =
+		'btn-shimmer inline-flex h-8 items-center gap-1.5 rounded-full px-3.5 text-sm font-semibold shadow-md shadow-primary/25 transition hover:brightness-110';
 </script>
 
 {#snippet pen()}
@@ -131,137 +135,139 @@
 	>
 {/snippet}
 
-<div
-	class="divide-y divide-base-content/10 rounded-box bg-base-200 px-5 ring-1 ring-base-content/5 sm:px-6"
->
-	<!-- Вкладки -->
-	<div role="tablist" aria-label="Что показывать" class="flex gap-5 pt-4">
-		{#each tabs as tab (tab.value)}
-			<button
-				role="tab"
-				aria-selected={filter === tab.value}
-				class={[
-					'-mb-px border-b-2 pb-3 text-sm font-semibold transition-colors',
-					filter === tab.value
-						? 'border-primary text-base-content'
-						: 'border-transparent text-base-content/50 hover:text-base-content'
-				]}
-				onclick={() => (filter = tab.value)}
-				>{tab.title}{#if tab.total}<span class="ml-1.5 font-normal text-base-content/40"
-						>{tab.total}</span
-					>{/if}</button
-			>
-		{/each}
-	</div>
-
-	<!-- «Что думаете о фильме?» — или форма рецензии на её месте. -->
-	{#if released && my.composing}
-		<ReviewComposer {my} {released} />
-	{:else}
-		<div class="flex flex-wrap items-center gap-3 py-3">
-			{#if session.status === 'authed' && session.user}
-				<Avatar user={session.user} size="w-8" />
-			{:else}
-				<span class="size-8 shrink-0 rounded-full bg-base-content/10" aria-hidden="true"></span>
-			{/if}
-			{#if session.status === 'guest'}
-				<a
-					href={loginUrl(page.url)}
-					class="min-w-0 flex-1 truncate rounded-full bg-base-100 px-4 py-2 text-sm text-base-content/50 ring-1 ring-base-300 transition-colors hover:text-base-content hover:ring-primary/50"
-					>Войдите, чтобы написать рецензию или начать обсуждение</a
-				>
-			{:else if released && session.status === 'authed' && my.loaded}
-				<!-- Строка-приглашение выглядит полем ввода: серая надпись без рамки читалась как
-				     подпись, и нажать на неё никто не пробовал. -->
+<!-- Та же градиентная рамка, что у заметки: лента — место, где человек пишет сам, и она
+     собрана в один блок с полем ввода. -->
+<div class="gradient-frame rounded-2xl shadow-[0_0_38px_-24px] shadow-primary/40">
+	<div class="divide-y divide-base-content/10 rounded-[calc(1rem-1px)] bg-base-200 px-5 sm:px-6">
+		<!-- Вкладки -->
+		<div role="tablist" aria-label="Что показывать" class="flex gap-5 pt-4">
+			{#each tabs as tab (tab.value)}
 				<button
-					class="min-w-0 flex-1 truncate rounded-full bg-base-100 px-4 py-2 text-left text-sm text-base-content/50 ring-1 ring-base-300 transition-colors hover:text-base-content hover:ring-primary/50"
-					onclick={() => (my.composing = true)}
-					>{my.review?.body ? 'Дополнить свою рецензию…' : 'Что думаете о фильме?'}</button
+					role="tab"
+					aria-selected={filter === tab.value}
+					class={[
+						'-mb-px border-b-2 pb-3 text-sm font-semibold transition-colors',
+						filter === tab.value
+							? 'border-primary text-base-content'
+							: 'border-transparent text-base-content/50 hover:text-base-content'
+					]}
+					onclick={() => (filter = tab.value)}
+					>{tab.title}{#if tab.total}<span class="ml-1.5 font-normal text-base-content/40"
+							>{tab.total}</span
+						>{/if}</button
 				>
-			{:else}
-				<span
-					class="min-w-0 flex-1 truncate rounded-full bg-base-100/50 px-4 py-2 text-sm text-base-content/35 ring-1 ring-base-300"
-					>{released ? 'Что думаете о фильме?' : 'Рецензии откроются после премьеры'}</span
-				>
-			{/if}
+			{/each}
+		</div>
 
-			<div class="flex gap-2">
-				{#if released}
-					{#if session.status === 'guest'}
-						<a href={loginUrl(page.url)} class={pill} aria-label="Написать рецензию"
-							>{@render pen()}Рецензия</a
-						>
-					{:else if session.status === 'authed' && my.loaded}
-						<button
-							class={pill}
-							aria-label={my.review?.body ? 'Изменить рецензию' : 'Написать рецензию'}
-							onclick={() => (my.composing = true)}>{@render pen()}Рецензия</button
-						>
-					{/if}
+		<!-- «Что думаете о фильме?» — или форма рецензии на её месте. -->
+		{#if released && my.composing}
+			<ReviewComposer {my} {released} />
+		{:else}
+			<div class="flex flex-wrap items-center gap-3 py-3">
+				{#if session.status === 'authed' && session.user}
+					<Avatar user={session.user} size="w-8" />
+				{:else}
+					<span class="size-8 shrink-0 rounded-full bg-base-content/10" aria-hidden="true"></span>
 				{/if}
-				{#if canThread}
+				{#if session.status === 'guest'}
 					<a
-						href={session.status === 'guest' ? loginUrl(page.url) : newThread}
-						class={pill}
-						aria-label="Начать обсуждение">{@render bubble()}Обсуждение</a
+						href={loginUrl(page.url)}
+						class="min-w-0 flex-1 truncate rounded-full bg-base-100 px-4 py-2 text-sm text-base-content/50 ring-1 ring-primary/35 transition-colors hover:text-base-content hover:ring-primary/60"
+						>Войдите, чтобы написать рецензию или начать обсуждение</a
+					>
+				{:else if released && session.status === 'authed' && my.loaded}
+					<!-- Строка-приглашение выглядит полем ввода: серая надпись без рамки читалась как
+				     подпись, и нажать на неё никто не пробовал. -->
+					<button
+						class="min-w-0 flex-1 truncate rounded-full bg-base-100 px-4 py-2 text-left text-sm text-base-content/50 ring-1 ring-primary/35 transition-colors hover:text-base-content hover:ring-primary/60"
+						onclick={() => (my.composing = true)}
+						>{my.review?.body ? 'Дополнить свою рецензию…' : 'Что думаете о фильме?'}</button
+					>
+				{:else}
+					<span
+						class="min-w-0 flex-1 truncate rounded-full bg-base-100/50 px-4 py-2 text-sm text-base-content/35 ring-1 ring-base-300"
+						>{released ? 'Что думаете о фильме?' : 'Рецензии откроются после премьеры'}</span
 					>
 				{/if}
-			</div>
-		</div>
-	{/if}
 
-	<!-- Записи -->
-	{#if !feed.current}
-		<div aria-hidden="true">
-			{#each { length: 3 }, i (i)}
-				<div class="flex flex-col gap-2.5 py-4">
-					<div class="flex items-center gap-3">
-						<div class="size-9 skeleton rounded-full"></div>
-						<div class="h-3.5 w-32 skeleton"></div>
-					</div>
-					<div class="h-3 w-full skeleton"></div>
-					<div class="h-3 w-3/5 skeleton"></div>
-				</div>
-			{/each}
-		</div>
-	{:else if !feed.current.data}
-		<div class="py-4"><LoadError message={feed.current.error} onretry={feed.retry} /></div>
-	{:else if entries.length}
-		<ul class="divide-y divide-base-content/10" aria-label="Рецензии и обсуждения">
-			{#each entries as entry (entry.kind + (entry.kind === 'review' ? entry.review.id : entry.thread.id))}
-				<li class="min-w-0">
-					{#if entry.kind === 'review'}
-						<ReviewCard
-							review={entry.review}
-							flat
-							lines={3}
-							onremoved={() => live.refresh()}
-							onedit={() => (my.composing = true)}
-						/>
-					{:else}
-						<ThreadItem thread={entry.thread} flat />
+				<div class="flex gap-2">
+					{#if released}
+						{#if session.status === 'guest'}
+							<a href={loginUrl(page.url)} class={pillPrimary} aria-label="Написать рецензию"
+								>{@render pen()}Рецензия</a
+							>
+						{:else if session.status === 'authed' && my.loaded}
+							<button
+								class={pillPrimary}
+								aria-label={my.review?.body ? 'Изменить рецензию' : 'Написать рецензию'}
+								onclick={() => (my.composing = true)}>{@render pen()}Рецензия</button
+							>
+						{/if}
 					{/if}
-				</li>
-			{/each}
-		</ul>
-	{:else}
-		<p class="py-6 text-center text-sm text-base-content/45">
-			{filter === 'thread' ? 'Обсуждений пока нет.' : 'Рецензий пока нет — напишите первую.'}
-		</p>
-	{/if}
+					{#if canThread}
+						<a
+							href={session.status === 'guest' ? loginUrl(page.url) : newThread}
+							class={pill}
+							aria-label="Начать обсуждение">{@render bubble()}Обсуждение</a
+						>
+					{/if}
+				</div>
+			</div>
+		{/if}
 
-	{#if moreReviews || moreThreads}
-		<p class="flex flex-wrap gap-x-6 gap-y-1 py-3 text-sm">
-			{#if moreReviews}
-				<a href="{page.url.pathname}/reviews" class="link link-primary link-hover"
-					>Все рецензии ({reviewsTotal}) →</a
-				>
-			{/if}
-			{#if moreThreads}
-				<a href="{page.url.pathname}/threads" class="link link-primary link-hover"
-					>Все обсуждения ({threadsTotal}) →</a
-				>
-			{/if}
-		</p>
-	{/if}
+		<!-- Записи -->
+		{#if !feed.current}
+			<div aria-hidden="true">
+				{#each { length: 3 }, i (i)}
+					<div class="flex flex-col gap-2.5 py-4">
+						<div class="flex items-center gap-3">
+							<div class="size-9 skeleton rounded-full"></div>
+							<div class="h-3.5 w-32 skeleton"></div>
+						</div>
+						<div class="h-3 w-full skeleton"></div>
+						<div class="h-3 w-3/5 skeleton"></div>
+					</div>
+				{/each}
+			</div>
+		{:else if !feed.current.data}
+			<div class="py-4"><LoadError message={feed.current.error} onretry={feed.retry} /></div>
+		{:else if entries.length}
+			<ul class="divide-y divide-base-content/10" aria-label="Рецензии и обсуждения">
+				{#each entries as entry (entry.kind + (entry.kind === 'review' ? entry.review.id : entry.thread.id))}
+					<li class="min-w-0">
+						{#if entry.kind === 'review'}
+							<ReviewCard
+								review={entry.review}
+								flat
+								lines={3}
+								onremoved={() => live.refresh()}
+								onedit={() => (my.composing = true)}
+							/>
+						{:else}
+							<ThreadItem thread={entry.thread} flat />
+						{/if}
+					</li>
+				{/each}
+			</ul>
+		{:else}
+			<p class="py-6 text-center text-sm text-base-content/45">
+				{filter === 'thread' ? 'Обсуждений пока нет.' : 'Рецензий пока нет — напишите первую.'}
+			</p>
+		{/if}
+
+		{#if moreReviews || moreThreads}
+			<p class="flex flex-wrap gap-x-6 gap-y-1 py-3 text-sm">
+				{#if moreReviews}
+					<a href="{page.url.pathname}/reviews" class="link link-primary link-hover"
+						>Все рецензии ({reviewsTotal}) →</a
+					>
+				{/if}
+				{#if moreThreads}
+					<a href="{page.url.pathname}/threads" class="link link-primary link-hover"
+						>Все обсуждения ({threadsTotal}) →</a
+					>
+				{/if}
+			</p>
+		{/if}
+	</div>
 </div>
