@@ -54,5 +54,19 @@ export const load: PageServerLoad = async ({ fetch, url, params }) => {
 	const href = entityHref(entity);
 	if (url.pathname !== href) redirect(301, href + url.search);
 
-	return { entity };
+	// Сезоны — тот же каталог: список одинаков для всех, рейтинг сезона приходит вместе с ним, и
+	// переключатель уходит в статику целиком. Своя оценка зрителя (my_rating) в статике всегда
+	// пустая — на таблетках её и не показываем. Сезонов нет или ручка упала — просто нет полосы.
+	const seasons =
+		entity.kind === 'series'
+			? await unwrap(
+					api.catalog.GET('/api/v1/catalog/entities/{slug}/seasons', {
+						params: { path: { slug: entity.slug } }
+					})
+				)
+					.then((list) => list.items)
+					.catch(() => [])
+			: [];
+
+	return { entity, seasons };
 };

@@ -3,7 +3,7 @@
 	import { page } from '$app/state';
 	import { unwrap } from '#lib/api/errors.ts';
 	import { session } from '#lib/auth/session.svelte.ts';
-	import { isReleased, productionOf, worthWatching } from '#lib/catalog/card.ts';
+	import { aboutTitle, isReleased, productionOf, worthWatching } from '#lib/catalog/card.ts';
 	import { entityHref, kindByApi } from '#lib/catalog/kinds.ts';
 	import { summary, yearOf } from '#lib/catalog/labels.ts';
 	import { trailerSources } from '#lib/catalog/trailer.ts';
@@ -37,7 +37,13 @@
 	import { MyReviewState } from '#lib/social/my-review.svelte.ts';
 	import { provideMyVotes } from '#lib/social/review-votes.svelte.ts';
 	import { Watch } from '#lib/social/watch.svelte.ts';
-	import type { SchemaEntityDetail } from '#lib/api/generated/catalog.ts';
+	import SeasonTabs from '#lib/components/card/SeasonTabs.svelte';
+	import EpisodeStrip from '#lib/components/card/EpisodeStrip.svelte';
+	import type {
+		SchemaEntityDetail,
+		SchemaEpisode,
+		SchemaSeasonSummary
+	} from '#lib/api/generated/catalog.ts';
 
 	// Карточка сверху вниз:
 	// 1. Липкая мини-шапка (только телефон) — когда первый экран ушёл вверх.
@@ -51,7 +57,27 @@
 	// Страница статическая (+page.server.ts): в data только каталог, и всё из него — в HTML.
 	// Личное и живое (оценки, «Следить», рецензии, темы, коллекции) грузится в браузере: сводка
 	// оценок — сразу (бейдж в шапке), остальное — ClientSection, когда блок подходит к экрану.
-	let { entity }: { entity: SchemaEntityDetail } = $props();
+	//
+	// Сериал и его сезон — одна и та же страница: у сезона свой slug, свои оценки, рецензии и
+	// коллекции, то есть всё, что здесь уже собрано вокруг `entity.slug`. Разница только в
+	// переключателе сезонов (seasons) и ленте серий (episodes), которые приходят сверху.
+	let {
+		entity,
+		seasons = [],
+		episodes = [],
+		/** Сериал открытого сезона: адреса таблеток и ссылка над названием. */
+		series = null
+	}: {
+		entity: SchemaEntityDetail;
+		seasons?: SchemaSeasonSummary[];
+		episodes?: SchemaEpisode[];
+		series?: { slug: string; title: string } | null;
+	} = $props();
+
+	// Над названием сезона — сериал: «Сезон 2» сам по себе не говорит ничего.
+	const seriesParent = $derived(
+		series ? { title: series.title, href: `/series/${series.slug}` } : null
+	);
 
 	let heroElement = $state<HTMLElement>();
 
@@ -76,7 +102,8 @@
 	);
 	const sections = $derived(
 		[
-			{ id: 'about', title: kind.kind === 'book' ? 'О книге' : 'О фильме' },
+			{ id: 'about', title: aboutTitle(entity.kind) },
+			episodes.length ? { id: 'episodes', title: 'Серии' } : null,
 			hasCast ? { id: 'credits', title: 'В ролях' } : null,
 			entity.related.length ? { id: 'related', title: 'Связанные' } : null,
 			session.status === 'authed' ? { id: 'note', title: 'Заметка' } : null,
@@ -163,7 +190,7 @@
 	<!-- Свой слой поверх разделов ниже (панель «Оценить» выпадает на них), но под шапкой сайта
 	     (z-20): у CardHero transform, без z-index его перекрывали бы вкладки «О фильме». -->
 	<div bind:this={heroElement} class="relative z-15">
-		<Hero {entity} {trailers}>
+		<Hero {entity} {trailers} parent={seriesParent}>
 			{#snippet marks()}
 				<!-- Реакции — на виду, а не внутри панели «Оценить»: их ставят в одно нажатие, и
 				     читают их все, включая гостей. Своя реакция снимается повторным нажатием,
@@ -215,6 +242,16 @@
 		</Hero>
 	</div>
 
+	<!-- Сезоны — сразу под шапкой, до полосы разделов: это переход на другую страницу, а не
+	     прокрутка к разделу этой, и смешивать их в одной полосе нельзя. -->
+	{#if seasons.length && (series || entity.kind === 'series')}
+		<SeasonTabs
+			seriesSlug={series?.slug ?? entity.slug}
+			{seasons}
+			active={entity.kind === 'season' ? entity.slug : null}
+		/>
+	{/if}
+
 	<!-- Полоса разделов: карточка длинная, и без неё не видно, что на ней есть. -->
 	<SectionNav hero={heroElement} {sections} />
 
@@ -233,6 +270,11 @@
 		</About>
 	{:else}
 		<About {entity} />
+	{/if}
+
+	<!-- Серии открытого сезона — сразу под «О сезоне»: ради них на страницу и пришли. -->
+	{#if episodes.length}
+		<EpisodeStrip {episodes} fallbackCover={entity.cover_url} />
 	{/if}
 
 	<!-- Приквелы, сиквелы, ремейки — только если есть; рекомендации — заглушкой, пока нет API. -->

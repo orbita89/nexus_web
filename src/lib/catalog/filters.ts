@@ -65,7 +65,8 @@ const FILM_ROLES = [
 	'editor'
 ] as const satisfies readonly PersonRole[];
 
-const SETS: Record<SchemaEntityKind, FilterSet> = {
+// Сезона здесь нет: своей выдачи у него не будет, и фильтровать в ней нечего.
+const SETS: Record<Exclude<SchemaEntityKind, 'season'>, FilterSet> = {
 	movie: {
 		roles: FILM_ROLES,
 		defaultRole: 'actor',
@@ -134,7 +135,7 @@ const ALL: FilterSet = {
 
 /** Набор фильтров раздела; без раздела (общий поиск) — все поля. */
 export function filterSet(kind?: SchemaEntityKind): FilterSet {
-	return kind ? SETS[kind] : ALL;
+	return kind && kind !== 'season' ? SETS[kind] : ALL;
 }
 
 /** Роли выпадающего списка раздела: первой всегда «Любая роль». */

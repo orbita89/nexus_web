@@ -52,6 +52,7 @@ export function aboutTitle(kind: SchemaEntityKind): string {
 	return {
 		movie: 'О фильме',
 		series: 'О сериале',
+		season: 'О сезоне',
 		book: 'О книге',
 		game: 'Об игре',
 		painting: 'О картине'

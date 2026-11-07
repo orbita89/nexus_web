@@ -272,6 +272,10 @@ export function metadataError(kind: SchemaEntityKind, form: MetadataForm): strin
 					countries() ??
 					trailers()
 				);
+			// Сезон в этой форме не заводят: у него свои поля и свои серии, и редактируют его
+			// отдельным экраном внутри сериала.
+			case 'season':
+				return null;
 			case 'book':
 				return range(form.pages, 'Страниц', 100_000);
 			case 'game':

@@ -991,6 +991,25 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/social/entities/{slug}/note': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Своя заметка о произведении. */
+		get: operations['get_own_note'];
+		/** Написать или заменить свою заметку целиком. Одна заметка на произведение. */
+		put: operations['put_note'];
+		post?: never;
+		/** Удалить свою заметку. */
+		delete: operations['delete_note'];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/social/entities/{slug}/rating': {
 		parameters: {
 			query?: never;
@@ -1471,6 +1490,23 @@ export interface paths {
 		};
 		/** Свои отметки, свежие сверху: списки «Посмотреть позже» и «Просмотрено» в личном кабинете. */
 		get: operations['list_own_marks'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/social/users/me/notes': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Свои заметки, новые сверху: вкладка «Заметки» в личном кабинете. Чужих заметок нет нигде. */
+		get: operations['list_own_notes'];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -2624,6 +2660,29 @@ export interface components {
 			entity: components['schemas']['EntityRef'];
 			kind: components['schemas']['MarkKind'];
 		};
+		/** @description Личная заметка о произведении: видит только автор. Оценка живёт в рецензии и публична. */
+		Note: {
+			/** @example Пересмотреть перед второй частью */
+			body: string;
+			/** Format: date-time */
+			created_at: string;
+			/** Format: uuid */
+			id: string;
+			/** Format: date-time */
+			updated_at: string;
+		};
+		/** @description Заметка в своём списке: то же плюс произведение, к которому она написана. */
+		NoteWithEntity: {
+			/** @example Пересмотреть перед второй частью */
+			body: string;
+			/** Format: date-time */
+			created_at: string;
+			entity: components['schemas']['EntityRef'];
+			/** Format: uuid */
+			id: string;
+			/** Format: date-time */
+			updated_at: string;
+		};
 		/** @description Страница списка. */
 		Page_Collection: {
 			items: {
@@ -2959,6 +3018,36 @@ export interface components {
 				created_at: string;
 				entity: components['schemas']['EntityRef'];
 				kind: components['schemas']['MarkKind'];
+			}[];
+			/**
+			 * Format: int64
+			 * @example 20
+			 */
+			limit: number;
+			/**
+			 * Format: int64
+			 * @example 0
+			 */
+			offset: number;
+			/**
+			 * Format: int64
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @example 137
+			 */
+			total: number;
+		};
+		/** @description Страница списка. */
+		Page_NoteWithEntity: {
+			items: {
+				/** @example Пересмотреть перед второй частью */
+				body: string;
+				/** Format: date-time */
+				created_at: string;
+				entity: components['schemas']['EntityRef'];
+				/** Format: uuid */
+				id: string;
+				/** Format: date-time */
+				updated_at: string;
 			}[];
 			/**
 			 * Format: int64
@@ -3450,6 +3539,12 @@ export interface components {
 			likes_given: components['schemas']['LikesGiven'];
 			/** @description Отметки «посмотрю позже» и «просмотрено». */
 			marks: components['schemas']['MarkCounts'];
+			/**
+			 * Format: int64
+			 * @description Свои личные заметки. Приватны: чужому и админу — `null`, число видит только сам автор.
+			 * @example 7
+			 */
+			notes?: number | null;
 			/** @description Оценки: среднее, сколько их и распределение по 1–10. */
 			ratings: components['schemas']['ProfileRatings'];
 			/** @description Свои реакции на произведения: всегда все четыре ключа. */
@@ -3470,6 +3565,11 @@ export interface components {
 			 * @description Новый пункт без `position` встаёт в конец; у существующего без `position` порядок не меняется.
 			 */
 			position?: number | null;
+		};
+		/** @description Своя заметка: заменяется целиком. Пустой текст — 400, удаление через `DELETE`. */
+		PutNote: {
+			/** @example Пересмотреть перед второй частью */
+			body: string;
 		};
 		/** @description Своя рецензия: заменяется целиком. Нужна хотя бы оценка или текст. */
 		PutReview: {
@@ -4091,6 +4191,8 @@ export type SchemaMark = components['schemas']['Mark'];
 export type SchemaMarkCounts = components['schemas']['MarkCounts'];
 export type SchemaMarkKind = components['schemas']['MarkKind'];
 export type SchemaMarkedEntity = components['schemas']['MarkedEntity'];
+export type SchemaNote = components['schemas']['Note'];
+export type SchemaNoteWithEntity = components['schemas']['NoteWithEntity'];
 export type SchemaPageCollection = components['schemas']['Page_Collection'];
 export type SchemaPageCollectionComment = components['schemas']['Page_CollectionComment'];
 export type SchemaPageCustomRoom = components['schemas']['Page_CustomRoom'];
@@ -4099,6 +4201,7 @@ export type SchemaPageGivenLike = components['schemas']['Page_GivenLike'];
 export type SchemaPageInterest = components['schemas']['Page_Interest'];
 export type SchemaPageLike = components['schemas']['Page_Like'];
 export type SchemaPageMarkedEntity = components['schemas']['Page_MarkedEntity'];
+export type SchemaPageNoteWithEntity = components['schemas']['Page_NoteWithEntity'];
 export type SchemaPagePersonInterest = components['schemas']['Page_PersonInterest'];
 export type SchemaPagePost = components['schemas']['Page_Post'];
 export type SchemaPageRatedEntity = components['schemas']['Page_RatedEntity'];
@@ -4116,6 +4219,7 @@ export type SchemaPost = components['schemas']['Post'];
 export type SchemaProfileRatings = components['schemas']['ProfileRatings'];
 export type SchemaProfileStats = components['schemas']['ProfileStats'];
 export type SchemaPutCollectionItem = components['schemas']['PutCollectionItem'];
+export type SchemaPutNote = components['schemas']['PutNote'];
 export type SchemaPutReview = components['schemas']['PutReview'];
 export type SchemaPutVote = components['schemas']['PutVote'];
 export type SchemaRatedEntity = components['schemas']['RatedEntity'];
@@ -8223,6 +8327,149 @@ export interface operations {
 			};
 		};
 	};
+	get_own_note: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug сущности
+				 * @example dune-2021
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Заметка */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Note'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Сущность не найдена или заметки нет */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	put_note: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug сущности
+				 * @example dune-2021
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['PutNote'];
+			};
+		};
+		responses: {
+			/** @description Заметка сохранена */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Note'];
+				};
+			};
+			/** @description Пустой или слишком длинный текст */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Сущность не найдена */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	delete_note: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug сущности
+				 * @example dune-2021
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Удалена */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Сущность не найдена или заметки нет */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
 	rating: {
 		parameters: {
 			query?: never;
@@ -10229,6 +10476,49 @@ export interface operations {
 				};
 				content: {
 					'application/json': components['schemas']['Page_MarkedEntity'];
+				};
+			};
+			/** @description Неверный параметр */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	list_own_notes: {
+		parameters: {
+			query?: {
+				/** @description 1–100, по умолчанию 20. */
+				limit?: number;
+				/** @description С 0. */
+				offset?: number;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Страница заметок */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Page_NoteWithEntity'];
 				};
 			};
 			/** @description Неверный параметр */

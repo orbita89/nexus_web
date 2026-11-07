@@ -32,8 +32,8 @@ export function searchQuery(f: CatalogFilters, options: SearchOptions) {
 		studio: f.studio,
 		publisher: f.publisher,
 		museum: f.museum,
-		// `country` бэкенд уже принимает, но в контракте его ещё нет — отсюда приведение ниже.
-		country: f.country,
+		// `country` в контракте — список (ИЛИ между странами); в адресе страна пока одна.
+		country: f.country ? [f.country] : undefined,
 		studio_slug: options.studioSlug,
 		person: f.person,
 		role: f.person ? f.role : undefined,

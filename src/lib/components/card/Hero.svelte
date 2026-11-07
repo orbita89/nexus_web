@@ -17,11 +17,14 @@
 	let {
 		entity,
 		trailers,
+		parent = null,
 		marks,
 		actions
 	}: {
 		entity: SchemaEntityDetail;
 		trailers: TrailerSource[];
+		/** Сериал над названием сезона: «Сезон 2» сам по себе ничего не говорит. */
+		parent?: { title: string; href: string } | null;
 		/** Под кнопками: «Посмотреть позже», «Просмотрено». */
 		marks: Snippet;
 		/** Кнопки: оценка, «Оценить», «В коллекцию», «Следить». */
@@ -32,6 +35,13 @@
 </script>
 
 {#snippet content()}
+	{#if parent}
+		<a
+			href={parent.href}
+			class="mb-1 inline-block text-sm font-semibold text-base-content/60 drop-shadow-lg transition-colors hover:text-primary"
+			>{parent.title}</a
+		>
+	{/if}
 	<h1
 		class="text-2xl leading-tight font-black tracking-tight text-balance drop-shadow-lg sm:text-4xl"
 	>

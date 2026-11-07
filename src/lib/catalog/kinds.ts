@@ -51,12 +51,24 @@ export function kindsParam(kinds: readonly { slug: string }[]): string | null {
 	return kinds.length ? kinds.map((k) => k.slug).join(',') : null;
 }
 
+/**
+ * Сезон — не раздел каталога: своей выдачи у него нет, он живёт внутри «Сериалов» (в поиске
+ * сезоны не показываем — в списке должен быть «Аркейн», а не «Аркейн, сезон 1»). Поэтому везде,
+ * где нужен раздел, сезон отвечает разделом сериалов.
+ */
 export function kindByApi(kind: SchemaEntityKind) {
-	return KINDS.find((k) => k.kind === kind)!;
+	const api = kind === 'season' ? 'series' : kind;
+	return KINDS.find((k) => k.kind === api)!;
 }
 
-/** Адрес карточки: /films/dune-2021. */
+/** Адрес карточки: /films/dune-2021, у сезона — /series/arcane/season-2. */
 export function entityHref(entity: { kind: SchemaEntityKind; slug: string }) {
+	if (entity.kind === 'season') {
+		// Слаг сезона бэкенд собирает из сериала и номера; откуда ещё пришла ссылка на сезон
+		// (лента активности, рецензия), сериала рядом нет — разбираем слаг.
+		const parts = /^(.+)-season-(\d+)$/.exec(entity.slug);
+		if (parts) return `/series/${parts[1]}/season-${parts[2]}`;
+	}
 	return `/${kindByApi(entity.kind).slug}/${entity.slug}`;
 }
 

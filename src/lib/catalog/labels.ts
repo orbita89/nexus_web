@@ -342,6 +342,7 @@ export function ageRating(kind: SchemaEntityKind, metadata: SchemaMetadata): str
 const LEAD_ROLES: Record<SchemaEntityKind, string[]> = {
 	movie: ['director'],
 	series: ['creator', 'director'],
+	season: ['creator', 'director'],
 	book: ['author'],
 	game: ['director', 'developer', 'creator'],
 	painting: ['artist']

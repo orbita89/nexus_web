@@ -547,6 +547,26 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/catalog/admin/seasons/{id}/episodes': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/**
+		 * Заменить серии сезона целиком. Номера уникальны внутри сезона; строки, которых нет в
+		 *     присланном списке, удаляются.
+		 */
+		put: operations['set_season_episodes'];
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/catalog/admin/tags': {
 		parameters: {
 			query?: never;
@@ -869,6 +889,29 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/catalog/entities/{slug}/seasons': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Сезоны сериала: переключатель `Весь сериал · 1 сезон · 2 сезон` в шапке.
+		 * @description Порядок — по номеру, спецвыпуски (0) в конце. `rating` и `my_rating` — те же поля и та же
+		 *     семантика, что у сущности в карточке; гостю `my_rating: null`. Гостю ответ кэшируется.
+		 *
+		 *     Сериал не найден или скрыт — 404 (админу видны и скрытые, вместе со скрытыми сезонами).
+		 */
+		get: operations['list_entity_seasons'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/catalog/entities/{slug}/similar': {
 		parameters: {
 			query?: never;
@@ -943,7 +986,8 @@ export interface paths {
 		 *     издатель или разработчик игры — тоже точное название), `museum` (музей картины),
 		 *     `person` (slug участника) и
 		 *     `role` (его роль в этой сущности; без `person` — 400), `award` (slug премии), `award_year`
-		 *     (год церемонии) и `awarded` (только с наградой).
+		 *     (год церемонии), `awarded` (только с наградой) и `country` (страна производства, код
+		 *     ISO 3166-1 alpha-2; несколько — ИЛИ между собой).
 		 *
 		 *     Сортировка по релевантности; `sort=recommended` / `trending` / `top_rated` — по баллу
 		 *     «Рекомендуемые», TMDB popularity, рейтингу IMDb (у кого значения нет — в конце); `new` — только
@@ -956,6 +1000,27 @@ export interface paths {
 		 *     Индекс обновляется после изменений в админке с задержкой в доли секунды.
 		 */
 		get: operations['search'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/search/countries': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Подсказки стран для фильтра `country` (facet search по полю `countries`): коды ISO 3166-1
+		 *     alpha-2 со счётчиками, самые частые сверху. Названия («США») показывает фронтенд, поэтому
+		 *     запрос `q` по названию бессмыслен — в фасете коды; `kind` сужает до раздела.
+		 */
+		get: operations['search_countries'];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -1031,7 +1096,9 @@ export interface paths {
 		};
 		/**
 		 * Подсказки студий для фильтра `studio` (facet search Meilisearch по полю `studios`): по части
-		 *     названия с опечатками; без `q` — самые частые. `count` — сколько видимых сущностей в индексе.
+		 *     названия с опечатками; без `q` — самые частые. `count` — сколько видимых сущностей в индексе,
+		 *     `slug` и `logo_url` — из `studios` (одним запросом на ответ), логотип тот же, что на странице
+		 *     студии.
 		 */
 		get: operations['search_studios'];
 		put?: never;
@@ -1056,6 +1123,48 @@ export interface paths {
 		 *     бессмысленен (в фасете slug'и), фильтровать по названию — на стороне клиента.
 		 */
 		get: operations['search_tags'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/seasons/{slug}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Карточка сезона: поля сущности, сериал для шапки и хлебных крошек и серии сезона.
+		 * @description Социальное (оценка, рецензия, лайк, отметка, коллекция) — существующими ручками `social` по
+		 *     этому же slug'у: сезон для них обычная сущность.
+		 */
+		get: operations['get_season'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/seasons/{slug}/episodes': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Серии сезона: страница `?limit=1..100&offset=` (по умолчанию 50).
+		 * @description Серии, которые ещё не вышли (`air_date` в будущем), тоже отдаются: карусель покажет их
+		 *     неактивными с датой. Оценок у серий нет — они не сущности.
+		 */
+		get: operations['list_season_episodes'];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -1494,6 +1603,16 @@ export interface components {
 			/** @description Название: с ним категория, которой у премии ещё нет, заводится на месте (путь импорта). */
 			title?: string | null;
 		};
+		/**
+		 * @description Страна в подсказках: код ISO 3166-1 alpha-2 (значение для `country`) и сколько сущностей в
+		 *     индексе. Название страны показывает фронтенд — в индексе только коды.
+		 */
+		CountryHit: {
+			/** @example US */
+			code: string;
+			/** Format: int64 */
+			count: number;
+		};
 		/** @description Новая премия. */
 		CreateAward: {
 			country?: string | null;
@@ -1594,6 +1713,12 @@ export interface components {
 			original_title?: string | null;
 			/** Format: date */
 			release_date?: string | null;
+			/**
+			 * @description Сериал, к которому относится сезон (`kind = season`): его slug. Обязателен для сезона и
+			 *     запрещён остальным типам — 400. Записывается в `entities.parent_id`.
+			 * @example arcane
+			 */
+			series_slug?: string | null;
 			/**
 			 * @description Латиница в нижнем регистре, цифры и дефисы.
 			 * @example dune-2021
@@ -1699,6 +1824,11 @@ export interface components {
 			/** @example Dune */
 			original_title?: string | null;
 			/**
+			 * Format: uuid
+			 * @description Родительская сущность: у сезона — его сериал. У остальных типов — `null`.
+			 */
+			parent_id?: string | null;
+			/**
 			 * Format: double
 			 * @description Байесовский рейтинг IMDb (сортировка `top_rated`).
 			 */
@@ -1779,7 +1909,7 @@ export interface components {
 		 * @description Тип сущности (Postgres enum `entity_kind`).
 		 * @enum {string}
 		 */
-		EntityKind: 'movie' | 'series' | 'book' | 'game' | 'painting';
+		EntityKind: 'movie' | 'series' | 'season' | 'book' | 'game' | 'painting';
 		/**
 		 * @description Порядок списка сущностей.
 		 * @enum {string}
@@ -1825,6 +1955,80 @@ export interface components {
 			slug: string;
 			/** @example Дюна */
 			title: string;
+		};
+		/** @description Серия сезона. Своего slug'а, рецензий и подборок у серии нет — она не сущность. */
+		Episode: {
+			/** Format: date */
+			air_date?: string | null;
+			/** Format: date-time */
+			created_at: string;
+			/** Format: uuid */
+			id: string;
+			/**
+			 * Format: int32
+			 * @example 1
+			 */
+			number: number;
+			/** @example Welcome to the Playground */
+			original_title?: string | null;
+			overview?: string | null;
+			/**
+			 * Format: int32
+			 * @description Целые минуты.
+			 * @example 42
+			 */
+			runtime_minutes?: number | null;
+			/** Format: int32 */
+			still_height?: number | null;
+			/**
+			 * @description Кадр из серии, 16:9 — не постер сериала и не постер сезона. Кадра нет — `null`, и
+			 *     заглушку (постер сезона, иначе сериала) подставляет фронтенд: пропорции у них другие.
+			 */
+			still_url?: string | null;
+			/**
+			 * Format: int32
+			 * @description Размеры кадра в пикселях: карточка держит точное `aspect-ratio` до загрузки.
+			 */
+			still_width?: number | null;
+			/** @example Тяжёлые времена */
+			title?: string | null;
+			/** Format: date-time */
+			updated_at: string;
+		};
+		/** @description Серия на входе. Ни «просмотрено», ни прогресса здесь нет и не будет: видео у нас нет. */
+		EpisodeInput: {
+			/** Format: date */
+			air_date?: string | null;
+			/**
+			 * Format: int32
+			 * @description Номер серии в сезоне, 0–10000; повторы в списке — 400.
+			 * @example 1
+			 */
+			number: number;
+			/** @example Welcome to the Playground */
+			original_title?: string | null;
+			/** @description До 2000 символов. */
+			overview?: string | null;
+			/**
+			 * Format: int32
+			 * @description Целые минуты, 1–10000.
+			 * @example 42
+			 */
+			runtime_minutes?: number | null;
+			/** Format: int32 */
+			still_height?: number | null;
+			/**
+			 * @description Кадр из серии (16:9), `http(s)://...`. Постер сериала или сезона сюда класть не надо —
+			 *     пропорции другие, карточка поедет.
+			 */
+			still_url?: string | null;
+			/**
+			 * Format: int32
+			 * @description Размеры кадра в пикселях: только вдвоём и только вместе с `still_url`.
+			 */
+			still_width?: number | null;
+			/** @example Тяжёлые времена */
+			title?: string | null;
 		};
 		/** @description Тело любого ответа с ошибкой. Нужно для документации API. */
 		ErrorBody: {
@@ -1966,6 +2170,7 @@ export interface components {
 		Metadata:
 			| components['schemas']['MovieMetadata']
 			| components['schemas']['SeriesMetadata']
+			| components['schemas']['SeasonMetadata']
 			| components['schemas']['BookMetadata']
 			| components['schemas']['GameMetadata']
 			| components['schemas']['PaintingMetadata'];
@@ -2331,6 +2536,63 @@ export interface components {
 			total: number;
 		};
 		/** @description Страница списка. */
+		Page_Episode: {
+			items: {
+				/** Format: date */
+				air_date?: string | null;
+				/** Format: date-time */
+				created_at: string;
+				/** Format: uuid */
+				id: string;
+				/**
+				 * Format: int32
+				 * @example 1
+				 */
+				number: number;
+				/** @example Welcome to the Playground */
+				original_title?: string | null;
+				overview?: string | null;
+				/**
+				 * Format: int32
+				 * @description Целые минуты.
+				 * @example 42
+				 */
+				runtime_minutes?: number | null;
+				/** Format: int32 */
+				still_height?: number | null;
+				/**
+				 * @description Кадр из серии, 16:9 — не постер сериала и не постер сезона. Кадра нет — `null`, и
+				 *     заглушку (постер сезона, иначе сериала) подставляет фронтенд: пропорции у них другие.
+				 */
+				still_url?: string | null;
+				/**
+				 * Format: int32
+				 * @description Размеры кадра в пикселях: карточка держит точное `aspect-ratio` до загрузки.
+				 */
+				still_width?: number | null;
+				/** @example Тяжёлые времена */
+				title?: string | null;
+				/** Format: date-time */
+				updated_at: string;
+			}[];
+			/**
+			 * Format: int64
+			 * @example 20
+			 */
+			limit: number;
+			/**
+			 * Format: int64
+			 * @example 0
+			 */
+			offset: number;
+			/**
+			 * Format: int64
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @example 137
+			 */
+			total: number;
+		};
+		/** @description Страница списка. */
 		Page_PersonHit: {
 			items: {
 				/** Format: date */
@@ -2548,6 +2810,11 @@ export interface components {
 		PublisherHit: {
 			/** Format: int64 */
 			count: number;
+			/**
+			 * @description Логотип, если под этим названием есть студия (`studios.logo_url`) — у издателей и музеев
+			 *     своих логотипов нет, поэтому обычно `null`; карточка тогда без картинки.
+			 */
+			logo_url?: string | null;
 			/** @example АСТ */
 			name: string;
 		};
@@ -2641,6 +2908,23 @@ export interface components {
 			 */
 			weight_recency: number;
 		};
+		/**
+		 * @description Средняя оценка сущности и число оценок: те же числа и та же семантика, что у карточки
+		 *     (`entity_ratings`, сводки присылает `social`).
+		 */
+		RatingValue: {
+			/**
+			 * Format: int64
+			 * @example 420
+			 */
+			count: number;
+			/**
+			 * Format: double
+			 * @description Среднее, округлённое до 0,1; оценок нет — `null`.
+			 * @example 9.2
+			 */
+			value?: number | null;
+		};
 		ReindexResult: {
 			/**
 			 * @description Удалённые устаревшие версии.
@@ -2703,6 +2987,109 @@ export interface components {
 			| 'rating'
 			| 'awarded'
 			| 'random';
+		/**
+		 * @description Карточка сезона: поля сущности (`metadata` — [`crate::metadata::SeasonMetadata`]), сериал для
+		 *     шапки и хлебных крошек и серии сезона.
+		 */
+		SeasonDetail: components['schemas']['EntityDetail'] & {
+			/**
+			 * @description Серии сезона по возрастанию номера, не больше [`MAX_PAGE_SIZE`](shared::pagination::MAX_PAGE_SIZE);
+			 *     длиннее — `GET /seasons/{slug}/episodes`.
+			 */
+			episodes: components['schemas']['Episode'][];
+			/**
+			 * Format: int32
+			 * @description Своя оценка зрителя, 1–10; гостю и без оценки — `null`.
+			 */
+			my_rating?: number | null;
+			rating: components['schemas']['RatingValue'];
+			series?: components['schemas']['EntitySummary'] | null;
+		};
+		/** @description Сезоны сериала одним ответом: без `total`, их всегда немного. */
+		SeasonList: {
+			items: components['schemas']['SeasonSummary'][];
+		};
+		/**
+		 * @description Поля сезона сериала (`kind = season`). Сам сериал — `entities.parent_id`, в ответах он
+		 *     приходит отдельным полем `series`; название, описание, постер и дата премьеры — обычные поля
+		 *     сущности (`title`, `description`, `cover_url`, `release_date`).
+		 *
+		 *     Видео у нас нет: «просмотрено», прогресса и позиции в серии здесь не будет.
+		 */
+		SeasonMetadata: {
+			/** @description Награды и номинации: до 50. */
+			awards?: components['schemas']['MetadataAward'][] | null;
+			/**
+			 * Format: int32
+			 * @description Сколько серий в сезоне.
+			 * @example 6
+			 */
+			episode_count?: number | null;
+			/**
+			 * Format: date
+			 * @description Дата выхода последней вышедшей серии. Премьера — `release_date` сущности.
+			 */
+			finale_date?: string | null;
+			/**
+			 * Format: int32
+			 * @description Номер сезона; 0 — спецвыпуски. Единственное обязательное поле `metadata` во всём каталоге:
+			 *     сезон без номера нечем ни назвать, ни упорядочить.
+			 * @example 2
+			 */
+			number: number;
+			status?: components['schemas']['SeriesStatus'] | null;
+			/** @description Факты: до 30, каждый 1–1000 символов. */
+			trivia?: string[] | null;
+		};
+		/**
+		 * @description Таблетка сезона в шапке сериала: `9.5 ★ · 6 серий` рисуется прямо отсюда, второго запроса
+		 *     за рейтингами быть не должно.
+		 */
+		SeasonSummary: {
+			/** Format: int32 */
+			cover_height?: number | null;
+			/** @description Постер сезона и размеры файла в пикселях (точное `aspect-ratio` до загрузки). */
+			cover_url?: string | null;
+			/** Format: int32 */
+			cover_width?: number | null;
+			/**
+			 * Format: int32
+			 * @example 6
+			 */
+			episode_count?: number | null;
+			/**
+			 * Format: date
+			 * @description Дата выхода последней вышедшей серии.
+			 */
+			finale_date?: string | null;
+			/** Format: uuid */
+			id: string;
+			/**
+			 * Format: int32
+			 * @description Своя оценка зрителя, 1–10; гостю и без оценки — `null`.
+			 * @example 10
+			 */
+			my_rating?: number | null;
+			/**
+			 * Format: int32
+			 * @description Номер сезона; 0 — спецвыпуски.
+			 * @example 2
+			 */
+			number?: number | null;
+			/** @example Arcane: Season 2 */
+			original_title?: string | null;
+			/**
+			 * Format: date
+			 * @description Дата выхода первой серии (`release_date` сущности).
+			 */
+			premiere_date?: string | null;
+			rating: components['schemas']['RatingValue'];
+			/** @example arcane-season-2 */
+			slug: string;
+			status?: components['schemas']['SeriesStatus'] | null;
+			/** @example Сезон 2 */
+			title: string;
+		};
 		/** @description Поля сериала. */
 		SeriesMetadata: {
 			/** @description Награды и номинации: до 50. */
@@ -2757,6 +3144,10 @@ export interface components {
 		};
 		/** @enum {string} */
 		SeriesStatus: 'ongoing' | 'ended' | 'canceled';
+		SetEpisodes: {
+			/** @description Серии сезона целиком: присланный список заменяет текущий. Пустой — снять все серии. */
+			episodes: components['schemas']['EpisodeInput'][];
+		};
 		SetTags: {
 			/**
 			 * @description Slug'и тегов: заменяют текущий набор целиком.
@@ -2856,6 +3247,12 @@ export interface components {
 		StudioHit: {
 			/** Format: int64 */
 			count: number;
+			/**
+			 * @description Логотип студии — тот же адрес, что в `GET /studios/{slug}` и `StudioRef` (`null` — у
+			 *     студии его нет).
+			 * @example https://image.tmdb.org/t/p/w300/xenuUvcunUNpbaDOYGhWZERaym7.png
+			 */
+			logo_url?: string | null;
 			/** @example Warner Bros. Pictures */
 			name: string;
 			/**
@@ -3039,6 +3436,12 @@ export interface components {
 			original_title?: string | null;
 			/** Format: date */
 			release_date?: string | null;
+			/**
+			 * @description Перенести сезон к другому сериалу: slug сериала. Только для `kind = season` — остальным
+			 *     типам 400. Не передан — родитель не меняется.
+			 * @example arcane
+			 */
+			series_slug?: string | null;
 			slug?: string | null;
 			title?: string | null;
 		};
@@ -3087,6 +3490,7 @@ export type SchemaBannerTarget = components['schemas']['BannerTarget'];
 export type SchemaBookMetadata = components['schemas']['BookMetadata'];
 export type SchemaButtonStyle = components['schemas']['ButtonStyle'];
 export type SchemaCategoryNominations = components['schemas']['CategoryNominations'];
+export type SchemaCountryHit = components['schemas']['CountryHit'];
 export type SchemaCreateAward = components['schemas']['CreateAward'];
 export type SchemaCreateBanner = components['schemas']['CreateBanner'];
 export type SchemaCreateCategory = components['schemas']['CreateCategory'];
@@ -3106,6 +3510,8 @@ export type SchemaEntityDetail = components['schemas']['EntityDetail'];
 export type SchemaEntityKind = components['schemas']['EntityKind'];
 export type SchemaEntitySort = components['schemas']['EntitySort'];
 export type SchemaEntitySummary = components['schemas']['EntitySummary'];
+export type SchemaEpisode = components['schemas']['Episode'];
+export type SchemaEpisodeInput = components['schemas']['EpisodeInput'];
 export type SchemaErrorBody = components['schemas']['ErrorBody'];
 export type SchemaGameMetadata = components['schemas']['GameMetadata'];
 export type SchemaIndexEntities = components['schemas']['IndexEntities'];
@@ -3124,6 +3530,7 @@ export type SchemaPageArchiveDoc = components['schemas']['Page_ArchiveDoc'];
 export type SchemaPageAwardListItem = components['schemas']['Page_AwardListItem'];
 export type SchemaPageBanner = components['schemas']['Page_Banner'];
 export type SchemaPageEntitySummary = components['schemas']['Page_EntitySummary'];
+export type SchemaPageEpisode = components['schemas']['Page_Episode'];
 export type SchemaPagePersonHit = components['schemas']['Page_PersonHit'];
 export type SchemaPagePersonSummary = components['schemas']['Page_PersonSummary'];
 export type SchemaPaintingMetadata = components['schemas']['PaintingMetadata'];
@@ -3140,13 +3547,19 @@ export type SchemaPutNominations = components['schemas']['PutNominations'];
 export type SchemaPutRelation = components['schemas']['PutRelation'];
 export type SchemaRankPreviewRow = components['schemas']['RankPreviewRow'];
 export type SchemaRankingSettings = components['schemas']['RankingSettings'];
+export type SchemaRatingValue = components['schemas']['RatingValue'];
 export type SchemaReindexResult = components['schemas']['ReindexResult'];
 export type SchemaRelatedWork = components['schemas']['RelatedWork'];
 export type SchemaRelationKind = components['schemas']['RelationKind'];
 export type SchemaReleaseStatus = components['schemas']['ReleaseStatus'];
 export type SchemaSearchSort = components['schemas']['SearchSort'];
+export type SchemaSeasonDetail = components['schemas']['SeasonDetail'];
+export type SchemaSeasonList = components['schemas']['SeasonList'];
+export type SchemaSeasonMetadata = components['schemas']['SeasonMetadata'];
+export type SchemaSeasonSummary = components['schemas']['SeasonSummary'];
 export type SchemaSeriesMetadata = components['schemas']['SeriesMetadata'];
 export type SchemaSeriesStatus = components['schemas']['SeriesStatus'];
+export type SchemaSetEpisodes = components['schemas']['SetEpisodes'];
 export type SchemaSetTags = components['schemas']['SetTags'];
 export type SchemaStatsResult = components['schemas']['StatsResult'];
 export type SchemaStep = components['schemas']['Step'];
@@ -5486,6 +5899,69 @@ export interface operations {
 			};
 		};
 	};
+	set_season_episodes: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description id сезона (сущность `kind = season`) */
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['SetEpisodes'];
+			};
+		};
+		responses: {
+			/** @description Серии сезона */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Episode'][];
+				};
+			};
+			/** @description Неверные поля или повтор номера */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Сезон не найден */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
 	create_tag: {
 		parameters: {
 			query?: never;
@@ -6303,6 +6779,8 @@ export interface operations {
 				offset?: number;
 				/** @description Типы работ, как в `GET /search` */
 				kind?: components['schemas']['EntityKind'][];
+				/** @description Страны производства, как в `GET /search` */
+				country?: string[];
 			};
 			header?: never;
 			path: {
@@ -6333,6 +6811,50 @@ export interface operations {
 			};
 			/** @description Meilisearch недоступен */
 			503: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	list_entity_seasons: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug сериала
+				 * @example arcane
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Сезоны сериала */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['SeasonList'];
+				};
+			};
+			/** @description Неверный токен */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Сериал не найден или скрыт */
+			404: {
 				headers: {
 					[name: string]: unknown;
 				};
@@ -6552,6 +7074,11 @@ export interface operations {
 				offset?: number;
 				/** @description Типы работ: можно повторить (`kind=movie&kind=game`) или перечислить через запятую. Несколько — ИЛИ между собой и И с остальными фильтрами. Не передан — все типы */
 				kind?: components['schemas']['EntityKind'][];
+				/**
+				 * @description Страны производства (`metadata.countries`), коды ISO 3166-1 alpha-2: можно повторить (`country=US&country=GB`) или перечислить через запятую. Несколько — ИЛИ между собой и И с остальными фильтрами. Регистр не важен; неизвестный код — 400
+				 * @example US
+				 */
+				country?: string[];
 			};
 			header?: never;
 			path?: never;
@@ -6569,6 +7096,54 @@ export interface operations {
 				};
 			};
 			/** @description Неверный фильтр */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Meilisearch недоступен */
+			503: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	search_countries: {
+		parameters: {
+			query?: {
+				/**
+				 * @description Начало или часть названия, опечатки допустимы. Пустой — самые частые.
+				 * @example аст
+				 */
+				q?: string;
+				/** @description Только у сущностей этого типа: жанры фильмов не предлагаются в книгах. */
+				kind?: components['schemas']['EntityKind'];
+				/** @description 1–50, по умолчанию 10. Вне диапазона приводится к границам. */
+				limit?: number;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Страны */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['CountryHit'][];
+				};
+			};
+			/** @description Слишком длинный `q` */
 			400: {
 				headers: {
 					[name: string]: unknown;
@@ -6833,6 +7408,98 @@ export interface operations {
 			};
 		};
 	};
+	get_season: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug сезона
+				 * @example arcane-season-2
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Карточка сезона */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['SeasonDetail'];
+				};
+			};
+			/** @description Неверный токен */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Не найден или скрыт */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	list_season_episodes: {
+		parameters: {
+			query?: {
+				/** @description 1–100, по умолчанию 50. */
+				limit?: number;
+				offset?: number;
+			};
+			header?: never;
+			path: {
+				/**
+				 * @description slug сезона
+				 * @example arcane-season-2
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Серии сезона */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Page_Episode'];
+				};
+			};
+			/** @description Неверный токен */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Сезон не найден или скрыт */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
 	get_studio: {
 		parameters: {
 			query?: never;
@@ -6879,7 +7546,7 @@ export interface operations {
 				 *     работы — отдельный параметр.
 				 * @example painting
 				 */
-				entity_kind?: 'movie' | 'series' | 'book' | 'game' | 'painting';
+				entity_kind?: 'movie' | 'series' | 'season' | 'book' | 'game' | 'painting';
 			};
 			header?: never;
 			path?: never;

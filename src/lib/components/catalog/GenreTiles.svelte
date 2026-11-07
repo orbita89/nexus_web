@@ -23,6 +23,7 @@
 	const TINT: Record<SchemaEntityKind, string> = {
 		movie: 'from-primary/25',
 		series: 'from-secondary/25',
+		season: 'from-secondary/25',
 		book: 'from-accent/20',
 		game: 'from-info/20',
 		painting: 'from-warning/20'
