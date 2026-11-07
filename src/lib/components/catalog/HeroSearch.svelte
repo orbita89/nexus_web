@@ -151,7 +151,7 @@
 		{action}
 		method="GET"
 		role="search"
-		class="flex max-w-xl items-center gap-2 rounded-full bg-base-100/40 p-2 pl-3 ring-1 ring-base-content/10 backdrop-blur-md focus-within:ring-2 focus-within:ring-primary/60"
+		class="flex max-w-xl items-center gap-2 rounded-full bg-base-100/40 p-2 pl-3 ring-1 ring-base-content/10 backdrop-blur-md focus-within:ring-base-content/25"
 	>
 		<!-- kind=films,games — несколько разделов разом; у людей и коллекций своего фильтра нет. -->
 		{#if !solo && kinds.length}<input type="hidden" name="kind" value={kindsParam(kinds)} />{/if}

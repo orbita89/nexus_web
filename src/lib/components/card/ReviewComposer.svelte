@@ -70,7 +70,7 @@
 				</div>
 			</div>
 			<!-- Поле без собственной рамки: плашка формы уже отделяет его от ленты, вторая обводка
-		     только утяжеляла. На фокусе — тонкое кольцо, а не толстая белая граница. -->
+		     только утяжеляла. На фокусе обводки нет: курсор в поле и так видно. -->
 			<textarea
 				id="review-body"
 				class="min-h-32 w-full resize-y bg-transparent text-lg leading-relaxed font-medium placeholder:font-normal placeholder:text-base-content/30 focus:outline-none"
