@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { Snippet } from 'svelte';
 	import { page } from '$app/state';
 	import { errorMessage } from '#lib/api/errors.ts';
 	import type { SchemaReview } from '#lib/api/generated/social.ts';
@@ -9,10 +10,11 @@
 	import ReviewComments from './ReviewComments.svelte';
 
 	// Под рецензией: 👍 / 👎 (взаимоисключающие, повторный клик снимает) и «Комментарии» —
-	// раскрывает ReviewComments. За свою рецензию голосовать нельзя (числа видно). Гостю — вход.
+	// раскрывает ReviewComments. `children` — что встаёт в тот же ряд справа («Изменить» у своей
+	// рецензии): снаружи этот ряд не обернуть, ниже него идут комментарии во всю ширину. За свою рецензию голосовать нельзя (числа видно). Гостю — вход.
 	// Свой голос — из общих голосов страницы (MyVotes); нажатие меняет числа сразу, после ответа —
 	// числа сервера, ошибка — откат.
-	let { review }: { review: SchemaReview } = $props();
+	let { review, children }: { review: SchemaReview; children?: Snippet } = $props();
 
 	const votes = useMyVotes();
 	let open = $state(false);
@@ -114,6 +116,7 @@
 		>
 		Комментарии{#if comments}<span class="tabular-nums">{comments}</span>{/if}
 	</button>
+	{#if children}<span class="ml-2">{@render children()}</span>{/if}
 </div>
 {#if error}<p role="alert" class="mt-1 text-xs text-error">{error}</p>{/if}
 {#if open}<ReviewComments

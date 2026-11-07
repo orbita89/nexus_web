@@ -126,12 +126,13 @@
 				</button>
 			{/if}
 		</div>
-		<div class="flex flex-wrap items-center gap-x-4">
-			<ReviewActions {review} />
+		<!-- «Изменить» — внутрь ряда реакций: обёрнутый снаружи flex забирал в ту же строку и
+		     раскрытые комментарии, и они уезжали вправо от 👍/👎. -->
+		<ReviewActions {review}>
 			{#if own}
-				<button class="mt-2 link text-sm text-primary link-hover" onclick={onedit}>Изменить</button>
+				<button class="link text-sm text-primary link-hover" onclick={onedit}>Изменить</button>
 			{/if}
-		</div>
+		</ReviewActions>
 	{:else if showEntity}
 		<p class="mt-2 text-sm text-base-content/50">Оценка без рецензии</p>
 	{/if}

@@ -92,4 +92,22 @@ describe('ReviewCard', () => {
 			/\/api\/v1\/social\/reviews\/r1\/comments\?limit=20&offset=0$/
 		);
 	});
+
+	it('раскрытые комментарии идут под реакциями, а не сбоку от них', async () => {
+		vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+			new Response(JSON.stringify({ items: [], total: 0, limit: 20, offset: 0 }), {
+				headers: { 'content-type': 'application/json' }
+			})
+		);
+		render(ReviewCard, { review: review({ comments_count: 0 }) });
+		const actions = page.getByRole('group', { name: 'Реакции на рецензию' });
+		await actions.getByRole('button', { name: /Комментарии/ }).click();
+		const empty = page.getByText('Комментариев пока нет.');
+		await expect.element(empty).toBeVisible();
+		// Блок комментариев лежал в одном flex-ряду с 👍/👎 и уезжал вправо от них: проверяем,
+		// что его родитель — не flex-строка, иначе на широкой карточке он снова встанет сбоку.
+		const block = (await empty.element()).closest('.border-l-2')!;
+		expect(block.parentElement).not.toBe((await actions.element()).parentElement?.closest('.flex'));
+		expect(getComputedStyle(block.parentElement!).display).not.toBe('flex');
+	});
 });
