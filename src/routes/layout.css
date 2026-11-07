@@ -74,6 +74,222 @@
 	padding: 1px;
 }
 
+/* Фильтры-таблетки: ровная матовая кнопка без неона — цветом выделяется только открытая или
+   выбранная, и в строке сразу видно, что включено. */
+.filter-pill {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+	min-width: 0;
+	height: 2.25rem;
+	padding-inline: 0.875rem;
+	border: 1px solid color-mix(in oklab, var(--color-base-content) 12%, transparent);
+	border-radius: 9999px;
+	background-color: var(--color-base-300);
+	font-size: 0.875rem;
+	color: color-mix(in oklab, var(--color-base-content) 85%, transparent);
+	cursor: pointer;
+	transition:
+		background-color 0.15s,
+		border-color 0.15s,
+		color 0.15s;
+}
+.filter-pill:hover {
+	border-color: color-mix(in oklab, var(--color-base-content) 24%, transparent);
+}
+.filter-pill-on {
+	border-color: color-mix(in oklab, var(--color-primary) 55%, transparent);
+	background-color: color-mix(in oklab, var(--color-primary) 18%, var(--color-base-300));
+	color: color-mix(in oklab, var(--color-primary) 40%, var(--color-base-content));
+}
+
+/* Поиск внутри панели — матовое поле без кольца: яркая оранжевая обводка во всю ширину спорила
+   с содержимым панели. О фокусе говорит лупа: она загорается цветом темы. */
+.filter-search {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	/* Ширину и сжатие задаёт только разметка: свой flex или min-width тут перебивали бы утилиты
+	   (обычный CSS сильнее @layer utilities) — поле схлопывалось в кружок. */
+	height: 2.25rem;
+	padding-inline: 0.875rem;
+	border: 1px solid color-mix(in oklab, var(--color-base-content) 10%, transparent);
+	border-radius: 9999px;
+	background-color: color-mix(in oklab, var(--color-base-content) 5%, var(--color-base-200));
+	color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+}
+.filter-search:focus-within {
+	border-color: color-mix(in oklab, var(--color-base-content) 20%, transparent);
+	color: var(--color-primary);
+}
+.filter-search input {
+	min-width: 0;
+	flex: 1;
+	border: none;
+	background: none;
+	font-size: 0.875rem;
+	color: var(--color-base-content);
+}
+/* Кольцо фокуса полей темы здесь ни к чему: оранжевая рамка во всю ширину панели кричала
+   громче содержимого. Селектор точнее общего правила — иначе оно перебивает. */
+.filter-search:focus,
+.filter-search input[type='search']:focus,
+.filter-search input[type='text']:focus {
+	outline: none;
+}
+
+/* Вкладки ролей: текст с подчёркиванием у выбранной. Рамки у восьми профессий сразу давали в
+   панели второй этаж кнопок — шум там, где нужен только выбор. */
+.filter-tab {
+	padding: 0.125rem 0;
+	border-bottom: 2px solid transparent;
+	font-size: 0.875rem;
+	color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+	cursor: pointer;
+}
+.filter-tab:hover {
+	color: var(--color-base-content);
+}
+.filter-tab-on {
+	border-bottom-color: var(--color-primary);
+	color: var(--color-base-content);
+}
+
+/* Ползунок года: две шкалы лежат одна на другой, поэтому у них прозрачный фон и клики ловят
+   только ручки — иначе верхняя шкала перехватывала бы всё поле у нижней. */
+.year-range input[type='range'] {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	margin: 0;
+	appearance: none;
+	background: none;
+	pointer-events: none;
+}
+.year-range input[type='range']:focus {
+	outline: none;
+}
+.year-range input[type='range']::-webkit-slider-thumb {
+	appearance: none;
+	width: 1.125rem;
+	height: 1.125rem;
+	border: 2px solid var(--color-base-100);
+	border-radius: 9999px;
+	background-color: var(--color-primary);
+	cursor: grab;
+	pointer-events: auto;
+}
+.year-range input[type='range']::-moz-range-thumb {
+	width: 1.125rem;
+	height: 1.125rem;
+	border: 2px solid var(--color-base-100);
+	border-radius: 9999px;
+	background-color: var(--color-primary);
+	cursor: grab;
+	pointer-events: auto;
+}
+.year-range input[type='range']:focus-visible::-webkit-slider-thumb {
+	box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-primary) 40%, transparent);
+}
+.year-range input[type='range']:focus-visible::-moz-range-thumb {
+	box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-primary) 40%, transparent);
+}
+.year-range-track,
+.year-range-fill {
+	position: absolute;
+	top: 50%;
+	height: 0.25rem;
+	border-radius: 9999px;
+	transform: translateY(-50%);
+}
+.year-range-track {
+	left: 0;
+	right: 0;
+	background-color: color-mix(in oklab, var(--color-base-content) 12%, transparent);
+}
+.year-range-fill {
+	background-color: color-mix(in oklab, var(--color-primary) 70%, transparent);
+}
+/* Слой кликов по шкале: лежит под обеими шкалами, поэтому клик по ручке достаётся ручке, а
+   клик по пустому месту полосы — выбору одного года. */
+.year-range-hit {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	border: 0;
+	background: none;
+	cursor: pointer;
+}
+
+/* Засечка десятилетия: короткий штрих под полосой, ориентир на длинной шкале. */
+.year-range-tick {
+	position: absolute;
+	top: 50%;
+	width: 1px;
+	height: 0.5rem;
+	margin-top: 0.25rem;
+	background-color: color-mix(in oklab, var(--color-base-content) 14%, transparent);
+	pointer-events: none;
+}
+/* Подпись над ручкой: год видно, не отводя глаз от самой ручки. */
+.year-range-badge {
+	position: absolute;
+	bottom: calc(50% + 0.75rem);
+	transform: translateX(-50%);
+	padding: 0.05rem 0.4rem;
+	border-radius: 9999px;
+	background-color: color-mix(in oklab, var(--color-primary) 18%, var(--color-base-300));
+	color: color-mix(in oklab, var(--color-primary) 45%, var(--color-base-content));
+	font-size: 0.75rem;
+	font-variant-numeric: tabular-nums;
+	pointer-events: none;
+	white-space: nowrap;
+}
+
+/* Поля точного года рядом с промежутками: матовые, узкие, по центру. */
+.year-field {
+	width: 3.5rem;
+	height: 1.75rem;
+	padding-inline: 0.5rem;
+	border: 1px solid color-mix(in oklab, var(--color-base-content) 10%, transparent);
+	border-radius: 0.5rem;
+	background-color: color-mix(in oklab, var(--color-base-content) 5%, var(--color-base-200));
+	color: var(--color-base-content);
+	font-size: 0.8125rem;
+	font-variant-numeric: tabular-nums;
+	text-align: center;
+}
+.year-field:focus {
+	outline: none;
+	border-color: color-mix(in oklab, var(--color-primary) 55%, transparent);
+}
+
+/* Вариант в выпадающей панели: карточка, а не строка списка — с флагом или счётчиком она
+   читается с одного взгляда, и в ряд их помещается четыре. */
+.filter-card {
+	display: flex;
+	align-items: center;
+	gap: 0.625rem;
+	min-width: 0;
+	padding: 0.5rem 0.75rem;
+	/* Рамка прозрачная, а не серая: девять обведённых карточек дробили панель на клетки. Место
+	   под рамку всё равно держим — иначе наведение сдвигало бы содержимое. */
+	border: 1px solid transparent;
+	border-radius: 0.75rem;
+	background-color: color-mix(in oklab, var(--color-base-content) 3%, transparent);
+	text-align: start;
+	cursor: pointer;
+	transition:
+		background-color 0.15s,
+		border-color 0.15s;
+}
+.filter-card:hover,
+.filter-card:focus-visible {
+	border-color: color-mix(in oklab, var(--color-primary) 55%, transparent);
+	background-color: color-mix(in oklab, var(--color-primary) 10%, var(--color-base-200));
+}
+
 /* Главная кнопка таких блоков: оранжевый #f97316 с золотым отливом, лента градиента шире кнопки
    и медленно едет поперёк. */
 .btn-shimmer {

@@ -81,14 +81,16 @@ export interface CountryOption {
 	label: string;
 }
 
-/** Страны по алфавиту; с запросом — те, чьё название или код начинается с него. */
+/**
+ * Без запроса — в порядке списка кодов: он от частых к редким, и в коротком окне выбора сверху
+ * оказываются страны, которые ищут чаще всего, а не те, что раньше по алфавиту. С запросом —
+ * по алфавиту: там порядок нужен предсказуемый.
+ */
 export function countryOptions(q: string): CountryOption[] {
-	const all = CODES.map((value) => ({ value, label: countryName(value) })).toSorted((a, b) =>
-		a.label.localeCompare(b.label, 'ru')
-	);
+	const all = CODES.map((value) => ({ value, label: countryName(value) }));
 	const needle = q.trim().toLowerCase();
 	if (!needle) return all;
-	return all.filter(
-		(c) => c.label.toLowerCase().startsWith(needle) || c.value.toLowerCase() === needle
-	);
+	return all
+		.toSorted((a, b) => a.label.localeCompare(b.label, 'ru'))
+		.filter((c) => c.label.toLowerCase().startsWith(needle) || c.value.toLowerCase() === needle);
 }
