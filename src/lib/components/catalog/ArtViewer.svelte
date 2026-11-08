@@ -1,20 +1,33 @@
 <script lang="ts">
+	import type { SchemaCrop } from '#lib/api/generated/catalog.ts';
+
 	// Картина во весь экран с увеличением: колесо (или кнопки) меняет масштаб, перетаскивание
 	// двигает холст, двойной щелчок — приблизить/вернуть, Esc закрывает. Всё в браузере: страница
 	// карточки остаётся статикой (пререндер), окно открывается только по нажатию.
 	let {
 		src,
 		title,
-		children
+		max = 6,
+		children,
+		open: openTo = $bindable(null)
 	}: {
 		src: string;
 		title: string;
+		/**
+		 * Потолок увеличения. По обложке выдачи дальше шестикратного — уже каша из пикселей, а по
+		 * исходнику музея есть куда идти: мелкая деталь занимает сотую долю холста.
+		 */
+		max?: number;
 		/** Содержимое кнопки — сам холст в карточке. */
 		children: import('svelte').Snippet;
+		/**
+		 * Фрагмент, к которому открыть просмотр: лента деталей ставит сюда кроп, и окно
+		 * открывается сразу увеличенным на этом месте холста. Закрыли — снова null.
+		 */
+		open?: SchemaCrop | null;
 	} = $props();
 
 	const MIN = 1;
-	const MAX = 6;
 	const STEP = 1.4;
 
 	let dialog: HTMLDialogElement;
@@ -26,7 +39,7 @@
 	let dragging = $state(false);
 	let from = { x: 0, y: 0 };
 
-	const clamp = (value: number) => Math.min(MAX, Math.max(MIN, value));
+	const clamp = (value: number) => Math.min(max, Math.max(MIN, value));
 
 	function reset() {
 		zoom = 1;
@@ -39,6 +52,32 @@
 		open = true;
 		dialog.showModal();
 	}
+
+	let canvasImage = $state<HTMLImageElement>();
+
+	/**
+	 * Открыть холст на фрагменте: увеличение такое, чтобы кусок занял окно, и сдвиг такой, чтобы
+	 * его середина встала в середину экрана. Точка p от центра холста после translate и scale
+	 * оказывается в центре, когда сдвиг равен −p × масштаб — отсюда формула.
+	 */
+	function focusOn(crop: SchemaCrop) {
+		const image = canvasImage;
+		if (!image) return;
+		const box = image.getBoundingClientRect();
+		if (!box.width || !box.height) return;
+		zoom = clamp(Math.min(1 / crop.width, 1 / crop.height));
+		x = -(crop.x + crop.width / 2 - 0.5) * box.width * zoom;
+		y = -(crop.y + crop.height / 2 - 0.5) * box.height * zoom;
+	}
+
+	// Лента деталей попросила открыть фрагмент: показываем окно и ждём, пока холст встанет на
+	// место, — до загрузки размеры картинки неизвестны и считать по ним нечего.
+	$effect(() => {
+		if (!openTo) return;
+		const crop = openTo;
+		if (!open) show();
+		if (canvasImage?.complete) focusOn(crop);
+	});
 
 	/** Масштаб с сохранением точки под курсором: иначе при увеличении картина уезжает. */
 	function scaleAt(next: number, clientX?: number, clientY?: number) {
@@ -94,6 +133,7 @@
 	aria-label={title}
 	onclose={() => {
 		open = false;
+		openTo = null;
 		reset();
 	}}
 >
@@ -137,9 +177,11 @@
 		>
 			{#if open}
 				<img
+					bind:this={canvasImage}
 					{src}
 					alt={title}
 					draggable="false"
+					onload={() => openTo && focusOn(openTo)}
 					class="absolute inset-0 m-auto max-h-full max-w-full object-contain select-none"
 					style="translate: {x}px {y}px; scale: {zoom}; transition: {dragging
 						? 'none'

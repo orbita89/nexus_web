@@ -308,6 +308,23 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/catalog/admin/entities/{id}/fragments': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/** Заменить фрагменты полотна целиком. */
+		put: operations['set_entity_fragments'];
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/catalog/admin/entities/{id}/relations': {
 		parameters: {
 			query?: never;
@@ -860,6 +877,23 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/catalog/entities/{slug}/fragments': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Фрагменты сущности в порядке `position`. */
+		get: operations['list_entity_fragments'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/catalog/entities/{slug}/neighbors': {
 		parameters: {
 			query?: never;
@@ -1278,6 +1312,12 @@ export interface components {
 			active_manual: boolean;
 			/** @description Видна на сайте (активна и вышла / «скоро» / вручную / не из TMDB). */
 			visible: boolean;
+		};
+		AnalysisPoint: {
+			/** @example Девочка с курицей на поясе — эмблема гильдии… */
+			text: string;
+			/** @example Тайна золотой девочки */
+			title: string;
 		};
 		/**
 		 * @description Документ архива — «скелет» фильма: то, что нужно для поиска, страницы фильма в архиве и
@@ -1759,6 +1799,32 @@ export interface components {
 			/** @example sci-fi */
 			slug: string;
 		};
+		/**
+		 * @description Прямоугольник на исходнике в долях его ширины и высоты (0–1), а не в пикселях: исходник
+		 *     могут перезалить в другом разрешении, и доли это переживут.
+		 */
+		Crop: {
+			/**
+			 * Format: double
+			 * @example 0.12
+			 */
+			height: number;
+			/**
+			 * Format: double
+			 * @example 0.09
+			 */
+			width: number;
+			/**
+			 * Format: double
+			 * @example 0.412
+			 */
+			x: number;
+			/**
+			 * Format: double
+			 * @example 0.168
+			 */
+			y: number;
+		};
 		DemoteRequest: {
 			/**
 			 * @description slug'и фильмов на сайте, 1–100, без повторов.
@@ -1897,6 +1963,12 @@ export interface components {
 			 */
 			awards: components['schemas']['EntityAward'][];
 			credits: components['schemas']['EntityCredit'][];
+			/**
+			 * @description Фрагменты полотна в порядке `position` (только у картин, у остальных типов — пусто):
+			 *     лента «Интересные детали полотна». Их мало и нужны они сразу, поэтому приходят прямо в
+			 *     карточке — второго запроса не надо.
+			 */
+			fragments: components['schemas']['Fragment'][];
 			related: components['schemas']['RelatedWork'][];
 			/**
 			 * @description Студии из `metadata.studios` в том же порядке, со ссылкой на страницу (`/studios/{slug}`).
@@ -2053,6 +2125,35 @@ export interface components {
 			 * @example 80
 			 */
 			retry_after?: number | null;
+		};
+		/** @description Деталь полотна со своим кропом. */
+		Fragment: {
+			crop: components['schemas']['Crop'];
+			/** @example В глубине толпы, между знаменем и шляпой, видно лицо самого Рембрандта. */
+			description?: string | null;
+			/** Format: uuid */
+			id: string;
+			/**
+			 * Format: int32
+			 * @description Порядок рассказа: детали идут по смыслу, а не слева направо.
+			 * @example 3
+			 */
+			position: number;
+			/** @example Скрытый автопортрет */
+			title: string;
+		};
+		FragmentInput: {
+			/** @description Прямоугольник в долях исходника: `x + width` и `y + height` не больше 1. */
+			crop: components['schemas']['Crop'];
+			/** @description До 600 символов. */
+			description?: string | null;
+			/**
+			 * Format: int32
+			 * @description Порядок рассказа; не передан — по порядку в списке.
+			 */
+			position?: number | null;
+			/** @example Скрытый автопортрет */
+			title: string;
 		};
 		/** @description Поля игры. */
 		GameMetadata: {
@@ -2660,10 +2761,25 @@ export interface components {
 			total: number;
 		};
 		/**
+		 * @description Разбор картины. Озвучки здесь нет намеренно: кнопка «Слушать разбор» без звука хуже, чем её
+		 *     отсутствие. Понадобится — рядом встанет одно поле `audio_url`.
+		 */
+		PaintingAnalysis: {
+			/** @description Тезисы-символы: до 10, `title` до 120 символов, `text` до 600. */
+			points?: components['schemas']['AnalysisPoint'][];
+			/**
+			 * @description Связный текст с абзацами, до 10 000 символов. Обычный текст, не HTML: чужую разметку в
+			 *     страницу мы не вставляем.
+			 * @example Полотно заказала стрелковая рота…
+			 */
+			text: string;
+		};
+		/**
 		 * @description Поля картины. Художник — не здесь, а в титрах (`entity_credits`, роль `artist`): у него своя
 		 *     страница и фильтр поиска, как у режиссёра. Год создания — `entities.release_date`.
 		 */
 		PaintingMetadata: {
+			analysis?: components['schemas']['PaintingAnalysis'] | null;
 			/** @description Награды и номинации: до 50 (у картин почти не бывает, но форма админки общая). */
 			awards?: components['schemas']['MetadataAward'][] | null;
 			/**
@@ -2677,6 +2793,34 @@ export interface components {
 			 * @example 77
 			 */
 			height_cm?: number | null;
+			/**
+			 * @description Базовый адрес IIIF Image API, если источник его отдаёт (Рейксмюсеум, Лувр, Метрополитен,
+			 *     Google Arts). Из него фронтенд собирает и тайлы глубокого зума, и кроп фрагмента
+			 *     (`{iiif_base}/{x},{y},{w},{h}/600,/0/default.jpg`): режет и хранит куски сервер IIIF, не
+			 *     мы. Хвостовой `/` отбрасывается. Есть IIIF — `image_url` можно не заполнять.
+			 * @example https://iiif.rijksmuseum.nl/public/SK-C-5
+			 */
+			iiif_base?: string | null;
+			/**
+			 * Format: int32
+			 * @example 5544
+			 */
+			image_height?: number | null;
+			/**
+			 * @description Исходник высокого разрешения — тот, по которому работает зум и считаются кропы
+			 *     фрагментов. Не `cover_url`: та обложка шириной 1000 px нужна выдаче, а кроп
+			 *     0.09 × 0.12 по ней — каша из двенадцати пикселей. Разумный предел по длинной стороне —
+			 *     2–4 тыс. px, иначе телефон файл не откроет.
+			 * @example https://upload.wikimedia.org/.../night-watch.jpg
+			 */
+			image_url?: string | null;
+			/**
+			 * Format: int32
+			 * @description Размеры этого самого файла в пикселях, 1–100000: принимаются только вдвоём и только
+			 *     вместе с `image_url`. По ним фронтенд переводит доли кропа в пиксели.
+			 * @example 6720
+			 */
+			image_width?: number | null;
 			/**
 			 * @description Где хранится: музей или собрание. Фильтр `museum` в поиске.
 			 * @example Лувр
@@ -3148,6 +3292,10 @@ export interface components {
 			/** @description Серии сезона целиком: присланный список заменяет текущий. Пустой — снять все серии. */
 			episodes: components['schemas']['EpisodeInput'][];
 		};
+		SetFragments: {
+			/** @description Фрагменты целиком: присланный список заменяет текущий. Пустой — снять все. */
+			fragments: components['schemas']['FragmentInput'][];
+		};
 		SetTags: {
 			/**
 			 * @description Slug'и тегов: заменяют текущий набор целиком.
@@ -3472,6 +3620,7 @@ export interface components {
 export type SchemaActiveResult = components['schemas']['ActiveResult'];
 export type SchemaAddCredit = components['schemas']['AddCredit'];
 export type SchemaAdminEntitySummary = components['schemas']['AdminEntitySummary'];
+export type SchemaAnalysisPoint = components['schemas']['AnalysisPoint'];
 export type SchemaArchiveDoc = components['schemas']['ArchiveDoc'];
 export type SchemaArchiveStats = components['schemas']['ArchiveStats'];
 export type SchemaAward = components['schemas']['Award'];
@@ -3498,6 +3647,7 @@ export type SchemaCreateEdition = components['schemas']['CreateEdition'];
 export type SchemaCreateEntity = components['schemas']['CreateEntity'];
 export type SchemaCreatePerson = components['schemas']['CreatePerson'];
 export type SchemaCreateTag = components['schemas']['CreateTag'];
+export type SchemaCrop = components['schemas']['Crop'];
 export type SchemaDemoteRequest = components['schemas']['DemoteRequest'];
 export type SchemaDemoteResult = components['schemas']['DemoteResult'];
 export type SchemaDemoteSkip = components['schemas']['DemoteSkip'];
@@ -3513,6 +3663,8 @@ export type SchemaEntitySummary = components['schemas']['EntitySummary'];
 export type SchemaEpisode = components['schemas']['Episode'];
 export type SchemaEpisodeInput = components['schemas']['EpisodeInput'];
 export type SchemaErrorBody = components['schemas']['ErrorBody'];
+export type SchemaFragment = components['schemas']['Fragment'];
+export type SchemaFragmentInput = components['schemas']['FragmentInput'];
 export type SchemaGameMetadata = components['schemas']['GameMetadata'];
 export type SchemaIndexEntities = components['schemas']['IndexEntities'];
 export type SchemaIndexResult = components['schemas']['IndexResult'];
@@ -3533,6 +3685,7 @@ export type SchemaPageEntitySummary = components['schemas']['Page_EntitySummary'
 export type SchemaPageEpisode = components['schemas']['Page_Episode'];
 export type SchemaPagePersonHit = components['schemas']['Page_PersonHit'];
 export type SchemaPagePersonSummary = components['schemas']['Page_PersonSummary'];
+export type SchemaPaintingAnalysis = components['schemas']['PaintingAnalysis'];
 export type SchemaPaintingMetadata = components['schemas']['PaintingMetadata'];
 export type SchemaPerson = components['schemas']['Person'];
 export type SchemaPersonCredit = components['schemas']['PersonCredit'];
@@ -3560,6 +3713,7 @@ export type SchemaSeasonSummary = components['schemas']['SeasonSummary'];
 export type SchemaSeriesMetadata = components['schemas']['SeriesMetadata'];
 export type SchemaSeriesStatus = components['schemas']['SeriesStatus'];
 export type SchemaSetEpisodes = components['schemas']['SetEpisodes'];
+export type SchemaSetFragments = components['schemas']['SetFragments'];
 export type SchemaSetTags = components['schemas']['SetTags'];
 export type SchemaStatsResult = components['schemas']['StatsResult'];
 export type SchemaStep = components['schemas']['Step'];
@@ -5110,6 +5264,69 @@ export interface operations {
 				};
 			};
 			/** @description Не найден */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	set_entity_fragments: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description id картины */
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['SetFragments'];
+			};
+		};
+		responses: {
+			/** @description Фрагменты полотна */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Fragment'][];
+				};
+			};
+			/** @description Неверные поля, кроп вне полотна или не картина */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Сущность не найдена */
 			404: {
 				headers: {
 					[name: string]: unknown;
@@ -6677,6 +6894,50 @@ export interface operations {
 				};
 				content: {
 					'application/json': components['schemas']['EntityDetail'];
+				};
+			};
+			/** @description Неверный токен */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Не найдена или скрыта */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	list_entity_fragments: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug картины
+				 * @example night-watch
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Фрагменты полотна */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Fragment'][];
 				};
 			};
 			/** @description Неверный токен */

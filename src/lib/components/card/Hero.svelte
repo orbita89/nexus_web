@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import type { SchemaEntityDetail } from '#lib/api/generated/catalog.ts';
+	import type { SchemaCrop, SchemaEntityDetail } from '#lib/api/generated/catalog.ts';
+	import type { Canvas } from '#lib/catalog/paintings.ts';
 	import type { TrailerSource } from '#lib/catalog/trailer.ts';
 	import CardHero from '#lib/components/catalog/CardHero.svelte';
 	import ArtNav from '#lib/components/card/ArtNav.svelte';
@@ -18,6 +19,8 @@
 		entity,
 		trailers,
 		parent = null,
+		canvas = null,
+		openCrop = $bindable(null),
 		marks,
 		actions
 	}: {
@@ -25,6 +28,10 @@
 		trailers: TrailerSource[];
 		/** Сериал над названием сезона: «Сезон 2» сам по себе ничего не говорит. */
 		parent?: { title: string; href: string } | null;
+		/** Холст картины: исходник для увеличения, если он есть, иначе обложка. */
+		canvas?: Canvas | null;
+		/** Фрагмент из ленты деталей: холст откроется увеличенным на этом месте. */
+		openCrop?: SchemaCrop | null;
 		/** Под кнопками: «Посмотреть позже», «Просмотрено». */
 		marks: Snippet;
 		/** Кнопки: оценка, «Оценить», «В коллекцию», «Следить». */
@@ -72,9 +79,15 @@
 	</CardHero>
 {:else if entity.kind === 'painting' && entity.cover_url}
 	<!-- Картина — сама страница: холст во всю ширину и почти во всю высоту экрана, название и
-	     кнопки под ним. Щелчок открывает её во весь экран с увеличением. -->
+	     кнопки под ним. Щелчок открывает её во весь экран с увеличением — в исходном разрешении,
+	     если оно есть: по обложке выдачи второй шаг увеличения уже расплывается. -->
 	<section aria-label="Шапка: {entity.title}" class="mb-12">
-		<ArtViewer src={entity.cover_url} title={entity.title}>
+		<ArtViewer
+			src={canvas?.src ?? entity.cover_url}
+			title={entity.title}
+			max={canvas?.width && canvas.width >= 2000 ? 16 : 6}
+			bind:open={openCrop}
+		>
 			<img
 				src={entity.cover_url}
 				alt="Картина: {entity.title}"

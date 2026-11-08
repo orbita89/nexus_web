@@ -38,6 +38,7 @@ const dune: SchemaEntityDetail = {
 	],
 	related: [],
 	awards: [],
+	fragments: [],
 	credits: [
 		credit('director', 'Вильнёв'),
 		credit('actor', 'Шаламе', 'Пол Атрейдес'),

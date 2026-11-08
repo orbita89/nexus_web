@@ -37,9 +37,13 @@
 	import { MyReviewState } from '#lib/social/my-review.svelte.ts';
 	import { provideMyVotes } from '#lib/social/review-votes.svelte.ts';
 	import { Watch } from '#lib/social/watch.svelte.ts';
+	import Analysis from '#lib/components/card/Analysis.svelte';
+	import FragmentStrip from '#lib/components/card/FragmentStrip.svelte';
 	import SeasonTabs from '#lib/components/card/SeasonTabs.svelte';
 	import EpisodeStrip from '#lib/components/card/EpisodeStrip.svelte';
+	import { analysisOf, canvasOf } from '#lib/catalog/paintings.ts';
 	import type {
+		SchemaCrop,
 		SchemaEntityDetail,
 		SchemaEpisode,
 		SchemaSeasonSummary
@@ -74,6 +78,14 @@
 		series?: { slug: string; title: string } | null;
 	} = $props();
 
+	// Картина: исходник для увеличения, фрагменты полотна и разбор. Всё трое — только у картин, и
+	// любого может не быть: фрагменты и разбор пишет человек, и на большинстве холстов их нет.
+	// Пустых заголовков в таком случае не остаётся — блоков просто нет.
+	const canvas = $derived(canvasOf(entity));
+	const analysis = $derived(analysisOf(entity));
+	/** Фрагмент, на котором открыть холст: лента деталей кладёт сюда кроп. */
+	let openCrop = $state<SchemaCrop | null>(null);
+
 	// Над названием сезона — сериал: «Сезон 2» сам по себе не говорит ничего.
 	const seriesParent = $derived(
 		series ? { title: series.title, href: `/series/${series.slug}` } : null
@@ -104,6 +116,7 @@
 		[
 			{ id: 'about', title: aboutTitle(entity.kind) },
 			episodes.length ? { id: 'episodes', title: 'Серии' } : null,
+			entity.fragments.length ? { id: 'fragments', title: 'Детали' } : null,
 			hasCast ? { id: 'credits', title: 'В ролях' } : null,
 			entity.related.length ? { id: 'related', title: 'Связанные' } : null,
 			session.status === 'authed' ? { id: 'note', title: 'Заметка' } : null,
@@ -190,7 +203,7 @@
 	<!-- Свой слой поверх разделов ниже (панель «Оценить» выпадает на них), но под шапкой сайта
 	     (z-20): у CardHero transform, без z-index его перекрывали бы вкладки «О фильме». -->
 	<div bind:this={heroElement} class="relative z-15">
-		<Hero {entity} {trailers} parent={seriesParent}>
+		<Hero {entity} {trailers} parent={seriesParent} {canvas} bind:openCrop>
 			{#snippet marks()}
 				<!-- Реакции — на виду, а не внутри панели «Оценить»: их ставят в одно нажатие, и
 				     читают их все, включая гостей. Своя реакция снимается повторным нажатием,
@@ -264,12 +277,26 @@
 	     Постера здесь нет: при трейлере в шапке он не нужен, а без трейлера уже стоит слева.
 	     Отдельного раздела «Награды» на карточке больше нет — списком категорий он занимал
 	     экран, а премия узнаётся по значку. Пусто во всём — колонки нет, таблица на всю ширину. -->
-	{#if production || entity.imdb_rating || entity.awards.length}
+	<!-- Разбор картины — в той же колонке, что «производство и факты»: он того же рода, объяснение
+	     рядом с фактами, и на телефоне встаёт под таблицу. -->
+	{#if production || entity.imdb_rating || entity.awards.length || analysis}
 		<About {entity}>
-			{#snippet aside()}<Production {entity} {production} />{/snippet}
+			{#snippet aside()}
+				<div class="flex flex-col gap-4">
+					{#if analysis}<Analysis {analysis} />{/if}
+					{#if production || entity.imdb_rating || entity.awards.length}
+						<Production {entity} {production} />
+					{/if}
+				</div>
+			{/snippet}
 		</About>
 	{:else}
 		<About {entity} />
+	{/if}
+
+	<!-- Детали полотна — сразу под «О картине»: нажатие открывает холст на этом месте. -->
+	{#if entity.fragments.length && canvas}
+		<FragmentStrip fragments={entity.fragments} {canvas} onopen={(crop) => (openCrop = crop)} />
 	{/if}
 
 	<!-- Серии открытого сезона — сразу под «О сезоне»: ради них на страницу и пришли. -->
