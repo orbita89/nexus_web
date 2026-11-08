@@ -1,6 +1,10 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import type { SchemaCrop, SchemaEntityDetail } from '#lib/api/generated/catalog.ts';
+	import type {
+		SchemaCrop,
+		SchemaEntityDetail,
+		SchemaPaintingMetadata
+	} from '#lib/api/generated/catalog.ts';
 	import type { Canvas } from '#lib/catalog/paintings.ts';
 	import type { TrailerSource } from '#lib/catalog/trailer.ts';
 	import CardHero from '#lib/components/catalog/CardHero.svelte';
@@ -39,6 +43,16 @@
 	} = $props();
 
 	const genres = $derived(entity.tags.filter((t) => t.kind === 'genre'));
+
+	/** Открыть холст целиком — тот же просмотр, что по щелчку, но кнопкой с подписью. */
+	const WHOLE_CANVAS: SchemaCrop = { x: 0, y: 0, width: 1, height: 1 };
+
+	// «363 × 437 см» — высота × ширина, как в музейной подписи; нет одного из размеров — нет строки.
+	const size = $derived.by(() => {
+		if (entity.kind !== 'painting') return null;
+		const m = entity.metadata as SchemaPaintingMetadata;
+		return m.height_cm && m.width_cm ? `${m.height_cm} × ${m.width_cm} см` : null;
+	});
 </script>
 
 {#snippet content()}
@@ -95,6 +109,26 @@
 				class="mx-auto max-h-[72vh] w-auto max-w-full rounded-box shadow-2xl ring-1 ring-base-content/10"
 			/>
 		</ArtViewer>
+		<!-- Панель под холстом: чем заняться с картиной и какого она размера. Всё, что здесь есть,
+		     делает именно холст — поэтому панель у холста, а не в общем ряду кнопок с «Оценить». -->
+		<div class="mt-4 flex flex-wrap items-center justify-center gap-2">
+			<button
+				type="button"
+				class="btn rounded-full btn-sm"
+				onclick={() => (openCrop = WHOLE_CANVAS)}
+			>
+				⛶ Во весь экран
+			</button>
+			{#if size}
+				<!-- Размер холста — не украшение: «Ночной дозор» 363 × 437 см, и без этой строчки
+				     он на экране такой же, как миниатюра. -->
+				<span
+					class="rounded-full bg-base-200 px-3 py-1.5 text-xs text-base-content/60 ring-1 ring-base-content/5"
+					>Масштаб: {size}</span
+				>
+			{/if}
+		</div>
+
 		<!-- Листание холстов: следующая картина того ряда, из которого сюда пришли. -->
 		<ArtNav slug={entity.slug} />
 		<div class="mx-auto mt-8 max-w-3xl">{@render content()}</div>

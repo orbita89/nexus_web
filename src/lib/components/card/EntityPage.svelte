@@ -38,6 +38,7 @@
 	import { provideMyVotes } from '#lib/social/review-votes.svelte.ts';
 	import { Watch } from '#lib/social/watch.svelte.ts';
 	import Analysis from '#lib/components/card/Analysis.svelte';
+	import ArtistWorks from '#lib/components/card/ArtistWorks.svelte';
 	import FragmentStrip from '#lib/components/card/FragmentStrip.svelte';
 	import SeasonTabs from '#lib/components/card/SeasonTabs.svelte';
 	import EpisodeStrip from '#lib/components/card/EpisodeStrip.svelte';
@@ -86,10 +87,24 @@
 	/** Фрагмент, на котором открыть холст: лента деталей кладёт сюда кроп. */
 	let openCrop = $state<SchemaCrop | null>(null);
 
-	// Над названием сезона — сериал: «Сезон 2» сам по себе не говорит ничего.
-	const seriesParent = $derived(
-		series ? { title: series.title, href: `/series/${series.slug}` } : null
-	);
+	/** Художник картины: строка над названием и лента «Другие работы художника». */
+	const artist = $derived.by(() => {
+		if (entity.kind !== 'painting') return null;
+		const credit = entity.credits.find((c) => c.role === 'artist');
+		return credit ? { slug: credit.person.slug, name: credit.person.full_name } : null;
+	});
+
+	// Над названием: у сезона — сериал («Сезон 2» сам по себе не говорит ничего), у картины —
+	// художник и год, как подпись на музейной табличке.
+	const seriesParent = $derived.by(() => {
+		if (series) return { title: series.title, href: `/series/${series.slug}` };
+		if (artist)
+			return {
+				title: year ? `${artist.name} · ${year} г.` : artist.name,
+				href: `/people/${artist.slug}`
+			};
+		return null;
+	});
 
 	let heroElement = $state<HTMLElement>();
 
@@ -306,7 +321,13 @@
 
 	<!-- Приквелы, сиквелы, ремейки — только если есть; рекомендации — заглушкой, пока нет API. -->
 	<Related {entity} />
-	<Recommendations slug={entity.slug} />
+	<!-- У картины вместо общих рекомендаций — работы того же художника: с холста уходят в
+	     соседний зал того же автора, а не к «похожей картине вообще». -->
+	{#if artist}
+		<ArtistWorks slug={entity.slug} {artist} />
+	{:else}
+		<Recommendations slug={entity.slug} />
+	{/if}
 
 	<!-- Ленивая зона: в статический HTML входят только заголовки и заглушки. Блок монтируется,
 	     когда раздел подходит к экрану, и сам грузит данные из API. -->
