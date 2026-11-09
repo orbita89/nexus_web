@@ -1,11 +1,8 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import type {
-		SchemaCrop,
-		SchemaEntityDetail,
-		SchemaPaintingMetadata
-	} from '#lib/api/generated/catalog.ts';
-	import type { Canvas } from '#lib/catalog/paintings.ts';
+	import type { SchemaEntityDetail, SchemaPaintingMetadata } from '#lib/api/generated/catalog.ts';
+	import { sizeOf } from '#lib/catalog/labels.ts';
+	import type { Canvas, ViewerFocus } from '#lib/catalog/paintings.ts';
 	import type { TrailerSource } from '#lib/catalog/trailer.ts';
 	import CardHero from '#lib/components/catalog/CardHero.svelte';
 	import ArtNav from '#lib/components/card/ArtNav.svelte';
@@ -35,7 +32,7 @@
 		/** Холст картины: исходник для увеличения, если он есть, иначе обложка. */
 		canvas?: Canvas | null;
 		/** Фрагмент из ленты деталей: холст откроется увеличенным на этом месте. */
-		openCrop?: SchemaCrop | null;
+		openCrop?: ViewerFocus | null;
 		/** Под кнопками: «Посмотреть позже», «Просмотрено». */
 		marks: Snippet;
 		/** Кнопки: оценка, «Оценить», «В коллекцию», «Следить». */
@@ -45,26 +42,33 @@
 	const genres = $derived(entity.tags.filter((t) => t.kind === 'genre'));
 
 	/** Открыть холст целиком — тот же просмотр, что по щелчку, но кнопкой с подписью. */
-	const WHOLE_CANVAS: SchemaCrop = { x: 0, y: 0, width: 1, height: 1 };
+	const WHOLE_CANVAS: ViewerFocus = { crop: { x: 0, y: 0, width: 1, height: 1 } };
 
-	// «363 × 437 см» — высота × ширина, как в музейной подписи; нет одного из размеров — нет строки.
-	const size = $derived.by(() => {
-		if (entity.kind !== 'painting') return null;
-		const m = entity.metadata as SchemaPaintingMetadata;
-		return m.height_cm && m.width_cm ? `${m.height_cm} × ${m.width_cm} см` : null;
-	});
+	// «363 × 437 см» — тем же форматом, что в таблице фактов: один факт — один форматтер.
+	const size = $derived(
+		entity.kind === 'painting' ? sizeOf(entity.metadata as SchemaPaintingMetadata) : null
+	);
+
+	// Тень под текстом нужна только поверх трейлера: там за буквами движется картинка. На ровном
+	// фоне она читается как грязь вокруг заголовка.
+	const overVideo = $derived(trailers.length > 0);
 </script>
 
 {#snippet content()}
 	{#if parent}
 		<a
 			href={parent.href}
-			class="mb-1 inline-block text-sm font-semibold text-base-content/60 drop-shadow-lg transition-colors hover:text-primary"
-			>{parent.title}</a
+			class={[
+				'mb-1 inline-block text-sm font-semibold text-base-content/60 transition-colors hover:text-primary',
+				overVideo && 'drop-shadow-lg'
+			]}>{parent.title}</a
 		>
 	{/if}
 	<h1
-		class="text-2xl leading-tight font-black tracking-tight text-balance drop-shadow-lg sm:text-4xl"
+		class={[
+			'text-2xl leading-tight font-black tracking-tight text-balance sm:text-4xl',
+			overVideo && 'drop-shadow-lg'
+		]}
 	>
 		{entity.title}
 	</h1>
@@ -106,11 +110,11 @@
 				src={entity.cover_url}
 				alt="Картина: {entity.title}"
 				fetchpriority="high"
-				class="mx-auto max-h-[72vh] w-auto max-w-full rounded-box shadow-2xl ring-1 ring-base-content/10"
+				class="mx-auto max-h-[72vh] w-auto max-w-full rounded-box shadow-xl ring-1 ring-base-content/5"
 			/>
 		</ArtViewer>
-		<!-- Панель под холстом: чем заняться с картиной и какого она размера. Всё, что здесь есть,
-		     делает именно холст — поэтому панель у холста, а не в общем ряду кнопок с «Оценить». -->
+		<!-- Одна строка под холстом: что сделать с картиной, какого она размера и куда листать.
+		     Тремя ярусами (кнопка, размер, листание) это рассыпалось по экрану. -->
 		<div class="mt-4 flex flex-wrap items-center justify-center gap-2">
 			<button
 				type="button"
@@ -124,14 +128,13 @@
 				     он на экране такой же, как миниатюра. -->
 				<span
 					class="rounded-full bg-base-200 px-3 py-1.5 text-xs text-base-content/60 ring-1 ring-base-content/5"
-					>Масштаб: {size}</span
+					>{size}</span
 				>
 			{/if}
+			<!-- Листание холстов: следующая картина того ряда, из которого сюда пришли. -->
+			<ArtNav slug={entity.slug} />
 		</div>
-
-		<!-- Листание холстов: следующая картина того ряда, из которого сюда пришли. -->
-		<ArtNav slug={entity.slug} />
-		<div class="mx-auto mt-8 max-w-3xl">{@render content()}</div>
+		<div class="mx-auto mt-6 max-w-2xl">{@render content()}</div>
 	</section>
 {:else}
 	<section

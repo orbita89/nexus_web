@@ -7,6 +7,17 @@ import type {
 	SchemaPaintingMetadata
 } from '#lib/api/generated/catalog.ts';
 
+/**
+ * Место на холсте, к которому открыть просмотр, и что об этом месте рассказать: лента деталей
+ * передаёт сюда фрагмент целиком, чтобы подпись читалась рядом с самой деталью, а не в карточке,
+ * где на неё есть две строки.
+ */
+export interface ViewerFocus {
+	crop: SchemaCrop;
+	title?: string | null;
+	description?: string | null;
+}
+
 /** Холст, который показываем: исходник, если он есть, иначе обложка выдачи. */
 export interface Canvas {
 	src: string;

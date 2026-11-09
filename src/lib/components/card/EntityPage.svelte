@@ -42,9 +42,8 @@
 	import FragmentStrip from '#lib/components/card/FragmentStrip.svelte';
 	import SeasonTabs from '#lib/components/card/SeasonTabs.svelte';
 	import EpisodeStrip from '#lib/components/card/EpisodeStrip.svelte';
-	import { analysisOf, canvasOf } from '#lib/catalog/paintings.ts';
+	import { analysisOf, canvasOf, type ViewerFocus } from '#lib/catalog/paintings.ts';
 	import type {
-		SchemaCrop,
 		SchemaEntityDetail,
 		SchemaEpisode,
 		SchemaSeasonSummary
@@ -85,7 +84,7 @@
 	const canvas = $derived(canvasOf(entity));
 	const analysis = $derived(analysisOf(entity));
 	/** Фрагмент, на котором открыть холст: лента деталей кладёт сюда кроп. */
-	let openCrop = $state<SchemaCrop | null>(null);
+	let openCrop = $state<ViewerFocus | null>(null);
 
 	/** Художник картины: строка над названием и лента «Другие работы художника». */
 	const artist = $derived.by(() => {
@@ -285,7 +284,7 @@
 
 	<!-- Теги — над «О фильме»; жанры — в шапке под названием. -->
 	{#if plainTags.length}
-		<div class="mb-10"><TagChips tags={plainTags} /></div>
+		<div class="mb-12"><TagChips tags={plainTags} /></div>
 	{/if}
 
 	<!-- Боковая колонка — «паспорт» работы: рейтинг IMDb, студии, награды значками и факты.
@@ -311,7 +310,16 @@
 
 	<!-- Детали полотна — сразу под «О картине»: нажатие открывает холст на этом месте. -->
 	{#if entity.fragments.length && canvas}
-		<FragmentStrip fragments={entity.fragments} {canvas} onopen={(crop) => (openCrop = crop)} />
+		<FragmentStrip
+			fragments={entity.fragments}
+			{canvas}
+			onopen={(fragment) =>
+				(openCrop = {
+					crop: fragment.crop,
+					title: fragment.title,
+					description: fragment.description
+				})}
+		/>
 	{/if}
 
 	<!-- Серии открытого сезона — сразу под «О сезоне»: ради них на страницу и пришли. -->

@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { unwrap } from '#lib/api/errors.ts';
-	import { listPage } from '#lib/catalog/search.ts';
 	import { browserApi, liveQuery } from '#lib/social/card-live.svelte.ts';
 	import PosterStrip from '#lib/components/catalog/PosterStrip.svelte';
 

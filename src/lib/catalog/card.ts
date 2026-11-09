@@ -117,15 +117,20 @@ export function aboutRows(entity: SchemaEntityDetail): FactRow[] {
 			links: personLinks(g.credits.slice(0, ROW_PEOPLE).map((c) => c.person)),
 			more: Math.max(0, g.credits.length - ROW_PEOPLE) || undefined
 		}));
-	// Страны уже в строке «Страна» сверху.
+	// Страны уже в строке «Страна» сверху. У картины отсюда же уходят музей с городом (они стоят
+	// блоком «Где хранится» справа) и размер (он под холстом, рядом с самим холстом, где и нужен):
+	// в таблице это было второе и третье написание одного и того же.
+	const painting = entity.kind === 'painting';
+	const HIDDEN = painting ? ['Страны', 'Музей', 'Город', 'Размер'] : ['Страны'];
 	const fields = metadataFields(entity.kind, entity.metadata)
-		.filter((f) => f.label !== 'Страны')
+		.filter((f) => !HIDDEN.includes(f.label))
 		.map((f) => ({ label: f.label, text: f.value }));
 	const rows: (FactRow | null)[] = [
 		// Год — ссылка в свой раздел с фильтром: «что ещё вышло в 2026-м» спрашивают чаще всего.
 		year
 			? {
-					label: entity.kind === 'book' ? 'Год издания' : 'Год производства',
+					label:
+						entity.kind === 'book' ? 'Год издания' : painting ? 'Год создания' : 'Год производства',
 					links: [{ href: `/${kindByApi(entity.kind).slug}?year=${year}`, text: year }]
 				}
 			: null,
@@ -141,7 +146,9 @@ export function aboutRows(entity: SchemaEntityDetail): FactRow[] {
 				}
 			: null,
 		...crewRows,
-		entity.release_date
+		// У холста премьеры не бывает, а точная дата в каталоге всё равно выдуманная («1 января
+		// 1503 г.»): год уже сказан строкой выше и в подписи автора над названием.
+		entity.release_date && !painting
 			? {
 					label: entity.kind === 'game' || entity.kind === 'book' ? 'Дата выхода' : 'Премьера',
 					text: formatDate(entity.release_date)
@@ -185,6 +192,18 @@ export type AnyMetadata = SchemaMovieMetadata &
  * «Производство и факты»: студии (у фильмов и сериалов — EntityDetail.studios со страницами, у игр —
  * разработчик и издатель, у книг — издательство из metadata), награды, факты. Пустое — null.
  */
+/**
+ * Музей и город картины — без повторов. В каталоге они часто об одном и том же («Отдел живописи
+ * Лувра» и «711-й зал Лувра»), и два бейджа рядом выглядели как ошибка: вложенное название
+ * выбрасываем, оставляя более полное.
+ */
+function museumPlace(places: { name: string }[]): { name: string }[] {
+	const key = (s: string) => s.toLowerCase().replace(/\s+/g, ' ').trim();
+	return places.filter(
+		(place) => !places.some((other) => other !== place && key(other.name).includes(key(place.name)))
+	);
+}
+
 export function productionOf(
 	entity: Pick<SchemaEntityDetail, 'kind' | 'metadata' | 'studios'>
 ): Production | null {
@@ -198,7 +217,7 @@ export function productionOf(
 				? plain([m.publisher])
 				: entity.kind === 'painting'
 					? // У картины «производство» — где она сейчас: музей и его город.
-						plain([m.museum, m.city])
+						museumPlace(plain([m.museum, m.city]))
 					: entity.studios.map((s) => ({
 							name: s.name,
 							href: studioHref(s.slug),

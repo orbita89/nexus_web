@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { SchemaCrop, SchemaFragment } from '#lib/api/generated/catalog.ts';
+	import type { SchemaFragment } from '#lib/api/generated/catalog.ts';
 	import { cropStyle, iiifCrop, squareCrop, type Canvas } from '#lib/catalog/paintings.ts';
 	import StripArrows from '#lib/components/catalog/StripArrows.svelte';
 
@@ -10,12 +10,12 @@
 	let {
 		fragments,
 		canvas,
-		/** Куда положить выбранный фрагмент: холст в шапке откроется на нём. */
+		/** Куда положить выбранный фрагмент: холст в шапке откроется на нём, с его подписью. */
 		onopen
 	}: {
 		fragments: SchemaFragment[];
 		canvas: Canvas;
-		onopen: (crop: SchemaCrop) => void;
+		onopen: (fragment: SchemaFragment) => void;
 	} = $props();
 
 	let track = $state<HTMLUListElement>();
@@ -36,9 +36,9 @@
 	aria-labelledby="fragments-title"
 	class="mb-14 scroll-mt-32 md:scroll-mt-28"
 >
-	<h2 id="fragments-title" class="mb-2 text-2xl font-bold">
+	<h2 id="fragments-title" class="mb-4 text-2xl font-bold">
 		Интересные детали полотна
-		<span class="font-semibold text-base-content/40">({fragments.length})</span>
+		<span class="text-sm font-normal text-base-content/40">({fragments.length})</span>
 	</h2>
 
 	<div class="relative">
@@ -51,8 +51,8 @@
 				<li class="w-56 shrink-0 snap-start sm:w-64">
 					<button
 						type="button"
-						class="group h-full w-full overflow-hidden rounded-box bg-base-200 text-start ring-1 ring-base-content/5 transition hover:ring-primary/40"
-						onclick={() => onopen(fragment.crop)}
+						class="group h-full w-full overflow-hidden rounded-box bg-base-200 text-start ring-1 ring-base-content/5 transition duration-300 hover:-translate-y-1 hover:shadow-xl hover:ring-2 hover:shadow-primary/20 hover:ring-primary"
+						onclick={() => onopen(fragment)}
 					>
 						<div
 							class="relative w-full bg-base-300 bg-cover bg-no-repeat"
@@ -61,15 +61,21 @@
 							<!-- Квадрат держим отношением сторон, а не высотой: карточка сужается на
 							     телефоне вместе с лентой. -->
 							<div class="aspect-square"></div>
+							<!-- Значок виден всегда, а не по наведению: на телефоне ховера нет, и
+							     подсказки о том, что карточка ведёт на холст, не было вовсе. -->
 							<span
-								class="absolute right-2 bottom-2 rounded-full bg-base-100/80 px-2 py-0.5 text-xs opacity-0 backdrop-blur-sm transition group-hover:opacity-100"
-								>Показать на холсте</span
+								class="absolute right-2 bottom-2 rounded-full bg-base-100/80 px-2 py-0.5 text-xs opacity-90 backdrop-blur-sm transition group-hover:bg-base-100 group-hover:opacity-100"
+								>⛶ На холсте</span
 							>
 						</div>
-						<div class="p-3">
-							<h3 class="text-sm font-semibold">{fragment.title}</h3>
+						<!-- Высота текста фиксирована: заголовок бывает в одну и в две строки, и без
+						     этого нижний край ленты получался рваным. -->
+						<div class="flex min-h-24 flex-col p-4">
+							<h3 class="line-clamp-2 text-sm leading-snug font-semibold">{fragment.title}</h3>
 							{#if fragment.description}
-								<p class="mt-1 line-clamp-3 text-xs leading-relaxed text-base-content/60">
+								<!-- Две строки вместо трёх: это зацепка, а не чтение. Целиком описание
+								     читается в просмотрщике, рядом с самой деталью. -->
+								<p class="mt-1.5 line-clamp-2 text-sm leading-relaxed text-base-content/70">
 									{fragment.description}
 								</p>
 							{/if}

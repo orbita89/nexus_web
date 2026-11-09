@@ -12,9 +12,16 @@
 
 <section
 	aria-labelledby="analysis-title"
-	class="rounded-box bg-base-200 p-5 ring-1 ring-base-content/5 sm:p-6"
+	class="rounded-box bg-base-200 p-5 text-sm ring-1 ring-base-content/5 sm:p-7"
 >
-	<h2 id="analysis-title" class="mb-3 text-lg font-bold">Смысл и анализ картины</h2>
+	<!-- Микро-заголовок, как у соседних блоков боковой колонки: второй крупный h2 рядом с
+	     заголовком раздела «О картине» читался как отдельный раздел. -->
+	<h3
+		id="analysis-title"
+		class="mb-2 text-xs font-semibold tracking-widest text-base-content/50 uppercase"
+	>
+		Разбор картины
+	</h3>
 
 	<Clamp lines={6} class="text-sm leading-7 text-base-content/90">
 		<p class="whitespace-pre-line">{analysis.text}</p>
@@ -26,7 +33,7 @@
 			{#each analysis.points as point (point.title)}
 				<li class="border-l-2 border-primary/40 pl-3">
 					<h3 class="text-sm font-semibold">{point.title}</h3>
-					<p class="mt-0.5 text-sm leading-relaxed text-base-content/60">{point.text}</p>
+					<p class="mt-1 text-sm leading-relaxed text-base-content/70">{point.text}</p>
 				</li>
 			{/each}
 		</ul>

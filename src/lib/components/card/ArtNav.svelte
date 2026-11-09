@@ -94,15 +94,17 @@
 	}}
 />
 
-<nav class="mt-4 flex items-center justify-center gap-2" aria-label="Листание картин">
+<!-- Отступа у полосы нет: она стоит в общем ряду под холстом, рядом с «Во весь экран». -->
+<nav class="flex items-center gap-2" aria-label="Листание картин">
 	{#if prevHref}
 		<a href={prevHref} class="btn btn-circle btn-sm" aria-label="Предыдущая картина">‹</a>
 	{:else}
 		<span class="btn btn-disabled btn-circle btn-sm" aria-hidden="true">‹</span>
 	{/if}
 	{#if nextHref}
-		<a href={nextHref} class="btn btn-sm" aria-label="Следующая картина">Следующая ›</a>
+		<a href={nextHref} class="btn rounded-full btn-sm" aria-label="Следующая картина">Следующая ›</a
+		>
 	{:else}
-		<span class="btn btn-disabled btn-sm" aria-hidden="true">Следующая ›</span>
+		<span class="btn btn-disabled rounded-full btn-sm" aria-hidden="true">Следующая ›</span>
 	{/if}
 </nav>

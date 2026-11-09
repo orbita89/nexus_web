@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { SchemaCrop } from '#lib/api/generated/catalog.ts';
+	import type { ViewerFocus } from '#lib/catalog/paintings.ts';
 
 	// Картина во весь экран с увеличением: колесо (или кнопки) меняет масштаб, перетаскивание
 	// двигает холст, двойной щелчок — приблизить/вернуть, Esc закрывает. Всё в браузере: страница
@@ -21,10 +22,10 @@
 		/** Содержимое кнопки — сам холст в карточке. */
 		children: import('svelte').Snippet;
 		/**
-		 * Фрагмент, к которому открыть просмотр: лента деталей ставит сюда кроп, и окно
+		 * Фрагмент, к которому открыть просмотр: лента деталей ставит сюда кроп с подписью, и окно
 		 * открывается сразу увеличенным на этом месте холста. Закрыли — снова null.
 		 */
-		open?: SchemaCrop | null;
+		open?: ViewerFocus | null;
 	} = $props();
 
 	const MIN = 1;
@@ -60,23 +61,27 @@
 	 * его середина встала в середину экрана. Точка p от центра холста после translate и scale
 	 * оказывается в центре, когда сдвиг равен −p × масштаб — отсюда формула.
 	 */
-	function focusOn(crop: SchemaCrop) {
+	function focusOn(crop: SchemaCrop, attempt = 0) {
 		const image = canvasImage;
 		if (!image) return;
 		const box = image.getBoundingClientRect();
-		if (!box.width || !box.height) return;
+		// Картинка из кэша готова раньше, чем окно встало на место: размеров ещё нет, считать не по
+		// чему. Ждём кадр и пробуем снова — иначе холст открывался целиком, а не на детали.
+		if (!box.width || !box.height) {
+			if (attempt < 10) requestAnimationFrame(() => focusOn(crop, attempt + 1));
+			return;
+		}
 		zoom = clamp(Math.min(1 / crop.width, 1 / crop.height));
 		x = -(crop.x + crop.width / 2 - 0.5) * box.width * zoom;
 		y = -(crop.y + crop.height / 2 - 0.5) * box.height * zoom;
 	}
 
-	// Лента деталей попросила открыть фрагмент: показываем окно и ждём, пока холст встанет на
-	// место, — до загрузки размеры картинки неизвестны и считать по ним нечего.
+	// Лента деталей попросила открыть фрагмент: показываем окно и ведём холст к этому месту.
 	$effect(() => {
 		if (!openTo) return;
-		const crop = openTo;
+		const { crop } = openTo;
 		if (!open) show();
-		if (canvasImage?.complete) focusOn(crop);
+		focusOn(crop);
 	});
 
 	/** Масштаб с сохранением точки под курсором: иначе при увеличении картина уезжает. */
@@ -181,7 +186,7 @@
 					{src}
 					alt={title}
 					draggable="false"
-					onload={() => openTo && focusOn(openTo)}
+					onload={() => openTo && focusOn(openTo.crop)}
 					class="absolute inset-0 m-auto max-h-full max-w-full object-contain select-none"
 					style="translate: {x}px {y}px; scale: {zoom}; transition: {dragging
 						? 'none'
@@ -189,11 +194,27 @@
 				/>
 			{/if}
 		</div>
-		<p
-			class="relative z-10 bg-base-100/80 px-4 py-2 text-center text-xs text-base-content/50 backdrop-blur-md"
-		>
-			Колесо — масштаб, перетаскивание — двигать, двойной щелчок — приблизить, Esc — закрыть
-		</p>
+		<!-- Внизу — рассказ о детали, на которой открыт холст: в карточке ленты на описание есть
+		     две строки, а читают его здесь, глядя на саму деталь. Открыли холст целиком —
+		     подписи нет, и остаётся обычная подсказка про управление. -->
+		{#if openTo?.title}
+			<div
+				class="relative z-10 bg-base-100/85 px-4 py-3 text-center backdrop-blur-md sm:px-8 sm:py-4"
+			>
+				<h3 class="text-sm font-semibold sm:text-base">{openTo.title}</h3>
+				{#if openTo.description}
+					<p class="mx-auto mt-1 max-w-2xl text-sm leading-relaxed text-base-content/70">
+						{openTo.description}
+					</p>
+				{/if}
+			</div>
+		{:else}
+			<p
+				class="relative z-10 bg-base-100/80 px-4 py-2 text-center text-xs text-base-content/50 backdrop-blur-md"
+			>
+				Колесо — масштаб, перетаскивание — двигать, двойной щелчок — приблизить, Esc — закрыть
+			</p>
+		{/if}
 	</div>
 	<form method="dialog" class="modal-backdrop"><button aria-label="Закрыть">Закрыть</button></form>
 </dialog>

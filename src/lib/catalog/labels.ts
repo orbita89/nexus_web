@@ -146,7 +146,7 @@ export interface Field {
 }
 
 /** «77 × 53 см»: размер картины, если известны обе стороны (иначе одна или ничего). */
-function sizeOf(m: SchemaPaintingMetadata): string | null {
+export function sizeOf(m: SchemaPaintingMetadata): string | null {
 	const cm = (v: number | null | undefined) => (v == null ? null : v.toLocaleString('ru-RU'));
 	const [h, w] = [cm(m.height_cm), cm(m.width_cm)];
 	if (h && w) return `${h} × ${w} см`;

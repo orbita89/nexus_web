@@ -24,14 +24,17 @@
 
 	<div class="flex flex-col gap-4">
 		<!-- Плашка 1 и справа от неё (с lg) боковая колонка aside — «Производство и факты». -->
-		<div class={['grid gap-4', aside && 'lg:grid-cols-[minmax(0,1fr)_20rem]']}>
+		<!-- items-start: иначе таблица тянется на высоту боковой колонки, а лишняя высота уходит в
+		     промежутки между строками — при длинном разборе справа подписи разъезжались по всей
+		     плашке. Та же защита, что h-fit у Production. -->
+		<div class={['grid items-start gap-4', aside && 'lg:grid-cols-[minmax(0,1fr)_20rem]']}>
 			<!-- Плашка 1: одна таблица — оригинальное название, описание и факты, все строки с подписью. -->
 			{#if original || entity.description || rows.length}
 				<!-- Колонка подписей — по самой длинной из них (max-content), а сами подписи прижаты
 				     вправо: при фиксированных 11rem между «Страна» и значением зияла половина ширины.
 				     На телефоне подпись идёт над значением — там две колонки отнимали место у текста. -->
 				<dl
-					class="grid gap-x-5 gap-y-2.5 rounded-box bg-base-200 p-5 text-sm ring-1 ring-base-content/5 max-sm:gap-y-1 sm:grid-cols-[max-content_minmax(0,1fr)] sm:p-7"
+					class="grid content-start gap-x-5 gap-y-2.5 rounded-box bg-base-200 p-5 text-sm ring-1 ring-base-content/5 max-sm:gap-y-1 sm:grid-cols-[max-content_minmax(0,1fr)] sm:p-7"
 				>
 					{#if original}
 						<dt class="text-base-content/50 max-sm:text-xs sm:text-right">Оригинальное название</dt>
