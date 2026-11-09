@@ -11,7 +11,10 @@
 	// считает бэкенд (GET /entities/{slug}/neighbors с теми же фильтрами, что были у списка).
 	// Ряд кончился или его нет (прямой заход) — идут похожие, кончились и они — случайная картина:
 	// «следующая» есть всегда. Адреса чистые: параметры ряда живут в sessionStorage (row.ts).
-	let { slug }: { slug: string } = $props();
+	//
+	// Холст приходит сюда снипетом: стрелки стоят по его сторонам, в полях страницы, и не лежат
+	// на живописи. Кнопка поверх лица — последнее, что нужно сайту о картинах.
+	let { slug, children }: { slug: string; children: import('svelte').Snippet } = $props();
 
 	const SIMILAR = 12;
 
@@ -94,21 +97,25 @@
 	}}
 />
 
-<!-- Листание — по краям самого холста, как в музейном зале: слева предыдущая работа, справа
-     следующая. Подписи не нужны, стрелка у края и так понятна, а строка «Следующая ›» под
-     картиной забирала внимание у неё же. Кнопки стоят поверх холста, поэтому стеклянные:
-     тёмная заливка с размытием, чтобы их было видно и на светлой, и на тёмной живописи. -->
-{#snippet arrow(href: string | null, label: string, side: string, glyph: string)}
+<!-- Листание — в полях по сторонам холста, как таблички у рамы: слева предыдущая работа, справа
+     следующая. Подписи не нужны, стрелка и так понятна, а строка «Следующая ›» под картиной
+     забирала внимание у неё же. Нет соседа — на его месте пустое место той же ширины, иначе
+     холст прыгал бы вбок на краях ряда. -->
+{#snippet arrow(href: string | null, label: string, glyph: string)}
 	{#if href}
 		<a
 			{href}
 			aria-label={label}
-			class="absolute {side} top-1/2 flex size-11 -translate-y-1/2 items-center justify-center rounded-full bg-base-100/60 text-xl text-base-content/80 opacity-0 shadow-lg ring-1 ring-white/10 backdrop-blur-md transition group-hover/canvas:opacity-100 hover:bg-base-100/90 hover:text-primary focus-visible:opacity-100 max-md:opacity-100"
+			class="flex size-11 shrink-0 items-center justify-center rounded-full bg-base-200/70 text-xl text-base-content/70 ring-1 ring-base-content/10 transition hover:bg-base-200 hover:text-primary"
 			>{glyph}</a
 		>
+	{:else}
+		<span class="size-11 shrink-0" aria-hidden="true"></span>
 	{/if}
 {/snippet}
 
-<!-- Стрелки появляются при наведении на холст; на телефоне, где наведения нет, — всегда. -->
-{@render arrow(prevHref, 'Предыдущая картина', 'left-3', '‹')}
-{@render arrow(nextHref, 'Следующая картина', 'right-3', '›')}
+<div class="flex items-center justify-center gap-2 sm:gap-5">
+	{@render arrow(prevHref, 'Предыдущая картина', '‹')}
+	<div class="min-w-0">{@render children()}</div>
+	{@render arrow(nextHref, 'Следующая картина', '›')}
+</div>
