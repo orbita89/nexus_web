@@ -8,6 +8,7 @@
 	import ArtNav from '#lib/components/card/ArtNav.svelte';
 	import ArtViewer from '#lib/components/catalog/ArtViewer.svelte';
 	import Poster from '#lib/components/catalog/Poster.svelte';
+	import TagChips from '#lib/components/catalog/TagChips.svelte';
 
 	// Первый экран карточки:
 	// - есть трейлер — шапка как у Okko (CardHero): трейлер фоном, текст поверх, постера нет;
@@ -40,6 +41,7 @@
 	} = $props();
 
 	const genres = $derived(entity.tags.filter((t) => t.kind === 'genre'));
+	const plainTags = $derived(entity.tags.filter((t) => t.kind === 'tag'));
 
 	/** Открыть холст целиком — тот же просмотр, что по щелчку, но кнопкой с подписью. */
 	const WHOLE_CANVAS: ViewerFocus = { crop: { x: 0, y: 0, width: 1, height: 1 } };
@@ -83,6 +85,11 @@
 				</li>
 			{/each}
 		</ul>
+	{/if}
+	<!-- Теги — здесь же, под жанрами: это признаки самой работы, и их место рядом с названием.
+	     Отдельной строкой посреди страницы они висели в пустоте между кнопками и «О фильме». -->
+	{#if plainTags.length}
+		<div class="mt-2.5"><TagChips tags={plainTags} counts={false} /></div>
 	{/if}
 	<div class="mt-7 flex flex-wrap items-center gap-3">
 		{@render actions()}

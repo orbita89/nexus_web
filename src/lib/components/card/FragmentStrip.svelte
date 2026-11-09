@@ -51,7 +51,7 @@
 				<li class="w-56 shrink-0 snap-start sm:w-64">
 					<button
 						type="button"
-						class="group h-full w-full overflow-hidden rounded-box bg-base-200 text-start ring-1 ring-base-content/5 transition duration-300 hover:-translate-y-1 hover:shadow-xl hover:ring-2 hover:shadow-primary/20 hover:ring-primary"
+						class="group h-full w-full overflow-hidden rounded-box bg-base-200 text-start ring-1 ring-base-content/5 transition duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/40 hover:ring-primary/50"
 						onclick={() => onopen(fragment)}
 					>
 						<div

@@ -24,7 +24,6 @@
 	import StickyHeader from '#lib/components/card/StickyHeader.svelte';
 	import ClientSection from '#lib/components/catalog/ClientSection.svelte';
 	import Seo from '#lib/components/catalog/Seo.svelte';
-	import TagChips from '#lib/components/catalog/TagChips.svelte';
 	import AddToCollection from '#lib/components/social/AddToCollection.svelte';
 	import CardCollections from '#lib/components/social/CardCollections.svelte';
 
@@ -110,7 +109,6 @@
 	const kind = $derived(kindByApi(entity.kind));
 	const year = $derived(yearOf(entity.release_date));
 	const trailers = $derived(trailerSources(entity));
-	const plainTags = $derived(entity.tags.filter((t) => t.kind === 'tag'));
 	const production = $derived(productionOf(entity));
 
 	// Вышло ли — по часам зрителя, не сборки: статика живёт дольше дня премьеры. До гидрации
@@ -283,15 +281,6 @@
 	<!-- Полоса разделов: карточка длинная, и без неё не видно, что на ней есть. -->
 	<SectionNav hero={heroElement} {sections} />
 
-	<!-- Теги — над «О фильме»; жанры — в шапке под названием. -->
-	{#if plainTags.length}
-		<div class="mb-12"><TagChips tags={plainTags} /></div>
-	{/if}
-
-	<!-- Боковая колонка — «паспорт» работы: рейтинг IMDb, студии, награды значками и факты.
-	     Постера здесь нет: при трейлере в шапке он не нужен, а без трейлера уже стоит слева.
-	     Отдельного раздела «Награды» на карточке больше нет — списком категорий он занимал
-	     экран, а премия узнаётся по значку. Пусто во всём — колонки нет, таблица на всю ширину. -->
 	{#if production || entity.imdb_rating || entity.awards.length}
 		<About {entity}>
 			{#snippet aside()}<Production {entity} {production} />{/snippet}

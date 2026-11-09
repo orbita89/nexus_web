@@ -40,8 +40,10 @@
 	{@render children()}
 </div>
 {#if overflows || expanded}
+	<!-- Не кнопка-ссылка DaisyUI: подчёркнутый оранжевый текст кричал громче самого текста.
+	     Обычная ссылка, подчёркивание — только под курсором. -->
 	<button
-		class="btn mt-1 btn-link px-0 btn-sm"
+		class="mt-2 text-sm font-medium text-primary/90 transition-colors hover:text-primary hover:underline"
 		aria-expanded={expanded}
 		onclick={() => (expanded = !expanded)}>{expanded ? less : more}</button
 	>
