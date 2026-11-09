@@ -130,6 +130,7 @@
 		[
 			{ id: 'about', title: aboutTitle(entity.kind) },
 			episodes.length ? { id: 'episodes', title: 'Серии' } : null,
+			analysis ? { id: 'analysis', title: 'Разбор' } : null,
 			entity.fragments.length ? { id: 'fragments', title: 'Детали' } : null,
 			hasCast ? { id: 'credits', title: 'В ролях' } : null,
 			entity.related.length ? { id: 'related', title: 'Связанные' } : null,
@@ -291,21 +292,18 @@
 	     Постера здесь нет: при трейлере в шапке он не нужен, а без трейлера уже стоит слева.
 	     Отдельного раздела «Награды» на карточке больше нет — списком категорий он занимал
 	     экран, а премия узнаётся по значку. Пусто во всём — колонки нет, таблица на всю ширину. -->
-	<!-- Разбор картины — в той же колонке, что «производство и факты»: он того же рода, объяснение
-	     рядом с фактами, и на телефоне встаёт под таблицу. -->
-	{#if production || entity.imdb_rating || entity.awards.length || analysis}
+	{#if production || entity.imdb_rating || entity.awards.length}
 		<About {entity}>
-			{#snippet aside()}
-				<div class="flex flex-col gap-4">
-					{#if analysis}<Analysis {analysis} />{/if}
-					{#if production || entity.imdb_rating || entity.awards.length}
-						<Production {entity} {production} />
-					{/if}
-				</div>
-			{/snippet}
+			{#snippet aside()}<Production {entity} {production} />{/snippet}
 		</About>
 	{:else}
 		<About {entity} />
+	{/if}
+
+	<!-- Разбор — отдельным разделом под таблицей, во всю ширину: в боковой колонке он тянул её на
+	     два экрана ниже фактов, и слева зияла пустота. -->
+	{#if analysis}
+		<Analysis {analysis} />
 	{/if}
 
 	<!-- Детали полотна — сразу под «О картине»: нажатие открывает холст на этом месте. -->

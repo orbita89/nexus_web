@@ -100,40 +100,61 @@
 	     кнопки под ним. Щелчок открывает её во весь экран с увеличением — в исходном разрешении,
 	     если оно есть: по обложке выдачи второй шаг увеличения уже расплывается. -->
 	<section aria-label="Шапка: {entity.title}" class="mb-12">
-		<ArtViewer
-			src={canvas?.src ?? entity.cover_url}
-			title={entity.title}
-			max={canvas?.width && canvas.width >= 2000 ? 16 : 6}
-			bind:open={openCrop}
+		<!-- w-fit: обёртка облегает холст, а не страницу, — иначе стрелки листания встали бы по
+		     краям экрана, в метре от картины. -->
+		<div class="group/canvas relative mx-auto w-fit">
+			<ArtViewer
+				src={canvas?.src ?? entity.cover_url}
+				title={entity.title}
+				max={canvas?.width && canvas.width >= 2000 ? 16 : 6}
+				bind:open={openCrop}
+			>
+				<img
+					src={entity.cover_url}
+					alt="Картина: {entity.title}"
+					fetchpriority="high"
+					class="mx-auto max-h-[72vh] w-auto max-w-full rounded-box shadow-xl ring-1 ring-base-content/5"
+				/>
+			</ArtViewer>
+
+			<!-- Листание холстов: следующая картина того ряда, из которого сюда пришли. Стрелки
+			     лежат поверх холста по его краям. -->
+			<ArtNav slug={entity.slug} />
+		</div>
+
+		<!-- Панель под холстом — одна стеклянная капсула, а не ряд разнокалиберных кнопок: это
+		     подпись у рамы, она не должна спорить с картиной. -->
+		<div
+			class="mx-auto mt-4 flex w-fit items-center gap-1 rounded-full bg-base-200/70 p-1 ring-1 ring-base-content/10 backdrop-blur-md"
 		>
-			<img
-				src={entity.cover_url}
-				alt="Картина: {entity.title}"
-				fetchpriority="high"
-				class="mx-auto max-h-[72vh] w-auto max-w-full rounded-box shadow-xl ring-1 ring-base-content/5"
-			/>
-		</ArtViewer>
-		<!-- Одна строка под холстом: что сделать с картиной, какого она размера и куда листать.
-		     Тремя ярусами (кнопка, размер, листание) это рассыпалось по экрану. -->
-		<div class="mt-4 flex flex-wrap items-center justify-center gap-2">
 			<button
 				type="button"
-				class="btn rounded-full btn-sm"
+				class="flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition hover:bg-base-100 hover:text-primary"
 				onclick={() => (openCrop = WHOLE_CANVAS)}
 			>
-				⛶ Во весь экран
+				<svg
+					class="size-4"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					aria-hidden="true"
+				>
+					<path
+						d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"
+					/>
+				</svg>
+				Во весь экран
 			</button>
 			{#if size}
 				<!-- Размер холста — не украшение: «Ночной дозор» 363 × 437 см, и без этой строчки
 				     он на экране такой же, как миниатюра. -->
-				<span
-					class="rounded-full bg-base-200 px-3 py-1.5 text-xs text-base-content/60 ring-1 ring-base-content/5"
-					>{size}</span
-				>
+				<span class="px-3 text-xs text-base-content/50 tabular-nums">{size}</span>
 			{/if}
-			<!-- Листание холстов: следующая картина того ряда, из которого сюда пришли. -->
-			<ArtNav slug={entity.slug} />
 		</div>
+
 		<div class="mx-auto mt-6 max-w-2xl">{@render content()}</div>
 	</section>
 {:else}

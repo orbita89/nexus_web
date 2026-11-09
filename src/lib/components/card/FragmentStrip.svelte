@@ -64,9 +64,23 @@
 							<!-- Значок виден всегда, а не по наведению: на телефоне ховера нет, и
 							     подсказки о том, что карточка ведёт на холст, не было вовсе. -->
 							<span
-								class="absolute right-2 bottom-2 rounded-full bg-base-100/80 px-2 py-0.5 text-xs opacity-90 backdrop-blur-sm transition group-hover:bg-base-100 group-hover:opacity-100"
-								>⛶ На холсте</span
+								class="absolute right-2 bottom-2 flex items-center gap-1 rounded-full bg-base-100/75 px-2.5 py-1 text-xs opacity-90 ring-1 ring-white/10 backdrop-blur-sm transition group-hover:bg-base-100 group-hover:opacity-100"
 							>
+								<svg
+									class="size-3.5"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									aria-hidden="true"
+								>
+									<circle cx="11" cy="11" r="7" />
+									<path d="m20 20-3.5-3.5M11 8v6M8 11h6" />
+								</svg>
+								На холсте
+							</span>
 						</div>
 						<!-- Высота текста фиксирована: заголовок бывает в одну и в две строки, и без
 						     этого нижний край ленты получался рваным. -->

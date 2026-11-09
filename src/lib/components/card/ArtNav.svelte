@@ -94,17 +94,21 @@
 	}}
 />
 
-<!-- Отступа у полосы нет: она стоит в общем ряду под холстом, рядом с «Во весь экран». -->
-<nav class="flex items-center gap-2" aria-label="Листание картин">
-	{#if prevHref}
-		<a href={prevHref} class="btn btn-circle btn-sm" aria-label="Предыдущая картина">‹</a>
-	{:else}
-		<span class="btn btn-disabled btn-circle btn-sm" aria-hidden="true">‹</span>
-	{/if}
-	{#if nextHref}
-		<a href={nextHref} class="btn rounded-full btn-sm" aria-label="Следующая картина">Следующая ›</a
+<!-- Листание — по краям самого холста, как в музейном зале: слева предыдущая работа, справа
+     следующая. Подписи не нужны, стрелка у края и так понятна, а строка «Следующая ›» под
+     картиной забирала внимание у неё же. Кнопки стоят поверх холста, поэтому стеклянные:
+     тёмная заливка с размытием, чтобы их было видно и на светлой, и на тёмной живописи. -->
+{#snippet arrow(href: string | null, label: string, side: string, glyph: string)}
+	{#if href}
+		<a
+			{href}
+			aria-label={label}
+			class="absolute {side} top-1/2 flex size-11 -translate-y-1/2 items-center justify-center rounded-full bg-base-100/60 text-xl text-base-content/80 opacity-0 shadow-lg ring-1 ring-white/10 backdrop-blur-md transition group-hover/canvas:opacity-100 hover:bg-base-100/90 hover:text-primary focus-visible:opacity-100 max-md:opacity-100"
+			>{glyph}</a
 		>
-	{:else}
-		<span class="btn btn-disabled rounded-full btn-sm" aria-hidden="true">Следующая ›</span>
 	{/if}
-</nav>
+{/snippet}
+
+<!-- Стрелки появляются при наведении на холст; на телефоне, где наведения нет, — всегда. -->
+{@render arrow(prevHref, 'Предыдущая картина', 'left-3', '‹')}
+{@render arrow(nextHref, 'Следующая картина', 'right-3', '›')}
