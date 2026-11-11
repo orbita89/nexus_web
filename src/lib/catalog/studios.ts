@@ -8,8 +8,14 @@ import { PAGE_SIZE } from './url.ts';
 export const studioHref = (slug: string) => `/studios/${slug}`;
 
 /** Порция фильмов студии — для load страницы и для «Показать ещё» и сортировки в браузере. */
-export function studioFilms(api: Api, slug: string, sort: ListSort, offset: number) {
-	return listPage(api, {}, { studioSlug: slug, sort, limit: PAGE_SIZE, offset });
+export function studioFilms(
+	api: Api,
+	slug: string,
+	sort: ListSort,
+	offset: number,
+	limit = PAGE_SIZE
+) {
+	return listPage(api, {}, { studioSlug: slug, sort, limit, offset });
 }
 
 /** Флаг страны из ISO 3166-1 alpha-2: US → 🇺🇸. Не две латинские буквы — пусто. */

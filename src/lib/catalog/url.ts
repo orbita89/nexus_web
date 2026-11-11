@@ -22,7 +22,7 @@ export function withQuery(path: string, query: Query): string {
 	for (const [key, raw] of Object.entries(query)) {
 		const value = typeof raw === 'string' ? raw.trim() : raw;
 		if (value === null || value === undefined || value === '') continue;
-		if (key === 'offset' && Number(value) <= 0) continue;
+		if ((key === 'offset' || key === 'more') && Number(value) <= 0) continue;
 		params.set(key, String(value));
 	}
 	const qs = params.toString();
@@ -34,7 +34,8 @@ export function filterUrl(url: UrlLike, changes: Query): string {
 	return withQuery(url.pathname, {
 		...Object.fromEntries(url.searchParams),
 		...changes,
-		offset: null
+		offset: null,
+		more: null
 	});
 }
 
@@ -45,9 +46,31 @@ export function formUrl(path: string, form: FormData): string {
 	return withQuery(path, query);
 }
 
-/** Текущий адрес на другой странице, фильтры сохраняются. */
+/** Текущий адрес на другой странице, фильтры сохраняются. Догруженные порции — не сохраняются. */
 export function pageUrl(url: UrlLike, offset: number): string {
-	return withQuery(url.pathname, { ...Object.fromEntries(url.searchParams), offset });
+	return withQuery(url.pathname, { ...Object.fromEntries(url.searchParams), offset, more: null });
+}
+
+/**
+ * Сколько раз нажали «Показать ещё» — тоже в адресе (`more`), иначе возврат с карточки показывал бы
+ * снова одну первую порцию. Ограничение — чтобы чужой адрес не просил у API сколько угодно сразу.
+ */
+export const MAX_MORE = 20;
+
+/** Текущий адрес с числом догруженных порций. */
+export function moreUrl(url: UrlLike, more: number): string {
+	return withQuery(url.pathname, { ...Object.fromEntries(url.searchParams), more });
+}
+
+/** `more` из адреса: целое 0…MAX_MORE, мусор — 0. */
+export function readMore(url: UrlLike): number {
+	const n = Number(url.searchParams.get('more'));
+	return Number.isInteger(n) && n > 0 ? Math.min(n, MAX_MORE) : 0;
+}
+
+/** Сколько карточек должно быть на экране по адресу: первая порция плюс догруженные. */
+export function shownSize(url: UrlLike): number {
+	return PAGE_SIZE * (readMore(url) + 1);
 }
 
 /** offset из адреса: целое ≥ 0, мусор — 0. */

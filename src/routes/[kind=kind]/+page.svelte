@@ -32,8 +32,8 @@
 	const archive = $derived(feed.archive);
 	const archiveTotal = $derived(archive?.first.total ?? 0);
 
-	const more = (offset: number) =>
-		sectionPage(guestApi, data.kind.kind, data.filters, data.mode, offset);
+	const more = (offset: number, limit?: number) =>
+		sectionPage(guestApi, data.kind.kind, data.filters, data.mode, offset, limit);
 
 	// Ряд листания на карточке: та же выдача, с теми же фильтрами и порядком.
 	const row = $derived({

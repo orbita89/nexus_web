@@ -83,9 +83,10 @@ export function sectionPage(
 	kind: SchemaEntityKind,
 	f: CatalogFilters,
 	mode: Mode,
-	offset: number
+	offset: number,
+	limit = PAGE_SIZE
 ) {
-	return searchPage(api, f, { kind, sort: searchSortParam(mode.sort), limit: PAGE_SIZE, offset });
+	return searchPage(api, f, { kind, sort: searchSortParam(mode.sort), limit, offset });
 }
 
 /** Просто список без текста (главная, тег, студия): страница поиска с одним-двумя фильтрами. */

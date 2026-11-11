@@ -5,7 +5,7 @@ import { hasFilters, readFilters } from '#lib/catalog/filters.ts';
 import { kindsBySlugs } from '#lib/catalog/kinds.ts';
 import { ratingsFor, settle, type Ratings } from '#lib/catalog/load.ts';
 import { personName, searchPage } from '#lib/catalog/search.ts';
-import { PAGE_SIZE, readOffset, readText } from '#lib/catalog/url.ts';
+import { readOffset, readText, shownSize } from '#lib/catalog/url.ts';
 import type { PageLoad } from './$types';
 
 /** Людей в блоке над фильмами; все — на /people?q=. */
@@ -47,7 +47,11 @@ export const load: PageLoad = async ({ fetch, url }) => {
 		onlyText && !kinds.length && !filters.studio && !filters.person && offset === 0;
 
 	const [found, tags, person, people] = await Promise.all([
-		searchPage(api, filters, { kind: kinds.map((k) => k.kind), limit: PAGE_SIZE, offset }).then(
+		searchPage(api, filters, {
+			kind: kinds.map((k) => k.kind),
+			limit: shownSize(url),
+			offset
+		}).then(
 			(page) => ({ page, error: null }),
 			(e: unknown) => ({ page: null, error: e })
 		),

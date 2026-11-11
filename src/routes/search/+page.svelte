@@ -29,10 +29,10 @@
 	const archiveOn = $derived(archiveKind && readArchive(page.url));
 	const feed = archiveFeed(() => (archiveOn && data.q ? data.q : null));
 	const archive = $derived(feed.archive);
-	const more = (offset: number) =>
+	const more = (offset: number, limit = PAGE_SIZE) =>
 		searchPage(guestApi, data.filters, {
 			kind: data.kinds.map((k) => k.kind),
-			limit: PAGE_SIZE,
+			limit,
 			offset
 		});
 

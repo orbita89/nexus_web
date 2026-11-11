@@ -1,10 +1,13 @@
 <script lang="ts">
+	import { replaceState } from '$app/navigation';
+	import { page } from '$app/state';
 	import { errorMessage } from '#lib/api/errors.ts';
 	import type { SchemaArchiveDoc, SchemaEntitySummary } from '#lib/api/generated/catalog.ts';
 	import { guestApi } from '#lib/auth/session.svelte.ts';
 	import { ratingsFor, type Ratings } from '#lib/catalog/load.ts';
 	import { archivePage as fetchArchive } from '#lib/catalog/search.ts';
 	import type { Row } from '#lib/catalog/row.ts';
+	import { PAGE_SIZE, moreUrl, readMore, shownSize } from '#lib/catalog/url.ts';
 	import ArchiveCard from './ArchiveCard.svelte';
 	import ArtWall from './ArtWall.svelte';
 	import EntityCard from './EntityCard.svelte';
@@ -28,8 +31,8 @@
 		row
 	}: {
 		first: Page<SchemaEntitySummary>;
-		/** Следующая порция сайта с этого offset. */
-		more: (offset: number) => Promise<Page<SchemaEntitySummary>>;
+		/** Следующая порция сайта с этого offset; limit — чтобы вернуть сразу несколько порций. */
+		more: (offset: number, limit?: number) => Promise<Page<SchemaEntitySummary>>;
 		ratings?: Ratings;
 		/** Архив по тому же запросу (только по названию); null — не ищем. */
 		archive?: { q: string; first: { items: SchemaArchiveDoc[]; total: number } } | null;
@@ -60,19 +63,47 @@
 	);
 	const canMore = $derived(!siteDone || archiveLeft);
 
-	async function loadMore() {
+	// Возврат с карточки: сколько порций догрузили, записано в адресе (?more=). Если страница
+	// отдала только первую порцию (статичная студия) — добираем остальное одним запросом.
+	let restoredFor = $state<string | null>(null);
+	$effect(() => {
+		const href = page.url.href;
+		const want = shownSize(page.url);
+		if (restoredFor === href || siteDone || loading || site.length >= want) return;
+		restoredFor = href;
+		void addSite(want - site.length);
+	});
+
+	/** Дописать следующие limit карточек сайта. */
+	async function addSite(limit: number) {
 		loading = true;
 		error = '';
 		try {
-			if (!siteDone) {
-				const page = await more(siteNext);
-				site = [...site, ...page.items];
-				siteNext += page.items.length;
-				siteDone = !page.items.length || siteNext >= page.total;
-				moreRatings = { ...moreRatings, ...(await ratingsFor(guestApi, page.items)) };
-			} else if (archive) {
-				const page = await fetchArchive(guestApi, archive.q, archivePage, archived.length);
-				archived = [...archived, ...page.items];
+			const next = await more(siteNext, limit);
+			site = [...site, ...next.items];
+			siteNext += next.items.length;
+			siteDone = !next.items.length || siteNext >= next.total;
+			moreRatings = { ...moreRatings, ...(await ratingsFor(guestApi, next.items)) };
+		} catch (e) {
+			error = errorMessage(e);
+		} finally {
+			loading = false;
+		}
+	}
+
+	async function loadMore() {
+		if (!siteDone) {
+			await addSite(PAGE_SIZE);
+			// Порция в адресе: вернувшись с карточки, увидим столько же, сколько и ушли.
+			if (!error) replaceState(moreUrl(page.url, readMore(page.url) + 1), page.state);
+			return;
+		}
+		loading = true;
+		error = '';
+		try {
+			if (archive) {
+				const chunk = await fetchArchive(guestApi, archive.q, archivePage, archived.length);
+				archived = [...archived, ...chunk.items];
 			}
 		} catch (e) {
 			error = errorMessage(e);

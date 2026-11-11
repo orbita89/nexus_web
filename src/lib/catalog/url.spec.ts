@@ -2,9 +2,13 @@ import { describe, expect, it } from 'vitest';
 import {
 	filterUrl,
 	formUrl,
+	MAX_MORE,
+	moreUrl,
 	pageLinks,
 	pageUrl,
+	readMore,
 	readOffset,
+	shownSize,
 	readText,
 	readYear,
 	withQuery
@@ -50,6 +54,36 @@ describe('pageUrl', () => {
 	it('сохраняет фильтры', () => {
 		expect(pageUrl(url('/films?tag=sci-fi'), 24)).toBe('/films?tag=sci-fi&offset=24');
 		expect(pageUrl(url('/films?tag=sci-fi&offset=24'), 0)).toBe('/films?tag=sci-fi');
+	});
+
+	it('сбрасывает догруженные порции', () => {
+		expect(pageUrl(url('/films?tag=sci-fi&more=3'), 24)).toBe('/films?tag=sci-fi&offset=24');
+	});
+});
+
+describe('«Показать ещё» в адресе', () => {
+	it('moreUrl сохраняет фильтры и страницу, more=0 не пишет', () => {
+		expect(moreUrl(url('/films?tag=sci-fi&offset=24'), 2)).toBe(
+			'/films?tag=sci-fi&offset=24&more=2'
+		);
+		expect(moreUrl(url('/films?tag=sci-fi&more=2'), 0)).toBe('/films?tag=sci-fi');
+	});
+
+	it('readMore: целое 0…MAX_MORE, мусор — 0', () => {
+		expect(readMore(url('/films?more=3'))).toBe(3);
+		expect(readMore(url('/films'))).toBe(0);
+		expect(readMore(url('/films?more=-1'))).toBe(0);
+		expect(readMore(url('/films?more=нет'))).toBe(0);
+		expect(readMore(url(`/films?more=${MAX_MORE + 5}`))).toBe(MAX_MORE);
+	});
+
+	it('shownSize: первая порция плюс догруженные', () => {
+		expect(shownSize(url('/films'))).toBe(24);
+		expect(shownSize(url('/films?more=2'))).toBe(72);
+	});
+
+	it('новый фильтр сбрасывает догруженные порции', () => {
+		expect(filterUrl(url('/films?tag=sci-fi&more=2'), { tag: 'drama' })).toBe('/films?tag=drama');
 	});
 });
 

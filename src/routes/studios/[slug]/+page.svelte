@@ -54,7 +54,8 @@
 		(list) => ratingsFor(guestApi, list.items)
 	);
 
-	const more = (offset: number) => studioFilms(guestApi, studio.slug, sort, offset);
+	const more = (offset: number, limit?: number) =>
+		studioFilms(guestApi, studio.slug, sort, offset, limit);
 
 	function sortBy(value: string) {
 		goto(filterUrl(page.url, { sort: value === DEFAULT_SORT ? null : value }), { reset: false });
