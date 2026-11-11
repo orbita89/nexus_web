@@ -468,3 +468,32 @@ test('раздел: порядок в адресе, выдача из Meilisearc
 	// Списки — только из Meilisearch (GET /search), не из PostgreSQL.
 	expect(dbLists).toEqual([]);
 });
+
+test('«Показать ещё»: порция в адресе, возврат с карточки — на ту же выдачу', async ({ page }) => {
+	const cards = page.getByRole('main').getByRole('listitem');
+	await page.goto('/films');
+	await expect(cards).toHaveCount(24);
+
+	// До гидрации кнопка ещё не связана с адресом — повторяем, пока адрес не сменится.
+	await expect(async () => {
+		await page.getByRole('button', { name: 'Показать ещё' }).click();
+		await expect(page).toHaveURL('/films?more=1', { timeout: 2000 });
+	}).toPass();
+	await expect(cards).toHaveCount(48);
+
+	// Уход на карточку и назад: столько же карточек, а не снова первая порция.
+	await cards.first().getByRole('link').first().click();
+	await expect(page).toHaveURL(/\/films\/[^/]+$/);
+	await page.goBack();
+	await expect(page).toHaveURL('/films?more=1');
+	await expect(cards).toHaveCount(48);
+
+	// Тем же адресом с нуля — та же выдача.
+	await page.goto('/films?more=1');
+	await expect(cards).toHaveCount(48);
+
+	// Новый фильтр — снова с первой порции (`more` в адресе не остаётся).
+	await page.getByLabel('Сортировка').selectOption('top_rated');
+	await expect(page).toHaveURL('/films?sort=top_rated');
+	await expect(cards).toHaveCount(24);
+});

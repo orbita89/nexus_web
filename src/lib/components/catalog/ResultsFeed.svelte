@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { replaceState } from '$app/navigation';
+	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { errorMessage } from '#lib/api/errors.ts';
 	import type { SchemaArchiveDoc, SchemaEntitySummary } from '#lib/api/generated/catalog.ts';
@@ -63,12 +63,18 @@
 	);
 	const canMore = $derived(!siteDone || archiveLeft);
 
+	/**
+	 * Адрес в строке браузера: «Показать ещё» правит его неглубокой навигацией, и тогда `page.url`
+	 * остаётся прежним (по нему SvelteKit перезапускает load), а настоящий адрес — в `page.shallow`.
+	 */
+	const feedUrl = $derived(page.shallow?.url ?? page.url);
+
 	// Возврат с карточки: сколько порций догрузили, записано в адресе (?more=). Если страница
-	// отдала только первую порцию (статичная студия) — добираем остальное одним запросом.
+	// отдала только первую порцию (назад из карточки, статичная студия) — добираем одним запросом.
 	let restoredFor = $state<string | null>(null);
 	$effect(() => {
-		const href = page.url.href;
-		const want = shownSize(page.url);
+		const href = feedUrl.href;
+		const want = shownSize(feedUrl);
 		if (restoredFor === href || siteDone || loading || site.length >= want) return;
 		restoredFor = href;
 		void addSite(want - site.length);
@@ -95,7 +101,12 @@
 		if (!siteDone) {
 			await addSite(PAGE_SIZE);
 			// Порция в адресе: вернувшись с карточки, увидим столько же, сколько и ушли.
-			if (!error) replaceState(moreUrl(page.url, readMore(page.url) + 1), page.state);
+			if (!error)
+				await goto(moreUrl(feedUrl, readMore(feedUrl) + 1), {
+					state: page.state,
+					shallow: true,
+					replace: true
+				});
 			return;
 		}
 		loading = true;
