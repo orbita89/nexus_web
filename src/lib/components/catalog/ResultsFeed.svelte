@@ -80,6 +80,52 @@
 		void addSite(want - site.length);
 	});
 
+	/** Ключ выдачи: позицию восстанавливаем только в той же выдаче, не в соседней. */
+	const feedKey = $derived(feedUrl.pathname + feedUrl.search);
+	/** Куда вернуться — переживает уход на карточку, но не касается других вкладок. */
+	const AT = 'feed-at';
+	let root = $state<HTMLElement>();
+
+	function readAt(): { key: string; href: string } | null {
+		try {
+			return JSON.parse(sessionStorage.getItem(AT) ?? 'null');
+		} catch {
+			// Приватный режим или запрет на хранилище: просто без возврата к работе.
+			return null;
+		}
+	}
+
+	/** Ушли на работу — запоминаем, с какой именно. */
+	function remember(event: MouseEvent) {
+		const link = (event.target as Element | null)?.closest?.('a[href]');
+		const href = link?.getAttribute('href');
+		if (!href) return;
+		try {
+			sessionStorage.setItem(AT, JSON.stringify({ key: feedKey, href }));
+		} catch {
+			/* не запомнили — вернёмся туда, куда поставит браузер */
+		}
+	}
+
+	// Назад с карточки: встаём на ту работу, с которой ушли, а не куда попал браузер (карточек на
+	// странице тогда было больше, и его позиция приходится на середину выдачи).
+	$effect(() => {
+		// Считаем карточки ради зависимости: нужной может ещё не быть — вернёмся после догрузки.
+		const shown = site.length + archived.length;
+		const at = readAt();
+		if (!shown || !root || !at || at.key !== feedKey) return;
+		const card = [...root.querySelectorAll('a[href]')].find(
+			(a) => a.getAttribute('href') === at.href
+		);
+		if (!card) return;
+		try {
+			sessionStorage.removeItem(AT);
+		} catch {
+			/* не страшно: ключ перезапишется при следующем уходе */
+		}
+		requestAnimationFrame(() => card.scrollIntoView({ block: 'center' }));
+	});
+
 	/** Дописать следующие limit карточек сайта. */
 	async function addSite(limit: number) {
 		loading = true;
@@ -128,21 +174,24 @@
 	<EntityCard {entity} {showKind} {wall} {row} rating={allRatings[entity.slug]} />
 {/snippet}
 
-{#if wall}
-	<!-- Стена картин: «Показать ещё» дописывает холсты, уже показанные не переезжают. -->
-	<ArtWall items={site} key={(entity) => entity.id} {tile} />
-{:else}
-	<ul class="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-		{#each site as entity (entity.id)}
-			<li>{@render tile(entity)}</li>
-		{/each}
-		{#if siteDone}
-			{#each archived as doc (doc.slug)}
-				<li><ArchiveCard {doc} /></li>
+<!-- Клик по карточке запоминаем на всю выдачу: назад вернёмся ровно к ней. -->
+<div bind:this={root} onclickcapture={remember}>
+	{#if wall}
+		<!-- Стена картин: «Показать ещё» дописывает холсты, уже показанные не переезжают. -->
+		<ArtWall items={site} key={(entity) => entity.id} {tile} />
+	{:else}
+		<ul class="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+			{#each site as entity (entity.id)}
+				<li>{@render tile(entity)}</li>
 			{/each}
-		{/if}
-	</ul>
-{/if}
+			{#if siteDone}
+				{#each archived as doc (doc.slug)}
+					<li><ArchiveCard {doc} /></li>
+				{/each}
+			{/if}
+		</ul>
+	{/if}
+</div>
 
 {#if error}<p class="mt-4 text-sm text-error">{error}</p>{/if}
 {#if canMore}

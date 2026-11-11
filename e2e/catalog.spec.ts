@@ -481,12 +481,16 @@ test('«Показать ещё»: порция в адресе, возврат 
 	}).toPass();
 	await expect(cards).toHaveCount(48);
 
-	// Уход на карточку и назад: столько же карточек, а не снова первая порция.
-	await cards.first().getByRole('link').first().click();
-	await expect(page).toHaveURL(/\/films\/[^/]+$/);
+	// Уход с дальней карточки и назад: столько же карточек (а не снова первая порция) и мы на той
+	// самой работе, с которой ушли.
+	const left = cards.nth(40).getByRole('link').first();
+	const href = await left.getAttribute('href');
+	await left.click();
+	await expect(page).toHaveURL(href!);
 	await page.goBack();
 	await expect(page).toHaveURL('/films?more=1');
 	await expect(cards).toHaveCount(48);
+	await expect(page.getByRole('main').locator(`a[href="${href}"]`).first()).toBeInViewport();
 
 	// Тем же адресом с нуля — та же выдача.
 	await page.goto('/films?more=1');
