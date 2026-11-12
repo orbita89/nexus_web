@@ -6,8 +6,9 @@
 	import { guestApi } from '#lib/auth/session.svelte.ts';
 	import { ratingsFor, type Ratings } from '#lib/catalog/load.ts';
 	import { archivePage as fetchArchive, SEARCH_MAX_LIMIT } from '#lib/catalog/search.ts';
+	import { keepShown, shown as shownFeed } from '#lib/catalog/shown.ts';
 	import type { Row } from '#lib/catalog/row.ts';
-	import { PAGE_SIZE, moreUrl, readMore, shownSize } from '#lib/catalog/url.ts';
+	import { PAGE_SIZE, feedKey, moreUrl, readMore, shownSize } from '#lib/catalog/url.ts';
 	import ArchiveCard from './ArchiveCard.svelte';
 	import ArtWall from './ArtWall.svelte';
 	import EntityCard from './EntityCard.svelte';
@@ -69,15 +70,29 @@
 	 */
 	const feedUrl = $derived(page.shallow?.url ?? page.url);
 
+	/** Ключ выдачи: позицию и уже показанные карточки берём только из той же выдачи, не из соседней. */
+	const key = $derived(feedKey(feedUrl));
+
 	// Возврат с карточки: сколько порций догрузили, записано в адресе (?more=). Если страница
-	// отдала только первую порцию (назад из карточки, статичная студия) — добираем остальное.
-	let restoredFor = $state<string | null>(null);
+	// отдала только первую порцию (назад из карточки, статичная студия) — берём остальное из
+	// памяти вкладки, а чего там нет (перезагрузка, чужая ссылка) — догружаем.
+	// Считаем не только по адресу, но и по порции с сервера: на статике страница сперва показывает
+	// пререндер, а данные приходят следом — по ним выдачу надо добрать заново.
+	let restoredFor = $state<{ href: string; first: unknown } | null>(null);
 	$effect(() => {
 		const href = feedUrl.href;
 		const want = shownSize(feedUrl);
-		if (restoredFor === href || siteDone || loading || site.length >= want) return;
-		restoredFor = href;
-		void restore(want);
+		if (restoredFor?.href === href && restoredFor.first === first) return;
+		if (siteDone || loading || site.length >= want) return;
+		restoredFor = { href, first };
+		const was = shownFeed(key);
+		if (was && was.items.length > site.length) {
+			site = [...was.items];
+			siteNext = was.next;
+			siteDone = was.done;
+			moreRatings = { ...moreRatings, ...was.ratings };
+		}
+		if (site.length < want && !siteDone) void restore(want);
 	});
 
 	/** Добрать выдачу до want карточек. Бэкенд отдаёт не больше SEARCH_MAX_LIMIT за раз. */
@@ -87,8 +102,6 @@
 		}
 	}
 
-	/** Ключ выдачи: позицию восстанавливаем только в той же выдаче, не в соседней. */
-	const feedKey = $derived(feedUrl.pathname + feedUrl.search);
 	/** Куда вернуться — переживает уход на карточку, но не касается других вкладок. */
 	const AT = 'feed-at';
 	let root = $state<HTMLElement>();
@@ -108,7 +121,7 @@
 		const href = link?.getAttribute('href');
 		if (!href) return;
 		try {
-			sessionStorage.setItem(AT, JSON.stringify({ key: feedKey, href }));
+			sessionStorage.setItem(AT, JSON.stringify({ key, href }));
 		} catch {
 			/* не запомнили — вернёмся туда, куда поставит браузер */
 		}
@@ -118,9 +131,9 @@
 	// странице тогда было больше, и его позиция приходится на середину выдачи).
 	$effect(() => {
 		// Считаем карточки ради зависимости: нужной может ещё не быть — вернёмся после догрузки.
-		const shown = site.length + archived.length;
+		const cards = site.length + archived.length;
 		const at = readAt();
-		if (!shown || !root || !at || at.key !== feedKey) return;
+		if (!cards || !root || !at || at.key !== key) return;
 		const card = [...root.querySelectorAll('a[href]')].find(
 			(a) => a.getAttribute('href') === at.href
 		);
@@ -143,6 +156,14 @@
 			siteNext += next.items.length;
 			siteDone = !next.items.length || siteNext >= next.total;
 			moreRatings = { ...moreRatings, ...(await ratingsFor(guestApi, next.items)) };
+			// Запоминаем показанное: вернувшись с карточки, покажем то же самое без запросов.
+			keepShown(key, {
+				items: site,
+				total: next.total,
+				next: siteNext,
+				done: siteDone,
+				ratings: { ...ratings, ...moreRatings }
+			});
 		} catch (e) {
 			error = errorMessage(e);
 		} finally {

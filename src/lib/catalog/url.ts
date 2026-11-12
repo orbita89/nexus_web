@@ -62,6 +62,17 @@ export function moreUrl(url: UrlLike, more: number): string {
 	return withQuery(url.pathname, { ...Object.fromEntries(url.searchParams), more });
 }
 
+/**
+ * Ключ выдачи: путь и фильтры без числа догруженных порций. У одной выдачи он один — по нему
+ * страница узнаёт свои карточки, когда на неё вернулись.
+ */
+export function feedKey(url: UrlLike): string {
+	const params = new URLSearchParams(Object.fromEntries(url.searchParams));
+	params.delete('more');
+	const qs = params.toString();
+	return qs ? `${url.pathname}?${qs}` : url.pathname;
+}
+
 /** `more` из адреса: целое 0…MAX_MORE, мусор — 0. */
 export function readMore(url: UrlLike): number {
 	const n = Number(url.searchParams.get('more'));

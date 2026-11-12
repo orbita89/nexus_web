@@ -5,7 +5,8 @@ import { hasFilters, readFilters } from '#lib/catalog/filters.ts';
 import { kindsBySlugs } from '#lib/catalog/kinds.ts';
 import { ratingsFor, settle, type Ratings } from '#lib/catalog/load.ts';
 import { personName, searchPage } from '#lib/catalog/search.ts';
-import { readOffset, readText, shownSize } from '#lib/catalog/url.ts';
+import { shown, shownUrl } from '#lib/catalog/shown.ts';
+import { PAGE_SIZE, feedKey, readOffset, readText, shownSize } from '#lib/catalog/url.ts';
 import type { PageLoad } from './$types';
 
 /** Людей в блоке над фильмами; все — на /people?q=. */
@@ -46,15 +47,23 @@ export const load: PageLoad = async ({ fetch, url }) => {
 	const wantPeople =
 		onlyText && !kinds.length && !filters.studio && !filters.person && offset === 0;
 
+	// Назад с карточки: вкладка помнит показанное — повторный запрос выдачи не нужен.
+	const here = shownUrl(url);
+	const want = shownSize(here);
+	const was = want > PAGE_SIZE ? shown(feedKey(here)) : null;
+	const ready = was && was.items.length >= want ? was : null;
+
 	const [found, tags, person, people] = await Promise.all([
-		searchPage(api, filters, {
-			kind: kinds.map((k) => k.kind),
-			limit: shownSize(url),
-			offset
-		}).then(
-			(page) => ({ page, error: null }),
-			(e: unknown) => ({ page: null, error: e })
-		),
+		ready
+			? { page: { items: ready.items, total: ready.total, offset }, error: null }
+			: searchPage(api, filters, {
+					kind: kinds.map((k) => k.kind),
+					limit: want,
+					offset
+				}).then(
+					(page) => ({ page, error: null }),
+					(e: unknown) => ({ page: null, error: e })
+				),
 		tagsCall,
 		personName(api, filters.person),
 		wantPeople
@@ -77,6 +86,6 @@ export const load: PageLoad = async ({ fetch, url }) => {
 	return {
 		...base,
 		result: found.page,
-		ratings: await ratingsFor(api, found.page.items)
+		ratings: ready ? ready.ratings : await ratingsFor(api, found.page.items)
 	};
 };
