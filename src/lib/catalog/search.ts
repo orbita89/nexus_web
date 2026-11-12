@@ -8,6 +8,12 @@ import type { SchemaEntityKind, SchemaSearchSort } from '#lib/api/generated/cata
 import { searchSortParam, type CatalogFilters, type Mode } from './filters.ts';
 import { PAGE_SIZE } from './url.ts';
 
+/**
+ * Сколько документов бэкенд отдаёт за один запрос: больший `limit` он молча урезает до этого
+ * числа, поэтому длинную выдачу собираем несколькими запросами.
+ */
+export const SEARCH_MAX_LIMIT = 100;
+
 export interface SearchOptions {
 	/** Один тип или несколько: API принимает повторяющийся `kind` (ИЛИ между типами). */
 	kind?: SchemaEntityKind | readonly SchemaEntityKind[];

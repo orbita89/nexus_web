@@ -501,3 +501,10 @@ test('«Показать ещё»: порция в адресе, возврат 
 	await expect(page).toHaveURL('/films?sort=top_rated');
 	await expect(cards).toHaveCount(24);
 });
+
+test('длинная выдача: порций больше, чем бэкенд отдаёт за раз (100)', async ({ page }) => {
+	// `limit` бэкенд молча урезает до 100 — выдачу добираем несколькими запросами, иначе карточек
+	// на странице меньше, чем было, и возврат попадает не на ту работу.
+	await page.goto('/films?more=5');
+	await expect(page.getByRole('main').getByRole('listitem')).toHaveCount(144);
+});

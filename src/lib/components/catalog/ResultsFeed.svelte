@@ -5,7 +5,7 @@
 	import type { SchemaArchiveDoc, SchemaEntitySummary } from '#lib/api/generated/catalog.ts';
 	import { guestApi } from '#lib/auth/session.svelte.ts';
 	import { ratingsFor, type Ratings } from '#lib/catalog/load.ts';
-	import { archivePage as fetchArchive } from '#lib/catalog/search.ts';
+	import { archivePage as fetchArchive, SEARCH_MAX_LIMIT } from '#lib/catalog/search.ts';
 	import type { Row } from '#lib/catalog/row.ts';
 	import { PAGE_SIZE, moreUrl, readMore, shownSize } from '#lib/catalog/url.ts';
 	import ArchiveCard from './ArchiveCard.svelte';
@@ -70,15 +70,22 @@
 	const feedUrl = $derived(page.shallow?.url ?? page.url);
 
 	// Возврат с карточки: сколько порций догрузили, записано в адресе (?more=). Если страница
-	// отдала только первую порцию (назад из карточки, статичная студия) — добираем одним запросом.
+	// отдала только первую порцию (назад из карточки, статичная студия) — добираем остальное.
 	let restoredFor = $state<string | null>(null);
 	$effect(() => {
 		const href = feedUrl.href;
 		const want = shownSize(feedUrl);
 		if (restoredFor === href || siteDone || loading || site.length >= want) return;
 		restoredFor = href;
-		void addSite(want - site.length);
+		void restore(want);
 	});
+
+	/** Добрать выдачу до want карточек. Бэкенд отдаёт не больше SEARCH_MAX_LIMIT за раз. */
+	async function restore(want: number) {
+		while (site.length < want && !siteDone && !error) {
+			await addSite(Math.min(want - site.length, SEARCH_MAX_LIMIT));
+		}
+	}
 
 	/** Ключ выдачи: позицию восстанавливаем только в той же выдаче, не в соседней. */
 	const feedKey = $derived(feedUrl.pathname + feedUrl.search);
