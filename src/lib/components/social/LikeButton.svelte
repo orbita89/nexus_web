@@ -15,7 +15,8 @@
 		count,
 		viewer,
 		size = 'sm',
-		red = false
+		red = false,
+		variant = 'btn'
 	}: {
 		username: string;
 		/** likes_count из шапки (серверный, как для гостя). */
@@ -25,6 +26,8 @@
 		size?: 'xs' | 'sm' | 'md' | 'lg';
 		/** Красный вариант кнопки. */
 		red?: boolean;
+		/** Вид кнопки: обычная кнопка daisyUI или мягкая пилюля (шапка профиля). */
+		variant?: 'btn' | 'pill';
 	} = $props();
 
 	// Своё состояние после нажатия; до него — то, что пришло с перечитанным профилем.
@@ -70,6 +73,7 @@
 		{busy}
 		{size}
 		{red}
+		{variant}
 		readonly={viewer.own}
 		guestLabel="Войдите, чтобы отметить профиль"
 		onclick={toggle}

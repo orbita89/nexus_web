@@ -386,11 +386,32 @@ test('без трейлера — ни видео, ни кнопки, зато �
 	// У книг трейлеров не бывает по контракту; фильмы dev-база дополняет инструментом медиа
 	// бэкенда, так что «фильм без трейлера» из сидов может трейлер получить.
 	await stubMedia(page);
+	// «Ещё книги автора» грузится в браузере: проверяем сам запрос (автор + только книги), а не
+	// содержимое dev-базы.
+	const worksRequest = page.waitForRequest(
+		(r) =>
+			r.url().includes('/api/v1/catalog/search') &&
+			r.url().includes('role=author') &&
+			r.url().includes('kind=book')
+	);
 	await page.goto('/books/dune-novel');
+	await worksRequest;
 	await expect(page.getByRole('heading', { name: 'Дюна', level: 1 })).toBeVisible();
 	await expect(
 		page.getByRole('region', { name: 'О книге' }).getByRole('link', { name: 'Фрэнк Херберт' })
 	).toBeVisible();
+	// Факты «О книге» — только справа от постера, внизу их нет.
+	await expect(page.getByRole('region', { name: 'О книге' })).toHaveCount(1);
+	// Издатель и ISBN у книги не показываем нигде на странице.
+	await expect(page.getByText('Издатель', { exact: true })).toHaveCount(0);
+	await expect(page.getByText('ISBN')).toHaveCount(0);
+	// Компактное «О книге» — справа от постера, в шапке; полный блок остаётся ниже.
+	const hero = page.getByRole('region', { name: 'Шапка: Дюна' });
+	const compact = hero.getByRole('region', { name: 'О книге' });
+	await expect(compact).toBeVisible();
+	const poster = await hero.getByRole('img', { name: 'Постер: Дюна' }).boundingBox();
+	const text = await compact.boundingBox();
+	expect(text!.x).toBeGreaterThan(poster!.x + poster!.width - 1);
 	await expect(page.locator('iframe')).toHaveCount(0);
 	await expect(page.getByRole('button', { name: 'Трейлер' })).toHaveCount(0);
 	await expect(

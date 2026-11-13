@@ -185,9 +185,7 @@ export function metadataFields(kind: SchemaEntityKind, metadata: SchemaMetadata)
 		case 'book': {
 			const m = metadata as SchemaBookMetadata;
 			rows.push(
-				['Страниц', m.pages ? m.pages.toLocaleString('ru-RU') : null],
-				['Издатель', m.publisher],
-				['ISBN', m.isbn]
+				['Страниц', m.pages ? m.pages.toLocaleString('ru-RU') : null]
 			);
 			break;
 		}

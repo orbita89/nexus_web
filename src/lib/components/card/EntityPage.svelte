@@ -51,7 +51,7 @@
 	// Карточка сверху вниз:
 	// 1. Липкая мини-шапка (только телефон) — когда первый экран ушёл вверх.
 	// 2. Первый экран: есть трейлер — шапка как у Okko (трейлер фоном, без постера); нет — постер
-	//    и текст. Кнопки: средняя оценка, «Оценить» (1–10 и реакции), «В коллекцию», «Следить».
+	//    и текст. Кнопки: «Оценить» (1–10 и реакции), средняя оценка, «Нравится», «В коллекцию», «Следить».
 	// 3. Теги, затем «О фильме»: таблица как у Кинопоиска, справа от неё «Производство и факты»,
 	//    ниже плашка «режиссёр и актёры». 4. Приквелы, сиквелы и ремейки (только если есть),
 	//    затем «Рекомендации» (заглушка, пока нет API).
@@ -89,6 +89,13 @@
 	const artist = $derived.by(() => {
 		if (entity.kind !== 'painting') return null;
 		const credit = entity.credits.find((c) => c.role === 'artist');
+		return credit ? { slug: credit.person.slug, name: credit.person.full_name } : null;
+	});
+
+	/** Автор книги: от него строится «Ещё книги автора». */
+	const bookAuthor = $derived.by(() => {
+		if (entity.kind !== 'book') return null;
+		const credit = entity.credits.find((c) => c.role === 'author');
 		return credit ? { slug: credit.person.slug, name: credit.person.full_name } : null;
 	});
 
@@ -218,21 +225,19 @@
 	<div bind:this={heroElement} class="relative z-15">
 		<Hero {entity} {trailers} parent={seriesParent} {canvas} bind:openCrop>
 			{#snippet marks()}
-				<!-- Реакции — на виду, а не внутри панели «Оценить»: их ставят в одно нажатие, и
-				     читают их все, включая гостей. Своя реакция снимается повторным нажатием,
-				     разных может быть сколько угодно. -->
-				<div class="mt-4">
-					<Reactions slug={entity.slug} {released} version={live.version} />
-				</div>
+				<!-- Реакции — отдельной строкой под кнопками, на всю ширину: их ставят в одно нажатие,
+				     и читают их все, включая гостей. -->
+				<Reactions slug={entity.slug} {released} version={live.version} />
 			{/snippet}
 			{#snippet actions()}
 				<!-- Один ряд вместо трёх: главное — «Оценить», рядом сердечко, отметка и чат, всё
 				     редкое — в «⋯». Восемь равных кнопок не давали глазу зацепиться ни за одну. -->
-				<AverageRating {average} total={rating.current?.data?.count ?? 0} />
-				<!-- Сердечко — до «Оценить»: «понравилось» ставят в одно нажатие, не раздумывая, а
-				     оценку 1–10 — обдумав. Чаще нужно первое, поэтому оно и ближе к оценке сайта. -->
-				<EntityLike slug={entity.slug} />
+				<!-- «Оценить» — первой: это главное действие, остальное идёт за ним. -->
 				<RateButton {my} {released} releaseDate={entity.release_date} />
+				<!-- Вторичные кнопки — отдельным рядом: на телефоне под «Оценить», на md и шире — в общем ряду. -->
+				<div class="flex flex-wrap items-center gap-2 md:contents">
+					<AverageRating {average} total={rating.current?.data?.count ?? 0} />
+				<EntityLike slug={entity.slug} />
 				<!-- Отметка одна: «позже» и «просмотрено» взаимоисключающие. У картины её нет —
 				     холст не откладывают на вечер. -->
 				{#if entity.kind !== 'painting'}
@@ -263,7 +268,8 @@
 						<WatchButton {watch} menu />
 					{/if}
 					<ShareMenu url={page.url.href} title={entity.title} />
-				</MoreMenu>
+					</MoreMenu>
+				</div>
 			{/snippet}
 		</Hero>
 	</div>
@@ -282,11 +288,11 @@
 	<SectionNav hero={heroElement} {sections} />
 
 	{#if production || entity.imdb_rating || entity.awards.length}
-		<About {entity}>
+		<About {entity} factsInHero={!trailers.length && entity.kind !== 'painting'}>
 			{#snippet aside()}<Production {entity} {production} />{/snippet}
 		</About>
 	{:else}
-		<About {entity} />
+		<About {entity} factsInHero={!trailers.length && entity.kind !== 'painting'} />
 	{/if}
 
 	<!-- Разбор — отдельным разделом под таблицей, во всю ширину: в боковой колонке он тянул её на
@@ -321,6 +327,10 @@
 	{#if artist}
 		<ArtistWorks slug={entity.slug} {artist} />
 	{:else}
+		<!-- У книги «Ещё книги автора» — рядом с рекомендациями, а не вместо них. -->
+		{#if bookAuthor}
+			<ArtistWorks slug={entity.slug} artist={bookAuthor} role="author" kind="book" />
+		{/if}
 		<Recommendations slug={entity.slug} />
 	{/if}
 

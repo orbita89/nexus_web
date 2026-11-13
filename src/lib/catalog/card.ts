@@ -37,6 +37,14 @@ export interface FactRow {
 /** Актёры (и озвучка — у игр и мультфильмов это и есть «роли»). */
 const CAST_ROLES = ['actor', 'voice_actor'];
 
+/**
+ * У фильма на карточке съёмочная группа сокращена до режиссёра: сценаристов, композиторов,
+ * монтажёров и прочих ролей не показываем. У остальных типов — без изменений.
+ */
+export function crewVisible(kind: string, role: string): boolean {
+	return kind !== 'movie' || role === 'director' || CAST_ROLES.includes(role);
+}
+
 const personLinks = (people: SchemaPersonRef[]) =>
 	people.map((p) => ({ href: `/people/${p.slug}`, text: p.full_name }));
 
@@ -111,7 +119,7 @@ const CREW_LABEL: Record<string, string> = { writer: 'Сценарий', editor:
 export function aboutRows(entity: SchemaEntityDetail): FactRow[] {
 	const year = yearOf(entity.release_date);
 	const crewRows = creditGroups(entity.credits)
-		.filter((g) => !CAST_ROLES.includes(g.role))
+		.filter((g) => !CAST_ROLES.includes(g.role) && crewVisible(entity.kind, g.role))
 		.map((g) => ({
 			label: CREW_LABEL[g.role] ?? roleLabel(g.role),
 			links: personLinks(g.credits.slice(0, ROW_PEOPLE).map((c) => c.person)),
@@ -121,13 +129,15 @@ export function aboutRows(entity: SchemaEntityDetail): FactRow[] {
 	// блоком «Где хранится» справа) и размер (он под холстом, рядом с самим холстом, где и нужен):
 	// в таблице это было второе и третье написание одного и того же.
 	const painting = entity.kind === 'painting';
+	// Полная дата выхода (или премьеры) уже содержит год: год отдельной строкой — повтор.
+	const fullDate = !!entity.release_date && !painting;
 	const HIDDEN = painting ? ['Страны', 'Музей', 'Город', 'Размер'] : ['Страны'];
 	const fields = metadataFields(entity.kind, entity.metadata)
 		.filter((f) => !HIDDEN.includes(f.label))
 		.map((f) => ({ label: f.label, text: f.value }));
 	const rows: (FactRow | null)[] = [
 		// Год — ссылка в свой раздел с фильтром: «что ещё вышло в 2026-м» спрашивают чаще всего.
-		year
+		year && !fullDate
 			? {
 					label:
 						entity.kind === 'book' ? 'Год издания' : painting ? 'Год создания' : 'Год производства',
@@ -157,6 +167,23 @@ export function aboutRows(entity: SchemaEntityDetail): FactRow[] {
 		...fields
 	];
 	return rows.filter((r): r is FactRow => !!r);
+}
+
+/** Второстепенные роли — только в полном блоке «О …» внизу, не в компактной плашке у постера. */
+const SECONDARY_FACT_LABELS = ['Композитор', 'Оператор', 'Монтаж', 'Монтажёр'];
+
+/** Топ-5 ключевых фактов для компактной плашки у постера. */
+export function keyFactRows(entity: SchemaEntityDetail): FactRow[] {
+	const rows = aboutRows(entity);
+	// Фильмы, сериалы и книги — только основные факты; остальные титры — во вкладке «Создатели».
+	const MAIN_FACTS: Partial<Record<string, string[]>> = {
+		movie: ['Страна', 'Страны', 'Режиссёр', 'Премьера', 'Длительность'],
+		series: ['Страна', 'Страны', 'Режиссёр', 'Премьера', 'Длительность'],
+		book: ['Автор', 'Дата выхода', 'Страниц']
+	};
+	const main = MAIN_FACTS[entity.kind];
+	if (main) return rows.filter((r) => main.includes(r.label));
+	return rows.filter((r) => !SECONDARY_FACT_LABELS.includes(r.label)).slice(0, 5);
 }
 
 /**
@@ -214,7 +241,8 @@ export function productionOf(
 		entity.kind === 'game'
 			? plain([m.developer, m.publisher])
 			: entity.kind === 'book'
-				? plain([m.publisher])
+				? // Издателя у книги не показываем: он не нужен в карточке.
+					[]
 				: entity.kind === 'painting'
 					? // У картины «производство» — где она сейчас: музей и его город.
 						museumPlace(plain([m.museum, m.city]))

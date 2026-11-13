@@ -94,9 +94,9 @@ describe('metadataFields', () => {
 	});
 
 	it('книга', () => {
-		expect(metadataFields('book', { pages: 1896, publisher: 'Ace Books', isbn: null })).toEqual([
-			{ label: 'Страниц', value: '1\u00a0896' },
-			{ label: 'Издатель', value: 'Ace Books' }
+		// Издатель и ISBN в метаданных книги не показываем.
+		expect(metadataFields('book', { pages: 1896, publisher: 'Ace Books', isbn: '978' })).toEqual([
+			{ label: 'Страниц', value: '1\u00a0896' }
 		]);
 	});
 

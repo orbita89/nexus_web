@@ -214,7 +214,7 @@ describe('productionOf', () => {
 		expect(p?.triviaTitle).toBe('Факты о съёмках');
 	});
 
-	it('игра — разработчик и издатель, книга — издательство', () => {
+	it('игра — разработчик и издатель, у книги издательства нет', () => {
 		expect(
 			productionOf({
 				kind: 'game',
@@ -223,7 +223,7 @@ describe('productionOf', () => {
 			})?.studios
 		).toEqual([{ name: 'CDPR' }]);
 		expect(
-			productionOf({ kind: 'book', metadata: { publisher: 'Chilton' }, studios: [] })?.studiosTitle
-		).toBe('Издательство');
+			productionOf({ kind: 'book', metadata: { publisher: 'Chilton' }, studios: [] })
+		).toBeNull();
 	});
 });

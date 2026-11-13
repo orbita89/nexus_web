@@ -82,3 +82,20 @@ test('вошедший: подписка и отписка, счётчик, св
 	);
 	await expect(page.getByRole('button', { name: 'Подписаться' })).toHaveCount(0);
 });
+
+test('гость: шапка без пустых блоков, журнал и его фильтры', async ({ page }) => {
+	await page.goto('/u/author');
+	await expect(page.getByText('Пользователь не добавил описание профиля.')).toHaveCount(0);
+
+	await tabs(page).getByRole('link', { name: 'Журнал' }).click();
+	await expect(page).toHaveURL('/u/author/journal');
+	await expect(page.getByRole('heading', { name: 'Автор форума', level: 1 })).toBeVisible();
+
+	const filters = page.getByRole('navigation', { name: 'Что показывать' });
+	await expect(filters.getByRole('link', { name: 'Лайки' })).toBeVisible();
+	await expect(filters.getByRole('link', { name: 'Заметки' })).toHaveCount(0);
+	await expect(filters.getByRole('link', { name: 'Посмотреть позже' })).toHaveCount(0);
+
+	await filters.getByRole('link', { name: 'Лайки' }).click();
+	await expect(page).toHaveURL('/u/author/journal?filter=likes');
+});

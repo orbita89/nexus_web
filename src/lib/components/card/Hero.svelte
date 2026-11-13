@@ -1,10 +1,12 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { SchemaEntityDetail, SchemaPaintingMetadata } from '#lib/api/generated/catalog.ts';
+	import { keyFactRows } from '#lib/catalog/card.ts';
 	import { sizeOf } from '#lib/catalog/labels.ts';
 	import type { Canvas, ViewerFocus } from '#lib/catalog/paintings.ts';
 	import type { TrailerSource } from '#lib/catalog/trailer.ts';
 	import CardHero from '#lib/components/catalog/CardHero.svelte';
+	import AboutCompact from '#lib/components/card/AboutCompact.svelte';
 	import ArtNav from '#lib/components/card/ArtNav.svelte';
 	import ArtViewer from '#lib/components/catalog/ArtViewer.svelte';
 	import Poster from '#lib/components/catalog/Poster.svelte';
@@ -12,7 +14,8 @@
 
 	// Первый экран карточки:
 	// - есть трейлер — шапка как у Okko (CardHero): трейлер фоном, текст поверх, постера нет;
-	// - нет трейлера — постер слева, тот же текст справа.
+	// - нет трейлера — постер слева, текст справа; на телефоне (< md) — постер слева, заголовок и
+	//   кнопки справа, ниже на всю ширину реакции и плашка фактов.
 	// В шапке только русское название, кнопки и под ними личные отметки. Описание, факты (год,
 	// длительность, возраст), режиссёр и роли — ниже, во вкладке «О фильме». Под названием — жанры
 	// (теги kind = genre), остальные теги — над «О фильме».
@@ -34,7 +37,7 @@
 		canvas?: Canvas | null;
 		/** Фрагмент из ленты деталей: холст откроется увеличенным на этом месте. */
 		openCrop?: ViewerFocus | null;
-		/** Под кнопками: «Посмотреть позже», «Просмотрено». */
+		/** Под кнопками, на всю ширину: реакции. */
 		marks: Snippet;
 		/** Кнопки: оценка, «Оценить», «В коллекцию», «Следить». */
 		actions: Snippet;
@@ -54,9 +57,11 @@
 	// Тень под текстом нужна только поверх трейлера: там за буквами движется картинка. На ровном
 	// фоне она читается как грязь вокруг заголовка.
 	const overVideo = $derived(trailers.length > 0);
+	// Есть ли факты справа от постера: без них постер на телефоне выводится по центру, крупно.
+	const hasFacts = $derived(entity.kind !== 'painting' && keyFactRows(entity).length > 0);
 </script>
 
-{#snippet content()}
+{#snippet head()}
 	{#if parent}
 		<a
 			href={parent.href}
@@ -66,36 +71,53 @@
 			]}>{parent.title}</a
 		>
 	{/if}
-	<h1
-		class={[
-			'text-2xl leading-tight font-black tracking-tight text-balance sm:text-4xl',
-			overVideo && 'drop-shadow-lg'
-		]}
-	>
-		{entity.title}
-	</h1>
-	{#if genres.length}
-		<ul class="mt-3 flex flex-wrap gap-x-2 text-sm text-base-content/70" aria-label="Жанры">
-			{#each genres as genre, i (genre.slug)}
-				<li>
-					{#if i}<span class="mr-2 text-base-content/30" aria-hidden="true">·</span>{/if}<a
-						href="/tags/{genre.slug}"
-						class="hover:text-primary">{genre.name}</a
-					>
-				</li>
-			{/each}
-		</ul>
-	{/if}
+	<div class="flex flex-wrap items-baseline gap-3">
+		<h1
+			class={[
+				'text-2xl leading-tight font-black tracking-tight text-balance sm:text-4xl',
+				overVideo && 'drop-shadow-lg'
+			]}
+		>
+			{entity.title}
+		</h1>
+		{#if genres.length}
+			<ul class="flex flex-wrap gap-x-2 text-sm text-base-content/70" aria-label="Жанры">
+				{#each genres as genre, i (genre.slug)}
+					<li>
+						{#if i}<span class="mr-2 text-base-content/30" aria-hidden="true">·</span>{/if}<a
+							href="/tags/{genre.slug}"
+							class="hover:text-primary">{genre.name}</a
+						>
+					</li>
+				{/each}
+			</ul>
+		{/if}
+	</div>
 	<!-- Теги — здесь же, под жанрами: это признаки самой работы, и их место рядом с названием.
 	     Отдельной строкой посреди страницы они висели в пустоте между кнопками и «О фильме». -->
 	{#if plainTags.length}
 		<div class="mt-2.5"><TagChips tags={plainTags} counts={false} /></div>
 	{/if}
-	<div class="mt-7 flex flex-wrap items-center gap-3">
+{/snippet}
+
+<!-- Ряд кнопок: на телефоне «Оценить» на всю ширину, остальные — одной строкой под ней; на md и шире — в ряд. -->
+{#snippet actionsRow(grid: boolean)}
+	<div
+		class={[
+			'mt-3 md:mt-7 md:flex md:flex-wrap md:items-center md:gap-3',
+			grid
+				? 'flex flex-col items-stretch gap-2 md:flex-row md:items-center md:gap-3'
+				: 'flex flex-wrap items-center gap-3'
+		]}
+	>
 		{@render actions()}
 	</div>
+{/snippet}
 
-	{@render marks()}
+{#snippet content()}
+	{@render head()}
+	{@render actionsRow(false)}
+	<div class="mt-4">{@render marks()}</div>
 {/snippet}
 
 {#if trailers.length}
@@ -146,7 +168,7 @@
 					aria-hidden="true"
 				>
 					<path
-						d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"
+						d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2 2v-3M16 21h3a2 2 0 0 0 2-2v-3"
 					/>
 				</svg>
 				Во весь экран
@@ -163,9 +185,19 @@
 {:else}
 	<section
 		aria-label="Шапка: {entity.title}"
-		class="mb-12 grid items-start gap-6 sm:grid-cols-[12rem_1fr] md:grid-cols-[16rem_1fr] md:gap-10"
+		class={[
+			'mb-12 grid items-start gap-x-3 gap-y-2 md:grid-cols-[16rem_1fr] md:gap-x-10 md:gap-y-0',
+			hasFacts ? 'grid-cols-[165px_minmax(0,1fr)] max-md:grid-rows-[auto_1fr]' : 'grid-cols-1'
+		]}
 	>
-		<div class="w-40 sm:w-auto">
+		<div
+			class={[
+				'col-start-1 row-start-1 md:row-span-2',
+				hasFacts
+					? 'row-span-2 w-[165px] rounded-xl md:w-auto'
+					: 'mx-auto w-full max-w-[240px] md:mx-0 md:max-w-none'
+			]}
+		>
 			<Poster
 				title={entity.title}
 				kind={entity.kind}
@@ -174,6 +206,40 @@
 				eager
 			/>
 		</div>
-		<div class="max-w-2xl min-w-0 md:pt-4">{@render content()}</div>
+
+		<!-- На телефоне эта обёртка не участвует в раскладке (contents): её части встают в сетку
+		     секции. На md и шире — обычный блок справа от постера. -->
+		<div class="contents md:col-start-2 md:row-start-1 md:block md:min-w-0 md:max-w-2xl md:pt-4">
+			<div
+				class={[
+					'min-w-0 md:block',
+					hasFacts ? 'max-md:col-start-2 max-md:row-start-1' : 'max-md:col-start-1 max-md:row-start-2'
+				]}
+			>
+				{@render head()}
+			</div>
+			<div
+				class={[
+					'min-w-0',
+					hasFacts ? 'max-md:col-start-2 max-md:row-start-2' : 'max-md:col-start-1 max-md:row-start-3'
+				]}
+			>
+				{@render actionsRow(true)}
+			</div>
+			<div
+				class={[
+					'mt-4 min-w-0',
+					hasFacts ? 'max-md:col-span-full max-md:row-start-3' : 'max-md:col-start-1 max-md:row-start-4'
+				]}
+			>
+				{@render marks()}
+			</div>
+		</div>
+
+		{#if hasFacts}
+			<div class="col-span-full row-start-4 min-w-0 md:col-span-1 md:col-start-2 md:row-start-2">
+				<AboutCompact {entity} />
+			</div>
+		{/if}
 	</section>
 {/if}

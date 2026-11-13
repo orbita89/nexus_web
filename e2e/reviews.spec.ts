@@ -32,6 +32,10 @@ test('гость: средняя в шапке ведёт ко всем реце
 		'href',
 		'/auth/login?next=%2Ffilms%2Fdune-2021'
 	);
+	// «Оценить» — первая кнопка в ряду: левее средней оценки.
+	const rateBox = await hero(page).getByRole('link', { name: 'Оценить' }).boundingBox();
+	const averageBox = await average(page).boundingBox();
+	expect(rateBox!.x).toBeLessThan(averageBox!.x);
 
 	await toFeed(page);
 	await expect(reviewsList(page)).toContainText('Вильнёв сделал невозможное');

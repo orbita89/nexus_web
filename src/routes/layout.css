@@ -334,3 +334,22 @@ select:focus {
 	outline: none;
 	border-color: color-mix(in oklab, var(--color-base-content) 25%, transparent);
 }
+
+/* Полосы прокрутки: тонкие, без стрелок на концах (Chromium рисует их по умолчанию).
+   Сама прокрутка остаётся. Базовое правило обязательно — без него кастомный вид не включается. */
+::-webkit-scrollbar {
+	width: 8px;
+	height: 8px;
+}
+::-webkit-scrollbar-button {
+	display: none;
+	width: 0;
+	height: 0;
+}
+::-webkit-scrollbar-track {
+	background: transparent;
+}
+::-webkit-scrollbar-thumb {
+	background: color-mix(in oklab, var(--color-base-content) 20%, transparent);
+	border-radius: 999px;
+}

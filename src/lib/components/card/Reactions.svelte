@@ -92,20 +92,24 @@
 	}}
 />
 
-<div class="flex flex-wrap items-center gap-1.5" bind:this={box}>
-	<div class="flex flex-wrap gap-1.5" role="group" aria-label="Реакции">
+<div class="flex max-w-full min-w-0 items-center gap-2 max-md:w-full md:flex-wrap" bind:this={box}>
+	<div
+		class="flex min-w-0 flex-wrap gap-0.5 max-md:shrink max-md:flex-nowrap max-md:overflow-x-auto max-md:[scrollbar-width:none] max-md:[&::-webkit-scrollbar]:hidden md:flex-wrap"
+		role="group"
+		aria-label="Реакции"
+	>
 		{#each shown as item (item.emoji)}
 			<button
 				class={[
-					'btn h-9 min-h-0 gap-1.5 rounded-full px-3 btn-sm',
-					item.mine ? 'border-primary/60 bg-primary/15' : 'border-base-300 bg-base-100 btn-ghost'
+					'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 transition-colors hover:bg-base-content/5 disabled:opacity-50',
+					item.mine && 'font-semibold text-primary'
 				]}
 				aria-pressed={item.mine}
 				aria-label="{item.emoji} — {item.count}"
 				disabled={!canReact || busy === item.emoji}
 				onclick={() => toggle(item.emoji)}
 			>
-				<span class="text-lg leading-none transition-transform active:scale-125">{item.emoji}</span>
+				<span class="text-base leading-none">{item.emoji}</span>
 				<span class="text-xs tabular-nums">{item.count}</span>
 			</button>
 		{/each}
@@ -117,9 +121,9 @@
 	<!-- «+» — своя реакция: палитра частых эмодзи. Бэкенд принимает любой, но выбор из тысячи
 	     никому не нужен; у гостя и до премьеры кнопки нет. -->
 	{#if canReact}
-		<div class="relative">
+		<div class="relative shrink-0">
 			<button
-				class="btn h-9 min-h-0 rounded-full border-base-300 bg-base-100 btn-ghost px-3 btn-sm"
+				class="inline-flex h-7 min-w-[1.75rem] shrink-0 items-center justify-center gap-0.5 rounded-md px-1 text-base-content/60 transition-colors hover:bg-base-content/5"
 				aria-label="Добавить реакцию"
 				aria-expanded={open}
 				title="Добавить реакцию"
@@ -140,7 +144,7 @@
 			</button>
 			{#if open}
 				<div
-					class="absolute bottom-full left-0 z-30 mb-2 grid w-64 grid-cols-6 gap-1 rounded-box border border-base-300 bg-base-200 p-2 shadow-xl"
+					class="absolute top-full right-0 z-30 mt-2 grid w-64 max-w-[calc(100vw-2rem)] grid-cols-6 gap-1 rounded-box border border-base-300 bg-base-200 p-2 shadow-xl"
 					role="group"
 					aria-label="Выбор реакции"
 				>

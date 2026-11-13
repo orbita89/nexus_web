@@ -30,3 +30,4 @@ blob-report
 
 # Claude Code: личные настройки разрешений
 .claude/settings.local.json
+plans/
