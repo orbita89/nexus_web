@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { SchemaEntityDetail } from '#lib/api/generated/catalog.ts';
-	import { aboutRows, aboutTitle, creditGroups, crewVisible, originalTitle } from '#lib/catalog/card.ts';
+	import { aboutRows, aboutTitle, creditGroups, originalTitle } from '#lib/catalog/card.ts';
 	import Credits from './Credits.svelte';
 
 	// «О фильме» — описание слева и студии справа (aside), под ними таблица фактов и титры.
@@ -14,12 +14,8 @@
 
 	const rows = $derived(factsInHero ? [] : aboutRows(entity));
 	const groups = $derived(creditGroups(entity.credits));
-	// У книг и картин блок титров не меняем: только актёры, как и раньше. Создатели — у фильмов и сериалов.
-	const creditGroupsForPage = $derived(
-		entity.kind === 'book' || entity.kind === 'painting'
-			? groups.filter((g) => g.role === 'actor' || g.role === 'voice_actor')
-			: groups.filter((g) => crewVisible(entity.kind, g.role))
-	);
+	// В «Создателях» — все причастные: сценаристы, композиторы, монтажёры, авторы, художники и т. д.
+	const creditGroupsForPage = $derived(groups);
 	const title = $derived(aboutTitle(entity.kind));
 	// У сезона оригинальное название — почти всегда то же «Season N»: не показываем.
 	const original = $derived(entity.kind === 'season' ? null : originalTitle(entity));

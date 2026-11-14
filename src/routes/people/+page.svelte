@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { afterNavigate, goto } from '$app/navigation';
 	import { navigating, page } from '$app/state';
-	import { count, roleLabel } from '#lib/catalog/labels.ts';
-	import { filterUrl, withQuery } from '#lib/catalog/url.ts';
+	import { count } from '#lib/catalog/labels.ts';
+	import { feedKey, filterUrl, withQuery } from '#lib/catalog/url.ts';
 	import EmptyState from '#lib/components/catalog/EmptyState.svelte';
 	import LoadError from '#lib/components/catalog/LoadError.svelte';
-	import Pagination from '#lib/components/catalog/Pagination.svelte';
-	import PersonAvatar from '#lib/components/catalog/PersonAvatar.svelte';
+	import PeopleFeed from '#lib/components/catalog/PeopleFeed.svelte';
+	import { roleHue } from '#lib/components/catalog/PersonCard.svelte';
 	import Seo from '#lib/components/catalog/Seo.svelte';
 	import { _PEOPLE_ROLES } from './+page.ts';
 	import type { PageProps } from './$types';
@@ -24,6 +24,13 @@
 		if (type !== 'goto') text = data.q ?? '';
 	});
 
+	const PRIMARY = 6;
+	const primary = _PEOPLE_ROLES.slice(0, PRIMARY);
+	const more = _PEOPLE_ROLES.slice(PRIMARY);
+	const moreActive = $derived(more.find((r) => r.value === data.role));
+	const items = $derived(data.list.data?.items ?? []);
+	const hue = $derived(roleHue(data.role));
+
 	function search(delay: number) {
 		clearTimeout(timer);
 		timer = setTimeout(() => {
@@ -38,16 +45,26 @@
 	description="Актёры, режиссёры, сценаристы и композиторы в каталоге Кассандра."
 />
 
+<div
+	class="pointer-events-none absolute inset-x-0 top-0 -z-10 h-96 opacity-60 transition-[background] duration-700"
+	style="background: radial-gradient(60% 100% at 50% 0%, oklch(0.45 0.16 {hue} / 0.35), transparent 70%)"
+	aria-hidden="true"
+></div>
+
 <header class="mb-6">
-	<h1 class="text-3xl font-black sm:text-4xl">{data.q ? 'Люди' : 'Популярные люди'}</h1>
-	{#if data.list.data && data.q}
-		<p class="mt-1 text-sm text-base-content/50">
+	<h1 class="text-3xl font-black tracking-tight sm:text-5xl">
+		{data.q ? 'Люди' : 'Популярные люди'}
+	</h1>
+	<p class="mt-2 text-sm text-base-content/60">
+		{#if data.list.data && data.q}
 			Найдено {data.list.data.total > data.list.data.limit ? 'около ' : ''}{count(
 				data.list.data.total,
 				['человек', 'человека', 'человек']
 			)}
-		</p>
-	{/if}
+		{:else}
+			Актёры, режиссёры, авторы книг и создатели игр — в одном месте
+		{/if}
+	</p>
 </header>
 
 <form
@@ -58,72 +75,93 @@
 		search(0);
 	}}
 	role="search"
-	class="mb-4 flex max-w-lg gap-2"
+	class="relative mb-5 max-w-xl"
 >
 	{#if data.role}<input type="hidden" name="role" value={data.role} />{/if}
+	<svg
+		class="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-base-content/40"
+		viewBox="0 0 24 24"
+		fill="none"
+		stroke="currentColor"
+		stroke-width="2"
+		stroke-linecap="round"
+		aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg
+	>
 	<input
 		type="search"
 		name="q"
 		bind:value={text}
 		oninput={() => search(300)}
-		placeholder="Имя — по-русски или латиницей"
+		placeholder="Найти человека — по-русски или латиницей"
 		aria-label="Поиск по имени"
-		class="input w-full"
+		class="input h-12 w-full rounded-full bg-base-200/80 pl-12 backdrop-blur focus:bg-base-200"
 	/>
-	<button class="btn btn-primary">Найти</button>
 </form>
 
-<nav class="mb-8 overflow-x-auto" aria-label="Основная роль">
-	<div class="tabs tabs-box w-fit tabs-sm">
-		{#each _PEOPLE_ROLES as r (r.title)}
+<nav class="mb-8" aria-label="Основная роль">
+	<div class="flex flex-wrap items-center gap-2">
+		{#each primary as r (r.title)}
+			{@const active = r.value === data.role}
 			<a
 				href={withQuery('/people', { q: data.q, role: r.value })}
 				data-sveltekit-noscroll
-				class={['tab', { 'tab-active': r.value === data.role }]}
-				aria-current={r.value === data.role ? 'page' : undefined}>{r.title}</a
+				class={[
+					'rounded-full border px-4 py-1.5 text-sm font-medium transition-colors',
+					active
+						? 'border-transparent bg-primary text-primary-content'
+						: 'border-base-content/10 bg-base-200/60 text-base-content/70 hover:border-base-content/30 hover:text-base-content'
+				]}
+				aria-current={active ? 'page' : undefined}>{r.title}</a
 			>
 		{/each}
+		<div class="dropdown">
+			<div
+				tabindex="0"
+				role="button"
+				class={[
+					'cursor-pointer rounded-full border px-4 py-1.5 text-sm font-medium transition-colors',
+					moreActive
+						? 'border-transparent bg-primary text-primary-content'
+						: 'border-base-content/10 bg-base-200/60 text-base-content/70 hover:border-base-content/30'
+				]}
+			>
+				{moreActive ? moreActive.title : 'Ещё'} ▾
+			</div>
+			<ul
+				class="dropdown-content menu z-20 mt-2 w-56 rounded-box border border-base-content/10 bg-base-200 p-2 shadow-xl"
+			>
+				{#each more as r (r.title)}
+					<li>
+						<a
+							href={withQuery('/people', { q: data.q, role: r.value })}
+							data-sveltekit-noscroll
+							class={{ 'menu-active': r.value === data.role }}
+							onclick={() => (document.activeElement as HTMLElement | null)?.blur()}>{r.title}</a
+						>
+					</li>
+				{/each}
+			</ul>
+		</div>
 	</div>
 </nav>
 
-<div class={['transition-opacity', { 'opacity-50': loading }]} aria-busy={loading}>
+{#snippet skeleton(n: number)}
+	{#each { length: n } as _, i (i)}
+		<li class="aspect-3/4 animate-pulse rounded-box bg-base-200"></li>
+	{/each}
+{/snippet}
+
+<div aria-busy={loading}>
 	{#if data.list.error}
 		<LoadError message={data.list.error} />
-	{:else if data.list.data?.items.length}
+	{:else if loading}
 		<ul class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-			{#each data.list.data.items as person (person.id)}
-				{@const original =
-					person.original_name && person.original_name !== person.full_name
-						? person.original_name
-						: null}
-				<li>
-					<a
-						href="/people/{person.slug}"
-						class="group flex flex-col items-center gap-3 rounded-box p-3 text-center transition-colors hover:bg-base-200"
-					>
-						<span class="transition duration-300 group-hover:scale-105">
-							<PersonAvatar name={person.full_name} photoUrl={person.photo_url} />
-						</span>
-						<span class="min-w-0">
-							<span class="block text-sm font-semibold group-hover:text-primary"
-								>{person.full_name}</span
-							>
-							{#if original}
-								<span class="block truncate text-xs text-base-content/50">{original}</span>
-							{/if}
-							{#if person.known_for}
-								<span class="block text-xs text-primary/80">{roleLabel(person.known_for)}</span>
-							{/if}
-						</span>
-					</a>
-				</li>
-			{/each}
+			{@render skeleton(12)}
 		</ul>
-		<Pagination
-			total={data.list.data.total}
-			limit={data.list.data.limit}
-			offset={data.list.data.offset}
-		/>
+	{:else if items.length}
+		{#key feedKey(page.url)}
+			<PeopleFeed first={data.list.data!} q={data.q} role={data.role} />
+		{/key}
 	{:else}
 		<EmptyState title="Никого не нашлось">
 			Проверьте написание имени или <a href="/people" class="link link-primary"
