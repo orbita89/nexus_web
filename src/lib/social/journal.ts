@@ -4,15 +4,17 @@
 // не просит у гостя. Эндпоинт `/journal` описан в docs/backend-tasks/journal.md; пока его нет
 // (404), страница собирает журнал из существующих эндпоинтов (journal.fallback.ts).
 import type { Api } from '#lib/api/client.ts';
-import type { SchemaEntityRef } from '#lib/api/generated/social.ts';
+import type { SchemaEntityRef, SchemaPersonRef } from '#lib/api/generated/social.ts';
 import { buildJournalFallback } from './journal.fallback.ts';
 
 export type JournalFilter = 'all' | 'likes' | 'reviews' | 'notes' | 'later' | 'ratings';
-export type JournalKind = 'movie' | 'series' | 'book' | 'game';
+export type JournalKind = 'movie' | 'series' | 'book' | 'game' | 'person';
 export type JournalAction = 'like' | 'review' | 'rating' | 'note' | 'later' | 'done' | 'reaction';
 
 export interface JournalItem {
-	entity: SchemaEntityRef;
+	/** Произведение; у записи о человеке его нет — тогда задан `person`. */
+	entity?: SchemaEntityRef | null;
+	person?: SchemaPersonRef | null;
 	actions: JournalAction[];
 	last_activity_at: string;
 	rating?: number;
@@ -36,27 +38,34 @@ export interface JournalParams {
 	cursor?: string | null;
 }
 
-export const JOURNAL_FILTERS: readonly { value: JournalFilter; title: string; ownerOnly: boolean }[] =
-	[
-		{ value: 'all', title: 'Все', ownerOnly: false },
-		{ value: 'likes', title: 'Лайки', ownerOnly: false },
-		{ value: 'reviews', title: 'Рецензии', ownerOnly: false },
-		{ value: 'notes', title: 'Заметки', ownerOnly: true },
-		{ value: 'later', title: 'Посмотреть позже', ownerOnly: true },
-		{ value: 'ratings', title: 'Оценки', ownerOnly: false }
-	];
+export const JOURNAL_FILTERS: readonly {
+	value: JournalFilter;
+	title: string;
+	ownerOnly: boolean;
+}[] = [
+	{ value: 'all', title: 'Все', ownerOnly: false },
+	{ value: 'likes', title: 'Лайки', ownerOnly: false },
+	{ value: 'reviews', title: 'Рецензии', ownerOnly: false },
+	{ value: 'notes', title: 'Заметки', ownerOnly: true },
+	{ value: 'later', title: 'Посмотреть позже', ownerOnly: true },
+	{ value: 'ratings', title: 'Оценки', ownerOnly: false }
+];
 
 export const JOURNAL_KINDS: readonly { value: JournalKind; title: string }[] = [
 	{ value: 'movie', title: 'Фильмы' },
 	{ value: 'series', title: 'Сериалы' },
 	{ value: 'book', title: 'Книги' },
-	{ value: 'game', title: 'Игры' }
+	{ value: 'game', title: 'Игры' },
+	{ value: 'person', title: 'Люди' }
 ];
 
 export const JOURNAL_PAGE_SIZE = 20;
 
 /** Разбор `?filter=&kind=&q=`; неизвестное — по умолчанию, приватные фильтры гостю — «Все». */
-export function readJournalParams(url: { searchParams: { get(name: string): string | null } }, isOwner: boolean): JournalParams {
+export function readJournalParams(
+	url: { searchParams: { get(name: string): string | null } },
+	isOwner: boolean
+): JournalParams {
 	const rawFilter = url.searchParams.get('filter');
 	const found = JOURNAL_FILTERS.find((f) => f.value === rawFilter);
 	const filter = found && (isOwner || !found.ownerOnly) ? found.value : 'all';
@@ -99,7 +108,7 @@ export function matchesFilter(item: JournalItem, filter: JournalFilter): boolean
 }
 
 export function matchesKind(item: JournalItem, kind: JournalKind | undefined): boolean {
-	return !kind || item.entity.kind === kind;
+	return !kind || (kind === 'person' ? !!item.person : item.entity?.kind === kind);
 }
 
 /** Регистр и «ё» не важны: «Ёжик» находится по «ежик». */
@@ -109,7 +118,7 @@ function normalize(s: string): string {
 
 export function matchesQuery(item: JournalItem, q: string | undefined): boolean {
 	const needle = q ? normalize(q) : '';
-	return !needle || normalize(item.entity.title).includes(needle);
+	return !needle || normalize(item.entity?.title ?? item.person?.full_name ?? '').includes(needle);
 }
 
 /**

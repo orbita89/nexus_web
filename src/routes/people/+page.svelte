@@ -24,10 +24,22 @@
 		if (type !== 'goto') text = data.q ?? '';
 	});
 
-	const PRIMARY = 6;
-	const primary = _PEOPLE_ROLES.slice(0, PRIMARY);
-	const more = _PEOPLE_ROLES.slice(PRIMARY);
+	// Всегда на виду: Все, актёры, режиссёры, художники, авторы книг; остальное — в «Ещё».
+	const PRIMARY = [undefined, 'actor', 'director', 'artist', 'author'];
+	const facets = $derived(data.list.data?.facets?.known_for);
+	// Роли без людей прячем (кроме «Все» и выбранной): вкладка не должна вести на пустой экран.
+	const roles = $derived(
+		_PEOPLE_ROLES.filter((r) => !facets || !r.value || facets[r.value] || r.value === data.role)
+	);
+	const primary = $derived(PRIMARY.flatMap((v) => roles.filter((r) => r.value === v)));
+	const more = $derived(roles.filter((r) => !PRIMARY.includes(r.value)));
 	const moreActive = $derived(more.find((r) => r.value === data.role));
+	/** Число людей у чипа: у «Все» — сумма по ролям. */
+	function roleCount(value?: string): number | undefined {
+		if (!facets) return undefined;
+		return value ? facets[value] : Object.values(facets).reduce((a, b) => a + b, 0);
+	}
+	const compact = new Intl.NumberFormat('ru', { notation: 'compact' });
 	const items = $derived(data.list.data?.items ?? []);
 	const hue = $derived(roleHue(data.role));
 
@@ -111,7 +123,10 @@
 						? 'border-transparent bg-primary text-primary-content'
 						: 'border-base-content/10 bg-base-200/60 text-base-content/70 hover:border-base-content/30 hover:text-base-content'
 				]}
-				aria-current={active ? 'page' : undefined}>{r.title}</a
+				aria-current={active ? 'page' : undefined}
+				>{r.title}{#if roleCount(r.value)}<span class="ml-1.5 text-xs opacity-60"
+						>{compact.format(roleCount(r.value) ?? 0)}</span
+					>{/if}</a
 			>
 		{/each}
 		<div class="dropdown">
@@ -128,7 +143,7 @@
 				{moreActive ? moreActive.title : 'Ещё'} ▾
 			</div>
 			<ul
-				class="dropdown-content menu z-20 mt-2 w-56 rounded-box border border-base-content/10 bg-base-200 p-2 shadow-xl"
+				class="menu dropdown-content z-20 mt-2 w-56 rounded-box border border-base-content/10 bg-base-200 p-2 shadow-xl"
 			>
 				{#each more as r (r.title)}
 					<li>
@@ -136,7 +151,10 @@
 							href={withQuery('/people', { q: data.q, role: r.value })}
 							data-sveltekit-noscroll
 							class={{ 'menu-active': r.value === data.role }}
-							onclick={() => (document.activeElement as HTMLElement | null)?.blur()}>{r.title}</a
+							onclick={() => (document.activeElement as HTMLElement | null)?.blur()}
+							>{r.title}{#if roleCount(r.value)}<span class="ml-auto text-xs opacity-60"
+									>{compact.format(roleCount(r.value) ?? 0)}</span
+								>{/if}</a
 						>
 					</li>
 				{/each}

@@ -23,14 +23,15 @@
 </script>
 
 <script lang="ts">
-	import { roleLabel } from '#lib/catalog/labels.ts';
+	import { count, roleLabel } from '#lib/catalog/labels.ts';
 
 	let {
 		slug,
 		name,
-		original,
 		photoUrl,
 		role,
+		worksCount = 0,
+		topWorks = [],
 		featured = false,
 		rank
 	}: {
@@ -39,6 +40,8 @@
 		original?: string | null;
 		photoUrl?: string | null;
 		role?: string | null;
+		worksCount?: number;
+		topWorks?: { slug: string; title: string; poster_url?: string | null }[];
 		featured?: boolean;
 		rank?: number;
 	} = $props();
@@ -53,7 +56,7 @@
 			.join('')
 			.toUpperCase()
 	);
-	const showOriginal = $derived(original && original !== name ? original : null);
+	const posters = $derived(topWorks.filter((w) => w.poster_url).slice(0, 3));
 </script>
 
 <a
@@ -98,20 +101,44 @@
 	{/if}
 	{#if role}
 		<span
-			class="absolute top-2 left-2 rounded-full bg-[oklch(0.3_0.08_var(--h)/0.75)] px-2 py-0.5 text-[11px] font-semibold text-[oklch(0.92_0.08_var(--h))] backdrop-blur"
-			>{roleLabel(role)}</span
+			class={[
+				'absolute top-2 left-2 rounded-full bg-[oklch(0.3_0.08_var(--h)/0.75)] px-2 py-0.5 text-[11px] font-semibold text-[oklch(0.92_0.08_var(--h))] backdrop-blur',
+				featured && 'hidden sm:block'
+			]}>{roleLabel(role)}</span
 		>
 	{/if}
 
-	<div class="absolute inset-x-0 bottom-0 p-3 text-white">
-		<span
-			class={[
-				'block leading-tight font-bold text-balance drop-shadow',
-				featured ? 'text-lg sm:text-xl' : 'line-clamp-2 text-sm'
-			]}>{name}</span
-		>
-		{#if showOriginal}
-			<span class="mt-0.5 block truncate text-xs text-white/60">{showOriginal}</span>
+	<div class="absolute inset-x-0 bottom-0 flex items-end justify-between gap-2 p-3 text-white">
+		<div class="min-w-0">
+			<span
+				class={[
+					'block leading-tight font-bold text-balance drop-shadow',
+					featured ? 'line-clamp-3 text-sm sm:text-xl' : 'line-clamp-2 text-sm'
+				]}>{name}</span
+			>
+
+			{#if worksCount > 0}
+				<span class={['mt-1 text-xs text-white/70', featured ? 'hidden sm:block' : 'block']}
+					>{count(worksCount, ['работа', 'работы', 'работ'])}</span
+				>
+			{/if}
+		</div>
+		{#if posters.length}
+			<span class="flex shrink-0 -space-x-2" aria-hidden="true">
+				{#each posters as work, i (work.slug)}
+					<img
+						src={work.poster_url}
+						alt=""
+						loading="lazy"
+						class={[
+							'rounded-sm object-cover ring-1 ring-black/60 transition duration-300 group-hover:-translate-y-1',
+							i > 0 &&
+								'hidden opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 md:block',
+							featured ? 'h-14 w-10' : 'h-10 w-7'
+						]}
+					/>
+				{/each}
+			</span>
 		{/if}
 	</div>
 </a>

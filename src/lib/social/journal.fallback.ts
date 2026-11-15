@@ -4,7 +4,7 @@
 // фильтры и поиск применяем к уже загруженному.
 import type { Api } from '#lib/api/client.ts';
 import { ApiError, unwrap } from '#lib/api/errors.ts';
-import type { SchemaEntityRef } from '#lib/api/generated/social.ts';
+import type { SchemaEntityRef, SchemaPersonRef } from '#lib/api/generated/social.ts';
 import {
 	matchesFilter,
 	matchesKind,
@@ -14,7 +14,7 @@ import {
 	type JournalPage,
 	type JournalParams
 } from './journal.ts';
-import { listMyNotes } from './notes.ts';
+import { listMyNotes, listMyPersonNotes } from './notes.ts';
 
 const FALLBACK_LIMIT = 100;
 const EXCERPT_LENGTH = 200;
@@ -33,6 +33,8 @@ export interface JournalSources {
 	}[];
 	notes: { entity: SchemaEntityRef; body: string; updated_at: string }[];
 	marks: { entity: SchemaEntityRef; kind: 'later' | 'done'; created_at: string }[];
+	personLikes?: { person: SchemaPersonRef; created_at: string }[];
+	personNotes?: { person: SchemaPersonRef; body: string; updated_at: string }[];
 }
 
 export const EMPTY_SOURCES: JournalSources = {
@@ -56,10 +58,18 @@ export function groupJournal(sources: JournalSources, isOwner: boolean): Journal
 	const byEntity = new Map<string, JournalItem>();
 
 	function touch(entity: SchemaEntityRef, at: string, action: JournalAction): JournalItem {
-		let item = byEntity.get(entity.id);
+		return touchKey(entity.id, { entity }, at, action);
+	}
+	function touchKey(
+		key: string,
+		who: Pick<JournalItem, 'entity' | 'person'>,
+		at: string,
+		action: JournalAction
+	): JournalItem {
+		let item = byEntity.get(key);
 		if (!item) {
-			item = { entity, actions: [], last_activity_at: at };
-			byEntity.set(entity.id, item);
+			item = { ...who, actions: [], last_activity_at: at };
+			byEntity.set(key, item);
 		}
 		if (!item.actions.includes(action)) item.actions.push(action);
 		if (at > item.last_activity_at) item.last_activity_at = at;
@@ -81,16 +91,30 @@ export function groupJournal(sources: JournalSources, isOwner: boolean): Journal
 			};
 		}
 	}
+	for (const l of sources.personLikes ?? []) {
+		touchKey(`person:${l.person.id}`, { person: l.person }, l.created_at, 'like');
+	}
 	if (isOwner) {
+		for (const n of sources.personNotes ?? []) {
+			touchKey(`person:${n.person.id}`, { person: n.person }, n.updated_at, 'note').note = {
+				body: n.body
+			};
+		}
 		for (const n of sources.notes) touch(n.entity, n.updated_at, 'note').note = { body: n.body };
 		for (const m of sources.marks) touch(m.entity, m.created_at, m.kind).mark = m.kind;
 	}
 
-	return [...byEntity.values()].sort((a, b) => b.last_activity_at.localeCompare(a.last_activity_at));
+	return [...byEntity.values()].sort((a, b) =>
+		b.last_activity_at.localeCompare(a.last_activity_at)
+	);
 }
 
 /** Фильтры и поиск по собранному; курсор — смещение строкой. */
-export function pageJournal(items: JournalItem[], params: JournalParams, limit: number): JournalPage {
+export function pageJournal(
+	items: JournalItem[],
+	params: JournalParams,
+	limit: number
+): JournalPage {
 	const filtered = items.filter(
 		(i) =>
 			matchesFilter(i, params.filter) && matchesKind(i, params.kind) && matchesQuery(i, params.q)
@@ -121,7 +145,7 @@ export async function buildJournalFallback(
 ): Promise<JournalPage> {
 	const path = { username };
 	const query = { limit: FALLBACK_LIMIT };
-	const [likes, ratings, reviews, notes, marks] = await Promise.all([
+	const [likes, ratings, reviews, notes, marks, personLikes, personNotes] = await Promise.all([
 		orEmpty(
 			unwrap(
 				client.social.GET('/api/v1/social/users/{username}/likes/given', {
@@ -154,12 +178,31 @@ export async function buildJournalFallback(
 			: Promise.resolve([]),
 		isOwner
 			? orEmpty(
-					unwrap(
-						client.social.GET('/api/v1/social/users/me/marks', { params: { query } })
-					).then((p) => p.items)
+					unwrap(client.social.GET('/api/v1/social/users/me/marks', { params: { query } })).then(
+						(p) => p.items
+					)
 				)
+			: Promise.resolve([]),
+		orEmpty(
+			unwrap(
+				client.social.GET('/api/v1/social/users/{username}/likes/given', {
+					params: { path, query: { ...query, target: 'person' } }
+				})
+			).then((p) =>
+				p.items.flatMap((i) =>
+					i.target.kind === 'person' && i.value === 1
+						? [{ person: i.target.person, created_at: i.created_at }]
+						: []
+				)
+			)
+		),
+		isOwner
+			? orEmpty(listMyPersonNotes(client, { limit: FALLBACK_LIMIT }).then((p) => p.items))
 			: Promise.resolve([])
 	]);
-	const items = groupJournal({ likes, ratings, reviews, notes, marks }, isOwner);
+	const items = groupJournal(
+		{ likes, ratings, reviews, notes, marks, personLikes, personNotes },
+		isOwner
+	);
 	return pageJournal(items, params, params.limit ?? 20);
 }

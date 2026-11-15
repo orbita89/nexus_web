@@ -9,7 +9,12 @@
 	import Seo from '#lib/components/catalog/Seo.svelte';
 	import Markdown from '#lib/components/social/Markdown.svelte';
 	import TimeAgo from '#lib/components/social/TimeAgo.svelte';
-	import { listMyNotes, type NoteWithEntity } from '#lib/social/notes.ts';
+	import {
+		listMyNotes,
+		listMyPersonNotes,
+		type NoteWithEntity,
+		type NoteWithPerson
+	} from '#lib/social/notes.ts';
 
 	// Свои заметки о произведениях: у бэкенда есть только /users/me/notes — чужих заметок не
 	// существует как маршрута. Поэтому страница живёт в браузере, с токеном, и открывается
@@ -18,7 +23,9 @@
 	const username = $derived(page.params.username);
 	const mine = $derived(session.status === 'authed' && session.user?.username === username);
 
+	// Заметки о людях подгружаем отдельным списком (kind=person) и показываем в общей ленте по дате.
 	let items = $state<NoteWithEntity[]>([]);
+	let people = $state<NoteWithPerson[]>([]);
 	let total = $state(0);
 	let loading = $state(true);
 	let error = $state('');
@@ -30,11 +37,12 @@
 		}
 		let stale = false;
 		loading = true;
-		listMyNotes(api, { limit: PAGE })
-			.then((p) => {
+		Promise.all([listMyNotes(api, { limit: PAGE }), listMyPersonNotes(api, { limit: PAGE })])
+			.then(([p, pp]) => {
 				if (stale) return;
 				items = p.items;
-				total = p.total;
+				people = pp.items;
+				total = p.total + pp.total;
 			})
 			.catch((e) => !stale && (error = errorMessage(e)))
 			.finally(() => !stale && (loading = false));
@@ -45,13 +53,24 @@
 
 	async function more() {
 		try {
-			const next = await listMyNotes(api, { limit: PAGE, offset: items.length });
+			const [next, nextPeople] = await Promise.all([
+				listMyNotes(api, { limit: PAGE, offset: items.length }),
+				listMyPersonNotes(api, { limit: PAGE, offset: people.length })
+			]);
 			items = [...items, ...next.items];
-			total = next.total;
+			people = [...people, ...nextPeople.items];
+			total = next.total + nextPeople.total;
 		} catch (e) {
 			error = errorMessage(e);
 		}
 	}
+
+	const feed = $derived(
+		[
+			...items.map((n) => ({ ...n, person: undefined as NoteWithPerson['person'] | undefined })),
+			...people.map((n) => ({ ...n, entity: undefined as NoteWithEntity['entity'] | undefined }))
+		].toSorted((a, b) => b.updated_at.localeCompare(a.updated_at))
+	);
 </script>
 
 <Seo title="Заметки" noindex />
@@ -64,16 +83,21 @@
 	<LoadError message={error} />
 {:else if loading}
 	<div class="h-40 animate-pulse rounded-box bg-base-200" aria-hidden="true"></div>
-{:else if items.length}
+{:else if feed.length}
 	<p class="mb-4 text-sm text-base-content/50">
 		{total.toLocaleString('ru-RU')} — видно только вам
 	</p>
 	<ul class="flex flex-col gap-3" aria-label="Мои заметки">
-		{#each items as note (note.id)}
-			{@const kind = asKind(note.entity.kind)}
+		{#each feed as note (note.id)}
+			{@const kind = note.entity ? asKind(note.entity.kind) : null}
 			<li class="rounded-box bg-base-200 p-4 ring-1 ring-base-300">
 				<div class="mb-1 flex flex-wrap items-baseline justify-between gap-x-3">
-					{#if kind}
+					{#if note.person}
+						<a href="/people/{note.person.slug}" class="font-semibold hover:text-primary"
+							>{note.person.full_name}
+							<span class="font-normal text-base-content/45">(человек)</span></a
+						>
+					{:else if note.entity && kind}
 						<a
 							href={entityHref({ kind, slug: note.entity.slug })}
 							class="font-semibold hover:text-primary"
@@ -86,7 +110,7 @@
 							{/if}
 						</a>
 					{:else}
-						<span class="font-semibold">{note.entity.title}</span>
+						<span class="font-semibold">{note.entity?.title}</span>
 					{/if}
 					<span class="text-xs text-base-content/40"><TimeAgo iso={note.updated_at} /></span>
 				</div>
@@ -94,7 +118,7 @@
 			</li>
 		{/each}
 	</ul>
-	{#if items.length < total}
+	{#if items.length + people.length < total}
 		<button class="btn mt-4 btn-ghost btn-sm" onclick={more}>Показать ещё</button>
 	{/if}
 {:else}

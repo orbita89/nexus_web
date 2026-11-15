@@ -1265,6 +1265,25 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/social/people/{slug}/note': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Своя заметка о человеке каталога. */
+		get: operations['get_own_person_note'];
+		/** Написать или заменить свою заметку о человеке целиком. Одна заметка на человека. */
+		put: operations['put_person_note'];
+		post?: never;
+		/** Удалить свою заметку о человеке. */
+		delete: operations['delete_person_note'];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/social/posts/{id}': {
 		parameters: {
 			query?: never;
@@ -1505,7 +1524,10 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** Свои заметки, новые сверху: вкладка «Заметки» в личном кабинете. Чужих заметок нет нигде. */
+		/**
+		 * Свои заметки, новые сверху: вкладка «Заметки» в личном кабинете. Чужих заметок нет нигде.
+		 *     `kind=entity` (по умолчанию) — о произведениях, `kind=person` — о людях.
+		 */
 		get: operations['list_own_notes'];
 		put?: never;
 		post?: never;
@@ -2671,18 +2693,9 @@ export interface components {
 			/** Format: date-time */
 			updated_at: string;
 		};
-		/** @description Заметка в своём списке: то же плюс произведение, к которому она написана. */
-		NoteWithEntity: {
-			/** @example Пересмотреть перед второй частью */
-			body: string;
-			/** Format: date-time */
-			created_at: string;
-			entity: components['schemas']['EntityRef'];
-			/** Format: uuid */
-			id: string;
-			/** Format: date-time */
-			updated_at: string;
-		};
+		/** @description Страница своих заметок: форма элементов зависит от `kind`. */
+		OwnNotesPage:
+			components['schemas']['Page_NoteWithEntity'] | components['schemas']['Page_NoteWithPerson'];
 		/** @description Страница списка. */
 		Page_Collection: {
 			items: {
@@ -3046,6 +3059,36 @@ export interface components {
 				entity: components['schemas']['EntityRef'];
 				/** Format: uuid */
 				id: string;
+				/** Format: date-time */
+				updated_at: string;
+			}[];
+			/**
+			 * Format: int64
+			 * @example 20
+			 */
+			limit: number;
+			/**
+			 * Format: int64
+			 * @example 0
+			 */
+			offset: number;
+			/**
+			 * Format: int64
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @example 137
+			 */
+			total: number;
+		};
+		/** @description Страница списка. */
+		Page_NoteWithPerson: {
+			items: {
+				/** @example Пересмотреть всё, что он снял */
+				body: string;
+				/** Format: date-time */
+				created_at: string;
+				/** Format: uuid */
+				id: string;
+				person: components['schemas']['PersonRef'];
 				/** Format: date-time */
 				updated_at: string;
 			}[];
@@ -3879,6 +3922,14 @@ export interface components {
 			 * @example 3
 			 */
 			following_count: number;
+			/**
+			 * Format: int64
+			 * @description Записей в журнале: произведений, с которыми что-то делали (лайк, оценка/рецензия, реакция;
+			 *     владельцу — ещё отметка и заметка). Одно произведение — одна запись. `null` — аналитика
+			 *     закрыта (`stats_public = false`), а смотрит не владелец.
+			 * @example 24
+			 */
+			journal_count?: number | null;
 			/** @description Лайкнул ли вошедший этот профиль. Гостю и в своём профиле — `false`. */
 			liked: boolean;
 			/**
@@ -4192,7 +4243,7 @@ export type SchemaMarkCounts = components['schemas']['MarkCounts'];
 export type SchemaMarkKind = components['schemas']['MarkKind'];
 export type SchemaMarkedEntity = components['schemas']['MarkedEntity'];
 export type SchemaNote = components['schemas']['Note'];
-export type SchemaNoteWithEntity = components['schemas']['NoteWithEntity'];
+export type SchemaOwnNotesPage = components['schemas']['OwnNotesPage'];
 export type SchemaPageCollection = components['schemas']['Page_Collection'];
 export type SchemaPageCollectionComment = components['schemas']['Page_CollectionComment'];
 export type SchemaPageCustomRoom = components['schemas']['Page_CustomRoom'];
@@ -4202,6 +4253,7 @@ export type SchemaPageInterest = components['schemas']['Page_Interest'];
 export type SchemaPageLike = components['schemas']['Page_Like'];
 export type SchemaPageMarkedEntity = components['schemas']['Page_MarkedEntity'];
 export type SchemaPageNoteWithEntity = components['schemas']['Page_NoteWithEntity'];
+export type SchemaPageNoteWithPerson = components['schemas']['Page_NoteWithPerson'];
 export type SchemaPagePersonInterest = components['schemas']['Page_PersonInterest'];
 export type SchemaPagePost = components['schemas']['Page_Post'];
 export type SchemaPageRatedEntity = components['schemas']['Page_RatedEntity'];
@@ -9446,6 +9498,149 @@ export interface operations {
 			};
 		};
 	};
+	get_own_person_note: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug человека
+				 * @example denis-villeneuve
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Заметка */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Note'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Человек не найден или заметки нет */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	put_person_note: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug человека
+				 * @example denis-villeneuve
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['PutNote'];
+			};
+		};
+		responses: {
+			/** @description Заметка сохранена */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Note'];
+				};
+			};
+			/** @description Пустой или слишком длинный текст */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Человек не найден */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	delete_person_note: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug человека
+				 * @example denis-villeneuve
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Удалена */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Человек не найден или заметки нет */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
 	delete_post: {
 		parameters: {
 			query?: never;
@@ -10501,6 +10696,8 @@ export interface operations {
 	list_own_notes: {
 		parameters: {
 			query?: {
+				/** @description `entity` (по умолчанию) — заметки о произведениях, `person` — о людях. */
+				kind?: 'entity' | 'person';
 				/** @description 1–100, по умолчанию 20. */
 				limit?: number;
 				/** @description С 0. */
@@ -10512,13 +10709,13 @@ export interface operations {
 		};
 		requestBody?: never;
 		responses: {
-			/** @description Страница заметок */
+			/** @description Страница заметок: `NoteWithEntity` или, при `kind=person`, `NoteWithPerson` */
 			200: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
-					'application/json': components['schemas']['Page_NoteWithEntity'];
+					'application/json': components['schemas']['OwnNotesPage'];
 				};
 			};
 			/** @description Неверный параметр */

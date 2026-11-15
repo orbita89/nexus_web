@@ -16,6 +16,7 @@
 		readonly = false,
 		size = 'sm',
 		red = false,
+		redHeart = false,
 		variant = 'btn',
 		title = 'Нравится',
 		guestLabel = 'Войдите, чтобы отметить',
@@ -30,6 +31,8 @@
 		size?: 'xs' | 'sm' | 'md' | 'lg';
 		/** Красный вариант кнопки. */
 		red?: boolean;
+		/** Само сердечко ♥ всегда красное, остальное — как у обычной кнопки. */
+		redHeart?: boolean;
 		variant?: 'btn' | 'pill';
 		title?: string;
 		guestLabel?: string;
@@ -38,7 +41,17 @@
 
 	const label = $derived(liked ? 'Убрать отметку «нравится»' : title);
 	const baseCls = $derived(`btn gap-2 btn-${size}`);
-	const activeCls = $derived(red ? 'btn-error' : liked ? 'btn-primary' : 'btn-ghost');
+	const activeCls = $derived(
+		redHeart
+			? liked
+				? 'btn-ghost border-transparent text-red-500'
+				: 'btn-ghost border-transparent text-base-content/60'
+			: red
+				? 'btn-error'
+				: liked
+					? 'btn-primary'
+					: 'btn-ghost'
+	);
 
 	const pillBase =
 		'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm tabular-nums ring-1 transition-all duration-200';
@@ -77,12 +90,12 @@
 	{/if}
 {:else if session.status === 'guest'}
 	<a href={loginUrl(page.url)} class={baseCls + ' ' + activeCls} aria-label={guestLabel}>
-		<span aria-hidden="true">♥</span>
+		<span aria-hidden="true" class={redHeart ? 'text-xl leading-none' : undefined}>♥</span>
 		<span class="tabular-nums">{count}</span>
 	</a>
 {:else if readonly}
 	<span class="flex items-center gap-2 px-2 text-sm text-base-content/60">
-		<span aria-hidden="true">♥</span>
+		<span aria-hidden="true" class={redHeart ? 'text-xl leading-none' : undefined}>♥</span>
 		<span class="tabular-nums">{count}</span>
 	</span>
 {:else}
@@ -94,7 +107,7 @@
 		{title}
 		{onclick}
 	>
-		<span aria-hidden="true">♥</span>
+		<span aria-hidden="true" class={redHeart ? 'text-xl leading-none' : undefined}>♥</span>
 		<span class="tabular-nums">{count}</span>
 	</button>
 {/if}

@@ -78,7 +78,7 @@
 	<LoadError message={error} />
 {:else if items.length}
 	<ul class="flex flex-col gap-3" aria-label="Журнал">
-		{#each items as item (item.entity.id)}
+		{#each items as item (item.entity?.id ?? `p:${item.person?.id}`)}
 			<JournalItemCard {item} />
 		{/each}
 	</ul>

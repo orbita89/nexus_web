@@ -51,7 +51,12 @@
 				full_name: person.full_name,
 				original_name: person.original_name ?? '',
 				birth_date: person.birth_date ?? '',
-				photo_url: person.photo_url ?? '',
+				photos: (person.photos.length
+					? person.photos.map((p) => p.url)
+					: person.photo_url
+						? [person.photo_url]
+						: []
+				).join('\n'),
 				bio: person.bio ?? ''
 			}}
 			submitLabel="Сохранить"

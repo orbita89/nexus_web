@@ -3,13 +3,20 @@
 	import { api, session } from '#lib/auth/session.svelte.ts';
 	import Markdown from '#lib/components/social/Markdown.svelte';
 	import { noteComposer } from '#lib/social/note.svelte.ts';
-	import { getNote, NOTE_LIMIT, putNote, removeNote, type Note } from '#lib/social/notes.ts';
+	import {
+		getNote,
+		NOTE_LIMIT,
+		putNote,
+		removeNote,
+		type Note,
+		type NoteTarget
+	} from '#lib/social/notes.ts';
 
 	// «Моя заметка» — личная запись о произведении: её не видит никто, кроме автора. Пока заметки
 	// нет, это одна негромкая строка с замком, а не раздел с заголовком и пустой плашкой во весь
 	// экран: до того, как человек что-то написал, показывать нечего. Есть текст — карточка в тёплом
 	// оттенке, чтобы она не смешивалась с публичными блоками рядом.
-	let { slug }: { slug: string } = $props();
+	let { slug, target = 'entities' }: { slug: string; target?: NoteTarget } = $props();
 
 	let note = $state<Note | null>(null);
 	let loaded = $state(false);
@@ -27,7 +34,7 @@
 		loaded = session.status === 'guest';
 		if (session.status !== 'authed') return;
 		let stale = false;
-		getNote(api, current)
+		getNote(api, current, target)
 			.then((n) => !stale && (note = n))
 			.catch((e) => {
 				// 404 — заметки просто нет, это обычное состояние.
@@ -61,7 +68,7 @@
 		busy = true;
 		error = '';
 		try {
-			note = await putNote(api, slug, body);
+			note = await putNote(api, slug, body, target);
 			editing = false;
 		} catch (e) {
 			error = errorMessage(e);
@@ -74,7 +81,7 @@
 		busy = true;
 		error = '';
 		try {
-			await removeNote(api, slug);
+			await removeNote(api, slug, target);
 			note = null;
 			editing = false;
 			confirmDelete = false;

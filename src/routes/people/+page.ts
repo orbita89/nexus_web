@@ -35,7 +35,9 @@ export const load: PageLoad = async ({ fetch, url }) => {
 	const list = await settle(
 		unwrap(
 			publicApi(fetch, url).catalog.GET('/api/v1/catalog/search/people', {
-				params: { query: { q, known_for: role, limit: q ? PAGE_SIZE : PAGE_SIZE + PODIUM, offset: 0 } }
+				params: {
+					query: { q, known_for: role, limit: q ? PAGE_SIZE : PAGE_SIZE + PODIUM, offset: 0 }
+				}
 			})
 		)
 	);

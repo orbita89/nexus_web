@@ -19,7 +19,7 @@
 </script>
 
 <section id="awards" class="mb-14 scroll-mt-32 md:scroll-mt-28">
-	<h2 class="mb-1 text-xl font-bold sm:text-2xl">{title}</h2>
+	{#if title}<h2 class="mb-1 text-xl font-bold sm:text-2xl">{title}</h2>{/if}
 	<p class="mb-5 text-sm text-base-content/50">
 		{#if tally.wins}{count(tally.wins, ['награда', 'награды', 'наград'])}{/if}
 		{#if tally.wins && tally.nominations}<span aria-hidden="true"> · </span>{/if}

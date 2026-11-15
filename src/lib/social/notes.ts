@@ -8,7 +8,7 @@
 // касты, остаётся только тонкая обёртка над api.
 import type { Api } from '#lib/api/client.ts';
 import { unwrap } from '#lib/api/errors.ts';
-import type { SchemaEntityRef } from '#lib/api/generated/social.ts';
+import type { SchemaEntityRef, SchemaPersonRef } from '#lib/api/generated/social.ts';
 
 /** Столько же, сколько у рецензии: бэкенд режет на 10 000 символов. */
 export const NOTE_LIMIT = 10_000;
@@ -25,6 +25,11 @@ export interface NoteWithEntity extends Note {
 	entity: SchemaEntityRef;
 }
 
+/** Заметка о человеке (`kind=person`). */
+export interface NoteWithPerson extends Note {
+	person: SchemaPersonRef;
+}
+
 export interface NotesPage {
 	items: NoteWithEntity[];
 	total: number;
@@ -35,28 +40,44 @@ export interface NotesPage {
 /** Клиент с токеном: заметки не отдаются никому, кроме автора. */
 type Social = Pick<Api, 'social'>;
 
+/** Чья заметка: произведения (`entities`) или человека (`people`) — пути одинаковые, меняется сегмент. */
+export type NoteTarget = 'entities' | 'people';
+
 /** Своя заметка о произведении; 404 — её нет (ловит вызывающий). */
-export function getNote(client: Social, slug: string): Promise<Note> {
+export function getNote(
+	client: Social,
+	slug: string,
+	target: NoteTarget = 'entities'
+): Promise<Note> {
 	return unwrap(
-		(client.social as unknown as RawSocial).GET<Note>('/api/v1/social/entities/{slug}/note', {
+		(client.social as unknown as RawSocial).GET<Note>(`/api/v1/social/${target}/{slug}/note`, {
 			params: { path: { slug } }
 		})
 	);
 }
 
 /** Создать или заменить целиком. Пустой текст бэкенд не принимает — для этого removeNote. */
-export function putNote(client: Social, slug: string, body: string): Promise<Note> {
+export function putNote(
+	client: Social,
+	slug: string,
+	body: string,
+	target: NoteTarget = 'entities'
+): Promise<Note> {
 	return unwrap(
-		(client.social as unknown as RawSocial).PUT<Note>('/api/v1/social/entities/{slug}/note', {
+		(client.social as unknown as RawSocial).PUT<Note>(`/api/v1/social/${target}/{slug}/note`, {
 			params: { path: { slug } },
 			body: { body }
 		})
 	);
 }
 
-export function removeNote(client: Social, slug: string): Promise<void> {
+export function removeNote(
+	client: Social,
+	slug: string,
+	target: NoteTarget = 'entities'
+): Promise<void> {
 	return unwrap(
-		(client.social as unknown as RawSocial).DELETE<void>('/api/v1/social/entities/{slug}/note', {
+		(client.social as unknown as RawSocial).DELETE<void>(`/api/v1/social/${target}/{slug}/note`, {
 			params: { path: { slug } }
 		})
 	);
@@ -71,6 +92,19 @@ export function listMyNotes(
 		(client.social as unknown as RawSocial).GET<NotesPage>('/api/v1/social/users/me/notes', {
 			params: { query: { limit, offset } }
 		})
+	);
+}
+
+/** Свои заметки о людях. */
+export function listMyPersonNotes(
+	client: Social,
+	{ limit = 20, offset = 0 }: { limit?: number; offset?: number } = {}
+): Promise<{ items: NoteWithPerson[]; total: number }> {
+	return unwrap(
+		(client.social as unknown as RawSocial).GET<{ items: NoteWithPerson[]; total: number }>(
+			'/api/v1/social/users/me/notes',
+			{ params: { query: { kind: 'person', limit, offset } } }
+		)
 	);
 }
 

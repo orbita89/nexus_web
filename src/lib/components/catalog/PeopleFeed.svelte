@@ -111,13 +111,15 @@
 		original={person.original_name}
 		photoUrl={person.photo_url}
 		role={person.known_for}
+		worksCount={person.works_count}
+		topWorks={person.top_works}
 		{rank}
 		featured={!!rank}
 	/>
 {/snippet}
 
 {#if podium}
-	<ul class="mb-4 grid grid-cols-3 gap-3 sm:gap-4">
+	<ul class="mb-4 grid grid-cols-3 gap-2 sm:gap-4">
 		{#each items.slice(0, 3) as person, i (person.id)}
 			<li>{@render card(person, i + 1)}</li>
 		{/each}

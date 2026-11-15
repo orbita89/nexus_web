@@ -31,7 +31,7 @@ describe('groupJournal', () => {
 			},
 			false
 		);
-		expect(items.map((i) => i.entity.id)).toEqual(['e1', 'e2']);
+		expect(items.map((i) => i.entity?.id)).toEqual(['e1', 'e2']);
 		expect(items[0].last_activity_at).toBe('2026-01-10T00:00:00Z');
 	});
 
@@ -73,7 +73,7 @@ describe('groupJournal', () => {
 
 	it('показывает заметки и отметки владельцу', () => {
 		const items = groupJournal(privateSources, true);
-		expect(items.map((i) => i.entity.id)).toEqual(['e2', 'e1']);
+		expect(items.map((i) => i.entity?.id)).toEqual(['e2', 'e1']);
 		expect(items[0].mark).toBe('later');
 		expect(items[1].note?.body).toBe('пересмотреть');
 	});
@@ -95,7 +95,7 @@ describe('pageJournal', () => {
 		expect(first.items).toHaveLength(1);
 		expect(first.next_cursor).toBe('1');
 		const second = pageJournal(items, { filter: 'all', cursor: first.next_cursor }, 1);
-		expect(second.items[0].entity.id).toBe('e2');
+		expect(second.items[0].entity?.id).toBe('e2');
 		expect(second.next_cursor).toBeNull();
 	});
 	it('ищет по названию', () => {

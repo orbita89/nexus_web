@@ -5,9 +5,12 @@
 		/** Имя латиницей, если отличается от full_name: по нему тоже ищут. */
 		original_name: string;
 		birth_date: string;
-		photo_url: string;
+		/** Ссылки на фото, по одной в строке; первая — главная. */
+		photos: string;
 		bio: string;
 	}
+
+	export const MAX_PHOTOS = 20;
 </script>
 
 <script lang="ts">
@@ -28,7 +31,7 @@
 			full_name: string;
 			original_name: string | null;
 			birth_date: string | null;
-			photo_url: string | null;
+			photos: string[];
 			bio: string | null;
 		}) => Promise<string | null>;
 	} = $props();
@@ -39,7 +42,7 @@
 			full_name: '',
 			original_name: '',
 			birth_date: '',
-			photo_url: '',
+			photos: '',
 			bio: ''
 		};
 	let form = $state(start());
@@ -48,12 +51,16 @@
 	let slugTouched = $state(isEdit());
 	let busy = $state(false);
 	let error = $state('');
+	const urls = $derived([...new Set(form.photos.split(/\s+/).filter(Boolean))]);
 
 	async function submit(event: SubmitEvent) {
 		event.preventDefault();
 		const slug = form.slug.trim();
 		const full_name = form.full_name.trim();
 		error = (!full_name && 'Введите имя.') || slugError(slug) || '';
+		if (!error && urls.length > MAX_PHOTOS) error = `Фото не больше ${MAX_PHOTOS}.`;
+		if (!error && urls.some((u) => !/^https:\/\//i.test(u)))
+			error = 'Ссылки на фото — только https://.';
 		if (error) return;
 		busy = true;
 		error =
@@ -62,7 +69,7 @@
 				full_name,
 				original_name: form.original_name.trim() || null,
 				birth_date: form.birth_date || null,
-				photo_url: form.photo_url.trim() || null,
+				photos: urls,
 				bio: form.bio.trim() || null
 			})) ?? '';
 		busy = false;
@@ -107,8 +114,15 @@
 			<input class="input w-full" type="date" name="birth_date" bind:value={form.birth_date} />
 		</fieldset>
 		<fieldset class="fieldset">
-			<legend class="fieldset-legend">Фото (ссылка https://)</legend>
-			<input class="input w-full" type="url" name="photo_url" bind:value={form.photo_url} />
+			<legend class="fieldset-legend">Фото (ссылки https://)</legend>
+			<textarea
+				class="textarea min-h-24 w-full font-mono text-xs"
+				name="photos"
+				placeholder="https://…/1.jpg"
+				bind:value={form.photos}></textarea>
+			<p class="label">
+				По одной ссылке в строке, до {MAX_PHOTOS}. Первая — главное фото. Сейчас: {urls.length}.
+			</p>
 		</fieldset>
 		<fieldset class="fieldset">
 			<legend class="fieldset-legend">Биография</legend>
@@ -118,7 +132,7 @@
 		<div><button class="btn btn-primary" disabled={busy}>{submitLabel}</button></div>
 	</div>
 	<div class="flex flex-col items-center gap-2 sm:pt-8">
-		<PersonAvatar name={form.full_name || '?'} photoUrl={form.photo_url.trim() || null} size="lg" />
+		<PersonAvatar name={form.full_name || '?'} photoUrl={urls[0] ?? null} size="lg" />
 		<p class="text-xs text-base-content/50">Превью</p>
 	</div>
 </form>

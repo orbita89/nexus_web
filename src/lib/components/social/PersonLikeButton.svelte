@@ -71,5 +71,5 @@
 	}
 </script>
 
-<LikeHeart count={shown} liked={mine} {busy} onclick={toggle} />
+<LikeHeart redHeart count={shown} liked={mine} {busy} onclick={toggle} />
 {#if error}<span role="alert" class="text-sm text-error">{error}</span>{/if}

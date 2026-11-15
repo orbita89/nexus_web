@@ -10,11 +10,22 @@
 	let { item }: { item: JournalItem } = $props();
 
 	const entity = $derived(item.entity);
-	const kind = $derived(asKind(entity.kind));
-	const href = $derived(kind ? entityHref({ kind, slug: entity.slug }) : null);
-	const kindTitle = $derived(KINDS.find((k) => k.kind === entity.kind)?.one ?? null);
-	const year = $derived(yearOf(entity.release_date));
+	const person = $derived(item.person);
+	const kind = $derived(entity ? asKind(entity.kind) : null);
+	const href = $derived(
+		person
+			? `/people/${person.slug}`
+			: entity && kind
+				? entityHref({ kind, slug: entity.slug })
+				: null
+	);
+	const kindTitle = $derived(
+		person ? 'Человек' : (KINDS.find((k) => k.kind === entity?.kind)?.one ?? null)
+	);
+	const year = $derived(entity ? yearOf(entity.release_date) : null);
 	const meta = $derived([year, kindTitle].filter(Boolean).join(' · '));
+	const title = $derived(person?.full_name ?? entity?.title ?? '');
+	const image = $derived(person ? person.photo_url : entity?.cover_url);
 
 	let spoilerOpen = $state(false);
 	let expanded = $state(false);
@@ -24,13 +35,18 @@
 
 <li class="flex gap-3 rounded-box bg-base-200 p-3 ring-1 ring-base-300 sm:gap-4 sm:p-4">
 	<div
-		class="flex aspect-[2/3] w-16 shrink-0 items-center self-start justify-center overflow-hidden rounded-field bg-base-300"
+		class="flex aspect-[2/3] w-16 shrink-0 items-center justify-center self-start overflow-hidden rounded-field bg-base-300"
 	>
-		{#if entity.cover_url}
-			<img src={entity.cover_url} alt="" loading="lazy" class="size-full max-w-full object-cover" />
+		{#if image}
+			<img
+				src={image}
+				alt=""
+				loading="lazy"
+				class={['size-full max-w-full object-cover', person && 'object-top']}
+			/>
 		{:else}
 			<span class="text-lg font-black text-base-content/30" aria-hidden="true"
-				>{entity.title.slice(0, 1)}</span
+				>{title.slice(0, 1)}</span
 			>
 		{/if}
 	</div>
@@ -38,9 +54,9 @@
 		<div class="flex items-start justify-between gap-4">
 			<div class="min-w-0">
 				{#if href}
-					<a {href} class="font-semibold hover:text-primary">{entity.title}</a>
+					<a {href} class="font-semibold hover:text-primary">{title}</a>
 				{:else}
-					<span class="font-semibold">{entity.title}</span>
+					<span class="font-semibold">{title}</span>
 				{/if}
 				{#if meta}
 					<p class="text-sm text-base-content/50">{meta}</p>
@@ -51,7 +67,7 @@
 				{#if href}
 					<a
 						{href}
-						class="btn btn-ghost btn-square btn-xs text-base-content/60"
+						class="btn btn-square btn-ghost text-base-content/60 btn-xs"
 						aria-label="Открыть карточку"
 						title="Открыть карточку">↗</a
 					>
@@ -62,7 +78,7 @@
 		<ul class="mt-2 flex flex-wrap gap-1.5" aria-label="Что сделано">
 			{#each item.actions as action (action)}
 				{@const label = journalActionLabel(action)}
-				<li class="badge badge-outline badge-sm gap-1">
+				<li class="badge gap-1 badge-outline badge-sm">
 					<span aria-hidden="true">{label.icon}</span>
 					{action === 'rating' && item.rating ? `${label.title} ${item.rating}` : label.title}
 				</li>

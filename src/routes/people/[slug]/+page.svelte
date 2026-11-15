@@ -1,11 +1,12 @@
 <script lang="ts">
 	import { SvelteSet } from 'svelte/reactivity';
-	import { count, formatDate, summary, WORKS_SHOWN } from '#lib/catalog/labels.ts';
+	import { formatDate, summary, WORKS_SHOWN } from '#lib/catalog/labels.ts';
 	import Awards from '#lib/components/card/Awards.svelte';
 	import EmptyState from '#lib/components/catalog/EmptyState.svelte';
 	import EntityGrid from '#lib/components/catalog/EntityGrid.svelte';
-	import PersonAvatar from '#lib/components/catalog/PersonAvatar.svelte';
+	import PersonGallery from '#lib/components/catalog/PersonGallery.svelte';
 	import Seo from '#lib/components/catalog/Seo.svelte';
+	import MyNote from '#lib/components/card/MyNote.svelte';
 	import ChatButton from '#lib/components/chat/ChatButton.svelte';
 	import PersonLikeButton from '#lib/components/social/PersonLikeButton.svelte';
 	import TargetComments from '#lib/components/social/TargetComments.svelte';
@@ -18,8 +19,43 @@
 	// Фильмография по ролям (data.roles): главная роль человека — первой, внутри — новые сверху.
 	// Длинный список — первые WORKS_SHOWN, остальное — «Показать всех» без запросов.
 	const person = $derived(data.person);
-	const total = $derived(new Set(person.credits.map((c) => c.entity.id)).size);
+	// Абзацы биографии «🏆Главные награды🏆: …» и «🎬Главные проекты🎬: …» дублируют данные страницы:
+	// награды — блок «Награды», проекты — вкладка «Главные проекты» (если нашли эти работы у человека).
+	const paras = $derived((person.bio ?? '').split(/\n\s*\n/));
+	const isHead = (p: string, head: string) =>
+		new RegExp(`^\\s*\\p{Extended_Pictographic}*\\s*${head}`, 'u').test(p);
+	const topPara = $derived(paras.find((p) => isHead(p, 'Главные проекты')));
+	const topWorks = $derived.by(() => {
+		if (!topPara) return [];
+		const all = new Map(person.credits.map((c) => [c.entity.id, c.entity]));
+		const found: (typeof person.credits)[number]['entity'][] = [];
+		for (const m of topPara.matchAll(/«([^»]+)»(?:\s*\((\d{4})\))?/g)) {
+			const title = m[1].trim().toLowerCase();
+			const hit = [...all.values()].find(
+				(e) =>
+					e.title.toLowerCase() === title &&
+					(!m[2] || !e.release_date || e.release_date.startsWith(m[2]))
+			);
+			if (hit && !found.includes(hit)) found.push(hit);
+		}
+		return found;
+	});
+	const bio = $derived(
+		paras
+			.filter((p) => !isHead(p, 'Главные награды') && !(topWorks.length && p === topPara))
+			.join('\n\n')
+			.trim()
+	);
 	const open = new SvelteSet<string>();
+	// Роли — вкладки на одном уровне; открыта главная (первая), если выбранной у этого человека нет.
+	let picked = $state<string>();
+	const TOP = 'top';
+	const tabs = $derived([
+		...(topWorks.length ? [{ key: TOP, title: 'Главные проекты', n: topWorks.length }] : []),
+		...data.roles.map((r) => ({ key: r.role, title: r.title, n: r.works.length }))
+	]);
+	const tab = $derived(tabs.find((t) => t.key === picked)?.key ?? tabs[0]?.key);
+	const active = $derived(data.roles.find((r) => r.role === tab));
 	const watch = new Watch(
 		() => person.slug,
 		() => person.id,
@@ -29,15 +65,14 @@
 
 <Seo
 	title={person.full_name}
-	description={summary(person.bio) ||
-		`${person.full_name}: фильмы, сериалы, книги и игры в Кассандра.`}
+	description={summary(bio) || `${person.full_name}: фильмы, сериалы, книги и игры в Кассандра.`}
 	image={person.photo_url}
 />
 
 <header
 	class="mb-10 flex flex-col items-center gap-6 text-center sm:flex-row sm:items-start sm:text-left"
 >
-	<PersonAvatar name={person.full_name} photoUrl={person.photo_url} size="lg" />
+	<PersonGallery name={person.full_name} photoUrl={person.photo_url} photos={person.photos} />
 	<div class="min-w-0">
 		<p class="text-xs font-semibold tracking-widest text-primary uppercase">Человек</p>
 		<h1 class="mt-1 text-3xl font-black sm:text-5xl">{person.full_name}</h1>
@@ -61,9 +96,9 @@
 				}}
 			/>
 		</div>
-		{#if person.bio}
+		{#if bio}
 			<p class="mt-4 max-w-2xl leading-relaxed whitespace-pre-line text-base-content/80">
-				{person.bio}
+				{bio}
 			</p>
 		{/if}
 	</div>
@@ -74,21 +109,62 @@
 	<Awards awards={person.awards} withEntity />
 {/if}
 
-<section aria-labelledby="works-title">
-	<h2 id="works-title" class="mb-6 text-xl font-bold">
-		Фильмография
-		{#if total}<span class="ml-1 text-sm font-normal text-base-content/40"
-				>{count(total, ['работа', 'работы', 'работ'])}</span
-			>{/if}
-	</h2>
-	{#each data.roles as role (role.role)}
+<MyNote slug={person.slug} target="people" />
+
+<section aria-label="Фильмография">
+	{#if tabs.length > 1}
+		<div class="mb-6 flex flex-wrap gap-2" role="tablist" aria-label="Деятельность">
+			{#each tabs as r (r.key)}
+				{@const current = r.key === tab}
+				<button
+					type="button"
+					role="tab"
+					id="tab-{r.key}"
+					aria-selected={current}
+					aria-controls="panel-{r.key}"
+					tabindex={current ? 0 : -1}
+					class={[
+						'rounded-full border px-4 py-1.5 text-sm font-medium transition-colors',
+						current
+							? 'border-transparent bg-primary text-primary-content'
+							: 'border-base-content/10 bg-base-200/60 text-base-content/70 hover:border-base-content/30 hover:text-base-content'
+					]}
+					onclick={() => (picked = r.key)}
+					onkeydown={(e) => {
+						const i = tabs.findIndex((x) => x.key === r.key);
+						const step = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+						if (!step) return;
+						e.preventDefault();
+						const next = tabs[(i + step + tabs.length) % tabs.length];
+						picked = next.key;
+						document.getElementById(`tab-${next.key}`)?.focus();
+					}}
+				>
+					{r.title}
+					<span class="ml-1 text-xs opacity-60">{r.n}</span>
+				</button>
+			{/each}
+		</div>
+	{/if}
+	{#if tab === TOP}
+		<div id="panel-top" role="tabpanel" aria-labelledby="tab-top">
+			<EntityGrid entities={topWorks} ratings={data.ratings} />
+		</div>
+	{:else if active}
+		{@const role = active}
 		{@const all = open.has(role.role)}
 		{@const captions = new Map(role.works.map((w) => [w.entity.id, w.caption]))}
-		<section class="mb-10" aria-labelledby="role-{role.role}">
-			<h3 id="role-{role.role}" class="mb-3 flex items-baseline gap-2 text-lg font-semibold">
-				{role.title}
-				<span class="text-sm font-normal text-base-content/40">{role.works.length}</span>
-			</h3>
+		<section
+			id="panel-{role.role}"
+			role={tabs.length > 1 ? 'tabpanel' : undefined}
+			aria-labelledby={tabs.length > 1 ? `tab-${role.role}` : undefined}
+		>
+			{#if tabs.length === 1}
+				<h3 class="mb-3 flex items-baseline gap-2 text-lg font-semibold">
+					{role.title}
+					<span class="text-sm font-normal text-base-content/40">{role.works.length}</span>
+				</h3>
+			{/if}
 			<EntityGrid
 				row={{ filters: { person: data.person.slug, role: role.role }, sort: 'new' }}
 				entities={(all ? role.works : role.works.slice(0, WORKS_SHOWN)).map((w) => w.entity)}
@@ -108,7 +184,7 @@
 		</section>
 	{:else}
 		<EmptyState title="Работ пока нет" />
-	{/each}
+	{/if}
 </section>
 
 <!-- Комментарии о человеке: публичный список грузится в браузере. -->

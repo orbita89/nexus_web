@@ -20,7 +20,8 @@
 <div class={['avatar', { 'avatar-placeholder': !photoUrl || failed }]} aria-hidden="true">
 	<div
 		class={[
-			'rounded-full ring-1 ring-base-content/10',
+			'ring-1 ring-base-content/10',
+			size === 'lg' ? 'aspect-square rounded-box' : 'rounded-full',
 			{
 				'w-10': size === 'sm',
 				'w-16': size === 'md',
@@ -30,7 +31,13 @@
 		]}
 	>
 		{#if photoUrl && !failed}
-			<img src={photoUrl} alt="" loading="lazy" onerror={() => (failed = true)} />
+			<img
+				src={photoUrl}
+				alt=""
+				loading="lazy"
+				onerror={() => (failed = true)}
+				class={size === 'lg' ? 'size-full object-cover object-top' : undefined}
+			/>
 		{:else}
 			<span
 				class={{ 'text-xs': size === 'sm', 'text-xl': size === 'md', 'text-5xl': size === 'lg' }}

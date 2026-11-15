@@ -1089,8 +1089,9 @@ export interface paths {
 		};
 		/**
 		 * Поиск людей: по имени (русскому и латиницей) с опечатками и по началу слова. Из одинаково
-		 *     подходящих выше известные (`fame`: работы в фильмах с большим числом оценок); без `q` — самые
-		 *     известные. `known_for` — основная роль (`actor`, `director`, ...).
+		 *     подходящих выше известные (`fame`: работы в фильмах с большим числом оценок). Без `q` и
+		 *     `known_for` — чередование ролей, внутри роли по известности. `known_for` — основная роль
+		 *     (`actor`, `director`, ...). `facets.known_for` — счётчики ролей среди найденных по `q`.
 		 */
 		get: operations['search_people'];
 		put?: never;
@@ -1785,7 +1786,13 @@ export interface components {
 			 * @example Denis Villeneuve
 			 */
 			original_name?: string | null;
+			/** @description Одно главное фото. Не передавайте вместе с `photos`: тогда главным станет `photos[0]`. */
 			photo_url?: string | null;
+			/**
+			 * @description Галерея: только https-ссылки, порядок = порядок массива, до 20; первая — главная,
+			 *     `photo_url` становится равным ей. Пустой массив — фото нет.
+			 */
+			photos?: string[] | null;
 			/** @example denis-villeneuve */
 			slug: string;
 		};
@@ -2028,7 +2035,12 @@ export interface components {
 			/** @example Дюна */
 			title: string;
 		};
-		/** @description Серия сезона. Своего slug'а, рецензий и подборок у серии нет — она не сущность. */
+		/**
+		 * @description Серия сезона. Своего slug'а, рецензий и подборок у серии нет — она не сущность, а данные
+		 *     сезона: хранится элементом массива `entities.metadata.episodes`, а не строкой таблицы.
+		 *
+		 *     Пустые поля в хранилище не лежат (`skip_serializing_if`), поэтому все они с `serde(default)`.
+		 */
 		Episode: {
 			/** Format: date */
 			air_date?: string | null;
@@ -2694,43 +2706,6 @@ export interface components {
 			total: number;
 		};
 		/** @description Страница списка. */
-		Page_PersonHit: {
-			items: {
-				/** Format: date */
-				birth_date?: string | null;
-				/** @example Брэд Питт */
-				full_name: string;
-				/** Format: uuid */
-				id: string;
-				/**
-				 * @description Основная роль: где вклад в известность больше всего.
-				 * @example actor
-				 */
-				known_for?: string | null;
-				/** @example Brad Pitt */
-				original_name?: string | null;
-				photo_url?: string | null;
-				/** @example brad-pitt */
-				slug: string;
-			}[];
-			/**
-			 * Format: int64
-			 * @example 20
-			 */
-			limit: number;
-			/**
-			 * Format: int64
-			 * @example 0
-			 */
-			offset: number;
-			/**
-			 * Format: int64
-			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
-			 * @example 137
-			 */
-			total: number;
-		};
-		/** @description Страница списка. */
 		Page_PersonSummary: {
 			items: {
 				/** Format: date */
@@ -2844,6 +2819,30 @@ export interface components {
 			 */
 			width_cm?: number | null;
 		};
+		/** @description Счётчики поиска людей. */
+		PeopleFacets: {
+			/**
+			 * @description Сколько людей с каждой основной ролью среди найденных по `q` (без фильтра `known_for`);
+			 *     ролей с нулём нет.
+			 */
+			known_for: {
+				[key: string]: number;
+			};
+		};
+		/** @description Страница поиска людей: как [`Page`] плюс счётчики по ролям. */
+		PeoplePage: {
+			facets: components['schemas']['PeopleFacets'];
+			items: components['schemas']['PersonHit'][];
+			/** Format: int64 */
+			limit: number;
+			/** Format: int64 */
+			offset: number;
+			/**
+			 * Format: int64
+			 * @description Точное число найденных людей (с учётом `q` и `known_for`).
+			 */
+			total: number;
+		};
 		/** @description Человек целиком (строка `people`). */
 		Person: {
 			bio?: string | null;
@@ -2860,7 +2859,10 @@ export interface components {
 			 * @example Denis Villeneuve
 			 */
 			original_name?: string | null;
+			/** @description Главное фото: всегда равно первому из `photos`. */
 			photo_url?: string | null;
+			/** @description Галерея в порядке показа (до 20); первое — главное. */
+			photos: components['schemas']['PersonPhoto'][];
 			/** @example denis-villeneuve */
 			slug: string;
 			/** Format: date-time */
@@ -2907,6 +2909,23 @@ export interface components {
 			photo_url?: string | null;
 			/** @example brad-pitt */
 			slug: string;
+			/** @description До 3 самых известных работ (по числу оценок TMDB); пусто, если работ нет. */
+			top_works?: components['schemas']['TopWork'][];
+			/**
+			 * Format: int64
+			 * @description Число работ в активных сущностях (сезоны не считаются).
+			 */
+			works_count?: number;
+		};
+		/** @description Фото человека в галерее. */
+		PersonPhoto: {
+			/**
+			 * Format: int32
+			 * @description С 0; 0 — главное фото.
+			 */
+			position: number;
+			/** @example https://image.tmdb.org/t/p/h632/abc.jpg */
+			url: string;
 		};
 		/** @description Человек в титрах сущности. */
 		PersonRef: {
@@ -3169,6 +3188,16 @@ export interface components {
 			 * @example 6
 			 */
 			episode_count?: number | null;
+			/**
+			 * @description Серии сезона по возрастанию номера, до [`MAX_EPISODES`].
+			 *
+			 *     Серия — не сущность, а данные сезона: её не ищут, не оценивают и не обсуждают, поэтому
+			 *     она лежит здесь, а не строкой отдельной таблицы. На полном каталоге TMDB (236 тыс.
+			 *     сериалов) строки дали бы порядка 150 млн записей ради списка под карточкой сезона.
+			 *     В ответах API серии приходят отдельным полем `episodes`, а из `metadata` вырезаются
+			 *     ([`ENTITY_COLUMNS_LEAN`](crate::models::ENTITY_COLUMNS_LEAN)).
+			 */
+			episodes?: components['schemas']['Episode'][] | null;
 			/**
 			 * Format: date
 			 * @description Дата выхода последней вышедшей серии. Премьера — `release_date` сущности.
@@ -3483,6 +3512,21 @@ export interface components {
 			/** @example sci-fi */
 			slug: string;
 		};
+		/** @description Работа человека в карточке выдачи поиска людей. */
+		TopWork: {
+			/**
+			 * @description `movie`, `series`, `book`, `game`, `painting`.
+			 * @example movie
+			 */
+			kind: string;
+			poster_url?: string | null;
+			/** @example dune-2021 */
+			slug: string;
+			/** @example Дюна */
+			title: string;
+			/** Format: int32 */
+			year?: number | null;
+		};
 		/**
 		 * @description Видеосервис трейлера. Фронтенд сам строит адрес плеера по провайдеру и id, поэтому в БД не
 		 *     попадает произвольный URL (и чужой домен в iframe).
@@ -3601,6 +3645,12 @@ export interface components {
 			full_name?: string | null;
 			original_name?: string | null;
 			photo_url?: string | null;
+			/**
+			 * @description Заменяет галерею целиком (https, до 20, порядок массива); первая — главная. Пустой
+			 *     массив убирает все фото. Если передан, `photo_url` из запроса игнорируется. Одно
+			 *     `photo_url` без `photos` делает галерею из одного этого фото.
+			 */
+			photos?: string[] | null;
 			slug?: string | null;
 		};
 		UpdateTag: {
@@ -3683,14 +3733,16 @@ export type SchemaPageAwardListItem = components['schemas']['Page_AwardListItem'
 export type SchemaPageBanner = components['schemas']['Page_Banner'];
 export type SchemaPageEntitySummary = components['schemas']['Page_EntitySummary'];
 export type SchemaPageEpisode = components['schemas']['Page_Episode'];
-export type SchemaPagePersonHit = components['schemas']['Page_PersonHit'];
 export type SchemaPagePersonSummary = components['schemas']['Page_PersonSummary'];
 export type SchemaPaintingAnalysis = components['schemas']['PaintingAnalysis'];
 export type SchemaPaintingMetadata = components['schemas']['PaintingMetadata'];
+export type SchemaPeopleFacets = components['schemas']['PeopleFacets'];
+export type SchemaPeoplePage = components['schemas']['PeoplePage'];
 export type SchemaPerson = components['schemas']['Person'];
 export type SchemaPersonCredit = components['schemas']['PersonCredit'];
 export type SchemaPersonDetail = components['schemas']['PersonDetail'];
 export type SchemaPersonHit = components['schemas']['PersonHit'];
+export type SchemaPersonPhoto = components['schemas']['PersonPhoto'];
 export type SchemaPersonRef = components['schemas']['PersonRef'];
 export type SchemaPersonSummary = components['schemas']['PersonSummary'];
 export type SchemaPlannedStep = components['schemas']['PlannedStep'];
@@ -3726,6 +3778,7 @@ export type SchemaTag = components['schemas']['Tag'];
 export type SchemaTagHit = components['schemas']['TagHit'];
 export type SchemaTagKind = components['schemas']['TagKind'];
 export type SchemaTagWithCount = components['schemas']['TagWithCount'];
+export type SchemaTopWork = components['schemas']['TopWork'];
 export type SchemaTrailerProvider = components['schemas']['TrailerProvider'];
 export type SchemaTrailerSource = components['schemas']['TrailerSource'];
 export type SchemaUpdateAward = components['schemas']['UpdateAward'];
@@ -7496,13 +7549,13 @@ export interface operations {
 		};
 		requestBody?: never;
 		responses: {
-			/** @description Страница людей. `total` — всего найдено (точно) */
+			/** @description Страница людей. `total` — всего найдено (точно), `facets.known_for` — людей по ролям */
 			200: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
-					'application/json': components['schemas']['Page_PersonHit'];
+					'application/json': components['schemas']['PeoplePage'];
 				};
 			};
 			/** @description Длинный `q` или неверный `known_for` */
