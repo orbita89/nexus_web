@@ -29,8 +29,12 @@ export const entries: EntryGenerator = async () => {
 			);
 		});
 		total = page.total;
-		for (const entity of page.items)
+		for (const entity of page.items) {
+			// Книг сотни тысяч: при сборке их не рендерим. Страница книги собирается при первом
+			// заходе (server/isr.js) и дальше раздаётся как готовый HTML.
+			if (entity.kind === 'book') continue;
 			params.push({ kind: kindByApi(entity.kind).slug, slug: entity.slug });
+		}
 		if (!page.items.length) break;
 	}
 	return params;

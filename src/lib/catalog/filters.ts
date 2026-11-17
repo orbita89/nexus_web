@@ -178,6 +178,8 @@ export interface CatalogFilters {
 	awardYear?: number;
 	/** Только с полученной наградой (не номинацией). */
 	awarded?: boolean;
+	/** Только книги с обложкой (`cover=1`): фильтр книжного поиска. */
+	hasCover?: boolean;
 }
 
 export function readFilters(url: UrlLike): CatalogFilters {
@@ -205,7 +207,8 @@ export function readFilters(url: UrlLike): CatalogFilters {
 		role: person && PERSON_ROLES.some((r) => r.value === role) ? role : undefined,
 		award,
 		awardYear: award ? readYear(url, 'award_year') : undefined,
-		awarded: url.searchParams.get('awarded') === '1' || undefined
+		awarded: url.searchParams.get('awarded') === '1' || undefined,
+		hasCover: url.searchParams.get('cover') === '1' || undefined
 	};
 }
 
@@ -231,7 +234,8 @@ export function hasFilters(f: CatalogFilters): boolean {
 		f.country ||
 		f.person ||
 		f.award ||
-		f.awarded
+		f.awarded ||
+		f.hasCover
 	);
 }
 
@@ -243,11 +247,28 @@ export interface Mode {
 	fallback: SearchSort;
 }
 
-/** Порядок из ?sort=; не подходящий режиму (релевантность без текста) — умолчание режима. */
-export function readMode(url: UrlLike, f: CatalogFilters): Mode {
+/**
+ * Сортировки книг: у книжного поиска (Tantivy) нет статистики TMDB/IMDb и наград, поэтому
+ * «Смотрят сейчас», «Высокий рейтинг», «Скоро» и «Больше наград» в разделе не предлагаются.
+ */
+const BOOK_SORTS: readonly SearchSort[] = [
+	'relevance',
+	'recommended',
+	'new',
+	'popular',
+	'rating',
+	'title'
+];
+
+/**
+ * Порядок из ?sort=; не подходящий режиму (релевантность без текста) — умолчание режима.
+ * `kind` — раздел: у книг свой набор сортировок.
+ */
+export function readMode(url: UrlLike, f: CatalogFilters, kind?: SchemaEntityKind): Mode {
 	const raw = url.searchParams.get('sort');
 	const text = !!f.q;
-	const options = text ? SEARCH_SORTS : LIST_SORTS;
+	const all = text ? SEARCH_SORTS : LIST_SORTS;
+	const options = kind === 'book' ? all.filter((s) => BOOK_SORTS.includes(s.value)) : all;
 	const fallback = text ? 'relevance' : DEFAULT_SORT;
 	const sort = options.find((s) => s.value === raw)?.value ?? fallback;
 	return { sort, options, fallback };

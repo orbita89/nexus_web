@@ -53,7 +53,13 @@
 			type: 'entity' as const,
 			href: entityHref(e),
 			title: e.title,
-			note: [yearOf(e.release_date), kindByApi(e.kind).one].filter(Boolean).join(' · '),
+			note: [
+				e.authors?.map((a) => a.name).join(', '),
+				yearOf(e.release_date),
+				kindByApi(e.kind).one
+			]
+				.filter(Boolean)
+				.join(' · '),
 			image: e.cover_url
 		}));
 	}

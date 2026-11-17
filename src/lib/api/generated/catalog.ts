@@ -1607,16 +1607,47 @@ export interface components {
 					/** @enum {string} */
 					type: 'path';
 			  };
+		/** @description Файл книги в хранилище архивов. */
+		BookFile: {
+			/**
+			 * @description Архив, в котором лежит файл: до 200 символов.
+			 * @example 104215-113436.arx
+			 */
+			archive: string;
+			/**
+			 * @description Путь внутри архива: до 300 символов.
+			 * @example 113037.epub
+			 */
+			path: string;
+			/**
+			 * Format: int64
+			 * @description Размер файла в байтах.
+			 */
+			size?: number | null;
+		};
 		/** @description Поля книги. */
 		BookMetadata: {
 			/** @description Награды и номинации: до 50. */
 			awards?: components['schemas']['MetadataAward'][] | null;
+			file?: components['schemas']['BookFile'] | null;
 			/**
 			 * @description ISBN-10 или ISBN-13, дефисы допустимы. Хранится без дефисов.
 			 * @example 9780441013593
 			 */
 			isbn?: string | null;
+			/** @description Ключевые слова: до 50, каждое до 100 символов. */
+			keywords?: string[] | null;
+			/**
+			 * @description Язык книги, код (`ru`): до 20 символов, нижний регистр.
+			 * @example ru
+			 */
+			language?: string | null;
 			libgen?: components['schemas']['LibgenSource'] | null;
+			/**
+			 * @description Язык оригинала, код (`en`): до 20 символов, нижний регистр.
+			 * @example en
+			 */
+			original_language?: string | null;
 			/**
 			 * Format: int32
 			 * @example 896
@@ -1625,12 +1656,33 @@ export interface components {
 			/** @example Ace Books */
 			publisher?: string | null;
 			/**
+			 * @description Серия книг: до 300 символов.
+			 * @example Абарат
+			 */
+			series?: string | null;
+			/**
+			 * @description Номер в серии, как в источнике (`1`, `2.5`): до 20 символов.
+			 * @example 1
+			 */
+			series_number?: string | null;
+			/**
 			 * @description Факты: до 30, каждый 1–1000 символов.
 			 * @example [
 			 *       "Пустыню снимали в Иордании и ОАЭ."
 			 *     ]
 			 */
 			trivia?: string[] | null;
+			/**
+			 * Format: int64
+			 * @description Объём текста в словах.
+			 * @example 105136
+			 */
+			words?: number | null;
+			/**
+			 * @description Когда написана, как в источнике (`2002`, `1865–1869`): до 50 символов.
+			 * @example 2002
+			 */
+			written?: string | null;
 		};
 		/** @enum {string} */
 		ButtonStyle: 'primary' | 'secondary' | 'ghost';
@@ -1997,6 +2049,11 @@ export interface components {
 			'recommended' | 'trending' | 'top_rated' | 'new' | 'soon' | 'popular' | 'rating' | 'title';
 		/** @description Сущность в списке. */
 		EntitySummary: {
+			/**
+			 * @description Авторы книги по порядку — только в выдаче книжного поиска (`GET /search` с `kind=book`
+			 *     при включённом индексе Tantivy); в остальных списках поля нет.
+			 */
+			authors?: components['schemas']['SummaryAuthor'][];
 			/**
 			 * Format: int32
 			 * @example 1493
@@ -2593,6 +2650,11 @@ export interface components {
 		/** @description Страница списка. */
 		Page_EntitySummary: {
 			items: {
+				/**
+				 * @description Авторы книги по порядку — только в выдаче книжного поиска (`GET /search` с `kind=book`
+				 *     при включённом индексе Tantivy); в остальных списках поля нет.
+				 */
+				authors?: components['schemas']['SummaryAuthor'][];
 				/**
 				 * Format: int32
 				 * @example 1493
@@ -3446,6 +3508,13 @@ export interface components {
 			/** @example warner-bros-pictures */
 			slug: string;
 		};
+		/** @description Автор в строке выдачи: имя и slug страницы человека. */
+		SummaryAuthor: {
+			/** @example Михаил Булгаков */
+			name: string;
+			/** @example mikhail-bulgakov */
+			slug: string;
+		};
 		Tag: {
 			/**
 			 * @description 1–2 предложения о жанре или метке; пишется руками через админку.
@@ -3686,6 +3755,7 @@ export type SchemaBannerButton = components['schemas']['BannerButton'];
 export type SchemaBannerKind = components['schemas']['BannerKind'];
 export type SchemaBannerSlide = components['schemas']['BannerSlide'];
 export type SchemaBannerTarget = components['schemas']['BannerTarget'];
+export type SchemaBookFile = components['schemas']['BookFile'];
 export type SchemaBookMetadata = components['schemas']['BookMetadata'];
 export type SchemaButtonStyle = components['schemas']['ButtonStyle'];
 export type SchemaCategoryNominations = components['schemas']['CategoryNominations'];
@@ -3774,6 +3844,7 @@ export type SchemaStepStatus = components['schemas']['StepStatus'];
 export type SchemaStudioDetail = components['schemas']['StudioDetail'];
 export type SchemaStudioHit = components['schemas']['StudioHit'];
 export type SchemaStudioRef = components['schemas']['StudioRef'];
+export type SchemaSummaryAuthor = components['schemas']['SummaryAuthor'];
 export type SchemaTag = components['schemas']['Tag'];
 export type SchemaTagHit = components['schemas']['TagHit'];
 export type SchemaTagKind = components['schemas']['TagKind'];
@@ -7087,6 +7158,11 @@ export interface operations {
 				award_year?: number;
 				/** @description `true` — только полученные награды (у работы есть хотя бы одна победа). */
 				awarded?: boolean;
+				/**
+				 * @description Только книги: `true` — с обложкой, `false` — без. Работает в книжном поиске (`kind=book`
+				 *     при включённом индексе Tantivy), в остальных случаях игнорируется.
+				 */
+				has_cover?: boolean;
 				/** @description 1–100, по умолчанию 20. */
 				limit?: number;
 				/** @description С 0. */
@@ -7382,6 +7458,11 @@ export interface operations {
 				award_year?: number;
 				/** @description `true` — только полученные награды (у работы есть хотя бы одна победа). */
 				awarded?: boolean;
+				/**
+				 * @description Только книги: `true` — с обложкой, `false` — без. Работает в книжном поиске (`kind=book`
+				 *     при включённом индексе Tantivy), в остальных случаях игнорируется.
+				 */
+				has_cover?: boolean;
 				/** @description 1–100, по умолчанию 20. */
 				limit?: number;
 				/** @description С 0. */

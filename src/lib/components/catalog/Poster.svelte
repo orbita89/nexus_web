@@ -8,7 +8,8 @@
 		coverUrl,
 		alt = '',
 		eager = false,
-		small = false
+		small = false,
+		note
 	}: {
 		title: string;
 		kind: SchemaEntityKind;
@@ -19,6 +20,8 @@
 		eager?: boolean;
 		/** Миниатюра (списки): в заглушке вместо названия — первая буква. */
 		small?: boolean;
+		/** Строка под названием в заглушке: автор книги (обложки нет у каждой пятой). */
+		note?: string;
 	} = $props();
 
 	let failed = $state(false);
@@ -97,8 +100,15 @@
 				<span class="text-[0.65rem] font-semibold tracking-widest text-base-content/50 uppercase">
 					{kindByApi(kind).one}
 				</span>
-				<span class="line-clamp-5 text-base leading-tight font-bold text-base-content/90">
-					{title}
+				<span class="min-w-0">
+					<span class="line-clamp-5 text-base leading-tight font-bold text-base-content/90">
+						{title}
+					</span>
+					{#if note}
+						<span class="mt-1 line-clamp-2 block text-xs leading-snug text-base-content/60">
+							{note}
+						</span>
+					{/if}
 				</span>
 			{/if}
 		</div>

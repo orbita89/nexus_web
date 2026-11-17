@@ -153,6 +153,18 @@ export function sizeOf(m: SchemaPaintingMetadata): string | null {
 	return h ? `${h} см в высоту` : w ? `${w} см в ширину` : null;
 }
 
+const LANGUAGES = new Intl.DisplayNames('ru', { type: 'language', fallback: 'none' });
+
+/** «en» → «английский»; язык книги (ru) и неизвестный код — null: строку не показываем. */
+export function languageName(code: string | null | undefined): string | null {
+	if (!code || code === 'ru') return null;
+	try {
+		return LANGUAGES.of(code) ?? null;
+	} catch {
+		return null;
+	}
+}
+
 const list = (items: readonly string[] | null | undefined, label: (s: string) => string) =>
 	items?.length ? items.map(label).join(', ') : null;
 
@@ -185,6 +197,14 @@ export function metadataFields(kind: SchemaEntityKind, metadata: SchemaMetadata)
 		case 'book': {
 			const m = metadata as SchemaBookMetadata;
 			rows.push(
+				[
+					'Серия',
+					m.series
+						? [m.series, m.series_number && `№ ${m.series_number}`].filter(Boolean).join(', ')
+						: null
+				],
+				['Написана', m.written],
+				['Язык оригинала', languageName(m.original_language)],
 				['Страниц', m.pages ? m.pages.toLocaleString('ru-RU') : null]
 			);
 			break;

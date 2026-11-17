@@ -7,8 +7,9 @@
 	import { yearOf } from '#lib/catalog/labels.ts';
 	import Poster from './Poster.svelte';
 
-	// Поле поиска по названию с подсказками: через 250 мс после ввода — до 6 фильмов из Meilisearch
-	// (мини-постер, название, год). Подсказка — ссылка на карточку: клик или стрелки + Enter
+	// Поле поиска по названию с подсказками: через 250 мс после ввода — до 6 работ из поиска
+	// (мини-постер, название, у книг — автор, год). Книги ищет Tantivy: недописанное слово
+	// дополняется («прест» → «Преступление и наказание»), поэтому подсказки идут с третьей буквы. Подсказка — ссылка на карточку: клик или стрелки + Enter
 	// открывают фильм. Enter без выбранной подсказки — обычная отправка формы (поиск). Поле —
 	// name="q" внутри формы родителя.
 	let {
@@ -31,6 +32,11 @@
 	} = $props();
 
 	const LIMIT = 6;
+	/**
+	 * С какой длины запроса спрашивать подсказки. У книг — с трёх символов: книжный поиск (как
+	 * настольная библиотека) короче не ищет вовсе, запрос ушёл бы впустую.
+	 */
+	const minChars = $derived(kind === 'book' ? 3 : 2);
 	const id = $props.id();
 	let text = $derived(value);
 	let items = $state<SchemaEntitySummary[]>([]);
@@ -42,7 +48,7 @@
 	function suggest() {
 		clearTimeout(timer);
 		const q = text.trim();
-		if (q.length < 2) {
+		if (q.length < minChars) {
 			items = [];
 			open = false;
 			return;
@@ -98,7 +104,7 @@
 		class={inputClass}
 		bind:value={text}
 		oninput={suggest}
-		onfocus={() => items.length && text.trim().length >= 2 && (open = true)}
+		onfocus={() => items.length && text.trim().length >= minChars && (open = true)}
 		onblur={() => (open = false)}
 		{onkeydown}
 	/>
@@ -113,6 +119,9 @@
 			]}
 		>
 			{#each items as entity, i (entity.id)}
+				{@const note = [entity.authors?.map((a) => a.name).join(', '), yearOf(entity.release_date)]
+					.filter(Boolean)
+					.join(' · ')}
 				<li id="{id}-{i}" role="option" aria-selected={i === active}>
 					<!-- mousedown не забирает фокус: иначе blur закрыл бы список раньше перехода. -->
 					<a
@@ -130,9 +139,8 @@
 						</span>
 						<span class="min-w-0 flex-1">
 							<span class="block truncate font-medium">{entity.title}</span>
-							{#if yearOf(entity.release_date)}
-								<span class="block text-xs text-base-content/50">{yearOf(entity.release_date)}</span
-								>
+							{#if note}
+								<span class="block truncate text-xs text-base-content/50">{note}</span>
 							{/if}
 						</span>
 					</a>

@@ -8,7 +8,12 @@
 	export type CardEntity = Pick<
 		SchemaEntitySummary,
 		'id' | 'slug' | 'kind' | 'title' | 'cover_url' | 'release_date'
-	> & { cover_width?: number | null; cover_height?: number | null };
+	> & {
+		cover_width?: number | null;
+		cover_height?: number | null;
+		/** Авторы книги: приходят в выдаче книжного поиска. */
+		authors?: { slug: string; name: string }[];
+	};
 </script>
 
 <script lang="ts">
@@ -52,6 +57,12 @@
 	/** Стена — только для картин с изображением; без него карточка обычная, с заглушкой. */
 	const onWall = $derived(wall && entity.kind === 'painting' && !!entity.cover_url && !failed);
 
+	/** «Михаил Булгаков» или «Илья Ильф, Евгений Петров»: больше двух — «и др.». */
+	const authors = $derived.by(() => {
+		const names = (entity.authors ?? []).map((a) => a.name);
+		return names.length > 2 ? `${names.slice(0, 2).join(', ')} и др.` : names.join(', ');
+	});
+
 	const meta = $derived(
 		[yearOf(entity.release_date), showKind ? kindByApi(entity.kind).one : null]
 			.filter(Boolean)
@@ -66,7 +77,7 @@
 <a
 	href={entityHref(entity)}
 	onclick={() => row && rememberRow(row)}
-	aria-label={[entity.title, meta, caption].filter(Boolean).join(' · ')}
+	aria-label={[entity.title, authors, meta, caption].filter(Boolean).join(' · ')}
 	class="group relative block rounded-box outline-offset-4"
 >
 	<div
@@ -97,7 +108,12 @@
 				{#if meta}<p class="mt-0.5 text-xs text-white/70">{meta}</p>{/if}
 			</div>
 		{:else}
-			<Poster title={entity.title} kind={entity.kind} coverUrl={entity.cover_url} />
+			<Poster
+				title={entity.title}
+				kind={entity.kind}
+				coverUrl={entity.cover_url}
+				note={authors || undefined}
+			/>
 			<!-- Название и год — поверх постера, а не строкой под ним: на обложке название уже
 			     написано, и вторая подпись дублировала картинку. Появляется на наведении и на
 			     фокусе — и только там. На телефоне наведения нет, а подпись, включённая насовсем,
@@ -110,6 +126,7 @@
 				<h3 class="line-clamp-2 text-sm leading-snug font-semibold text-white">
 					{entity.title}
 				</h3>
+				{#if authors}<p class="mt-0.5 line-clamp-1 text-xs text-white/85">{authors}</p>{/if}
 				{#if meta}<p class="mt-0.5 text-xs text-white/70">{meta}</p>{/if}
 				{#if caption}<p class="mt-0.5 line-clamp-2 text-xs text-primary/90">{caption}</p>{/if}
 			</div>

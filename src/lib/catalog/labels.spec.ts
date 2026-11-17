@@ -98,6 +98,22 @@ describe('metadataFields', () => {
 		expect(metadataFields('book', { pages: 1896, publisher: 'Ace Books', isbn: '978' })).toEqual([
 			{ label: 'Страниц', value: '1\u00a0896' }
 		]);
+		// Книга из библиотеки: серия с номером, когда написана и язык оригинала (не русский).
+		expect(
+			metadataFields('book', {
+				series: 'Абарат',
+				series_number: '1',
+				written: '2002',
+				language: 'ru',
+				original_language: 'en',
+				words: 105136
+			})
+		).toEqual([
+			{ label: 'Серия', value: 'Абарат, № 1' },
+			{ label: 'Написана', value: '2002' },
+			{ label: 'Язык оригинала', value: 'английский' }
+		]);
+		expect(metadataFields('book', { original_language: 'ru' })).toEqual([]);
 	});
 
 	it('игра', () => {

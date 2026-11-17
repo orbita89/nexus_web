@@ -15,7 +15,7 @@ import type { PageLoad } from './$types';
 export const load: PageLoad = async ({ fetch, url, params }) => {
 	const kind = kindBySlug(params.kind)!;
 	const filters = readFilters(url);
-	const mode = readMode(url, filters);
+	const mode = readMode(url, filters, kind.kind);
 	const offset = readOffset(url);
 	const api = publicApi(fetch, url);
 

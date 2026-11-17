@@ -256,7 +256,8 @@
 			kindTagsFor = kind?.kind;
 			kindTags = unwrap(
 				guestApi.catalog.GET('/api/v1/catalog/search/tags', {
-					params: { query: { kind: kind?.kind, limit: 50 } }
+					// Жанров книг (FB2) больше двухсот — книжный поиск отдаёт до 300, остальные до 50.
+					params: { query: { kind: kind?.kind, limit: kind?.kind === 'book' ? 300 : 50 } }
 				})
 			)
 				.then((found) => new Map(found.map((t) => [t.slug, t.count])))
@@ -406,7 +407,7 @@
 		{#if titleField}
 			<form method="GET" action={path} onsubmit={submitTitle} class="flex gap-2" role="search">
 				<!-- Без JS форма уходит обычным GET: остальные фильтры — скрытыми полями. -->
-				{#each ['tag', 'year', 'year_from', 'year_to', 'studio', 'publisher', 'museum', 'country', 'person', 'role', 'archive', 'award', 'award_year', 'awarded'] as key (key)}
+				{#each ['tag', 'year', 'year_from', 'year_to', 'studio', 'publisher', 'museum', 'country', 'person', 'role', 'archive', 'award', 'award_year', 'awarded', 'cover'] as key (key)}
 					{@const value = page.url.searchParams.get(key)}
 					{#if value}<input type="hidden" name={key} {value} />{/if}
 				{/each}
@@ -619,16 +620,30 @@
 					Архив
 				</label>
 			{/if}
-			<!-- «С наградами» — у работы есть хотя бы одна победа (фасет Meilisearch). -->
-			<label class="label mr-2 cursor-pointer text-sm text-base-content/80">
-				<input
-					type="checkbox"
-					class="toggle toggle-primary toggle-sm"
-					checked={!!filters.awarded}
-					onchange={(e) => apply({ awarded: e.currentTarget.checked ? '1' : null })}
-				/>
-				С наградами
-			</label>
+			{#if kind?.kind === 'book'}
+				<!-- У книг наград нет, зато обложка есть не у каждой: «С обложкой» — фильтр
+				     книжного поиска (has_cover). -->
+				<label class="label mr-2 cursor-pointer text-sm text-base-content/80">
+					<input
+						type="checkbox"
+						class="toggle toggle-primary toggle-sm"
+						checked={!!filters.hasCover}
+						onchange={(e) => apply({ cover: e.currentTarget.checked ? '1' : null })}
+					/>
+					С обложкой
+				</label>
+			{:else}
+				<!-- «С наградами» — у работы есть хотя бы одна победа (фасет Meilisearch). -->
+				<label class="label mr-2 cursor-pointer text-sm text-base-content/80">
+					<input
+						type="checkbox"
+						class="toggle toggle-primary toggle-sm"
+						checked={!!filters.awarded}
+						onchange={(e) => apply({ awarded: e.currentTarget.checked ? '1' : null })}
+					/>
+					С наградами
+				</label>
+			{/if}
 			{#each chips as chip (chip.label)}
 				<span class="badge gap-1 badge-soft py-3 pr-1 badge-primary">
 					{#if chip.href}

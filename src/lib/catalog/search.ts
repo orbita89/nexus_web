@@ -1,7 +1,12 @@
-// Списки каталога — из Meilisearch (GET /search): разделы (/films), общая страница /search,
-// главная, теги, студии. Любая сортировка, фильтрация и поиск — только так (docs/README.md): в
-// PostgreSQL (GET /entities) сортировка всего каталога бывает по 7 с, у Meilisearch — десятки
-// миллисекунд. total у поиска точный.
+// Списки каталога — из поискового индекса (GET /search): разделы (/films), общая страница
+// /search, главная, теги, студии. Любая сортировка, фильтрация и поиск — только так
+// (docs/README.md): в PostgreSQL (GET /entities) сортировка всего каталога бывает по 7 с, у
+// индекса — десятки миллисекунд. total у поиска точный.
+//
+// Какой движок отвечает, решает бэкенд, параметры и ответ одинаковые: книги (kind=book) ищет
+// Tantivy — по названию, автору и серии, с автодополнением недописанного слова и исправлением
+// опечатки; остальные разделы — Meilisearch. В выдаче по всем разделам они чередуются. У книг
+// в строке выдачи есть `authors`, и только у них работает фильтр `has_cover`.
 import type { Api } from '#lib/api/client.ts';
 import { unwrap } from '#lib/api/errors.ts';
 import type { SchemaEntityKind, SchemaSearchSort } from '#lib/api/generated/catalog.ts';
@@ -46,6 +51,7 @@ export function searchQuery(f: CatalogFilters, options: SearchOptions) {
 		award: f.award,
 		award_year: f.award ? f.awardYear : undefined,
 		awarded: f.awarded,
+		has_cover: f.hasCover,
 		sort: options.sort
 	};
 }
