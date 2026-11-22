@@ -4,10 +4,13 @@
 	"version": "0.0.1",
 	"type": "module",
 	"scripts": {
-		"dev": "vite dev",
+		"dev": "ORIGIN=http://localhost PRERENDER_ENTITIES=${PRERENDER_ENTITIES:-0} vite build && pnpm serve",
+		"serve": "HOST=0.0.0.0 ORIGIN=http://localhost BACKEND_URL=${BACKEND_URL:-http://localhost} ISR_SECRET=${ISR_SECRET:-nexus-dev-isr-secret} node server/index.js",
+		"dev:vite": "vite dev",
 		"build": "vite build",
 		"start": "node server/index.js",
 		"revalidate": "node scripts/revalidate.mjs",
+		"check-static": "node scripts/check-static.mjs",
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo ''",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
@@ -55,6 +58,8 @@
 	},
 	"dependencies": {
 		"dompurify": "^3.2.6",
+		"foliate-js": "github:johnfactotum/foliate-js#78914aef4466eb960965702401634c2cb348e9b1",
+		"html-minifier-terser": "7.2.0",
 		"openapi-fetch": "^0.17.0"
 	},
 	"packageManager": "pnpm@12.6.0",

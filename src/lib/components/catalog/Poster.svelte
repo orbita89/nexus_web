@@ -9,7 +9,9 @@
 		alt = '',
 		eager = false,
 		small = false,
-		note
+		note,
+		width,
+		height
 	}: {
 		title: string;
 		kind: SchemaEntityKind;
@@ -22,7 +24,23 @@
 		small?: boolean;
 		/** Строка под названием в заглушке: автор книги (обложки нет у каждой пятой). */
 		note?: string;
+		/** Размеры файла обложки (`cover_width`/`cover_height`): браузер знает пропорции до загрузки. */
+		width?: number | null;
+		height?: number | null;
 	} = $props();
+
+	/**
+	 * Атрибуты загрузки. Обложка над сгибом — главная картинка страницы (LCP): качаем сразу и
+	 * первой (`fetchpriority="high"`, без lazy). Остальные — лениво, у экрана. Место под картинку
+	 * держит плитка с aspect-ratio, а width/height дают браузеру пропорции заранее (CLS = 0).
+	 */
+	const load = $derived({
+		loading: eager ? ('eager' as const) : ('lazy' as const),
+		fetchpriority: eager ? ('high' as const) : undefined,
+		decoding: eager ? undefined : ('async' as const),
+		width: width ?? undefined,
+		height: height ?? undefined
+	});
 
 	let failed = $state(false);
 	const showImage = $derived(!!coverUrl && !failed);
@@ -63,8 +81,7 @@
 		<img
 			src={coverUrl}
 			{alt}
-			loading={eager ? 'eager' : 'lazy'}
-			decoding="async"
+			{...load}
 			class="relative max-h-[86%] max-w-[86%] rounded-[2px] object-contain shadow-[0_8px_24px_-6px_rgba(0,0,0,0.85)] ring-1 ring-black/50"
 			onerror={() => (failed = true)}
 		/>
@@ -72,8 +89,7 @@
 		<img
 			src={coverUrl}
 			{alt}
-			loading={eager ? 'eager' : 'lazy'}
-			decoding="async"
+			{...load}
 			class="h-full w-full object-cover"
 			onerror={() => (failed = true)}
 		/>

@@ -32,6 +32,8 @@
 	const isAdmin = $derived(
 		page.url.pathname === '/admin' || page.url.pathname.startsWith('/admin/')
 	);
+	// Читалка — на весь экран: без шапки, чата, баннеров и подвала (она сама рисует свою шапку).
+	const reading = $derived(page.route.id === '/[kind=kind]/[slug]/read');
 </script>
 
 <svelte:head>
@@ -40,14 +42,14 @@
 </svelte:head>
 
 <!-- Шапка — во всю ширину окна, над панелью чата: кнопка чата и профиль в самом углу. -->
-<Navbar />
+{#if !reading}<Navbar />{/if}
 <!-- Справа закреплена панель чата: на десктопе контент сдвигается на её ширину. -->
 <div
 	class={[
 		// @container: от него считают ширину шапки карточки (100cqw) — чтобы она занимала страницу
 		// без панели чата, а не всё окно.
 		'@container relative isolate flex min-h-screen flex-col overflow-x-clip',
-		chat.collapsed ? 'lg:pr-16' : 'lg:pr-80'
+		!reading && (chat.collapsed ? 'lg:pr-16' : 'lg:pr-80')
 	]}
 >
 	<!-- Фиолетовый отсвет от «Кассандры» держится на фоне всей страницы, куда бы её ни пролистали. -->
@@ -64,12 +66,12 @@
 	></div>
 	<main class="mx-auto w-full max-w-6xl flex-1 px-4 py-6">
 		<!-- Баннеры по пути страницы (+layout.server.ts); в админке не показываем. -->
-		{#if !isAdmin}
+		{#if !isAdmin && !reading}
 			<BannerCarousel banners={data.banners} />
 		{/if}
 		{@render children()}
 	</main>
-	{#if !hideFooter}
+	{#if !hideFooter && !reading}
 		<!-- Футер — последний экран страницы, а не строка ссылок: три колонки по смыслу
 		     (каталог, сообщество, о проекте) и копирайт отдельной строкой. -->
 		<footer class="mt-10 border-t border-base-300 bg-base-200/40">
@@ -136,7 +138,7 @@
 	{/if}
 	<ReplyToasts />
 </div>
-<ChatPanel />
+{#if !reading}<ChatPanel />{/if}
 
 <style>
 	/* Красный отсвет переливается: пятна чуть расходятся и меняют силу. Полный цикл — 36 с,

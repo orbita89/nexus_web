@@ -20,6 +20,7 @@
 		{ href: '/admin/index', title: 'Индексация' },
 		{ href: '/admin/books', title: 'Книжный индекс' },
 		{ href: '/admin/ai', title: 'Провайдеры ИИ' },
+		{ href: '/admin/prompts', title: 'Промпты ИИ' },
 		{ href: '/admin/scripts', title: 'Скрипты' }
 	];
 	const isActive = (href: string) =>

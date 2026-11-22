@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { backoff, Realtime, type SocketLike } from './client';
+import { backoff, IDLE_CLOSE_MS, Realtime, type SocketLike } from './client';
 
 class FakeSocket implements SocketLike {
 	readyState = 0;
@@ -202,5 +202,47 @@ describe('вход', () => {
 		const rt = client();
 		rt.setAuth(false);
 		expect(sockets).toHaveLength(0);
+	});
+});
+
+describe('простой гостя', () => {
+	it('последняя отписка — соединение закрывается через IDLE_CLOSE_MS', async () => {
+		const rt = client();
+		const off = rt.subscribe(['entity:x'], () => {});
+		sockets[0].open();
+		await flush();
+		off();
+		await vi.advanceTimersByTimeAsync(IDLE_CLOSE_MS - 1);
+		expect(sockets[0].readyState).toBe(1);
+		await vi.advanceTimersByTimeAsync(1);
+		expect(sockets[0].readyState).toBe(3);
+		// и не переподключается само
+		await vi.advanceTimersByTimeAsync(60_000);
+		expect(sockets).toHaveLength(1);
+	});
+
+	it('новая подписка в паузе (переход между страницами) — соединение то же', async () => {
+		const rt = client();
+		const off = rt.subscribe(['entity:x'], () => {});
+		sockets[0].open();
+		await flush();
+		off();
+		await vi.advanceTimersByTimeAsync(1000);
+		rt.subscribe(['entity:y'], () => {});
+		await vi.advanceTimersByTimeAsync(IDLE_CLOSE_MS * 2);
+		expect(sockets).toHaveLength(1);
+		expect(sockets[0].readyState).toBe(1);
+	});
+
+	it('вошедшему соединение не закрывается', async () => {
+		token = 't';
+		const rt = client();
+		rt.setAuth(true);
+		const off = rt.subscribe(['entity:x'], () => {});
+		sockets[0].open();
+		await flush();
+		off();
+		await vi.advanceTimersByTimeAsync(IDLE_CLOSE_MS * 2);
+		expect(sockets[0].readyState).toBe(1);
 	});
 });

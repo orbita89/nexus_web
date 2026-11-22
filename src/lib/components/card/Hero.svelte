@@ -142,6 +142,8 @@
 					src={entity.cover_url}
 					alt="Картина: {entity.title}"
 					fetchpriority="high"
+					width={entity.cover_width ?? undefined}
+					height={entity.cover_height ?? undefined}
 					class="mx-auto max-h-[72vh] w-auto max-w-full rounded-box shadow-xl ring-1 ring-base-content/5"
 				/>
 			</ArtViewer>
@@ -202,6 +204,8 @@
 				title={entity.title}
 				kind={entity.kind}
 				coverUrl={entity.cover_url}
+				width={entity.cover_width}
+				height={entity.cover_height}
 				alt="{entity.kind === 'painting' ? 'Картина' : 'Постер'}: {entity.title}"
 				eager
 			/>
@@ -209,11 +213,13 @@
 
 		<!-- На телефоне эта обёртка не участвует в раскладке (contents): её части встают в сетку
 		     секции. На md и шире — обычный блок справа от постера. -->
-		<div class="contents md:col-start-2 md:row-start-1 md:block md:min-w-0 md:max-w-2xl md:pt-4">
+		<div class="contents md:col-start-2 md:row-start-1 md:block md:max-w-2xl md:min-w-0 md:pt-4">
 			<div
 				class={[
 					'min-w-0 md:block',
-					hasFacts ? 'max-md:col-start-2 max-md:row-start-1' : 'max-md:col-start-1 max-md:row-start-2'
+					hasFacts
+						? 'max-md:col-start-2 max-md:row-start-1'
+						: 'max-md:col-start-1 max-md:row-start-2'
 				]}
 			>
 				{@render head()}
@@ -221,7 +227,9 @@
 			<div
 				class={[
 					'min-w-0',
-					hasFacts ? 'max-md:col-start-2 max-md:row-start-2' : 'max-md:col-start-1 max-md:row-start-3'
+					hasFacts
+						? 'max-md:col-start-2 max-md:row-start-2'
+						: 'max-md:col-start-1 max-md:row-start-3'
 				]}
 			>
 				{@render actionsRow(true)}
@@ -229,7 +237,9 @@
 			<div
 				class={[
 					'mt-4 min-w-0',
-					hasFacts ? 'max-md:col-span-full max-md:row-start-3' : 'max-md:col-start-1 max-md:row-start-4'
+					hasFacts
+						? 'max-md:col-span-full max-md:row-start-3'
+						: 'max-md:col-start-1 max-md:row-start-4'
 				]}
 			>
 				{@render marks()}

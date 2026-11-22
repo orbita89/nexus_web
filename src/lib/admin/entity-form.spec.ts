@@ -7,6 +7,7 @@ import {
 	splitList,
 	toMetadata
 } from './entity-form';
+import type { SchemaMetadata } from '#lib/api/generated/catalog.ts';
 
 const form = (o: Partial<ReturnType<typeof emptyMetadataForm>>) => ({
 	...emptyMetadataForm(),
@@ -156,5 +157,32 @@ describe('metadataError', () => {
 		).toMatch(/50 наград/);
 		expect(metadataError('game', form({ trivia: many(31) }))).toMatch(/30 фактов/);
 		expect(metadataError('game', form({ trivia: ['x'.repeat(1001)] }))).toMatch(/1000/);
+	});
+});
+
+describe('metadata: поля вне формы и публичное чтение', () => {
+	it('файл книги и прочие поля вне формы не теряются при сохранении', () => {
+		const meta = {
+			isbn: '978',
+			file: { archive: 'a.zip', path: 'b.epub', size: 1000 },
+			libgen: { id: 1 },
+			keywords: ['x']
+		} as unknown as SchemaMetadata;
+		const form = fromMetadata('book', meta);
+		form.isbn = '979';
+		expect(toMetadata('book', form)).toEqual({
+			isbn: '979',
+			file: { archive: 'a.zip', path: 'b.epub', size: 1000 },
+			libgen: { id: 1 },
+			keywords: ['x']
+		});
+	});
+
+	it('публичное чтение: галочка — true, снята — поля нет', () => {
+		const form = fromMetadata('book', { public_read: true } as unknown as SchemaMetadata);
+		expect(form.publicRead).toBe(true);
+		expect(toMetadata('book', form)).toEqual({ public_read: true });
+		form.publicRead = false;
+		expect(toMetadata('book', form)).toEqual({});
 	});
 });

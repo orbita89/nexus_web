@@ -49,6 +49,11 @@ export type ReplyMessage = { type: string; [key: string]: unknown };
 const OPEN = 1;
 /** Повторить auth за столько до истечения: accessToken() обновляет токены моложе 30 с. */
 const RENEW_BEFORE_MS = 25_000;
+/**
+ * Гость без подписок: через столько закрыть соединение. Не сразу — переход между страницами
+ * отписывает и тут же подписывает снова, сокет не должен мигать.
+ */
+export const IDLE_CLOSE_MS = 30_000;
 
 /** Пауза перед переподключением: 1, 2, 4, 8, 16, 30, 30, … секунд. */
 export function backoff(attempt: number): number {
@@ -76,6 +81,7 @@ export class Realtime {
 	#reconnectTimer: unknown = null;
 	#renewTimer: unknown = null;
 	#connectedOnce = false;
+	#idleTimer: unknown = null;
 
 	constructor(deps: RealtimeDeps) {
 		this.#deps = deps;
@@ -92,6 +98,8 @@ export class Realtime {
 	): () => void {
 		const sub: Subscription = { channels: channels && new Set(channels), onEvent, onResync };
 		this.#subs.add(sub);
+		this.#deps.clearTimeout(this.#idleTimer);
+		this.#idleTimer = null;
 		const added = (channels ?? []).filter((c) => !isAutomatic(c) && this.#inc(c));
 		this.#ensureSocket();
 		if (added.length) this.#send({ type: 'subscribe', channels: added });
@@ -99,6 +107,7 @@ export class Realtime {
 			if (!this.#subs.delete(sub)) return;
 			const removed = (channels ?? []).filter((c) => !isAutomatic(c) && this.#dec(c));
 			if (removed.length) this.#send({ type: 'unsubscribe', channels: removed });
+			this.#closeWhenIdle();
 		};
 	}
 
@@ -134,6 +143,9 @@ export class Realtime {
 	/** Закрыть соединение (тесты, выход со страницы). */
 	close() {
 		this.#deps.clearTimeout(this.#reconnectTimer);
+		this.#reconnectTimer = null;
+		this.#deps.clearTimeout(this.#idleTimer);
+		this.#idleTimer = null;
 		this.#clearRenew();
 		const socket = this.#socket;
 		this.#socket = null;
@@ -141,6 +153,18 @@ export class Realtime {
 			socket.onclose = null;
 			socket.close();
 		}
+	}
+
+	/**
+	 * Подписок не осталось, и это гость (вошедшему соединение нужно для личных событий) — закрыть
+	 * через IDLE_CLOSE_MS: каждое открытое соединение держит память на сервере.
+	 */
+	#closeWhenIdle() {
+		if (this.#subs.size || this.#wantAuth || this.#idleTimer) return;
+		this.#idleTimer = this.#deps.setTimeout(() => {
+			this.#idleTimer = null;
+			if (!this.#subs.size && !this.#wantAuth) this.close();
+		}, IDLE_CLOSE_MS);
 	}
 
 	#inc(channel: string): boolean {

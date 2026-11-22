@@ -72,5 +72,29 @@ export const load: PageServerLoad = async ({ fetch, url, params }) => {
 					.catch(() => [])
 			: [];
 
-	return { entity, seasons };
+	return { entity: forPage(entity), seasons };
 };
+
+/** Поля metadata, которые страница не показывает: служебные источники и сырьё для поиска. */
+const HIDDEN_META = ['libgen', 'keywords'] as const;
+
+/**
+ * Данные карточки попадают в статику дважды — в конец HTML (для гидрации) и в __data.json. Всё,
+ * чего страница не рисует (ранжирование, служебные источники книги), — лишний вес в обоих.
+ */
+function forPage<T extends { metadata: unknown }>(entity: T): T {
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars -- поля отбрасываем
+	const { tmdb_popularity, tmdb_votes, rank_score, quality, ...rest } = entity as T & {
+		tmdb_popularity?: unknown;
+		tmdb_votes?: unknown;
+		rank_score?: unknown;
+		quality?: unknown;
+	};
+	const meta = { ...(rest.metadata as Record<string, unknown>) };
+	for (const key of HIDDEN_META) delete meta[key];
+	// Файл книги: странице нужно только «есть ли» (кнопка «Читать») и размер (прогресс загрузки).
+	// Где он лежит в архиве (archive, path) — не для статики.
+	const file = meta.file as { size?: number | null } | null | undefined;
+	if (file) meta.file = { size: file.size ?? null };
+	return { ...rest, metadata: meta } as unknown as T;
+}

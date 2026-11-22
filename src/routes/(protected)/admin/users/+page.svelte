@@ -12,6 +12,8 @@
 	const PAGE = 50;
 	const ROLES: { value: SchemaRole; title: string }[] = [
 		{ value: 'user', title: 'Пользователь' },
+		// vip — читает закрытые книги (читалка); в остальном как пользователь.
+		{ value: 'vip', title: 'VIP (читалка)' },
 		{ value: 'author', title: 'Автор' },
 		{ value: 'admin', title: 'Админ' }
 	];

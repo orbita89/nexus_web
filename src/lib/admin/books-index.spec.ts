@@ -62,3 +62,16 @@ describe('books-index', () => {
 		expect(operationTitle('other')).toBe('other');
 	});
 });
+
+describe('bookPagePath', () => {
+	it('slug, путь и ссылка — один адрес', async () => {
+		const { bookPagePath } = await import('./books-index.ts');
+		expect(bookPagePath('belaya-gvardiya')).toBe('/books/belaya-gvardiya');
+		expect(bookPagePath('/books/belaya-gvardiya')).toBe('/books/belaya-gvardiya');
+		expect(bookPagePath('http://localhost/books/belaya-gvardiya?x=1')).toBe(
+			'/books/belaya-gvardiya'
+		);
+		expect(bookPagePath('Белая гвардия')).toBeNull();
+		expect(bookPagePath('/films/dune')).toBeNull();
+	});
+});

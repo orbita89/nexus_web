@@ -1,4 +1,5 @@
 <script lang="ts">
+	import DeviceBooks from '#lib/components/reader/DeviceBooks.svelte';
 	import { errorMessage, unwrap } from '#lib/api/errors.ts';
 	import { api, session, updateUser } from '#lib/auth/session.svelte.ts';
 	import Alert from '#lib/components/Alert.svelte';
@@ -121,4 +122,7 @@
 		{#if saved}<Alert kind="success">Сохранено.</Alert>{/if}
 		<div><button class="btn btn-primary" disabled={submitting}>Сохранить</button></div>
 	</form>
+
+	<!-- Вне формы: не сохраняется кнопкой «Сохранить», действует сразу. -->
+	<DeviceBooks />
 </div>

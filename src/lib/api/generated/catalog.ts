@@ -4,6 +4,57 @@
  */
 
 export interface paths {
+	'/api/v1/catalog/admin/ai/prompts': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get: operations['list_ai_prompts'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/admin/ai/prompts/preview': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Собранные промпты на примере книги — как их увидит модель. */
+		get: operations['preview_ai_prompts'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/admin/ai/prompts/{key}/{scope}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/** Переопределить промпт для области. Неизвестные подстановки `{…}` — 400. */
+		put: operations['put_ai_prompt'];
+		post?: never;
+		/** Убрать переопределение: действует общее или встроенное. */
+		delete: operations['delete_ai_prompt'];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/catalog/admin/ai/providers': {
 		parameters: {
 			query?: never;
@@ -866,6 +917,57 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/catalog/admin/static/pages': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Перерисовать несколько страниц сразу (до ответа): одну книгу после ручной проверки и т.п. */
+		post: operations['regenerate_static_pages'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/admin/static/regenerate': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Пересобрать статику раздела (или всю) в фоне. Ход — `GET /admin/static/status`. */
+		post: operations['regenerate_static'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/admin/static/status': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Ход последней пересборки статики. */
+		get: operations['static_status'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/catalog/admin/tags': {
 		parameters: {
 			query?: never;
@@ -1107,6 +1209,41 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/catalog/books/{slug}/epub': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Отдать EPUB книги для читалки. */
+		get: operations['read_book_epub'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/books/{slug}/tutor': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Свои обсуждения книги, свежие сверху. */
+		get: operations['list_book_ai_threads'];
+		put?: never;
+		/** Начать обсуждение книги. */
+		post: operations['create_ai_thread'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/catalog/entities': {
 		parameters: {
 			query?: never;
@@ -1241,6 +1378,76 @@ export interface paths {
 		 *     связанных (они и так на карточке). Нет тегов — пустая страница.
 		 */
 		get: operations['list_similar_entities'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/me/ai-providers': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Свои провайдеры. */
+		get: operations['list_my_ai_providers'];
+		put?: never;
+		/** Добавить провайдера (свой ключ). */
+		post: operations['create_my_ai_provider'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/me/ai-providers/{id}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		post?: never;
+		/** Удалить своего провайдера. Удалили «по умолчанию» — им становится самый старый оставшийся. */
+		delete: operations['delete_my_ai_provider'];
+		options?: never;
+		head?: never;
+		/** Изменить своего провайдера. */
+		patch: operations['update_my_ai_provider'];
+		trace?: never;
+	};
+	'/api/v1/catalog/me/ai-providers/{id}/test': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Проверить ключ: короткий запрос к модели. */
+		post: operations['test_my_ai_provider'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/me/tutor': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Свои обсуждения во всех книгах, свежие сверху: раздел профиля. */
+		get: operations['list_my_ai_threads'];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -1550,6 +1757,46 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/catalog/tutor/{id}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Обсуждение со всеми сообщениями. */
+		get: operations['get_ai_thread'];
+		put?: never;
+		post?: never;
+		/** Удалить своё обсуждение. */
+		delete: operations['delete_ai_thread'];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/tutor/{id}/messages': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Задать вопрос. Ответ — потоком (`text/event-stream`):
+		 *     `event: delta` `data: {"text": "…"}` — кусок ответа;
+		 *     `event: done` `data: {"id", "tokens_in", "tokens_out"}` — ответ сохранён;
+		 *     `event: error` `data: {"message"}` — модель не ответила (вопрос сохранён).
+		 */
+		post: operations['send_ai_message'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1612,6 +1859,64 @@ export interface components {
 		 * @enum {string}
 		 */
 		AiKind: 'anthropic' | 'openai';
+		AiMessage: {
+			chapter?: string | null;
+			content: string;
+			/** Format: date-time */
+			created_at: string;
+			/** Format: uuid */
+			id: string;
+			/** @description Вопрос из читалки: выделенный фрагмент и глава. */
+			quote?: string | null;
+			/** @description `user` или `assistant`. */
+			role: string;
+		};
+		/** @description Промпт: назначение, подстановки, встроенный текст и переопределения. */
+		AiPrompt: {
+			/** @description Встроенный текст (действует, если переопределений нет). */
+			builtin: string;
+			description: string;
+			/** @example tutor.system */
+			key: string;
+			overrides: components['schemas']['AiPromptOverride'][];
+			placeholders: components['schemas']['Placeholder'][];
+			title: string;
+		};
+		/** @description Числовой предел промпта (меняется только в коде). */
+		AiPromptLimit: {
+			description: string;
+			name: string;
+			/** Format: int64 */
+			value: number;
+		};
+		/** @description Переопределение промпта для области. */
+		AiPromptOverride: {
+			/**
+			 * @description `default` — для всех сущностей, иначе тип: `book`, `movie`, …
+			 * @example book
+			 */
+			scope: string;
+			template: string;
+			/** Format: date-time */
+			updated_at: string;
+		};
+		/** @description Что уйдёт в модель на примере книги. */
+		AiPromptPreview: {
+			/** @description Вопрос по фрагменту из читалки. */
+			quote_question: string;
+			scope: string;
+			/** @description Запрос на сжатие разговора. */
+			summarize: string;
+			/** @description Системный промпт (читатель на 30%, есть резюме). */
+			system: string;
+		};
+		/** @description Все промпты ИИ. */
+		AiPrompts: {
+			limits: components['schemas']['AiPromptLimit'][];
+			prompts: components['schemas']['AiPrompt'][];
+			/** @description Области: `default` и типы сущностей. */
+			scopes: string[];
+		};
 		/** @description Провайдер без ключей — то, что видит админка. */
 		AiProvider: {
 			/**
@@ -1678,6 +1983,34 @@ export interface components {
 			ok: boolean;
 			/** @description Ответ модели на первом рабочем ключе. */
 			reply?: string | null;
+		};
+		/** @description Обсуждение. */
+		AiThread: {
+			/** Format: date-time */
+			created_at: string;
+			/** Format: uuid */
+			id: string;
+			/** Format: int32 */
+			messages_count: number;
+			title: string;
+			/**
+			 * Format: int64
+			 * @description Расход токенов обсуждения (по данным провайдера): вход и выход.
+			 */
+			tokens_in: number;
+			/** Format: int64 */
+			tokens_out: number;
+			/** Format: date-time */
+			updated_at: string;
+		};
+		/** @description Обсуждение целиком: книга и все сообщения. */
+		AiThreadDetail: components['schemas']['AiThread'] & {
+			entity: components['schemas']['EntityRef'];
+			messages: components['schemas']['AiMessage'][];
+		};
+		/** @description Обсуждение в своём списке (профиль): то же плюс книга. */
+		AiThreadWithEntity: components['schemas']['AiThread'] & {
+			entity: components['schemas']['EntityRef'];
 		};
 		AnalysisPoint: {
 			/** @example Девочка с курицей на поясе — эмблема гильдии… */
@@ -2018,6 +2351,11 @@ export interface components {
 			 * @example 896
 			 */
 			pages?: number | null;
+			/**
+			 * @description Читать книгу могут все, включая гостей. Без поля (или `false`) читалка открыта только
+			 *     ролям `vip` и `admin` (`GET /catalog/books/{slug}/epub`). Ставит админ.
+			 */
+			public_read?: boolean;
 			/** @example Ace Books */
 			publisher?: string | null;
 			/**
@@ -2122,6 +2460,10 @@ export interface components {
 		CreateAiProvider: components['schemas']['AiProviderInput'] & {
 			/** @example deepseek */
 			slug: string;
+		};
+		CreateAiThread: {
+			/** @description Пусто — по первому вопросу. */
+			title?: string | null;
 		};
 		/** @description Новая премия. */
 		CreateAward: {
@@ -2274,6 +2616,15 @@ export interface components {
 			name: string;
 			/** @example sci-fi */
 			slug: string;
+		};
+		CreateUserAiProvider: {
+			api_key: string;
+			base_url?: string | null;
+			/** @description Сделать провайдером по умолчанию (первый — всегда по умолчанию). */
+			is_default?: boolean;
+			kind: components['schemas']['UserAiKind'];
+			model: string;
+			title: string;
 		};
 		/**
 		 * @description Прямоугольник на исходнике в долях его ширины и высоты (0–1), а не в пикселях: исходник
@@ -2458,6 +2809,27 @@ export interface components {
 		 * @enum {string}
 		 */
 		EntityKind: 'movie' | 'series' | 'season' | 'book' | 'game' | 'painting';
+		/** @description Сущность каталога в чужих ответах: ровно столько, сколько нужно для ссылки на карточку. */
+		EntityRef: {
+			cover_url?: string | null;
+			/** Format: uuid */
+			id: string;
+			/**
+			 * @description `movie`, `series`, `book`, `game`.
+			 * @example movie
+			 */
+			kind: string;
+			/**
+			 * Format: date
+			 * @description Дата выхода: по году фронтенд различает «Дюна (1984)» и «Дюна (2021)». `null` — неизвестна.
+			 * @example 2021-10-22
+			 */
+			release_date?: string | null;
+			/** @example dune-2021 */
+			slug: string;
+			/** @example Дюна */
+			title: string;
+		};
 		/**
 		 * @description Порядок списка сущностей.
 		 * @enum {string}
@@ -3051,6 +3423,28 @@ export interface components {
 			total: number;
 		};
 		/** @description Страница списка. */
+		Page_AiThreadWithEntity: {
+			items: (components['schemas']['AiThread'] & {
+				entity: components['schemas']['EntityRef'];
+			})[];
+			/**
+			 * Format: int64
+			 * @example 20
+			 */
+			limit: number;
+			/**
+			 * Format: int64
+			 * @example 0
+			 */
+			offset: number;
+			/**
+			 * Format: int64
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @example 137
+			 */
+			total: number;
+		};
+		/** @description Страница списка. */
 		Page_ArchiveDoc: {
 			items: {
 				/**
@@ -3598,6 +3992,11 @@ export interface components {
 			/** @example denis-villeneuve */
 			slug: string;
 		};
+		/** @description Подстановка промпта — для админки. */
+		Placeholder: {
+			description: string;
+			name: string;
+		};
 		/** @description Шаг в событии `plan`. */
 		PlannedStep: {
 			step: components['schemas']['Step'];
@@ -3629,6 +4028,10 @@ export interface components {
 			logo_url?: string | null;
 			/** @example АСТ */
 			name: string;
+		};
+		/** @description Новый текст промпта. */
+		PutAiPrompt: {
+			template: string;
 		};
 		/** @description Новый ручной список целиком (прежний удаляется). */
 		PutBookRanks: {
@@ -3741,6 +4144,28 @@ export interface components {
 			 * @example 9.2
 			 */
 			value?: number | null;
+		};
+		/** @description Страницы для перерисовки сразу (до ответа). */
+		RegeneratePages: {
+			/**
+			 * @description Адреса страниц: `/books/belaya-gvardiya`. 1–100.
+			 * @example [
+			 *       "/books/belaya-gvardiya"
+			 *     ]
+			 */
+			paths: string[];
+		};
+		RegenerateStarted: {
+			/** @description `false` — пересборка уже идёт, вторая не запущена. */
+			started: boolean;
+		};
+		/** @description Что пересобрать. */
+		RegenerateStatic: {
+			/**
+			 * @description Раздел: `book`, `movie`, `series`, `game`, `painting`. Не задан — вся статика.
+			 * @example book
+			 */
+			kind?: string | null;
 		};
 		ReindexResult: {
 			/**
@@ -3947,6 +4372,23 @@ export interface components {
 			/** @example Сезон 2 */
 			title: string;
 		};
+		/** @description Вопрос. */
+		SendAiMessage: {
+			chapter?: string | null;
+			/**
+			 * Format: float
+			 * @description Докуда дочитал читатель (0–1): ИИ не спойлерит дальше.
+			 */
+			fraction?: number | null;
+			/**
+			 * Format: uuid
+			 * @description Свой провайдер; не задан — по умолчанию.
+			 */
+			provider_id?: string | null;
+			/** @description Выделенный в читалке фрагмент (≤ 1500 символов, длиннее — обрежется). */
+			quote?: string | null;
+			text: string;
+		};
 		/** @description Поля сериала. */
 		SeriesMetadata: {
 			/** @description Награды и номинации: до 50. */
@@ -4056,6 +4498,40 @@ export interface components {
 			total_bytes: number;
 			/** Format: int64 */
 			with_cover: number;
+		};
+		/** @description Страница, которая не перерисовалась. */
+		StaticFailure: {
+			path: string;
+			/** Format: int32 */
+			status: number;
+		};
+		/** @description Ход последней пересборки статики (в памяти сервера фронтенда, с его перезапуска). */
+		StaticRun: {
+			/**
+			 * Format: int64
+			 * @description Сколько страниц действительно изменилось (остальные совпали байт в байт и не тронуты).
+			 */
+			changed: number;
+			/** Format: int64 */
+			done: number;
+			/** @description Пересборка прервалась целиком (например, API каталога не ответил). */
+			error?: string | null;
+			/** @description Первые 100 ошибок. */
+			failed: components['schemas']['StaticFailure'][];
+			/** @description `null` — ещё идёт. */
+			finished_at?: string | null;
+			/** @description Раздел; `null` — вся статика. */
+			kind?: string | null;
+			running: boolean;
+			started_at: string;
+			/**
+			 * Format: int64
+			 * @description Страниц в работе (каталог из API + файлы на диске).
+			 */
+			total: number;
+		};
+		StaticStatus: {
+			run?: components['schemas']['StaticRun'] | null;
 		};
 		/** @description Итог «обновить рейтинги». */
 		StatsResult: {
@@ -4434,6 +4910,48 @@ export interface components {
 			name?: string | null;
 			slug?: string | null;
 		};
+		/** @description Правка: переданное поле меняется; `api_key` — новый ключ. */
+		UpdateUserAiProvider: {
+			api_key?: string | null;
+			/** @description Пустая строка — адрес по умолчанию. */
+			base_url?: string | null;
+			/** @description `true` — сделать провайдером по умолчанию. */
+			is_default?: boolean | null;
+			model?: string | null;
+			title?: string | null;
+		};
+		/**
+		 * @description Протокол API: `openai` — любой OpenAI-совместимый (OpenAI, DeepSeek, OpenRouter, свой
+		 *     сервер), `anthropic` — Claude.
+		 * @enum {string}
+		 */
+		UserAiKind: 'openai' | 'anthropic';
+		/** @description Свой провайдер (без ключа). */
+		UserAiProvider: {
+			/**
+			 * @description Пусто — адрес по умолчанию протокола.
+			 * @example https://api.deepseek.com
+			 */
+			base_url?: string | null;
+			/** Format: date-time */
+			created_at: string;
+			/** Format: uuid */
+			id: string;
+			is_default: boolean;
+			/** @description `sk-…a1b2`. */
+			key_hint: string;
+			/** @example openai */
+			kind: string;
+			/** @example deepseek-chat */
+			model: string;
+			/** @example DeepSeek */
+			title: string;
+		};
+		UserAiTest: {
+			/** @description Ответ модели или текст ошибки (ключ вырезан). */
+			message: string;
+			ok: boolean;
+		};
 	};
 	responses: never;
 	parameters: never;
@@ -4447,9 +4965,18 @@ export type SchemaAdminEntitySummary = components['schemas']['AdminEntitySummary
 export type SchemaAfter = components['schemas']['After'];
 export type SchemaAiEffort = components['schemas']['AiEffort'];
 export type SchemaAiKind = components['schemas']['AiKind'];
+export type SchemaAiMessage = components['schemas']['AiMessage'];
+export type SchemaAiPrompt = components['schemas']['AiPrompt'];
+export type SchemaAiPromptLimit = components['schemas']['AiPromptLimit'];
+export type SchemaAiPromptOverride = components['schemas']['AiPromptOverride'];
+export type SchemaAiPromptPreview = components['schemas']['AiPromptPreview'];
+export type SchemaAiPrompts = components['schemas']['AiPrompts'];
 export type SchemaAiProvider = components['schemas']['AiProvider'];
 export type SchemaAiProviderInput = components['schemas']['AiProviderInput'];
 export type SchemaAiTest = components['schemas']['AiTest'];
+export type SchemaAiThread = components['schemas']['AiThread'];
+export type SchemaAiThreadDetail = components['schemas']['AiThreadDetail'];
+export type SchemaAiThreadWithEntity = components['schemas']['AiThreadWithEntity'];
 export type SchemaAnalysisPoint = components['schemas']['AnalysisPoint'];
 export type SchemaArchiveDoc = components['schemas']['ArchiveDoc'];
 export type SchemaArchiveStats = components['schemas']['ArchiveStats'];
@@ -4476,6 +5003,7 @@ export type SchemaButtonStyle = components['schemas']['ButtonStyle'];
 export type SchemaCategoryNominations = components['schemas']['CategoryNominations'];
 export type SchemaCountryHit = components['schemas']['CountryHit'];
 export type SchemaCreateAiProvider = components['schemas']['CreateAiProvider'];
+export type SchemaCreateAiThread = components['schemas']['CreateAiThread'];
 export type SchemaCreateAward = components['schemas']['CreateAward'];
 export type SchemaCreateBanner = components['schemas']['CreateBanner'];
 export type SchemaCreateCategory = components['schemas']['CreateCategory'];
@@ -4483,6 +5011,7 @@ export type SchemaCreateEdition = components['schemas']['CreateEdition'];
 export type SchemaCreateEntity = components['schemas']['CreateEntity'];
 export type SchemaCreatePerson = components['schemas']['CreatePerson'];
 export type SchemaCreateTag = components['schemas']['CreateTag'];
+export type SchemaCreateUserAiProvider = components['schemas']['CreateUserAiProvider'];
 export type SchemaCrop = components['schemas']['Crop'];
 export type SchemaDemoteRequest = components['schemas']['DemoteRequest'];
 export type SchemaDemoteResult = components['schemas']['DemoteResult'];
@@ -4494,6 +5023,7 @@ export type SchemaEntityAward = components['schemas']['EntityAward'];
 export type SchemaEntityCredit = components['schemas']['EntityCredit'];
 export type SchemaEntityDetail = components['schemas']['EntityDetail'];
 export type SchemaEntityKind = components['schemas']['EntityKind'];
+export type SchemaEntityRef = components['schemas']['EntityRef'];
 export type SchemaEntitySort = components['schemas']['EntitySort'];
 export type SchemaEntitySummary = components['schemas']['EntitySummary'];
 export type SchemaEpisode = components['schemas']['Episode'];
@@ -4522,6 +5052,7 @@ export type SchemaNeighbors = components['schemas']['Neighbors'];
 export type SchemaNomination = components['schemas']['Nomination'];
 export type SchemaNominationInput = components['schemas']['NominationInput'];
 export type SchemaPageAdminEntitySummary = components['schemas']['Page_AdminEntitySummary'];
+export type SchemaPageAiThreadWithEntity = components['schemas']['Page_AiThreadWithEntity'];
 export type SchemaPageArchiveDoc = components['schemas']['Page_ArchiveDoc'];
 export type SchemaPageAwardListItem = components['schemas']['Page_AwardListItem'];
 export type SchemaPageBanner = components['schemas']['Page_Banner'];
@@ -4540,15 +5071,20 @@ export type SchemaPersonHit = components['schemas']['PersonHit'];
 export type SchemaPersonPhoto = components['schemas']['PersonPhoto'];
 export type SchemaPersonRef = components['schemas']['PersonRef'];
 export type SchemaPersonSummary = components['schemas']['PersonSummary'];
+export type SchemaPlaceholder = components['schemas']['Placeholder'];
 export type SchemaPlannedStep = components['schemas']['PlannedStep'];
 export type SchemaProgressEvent = components['schemas']['ProgressEvent'];
 export type SchemaPublisherHit = components['schemas']['PublisherHit'];
+export type SchemaPutAiPrompt = components['schemas']['PutAiPrompt'];
 export type SchemaPutBookRanks = components['schemas']['PutBookRanks'];
 export type SchemaPutNominations = components['schemas']['PutNominations'];
 export type SchemaPutRelation = components['schemas']['PutRelation'];
 export type SchemaRankPreviewRow = components['schemas']['RankPreviewRow'];
 export type SchemaRankingSettings = components['schemas']['RankingSettings'];
 export type SchemaRatingValue = components['schemas']['RatingValue'];
+export type SchemaRegeneratePages = components['schemas']['RegeneratePages'];
+export type SchemaRegenerateStarted = components['schemas']['RegenerateStarted'];
+export type SchemaRegenerateStatic = components['schemas']['RegenerateStatic'];
 export type SchemaReindexResult = components['schemas']['ReindexResult'];
 export type SchemaRelatedWork = components['schemas']['RelatedWork'];
 export type SchemaRelationKind = components['schemas']['RelationKind'];
@@ -4560,12 +5096,16 @@ export type SchemaSeasonDetail = components['schemas']['SeasonDetail'];
 export type SchemaSeasonList = components['schemas']['SeasonList'];
 export type SchemaSeasonMetadata = components['schemas']['SeasonMetadata'];
 export type SchemaSeasonSummary = components['schemas']['SeasonSummary'];
+export type SchemaSendAiMessage = components['schemas']['SendAiMessage'];
 export type SchemaSeriesMetadata = components['schemas']['SeriesMetadata'];
 export type SchemaSeriesStatus = components['schemas']['SeriesStatus'];
 export type SchemaSetEpisodes = components['schemas']['SetEpisodes'];
 export type SchemaSetFragments = components['schemas']['SetFragments'];
 export type SchemaSetTags = components['schemas']['SetTags'];
 export type SchemaSidecarStatus = components['schemas']['SidecarStatus'];
+export type SchemaStaticFailure = components['schemas']['StaticFailure'];
+export type SchemaStaticRun = components['schemas']['StaticRun'];
+export type SchemaStaticStatus = components['schemas']['StaticStatus'];
 export type SchemaStatsResult = components['schemas']['StatsResult'];
 export type SchemaStep = components['schemas']['Step'];
 export type SchemaStepEvent = components['schemas']['StepEvent'];
@@ -4589,8 +5129,211 @@ export type SchemaUpdateEdition = components['schemas']['UpdateEdition'];
 export type SchemaUpdateEntity = components['schemas']['UpdateEntity'];
 export type SchemaUpdatePerson = components['schemas']['UpdatePerson'];
 export type SchemaUpdateTag = components['schemas']['UpdateTag'];
+export type SchemaUpdateUserAiProvider = components['schemas']['UpdateUserAiProvider'];
+export type SchemaUserAiKind = components['schemas']['UserAiKind'];
+export type SchemaUserAiProvider = components['schemas']['UserAiProvider'];
+export type SchemaUserAiTest = components['schemas']['UserAiTest'];
 export type $defs = Record<string, never>;
 export interface operations {
+	list_ai_prompts: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Промпты ИИ: встроенные тексты и переопределения */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['AiPrompts'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	preview_ai_prompts: {
+		parameters: {
+			query?: {
+				/** @description Область: `default` или тип сущности. По умолчанию `book`. */
+				scope?: string;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Пример собранных промптов */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['AiPromptPreview'];
+				};
+			};
+			/** @description Неизвестная область */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	put_ai_prompt: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				key: string;
+				scope: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['PutAiPrompt'];
+			};
+		};
+		responses: {
+			/** @description Сохранено */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['AiPromptOverride'];
+				};
+			};
+			/** @description Пустой/длинный текст, неизвестная область или подстановка */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такого промпта */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	delete_ai_prompt: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				key: string;
+				scope: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Сброшено */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такого переопределения */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
 	list_ai_providers: {
 		parameters: {
 			query?: never;
@@ -8023,6 +8766,170 @@ export interface operations {
 			};
 		};
 	};
+	regenerate_static_pages: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['RegeneratePages'];
+			};
+		};
+		responses: {
+			/** @description Перерисованы */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Пустой список или больше 100 адресов */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description ISR не настроен или страница не нарисовалась */
+			503: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	regenerate_static: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['RegenerateStatic'];
+			};
+		};
+		responses: {
+			/** @description Запущено (или уже идёт: started = false) */
+			202: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['RegenerateStarted'];
+				};
+			};
+			/** @description Неизвестный kind */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description ISR не настроен или фронтенд не отвечает */
+			503: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	static_status: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['StaticStatus'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description ISR не настроен или фронтенд не отвечает */
+			503: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
 	create_tag: {
 		parameters: {
 			query?: never;
@@ -8663,6 +9570,156 @@ export interface operations {
 			};
 		};
 	};
+	read_book_epub: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Slug книги */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Файл книги. `HEAD` — только проверка доступа, без извлечения и тела */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/epub+zip': number[];
+				};
+			};
+			/** @description Закрытая книга, гость */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Закрытая книга, роль не vip/admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Нет книги или у неё нет файла */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Хранилище архивов не настроено или недоступно */
+			503: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	list_book_ai_threads: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug книги
+				 * @example master-i-margarita
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['AiThread'][];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Книга не найдена */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	create_ai_thread: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug книги
+				 * @example master-i-margarita
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['CreateAiThread'];
+			};
+		};
+		responses: {
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['AiThread'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Книга не найдена */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Слишком много обсуждений */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
 	list_entities: {
 		parameters: {
 			query?: {
@@ -9029,6 +10086,254 @@ export interface operations {
 			};
 			/** @description Meilisearch недоступен */
 			503: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	list_my_ai_providers: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['UserAiProvider'][];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	create_my_ai_provider: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['CreateUserAiProvider'];
+			};
+		};
+		responses: {
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['UserAiProvider'];
+				};
+			};
+			/** @description Неверные поля */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Уже 5 провайдеров */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description ИИ не настроен на сервере */
+			503: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	delete_my_ai_provider: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Удалён */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такого своего провайдера */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	update_my_ai_provider: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['UpdateUserAiProvider'];
+			};
+		};
+		responses: {
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['UserAiProvider'];
+				};
+			};
+			/** @description Неверные поля */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такого своего провайдера */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	test_my_ai_provider: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['UserAiTest'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такого своего провайдера */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	list_my_ai_threads: {
+		parameters: {
+			query?: {
+				/** @description 1–100, по умолчанию 20. */
+				limit?: number;
+				offset?: number;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Page_AiThreadWithEntity'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
 				headers: {
 					[name: string]: unknown;
 				};
@@ -9731,6 +11036,154 @@ export interface operations {
 			};
 			/** @description Не найден */
 			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	get_ai_thread: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['AiThreadDetail'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такого своего обсуждения */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	delete_ai_thread: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Удалено */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такого своего обсуждения */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	send_ai_message: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['SendAiMessage'];
+			};
+		};
+		responses: {
+			/** @description Поток ответа (SSE) */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'text/event-stream': string;
+				};
+			};
+			/** @description Пустой или слишком длинный вопрос */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такого своего обсуждения */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет своего ключа ИИ (`no_ai_provider`) или обсуждение переполнено */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description ИИ не настроен на сервере */
+			503: {
 				headers: {
 					[name: string]: unknown;
 				};

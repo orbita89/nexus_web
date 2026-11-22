@@ -46,7 +46,40 @@ export interface MetadataForm {
 	studios: string;
 	awards: AwardRow[];
 	trivia: string[];
+	/** Книга: читать может любой, без роли vip (`public_read`). */
+	publicRead: boolean;
+	/**
+	 * Поля metadata, которых в форме нет (файл книги `file`, источники, ключевые слова, …). Бэкенд
+	 * заменяет metadata целиком, поэтому они уходят обратно как были — иначе правка книги в
+	 * админке стёрла бы её файл.
+	 */
+	extra: Record<string, unknown>;
 }
+
+/** Поля metadata, которыми управляет форма (toMetadata); остальные — в extra, без изменений. */
+const MANAGED = new Set([
+	'awards',
+	'trivia',
+	'studios',
+	'runtime_min',
+	'countries',
+	'age_rating',
+	'trailers',
+	'seasons',
+	'episodes',
+	'status',
+	'isbn',
+	'pages',
+	'publisher',
+	'platforms',
+	'developer',
+	'technique',
+	'museum',
+	'city',
+	'height_cm',
+	'width_cm',
+	'public_read'
+]);
 
 export const emptyMetadataForm = (): MetadataForm => ({
 	runtime_min: '',
@@ -67,6 +100,8 @@ export const emptyMetadataForm = (): MetadataForm => ({
 	width_cm: '',
 	trailers: [],
 	studios: '',
+	publicRead: false,
+	extra: {},
 	awards: [],
 	trivia: []
 });
@@ -136,7 +171,7 @@ export function toMetadata(kind: SchemaEntityKind, form: MetadataForm): SchemaMe
 	const trailers = form.trailers
 		.map((t) => ({ provider: t.provider, id: t.id.trim() }))
 		.filter((t) => t.id);
-	const entries: Record<string, unknown> = {};
+	const entries: Record<string, unknown> = { ...form.extra };
 	const put = (key: string, value: unknown) => {
 		if (value !== null && value !== '' && !(Array.isArray(value) && !value.length)) {
 			entries[key] = value;
@@ -163,6 +198,8 @@ export function toMetadata(kind: SchemaEntityKind, form: MetadataForm): SchemaMe
 			put('isbn', form.isbn.replace(/[\s-]/g, '') || null);
 			put('pages', int(form.pages));
 			put('publisher', text(form.publisher));
+			// Только true: снятая галочка — поля нет (так «закрыто» и по умолчанию).
+			if (form.publicRead) entries.public_read = true;
 			break;
 		case 'game':
 			put('platforms', splitList(form.platforms));
@@ -212,6 +249,10 @@ export function fromMetadata(kind: SchemaEntityKind, metadata: SchemaMetadata): 
 		won: a.won ?? false
 	}));
 	form.trivia = [...(m.trivia ?? [])];
+	form.publicRead = (metadata as { public_read?: boolean }).public_read === true;
+	form.extra = Object.fromEntries(
+		Object.entries(metadata ?? {}).filter(([key]) => !MANAGED.has(key))
+	);
 	return form;
 }
 

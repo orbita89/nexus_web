@@ -71,3 +71,13 @@ export const FORMS: Record<string, string> = {
 	article: 'Статьи',
 	document: 'Документы'
 };
+
+/**
+ * Адрес страницы книги из того, что вставили в поле: slug, путь или полная ссылка
+ * («https://…/books/belaya-gvardiya?x=1» → «/books/belaya-gvardiya»). null — не похоже на книгу.
+ */
+export function bookPagePath(input: string): string | null {
+	const text = input.trim();
+	const slug = /(?:^|\/books\/)([a-z0-9]+(?:-[a-z0-9]+)*)\/?(?:[?#].*)?$/.exec(text)?.[1];
+	return slug ? `/books/${slug}` : null;
+}

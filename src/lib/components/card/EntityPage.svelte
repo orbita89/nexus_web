@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
+	import { entityJsonLd } from '#lib/catalog/jsonld.ts';
+	import { canonicalUrl } from '#lib/catalog/seo.ts';
 	import { unwrap } from '#lib/api/errors.ts';
 	import { session } from '#lib/auth/session.svelte.ts';
 	import { aboutTitle, isReleased, productionOf, worthWatching } from '#lib/catalog/card.ts';
@@ -17,6 +19,10 @@
 	import MyNote from '#lib/components/card/MyNote.svelte';
 	import Production from '#lib/components/card/Production.svelte';
 	import RateButton from '#lib/components/card/RateButton.svelte';
+	import ReadButton from '#lib/components/card/ReadButton.svelte';
+	import BookMarks from '#lib/components/reader/BookMarks.svelte';
+	import AskAiButton from '#lib/components/tutor/AskAiButton.svelte';
+	import { bookFile } from '#lib/reader/access.ts';
 	import SectionNav from '#lib/components/card/SectionNav.svelte';
 	import Reactions from '#lib/components/card/Reactions.svelte';
 	import Recommendations from '#lib/components/card/Recommendations.svelte';
@@ -186,8 +192,11 @@
 		clearTimeout(refreshTimer);
 		refreshTimer = setTimeout(() => live.refresh(), 800);
 	}
+	// Живые обновления карточки (новые рецензии, обсуждения, реакции) — только вошедшему: у него
+	// соединение и так открыто. Гостю (большинство заходов на статические карточки) WebSocket не
+	// открываем — каждое соединение держит память сервера; он видит то, что загрузилось при открытии.
 	useRealtime(
-		() => [`entity:${entity.slug}`],
+		() => (session.status === 'authed' ? [`entity:${entity.slug}`] : []),
 		(event) => {
 			if (event.data.author_id === session.user?.id) return;
 			// entity.reacted — кто-то поставил эмодзи: в событии только id, какое именно — узнаём,
@@ -202,13 +211,27 @@
 		refreshSoon
 	);
 
+	/** og:type по типу работы (Open Graph). */
+	const OG_TYPE: Partial<Record<string, string>> = {
+		book: 'book',
+		movie: 'video.movie',
+		series: 'video.tv_show'
+	};
+
 	const description = $derived(
 		summary(entity.description) ||
 			`${kind.one} «${entity.title}»${year ? ` (${year})` : ''}: оценки, рецензии и обсуждения в Кассандра.`
 	);
 </script>
 
-<Seo title="{entity.title}{year ? ` (${year})` : ''}" {description} image={entity.cover_url} />
+<Seo
+	title="{entity.title}{year ? ` (${year})` : ''}"
+	{description}
+	image={entity.cover_url}
+	type={OG_TYPE[entity.kind] ?? 'website'}
+	jsonLd={entityJsonLd(entity, canonicalUrl(page.url, page.url.origin), page.url.origin)}
+	preloadImage={entity.kind !== 'painting'}
+/>
 
 <!-- key — у новой карточки всё заново: трейлер, ленивость блоков, «Читать далее». -->
 {#key entity.id}
@@ -234,40 +257,46 @@
 				     редкое — в «⋯». Восемь равных кнопок не давали глазу зацепиться ни за одну. -->
 				<!-- «Оценить» — первой: это главное действие, остальное идёт за ним. -->
 				<RateButton {my} {released} releaseDate={entity.release_date} />
+				{#if entity.kind === 'book' && bookFile(entity.metadata).has}
+					<ReadButton slug={entity.slug} publicRead={bookFile(entity.metadata).publicRead} />
+				{/if}
+				{#if entity.kind === 'book'}
+					<AskAiButton slug={entity.slug} title={entity.title} />
+				{/if}
 				<!-- Вторичные кнопки — отдельным рядом: на телефоне под «Оценить», на md и шире — в общем ряду. -->
 				<div class="flex flex-wrap items-center gap-2 md:contents">
 					<AverageRating {average} total={rating.current?.data?.count ?? 0} />
-				<EntityLike slug={entity.slug} />
-				<!-- Отметка одна: «позже» и «просмотрено» взаимоисключающие. У картины её нет —
+					<EntityLike slug={entity.slug} />
+					<!-- Отметка одна: «позже» и «просмотрено» взаимоисключающие. У картины её нет —
 				     холст не откладывают на вечер. -->
-				{#if entity.kind !== 'painting'}
-					<MarkButtons marks={viewing} kind={entity.kind} />
-				{/if}
-				<ChatActivity
-					kind="entity"
-					slug={entity.slug}
-					meta={{
-						room: `entity:${entity.slug}`,
-						title: entity.title,
-						href: entityHref(entity),
-						image: entity.cover_url ?? null
-					}}
-				/>
-				{#if waiting}
-					<!-- Ждём премьеру или новый сезон — тогда «Следить» на виду. -->
-					<WatchButton {watch} />
-				{/if}
-				<MoreMenu>
-					<AddToCollection
-						slug={entity.slug}
-						title={entity.title}
-						onchange={() => live.refresh()}
-						menu
-					/>
-					{#if !waiting}
-						<WatchButton {watch} menu />
+					{#if entity.kind !== 'painting'}
+						<MarkButtons marks={viewing} kind={entity.kind} />
 					{/if}
-					<ShareMenu url={page.url.href} title={entity.title} />
+					<ChatActivity
+						kind="entity"
+						slug={entity.slug}
+						meta={{
+							room: `entity:${entity.slug}`,
+							title: entity.title,
+							href: entityHref(entity),
+							image: entity.cover_url ?? null
+						}}
+					/>
+					{#if waiting}
+						<!-- Ждём премьеру или новый сезон — тогда «Следить» на виду. -->
+						<WatchButton {watch} />
+					{/if}
+					<MoreMenu>
+						<AddToCollection
+							slug={entity.slug}
+							title={entity.title}
+							onchange={() => live.refresh()}
+							menu
+						/>
+						{#if !waiting}
+							<WatchButton {watch} menu />
+						{/if}
+						<ShareMenu url={page.url.href} title={entity.title} />
 					</MoreMenu>
 				</div>
 			{/snippet}
@@ -293,6 +322,11 @@
 		</About>
 	{:else}
 		<About {entity} factsInHero={!trailers.length && entity.kind !== 'painting'} />
+	{/if}
+
+	<!-- Свои закладки и выделения в книге — по API, только у вошедшего (страница статическая). -->
+	{#if entity.kind === 'book' && bookFile(entity.metadata).has}
+		<BookMarks slug={entity.slug} />
 	{/if}
 
 	<!-- Разбор — отдельным разделом под таблицей, во всю ширину: в боковой колонке он тянул её на

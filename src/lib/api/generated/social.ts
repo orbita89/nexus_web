@@ -313,6 +313,42 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/social/annotations/{id}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		post?: never;
+		/** Удалить свою пометку. */
+		delete: operations['delete_annotation'];
+		options?: never;
+		head?: never;
+		/** Изменить цвет или заметку своей пометки. */
+		patch: operations['update_annotation'];
+		trace?: never;
+	};
+	'/api/v1/social/books/{slug}/annotations': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Свои пометки в книге — по порядку в книге (доля прочитанного), затем по времени. */
+		get: operations['list_book_annotations'];
+		put?: never;
+		/** Добавить закладку или выделение. Повторная закладка на то же место возвращает существующую. */
+		post: operations['create_book_annotation'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/social/chat/attachments': {
 		parameters: {
 			query?: never;
@@ -1482,6 +1518,23 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/social/users/me/annotations': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Свои пометки во всех книгах, новые сверху: раздел профиля. */
+		get: operations['list_own_annotations'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/social/users/me/chat-settings': {
 		parameters: {
 			query?: never;
@@ -1849,6 +1902,38 @@ export interface components {
 			description?: string | null;
 			/** @description 1–200 символов. Не передано — не меняется. */
 			title?: string | null;
+		};
+		/** @description Закладка или выделение. */
+		Annotation: {
+			/** @description EPUB CFI: точка (закладка) или диапазон (выделение). */
+			cfi: string;
+			chapter?: string | null;
+			/**
+			 * Format: int32
+			 * @description Цвет выделения 0–6; у закладки — `null`.
+			 */
+			color?: number | null;
+			/** Format: date-time */
+			created_at: string;
+			/**
+			 * Format: float
+			 * @description Доля прочитанного 0–1 в момент создания.
+			 */
+			fraction?: number | null;
+			/** Format: uuid */
+			id: string;
+			kind: components['schemas']['AnnotationKind'];
+			note?: string | null;
+			/** @description Выделенный текст; у закладки — `null`. */
+			text?: string | null;
+			/** Format: date-time */
+			updated_at: string;
+		};
+		/** @enum {string} */
+		AnnotationKind: 'bookmark' | 'highlight';
+		/** @description Пометка в своём списке (профиль): то же плюс книга. */
+		AnnotationWithEntity: components['schemas']['Annotation'] & {
+			entity: components['schemas']['EntityRef'];
 		};
 		/** @description Вложение сообщения. */
 		Attachment: {
@@ -2249,6 +2334,23 @@ export interface components {
 			 * @example 4
 			 */
 			reviews: number;
+		};
+		/** @description Новая пометка. */
+		CreateAnnotation: {
+			/** @example epubcfi(/6/14!/4/2/1:0) */
+			cfi: string;
+			chapter?: string | null;
+			/**
+			 * Format: int32
+			 * @description 0–6, у выделения по умолчанию 0.
+			 */
+			color?: number | null;
+			/** Format: float */
+			fraction?: number | null;
+			kind: components['schemas']['AnnotationKind'];
+			note?: string | null;
+			/** @description Обязателен у выделения. */
+			text?: string | null;
 		};
 		CreateCollection: {
 			/** @description До 2000 символов. */
@@ -2696,6 +2798,28 @@ export interface components {
 		/** @description Страница своих заметок: форма элементов зависит от `kind`. */
 		OwnNotesPage:
 			components['schemas']['Page_NoteWithEntity'] | components['schemas']['Page_NoteWithPerson'];
+		/** @description Страница списка. */
+		Page_AnnotationWithEntity: {
+			items: (components['schemas']['Annotation'] & {
+				entity: components['schemas']['EntityRef'];
+			})[];
+			/**
+			 * Format: int64
+			 * @example 20
+			 */
+			limit: number;
+			/**
+			 * Format: int64
+			 * @example 0
+			 */
+			offset: number;
+			/**
+			 * Format: int64
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @example 137
+			 */
+			total: number;
+		};
 		/** @description Страница списка. */
 		Page_Collection: {
 			items: {
@@ -4068,6 +4192,15 @@ export interface components {
 		 * @enum {string}
 		 */
 		ThreadSort: 'active' | 'new';
+		/**
+		 * @description Правка: цвет и заметка. `note: null` или пустая строка — убрать заметку; поле не передано —
+		 *     не менять.
+		 */
+		UpdateAnnotation: {
+			/** Format: int32 */
+			color?: number | null;
+			note?: string | null;
+		};
 		UpdateChatMessage: {
 			/** @description 1–2000 символов. */
 			body: string;
@@ -4190,6 +4323,9 @@ export interface components {
 }
 export type SchemaAddRelated = components['schemas']['AddRelated'];
 export type SchemaAdminUpdateCollection = components['schemas']['AdminUpdateCollection'];
+export type SchemaAnnotation = components['schemas']['Annotation'];
+export type SchemaAnnotationKind = components['schemas']['AnnotationKind'];
+export type SchemaAnnotationWithEntity = components['schemas']['AnnotationWithEntity'];
 export type SchemaAttachment = components['schemas']['Attachment'];
 export type SchemaAwardRoomRef = components['schemas']['AwardRoomRef'];
 export type SchemaByKind = components['schemas']['ByKind'];
@@ -4211,6 +4347,7 @@ export type SchemaCollectionLike = components['schemas']['CollectionLike'];
 export type SchemaCollectionLikes = components['schemas']['CollectionLikes'];
 export type SchemaCollectionReactions = components['schemas']['CollectionReactions'];
 export type SchemaCommentCounts = components['schemas']['CommentCounts'];
+export type SchemaCreateAnnotation = components['schemas']['CreateAnnotation'];
 export type SchemaCreateCollection = components['schemas']['CreateCollection'];
 export type SchemaCreateCollectionComment = components['schemas']['CreateCollectionComment'];
 export type SchemaCreatePost = components['schemas']['CreatePost'];
@@ -4244,6 +4381,7 @@ export type SchemaMarkKind = components['schemas']['MarkKind'];
 export type SchemaMarkedEntity = components['schemas']['MarkedEntity'];
 export type SchemaNote = components['schemas']['Note'];
 export type SchemaOwnNotesPage = components['schemas']['OwnNotesPage'];
+export type SchemaPageAnnotationWithEntity = components['schemas']['Page_AnnotationWithEntity'];
 export type SchemaPageCollection = components['schemas']['Page_Collection'];
 export type SchemaPageCollectionComment = components['schemas']['Page_CollectionComment'];
 export type SchemaPageCustomRoom = components['schemas']['Page_CustomRoom'];
@@ -4301,6 +4439,7 @@ export type SchemaTargetComment = components['schemas']['TargetComment'];
 export type SchemaThread = components['schemas']['Thread'];
 export type SchemaThreadDetail = components['schemas']['ThreadDetail'];
 export type SchemaThreadSort = components['schemas']['ThreadSort'];
+export type SchemaUpdateAnnotation = components['schemas']['UpdateAnnotation'];
 export type SchemaUpdateChatMessage = components['schemas']['UpdateChatMessage'];
 export type SchemaUpdateChatSettings = components['schemas']['UpdateChatSettings'];
 export type SchemaUpdateCollection = components['schemas']['UpdateCollection'];
@@ -5555,6 +5694,209 @@ export interface operations {
 			};
 			/** @description Не найдена */
 			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	delete_annotation: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description id пометки */
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Удалена */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такой своей пометки */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	update_annotation: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description id пометки */
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['UpdateAnnotation'];
+			};
+		};
+		responses: {
+			/** @description Изменена */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Annotation'];
+				};
+			};
+			/** @description Неверный цвет или длина заметки */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такой своей пометки */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	list_book_annotations: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug книги
+				 * @example master-i-margarita
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Закладки и выделения */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Annotation'][];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Книга не найдена */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	create_book_annotation: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug книги
+				 * @example master-i-margarita
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['CreateAnnotation'];
+			};
+		};
+		responses: {
+			/** @description Создана (или такая закладка уже была) */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Annotation'];
+				};
+			};
+			/** @description Неверные поля */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Книга не найдена */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Слишком много пометок в книге */
+			409: {
 				headers: {
 					[name: string]: unknown;
 				};
@@ -10564,6 +10906,51 @@ export interface operations {
 				};
 				content: {
 					'application/json': components['schemas']['Page_UserRef'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	list_own_annotations: {
+		parameters: {
+			query?: {
+				/** @description Только закладки или только выделения; по умолчанию — всё. */
+				kind?: 'bookmark' | 'highlight';
+				/** @description 1–100, по умолчанию 20. */
+				limit?: number;
+				/** @description С 0. */
+				offset?: number;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Страница пометок с книгами */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Page_AnnotationWithEntity'];
+				};
+			};
+			/** @description Неверный параметр */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
 				};
 			};
 			/** @description Нет токена */

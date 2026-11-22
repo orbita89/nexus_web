@@ -27,14 +27,21 @@
 		(event) => chat.onEvent(event),
 		() => chat.resync()
 	);
+	// Панель показали — догрузить открытую комнату (скрытая ничего не грузит, chat.wake).
+	$effect(() => {
+		if (chat.visible) chat.wake();
+	});
+
+	// Каналы ниже — только пока панель на экране: у скрытой панели нет ни запросов, ни подписок,
+	// и гостю на странице без живых блоков WebSocket не открывается вовсе.
 	// Канал общего списка комнат: новая комната появляется в «Обсуждается» без перезагрузки.
 	useRealtime(
-		() => ['rooms'],
+		() => (chat.visible ? ['rooms'] : []),
 		(event) => chat.onEvent(event)
 	);
 	// Открытая комната не из интересов (и у гостя) — подписать её канал.
 	useRealtime(
-		() => (chat.current && !chat.member ? [chat.current.room] : []),
+		() => (chat.visible && chat.current && !chat.member ? [chat.current.room] : []),
 		(event) => session.status !== 'authed' && chat.onEvent(event),
 		() => session.status !== 'authed' && chat.resync()
 	);

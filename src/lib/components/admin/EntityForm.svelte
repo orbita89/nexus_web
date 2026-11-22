@@ -268,6 +268,15 @@
 							bind:value={form.metadata.publisher}
 						/></label
 					>
+					<!-- Публичное чтение: без него книгу читают только vip и админы. -->
+					<label class="label cursor-pointer gap-2 text-sm">
+						<input
+							type="checkbox"
+							class="checkbox checkbox-sm"
+							bind:checked={form.metadata.publicRead}
+						/>
+						Публичное чтение — читать может любой посетитель
+					</label>
 				{:else if form.kind === 'painting'}
 					<label class="floating-label"
 						><span>Техника</span><input

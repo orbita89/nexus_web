@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { jsonLdScript } from '#lib/catalog/jsonld.ts';
 	import { canonicalUrl } from '#lib/catalog/seo.ts';
 
 	let {
@@ -7,7 +8,10 @@
 		description,
 		image,
 		canonical,
-		noindex = false
+		noindex = false,
+		type = 'website',
+		jsonLd = null,
+		preloadImage = false
 	}: {
 		title: string;
 		description?: string;
@@ -16,6 +20,12 @@
 		canonical?: string;
 		/** Страницу не индексировать (выдача поиска), но по ссылкам с неё ходить можно. */
 		noindex?: boolean;
+		/** og:type: `book`, `video.movie`, … */
+		type?: string;
+		/** Структурированные данные страницы (schema.org): jsonld.ts. */
+		jsonLd?: Record<string, unknown> | null;
+		/** Картинка — главная на первом экране: браузер начнёт качать её из <head>, до разметки. */
+		preloadImage?: boolean;
 	} = $props();
 
 	const fullTitle = $derived(`${title} — Кассандра`);
@@ -35,5 +45,13 @@
 	<link rel="canonical" href={url} />
 	<meta property="og:url" content={url} />
 	{#if noindex}<meta name="robots" content="noindex, follow" />{/if}
-	{#if image}<meta property="og:image" content={image} />{/if}
+	<meta property="og:type" content={type} />
+	<meta property="og:locale" content="ru_RU" />
+	<meta name="twitter:card" content={image ? 'summary_large_image' : 'summary'} />
+	{#if image}
+		<meta property="og:image" content={image} />
+		{#if preloadImage}<link rel="preload" as="image" href={image} fetchpriority="high" />{/if}
+	{/if}
+	<!-- eslint-disable-next-line svelte/no-at-html-tags -- JSON экранирован в jsonLdScript -->
+	{#if jsonLd}{@html jsonLdScript(jsonLd)}{/if}
 </svelte:head>

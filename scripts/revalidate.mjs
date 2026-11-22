@@ -4,6 +4,9 @@
 //   pnpm revalidate /films/dune-2021 /studios/mosfilm    — указанные страницы, до ответа
 //   pnpm revalidate films/dune-2021                      — ведущий / можно не писать
 //   pnpm revalidate --all                                — вся статика, в фоне на сервере
+//   pnpm revalidate --all --kind book                    — только раздел (book, movie, …)
+//   pnpm revalidate --all --kind book --wait             — и дождаться конца: прогресс раз в 5 с,
+//                                                           код выхода 1, если были ошибки
 //
 // ISR_SECRET — токен сервера (обязателен), ISR_URL — сервер (http://127.0.0.1:3000).
 // После изменений в коде нужна полная сборка (pnpm build): HTML ссылается на чанки сборки.
@@ -19,13 +22,49 @@ if (!secret) fail('ISR_SECRET не задан');
 if (!args.length) fail('укажите адреса страниц (/films/dune-2021, /studios/mosfilm) или --all');
 
 if (args.includes('--all')) {
-	const { started } = await post({ all: true });
-	console.log(
-		started
-			? 'Пересборка всей статики запущена в фоне — ход и итог в логе сервера.'
-			: 'Пересборка всей статики уже идёт — ход и итог в логе сервера.'
-	);
-	process.exit(0);
+	const kindAt = args.indexOf('--kind');
+	const kind = kindAt >= 0 ? args[kindAt + 1] : undefined;
+	if (kindAt >= 0 && !kind) fail('--kind: укажите раздел (book, movie, series, game, painting)');
+	const { started } = await post(kind ? { all: true, kind } : { all: true });
+	const what = kind ? `статики раздела ${kind}` : 'всей статики';
+	if (!args.includes('--wait')) {
+		console.log(
+			started
+				? `Пересборка ${what} запущена в фоне — ход и итог в логе сервера.`
+				: `Пересборка ${what} уже идёт — ход и итог в логе сервера.`
+		);
+		process.exit(0);
+	}
+	if (!started) console.log(`Пересборка уже идёт — ждём её.`);
+	process.exit(await waitRun());
+}
+
+/** Ждать конца пересборки (GET /_isr/status), печатая ход. Код выхода: 0 — без ошибок. */
+async function waitRun() {
+	const started = Date.now();
+	for (;;) {
+		await new Promise((resolve) => setTimeout(resolve, 5000));
+		const response = await fetch(`${isrUrl}/_isr/status`, {
+			headers: { authorization: `Bearer ${secret}` }
+		}).catch((error) => fail(`${isrUrl}: ${error.message}`));
+		if (!response.ok) fail(`${isrUrl}/_isr/status: ${response.status}`);
+		const { run } = await response.json();
+		if (!run) fail('сервер не знает о пересборке (перезапускался?)');
+		const minutes = ((Date.now() - started) / 60000).toFixed(1);
+		console.log(
+			`${run.done} из ${run.total} · изменено ${run.changed} · ошибок ${run.failed.length} · ${minutes} мин`
+		);
+		if (run.running) continue;
+		if (run.error) {
+			console.error(`Прервано: ${run.error}`);
+			return 1;
+		}
+		for (const { path, status } of run.failed) console.error(`✗ ${path} — ${status}`);
+		console.log(
+			`Готово: ${run.done} страниц, изменено ${run.changed}, ошибок ${run.failed.length}`
+		);
+		return run.failed.length ? 1 : 0;
+	}
 }
 
 let ok = 0;

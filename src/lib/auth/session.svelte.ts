@@ -37,6 +37,13 @@ export function ensureSession(): Promise<void> {
 }
 
 function apply(user: User | null) {
+	// Вышли (в этой вкладке или в другой) — закрытые книги с устройства убираем: читать их
+	// может только этот пользователь, а устройство может быть общим.
+	if (session.status === 'authed' && !user) {
+		void import('#lib/reader/cache.ts').then(({ idbCache, removePrivate }) =>
+			removePrivate(idbCache).catch(() => {})
+		);
+	}
 	session.user = user;
 	session.status = user ? 'authed' : 'guest';
 }
@@ -51,6 +58,9 @@ export const api = createApi({
 	baseUrl: '',
 	fetch: (request) => requireAuth().authFetch(request)
 });
+
+/** fetch с токеном текущего пользователя (обновление в очереди). Только в браузере. */
+export const authedFetch = (request: Request) => requireAuth().authFetch(request);
 
 /** API без токена — для входа, регистрации и ссылок из писем. */
 export const guestApi = createApi({ baseUrl: '', fetch: (request) => fetch(request) });

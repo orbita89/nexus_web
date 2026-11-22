@@ -26,7 +26,14 @@
 	<div class="avatar {wrap}">
 		<div class="{size} {radius}">
 			<!-- Бэкенд не вырезает квадрат (длинная сторона 512 px) — кадрируем сами. -->
-			<img {src} alt="" class="size-full object-cover" referrerpolicy="no-referrer" />
+			<img
+				{src}
+				alt=""
+				loading="lazy"
+				decoding="async"
+				class="size-full object-cover"
+				referrerpolicy="no-referrer"
+			/>
 		</div>
 	</div>
 {:else}

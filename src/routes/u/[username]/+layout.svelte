@@ -46,6 +46,10 @@
 		{ href: `${base}/reviews`, title: 'Рецензии', n: profile.reviews_count },
 		{ href: `${base}/threads`, title: 'Темы', n: profile.threads_count },
 		{ href: `${base}/collections`, title: 'Коллекции', n: profile.collections_count },
+		// Закладки и выделения в читалке — личные, вкладка только у владельца.
+		{ href: `${base}/books`, title: 'Из книг', n: null, ownerOnly: true },
+		// Обсуждения книг с ИИ-преподавателем — личные.
+		{ href: `${base}/ai`, title: 'ИИ', n: null, ownerOnly: true },
 		// Оценки, отметки и комментарии — разделы «Статистики», своих вкладок у них нет.
 		...(stats ? [{ href: `${base}/stats`, title: 'Статистика', n: null }] : [])
 	]);

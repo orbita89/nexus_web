@@ -269,8 +269,10 @@ class Chat {
 			this.missing = false;
 			this.roomSearch = false;
 			this.clearSearch();
-			void this.loadInfo();
-			void this.loadHistory();
+			// Скрытая панель (свёрнута, лист закрыт) ничего не грузит: комната и история — при
+			// первом показе (wake). Иначе каждая страница ходила бы за чатом, которого не видно.
+			this.#stale = true;
+			this.wake();
 		}
 		this.toasts = this.toasts.filter((t) => t.meta.room !== meta.room);
 		this.#save();
@@ -586,6 +588,31 @@ class Chat {
 	/** Переподключились или lagged: пропущенное не придёт — перечитать. */
 	resync() {
 		void this.loadChats();
+		if (!this.visible) {
+			this.#stale = true;
+			return;
+		}
+		void this.loadInfo();
+		void this.loadHistory();
+	}
+
+	/**
+	 * Панель на экране: на десктопе не свёрнута, уже — открыт лист. Пока нет — ни запросов, ни
+	 * подписок на комнаты (ChatPanel).
+	 */
+	get visible(): boolean {
+		if (typeof matchMedia === 'undefined') return false;
+		const mobile = !matchMedia('(min-width: 64rem)').matches;
+		return mobile ? this.sheet : !this.collapsed;
+	}
+
+	/** Комната открыта, но не загружена (панель была скрыта). */
+	#stale = false;
+
+	/** Панель показали — догрузить открытую комнату, если она ещё не загружена. */
+	wake() {
+		if (!this.#stale || !this.visible || !this.current) return;
+		this.#stale = false;
 		void this.loadInfo();
 		void this.loadHistory();
 	}

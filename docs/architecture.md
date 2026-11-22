@@ -123,6 +123,8 @@ scripts/api-types.mjs  генерация типов API
 
 ### Карточка — статика и ISR
 
+Подробно (раскладка файлов, книги в `.br`, nginx, админка, дев = прод, выкладка) — `docs/pages.md`.
+
 Карточка — `+page.server.ts` с `prerender = 'auto'`, данные — только каталог (`{ entity }`).
 Серверный load, а не `+page.ts`: только у него есть `__data.json` — статический файл, который
 браузер берёт при переходах вместо запросов к API. `'auto'`, а не `true`: с `true` маршрут
@@ -132,11 +134,28 @@ scripts/api-types.mjs  генерация типов API
   для прода — `ORIGIN` (попадает в `og:url`). Без бэкенда — `PRERENDER_ENTITIES=0` (так в CI):
   `entries()` листает `GET /catalog/entities`, на каждую карточку — `films/x.html`,
   `films/x/__data.json` и их `.br`/`.gz` в `build/prerendered`. Каждая сборка стирает `build/`
-  и собирает статику заново; `pnpm dev` статики не использует — там карточка рендерится на запрос.
+  и собирает статику заново.
+- **Книги на диске — по папкам и только сжатыми.** Их сотни тысяч: файлы книги лежат в папке из
+  первых двух символов slug и только в brotli — `/books/belaya-gvardiya` →
+  `books/be/belaya-gvardiya.html.br` и `books/be/belaya-gvardiya/__data.json.br` (`staticFiles`,
+  `brOnly` в `server/isr.js`). Адрес сайта не меняется. Браузеру с brotli (~97%) nginx отдаёт `.br`
+  как есть (`Content-Encoding: br`, модуль brotli не нужен); остальных (старые браузеры, превью
+  ссылок, curl) — в Node, он распаковывает тот же файл. Несжатых файлов и `.gz` у книг нет.
+- **Запись.** HTML минифицируется (`minifyHtml`: пробелы сжимаются, комментарии-метки гидрации
+  Svelte остаются), сжимается brotli q11. Совпало байт в байт с файлом на диске — файл не
+  трогается: mtime и ETag прежние, у читателей работает 304.
+- **Админка.** `/admin/books` → «Статические страницы книг»: перерисовать все книги
+  (`POST /admin/static/regenerate {"kind": "book"}` → фронтенд `{"all": true, "kind": "book"}`),
+  одну по slug (`POST /admin/static/pages`), ход — `GET /admin/static/status` (← `GET /_isr/status`).
 - **Раздача.** nginx (`deploy/nginx.conf`) отдаёт карточки с диска; query не важен. Файла нет —
   запрос идёт в Node (`server/index.js`), он рисует, сохраняет и отдаёт (`x-isr: miss`); дальше
   снова с диска. Без nginx (`pnpm start` локально) готовый файл отдаёт сам Node (`x-isr: hit`, без
-  бэкенда). В `pnpm dev` статики нет: страница рисуется на каждый запрос и ходит в API.
+  бэкенда).
+- **Dev = прод.** `pnpm dev` — сборка (`PRERENDER_ENTITIES=0`, карточки дорисовываются при первом
+  заходе) и `node server/index.js` на :3000; сайт — http://localhost через nginx-шлюз nexus_project
+  (`infra/nginx.conf`: статика с диска, `/api` → бэкенд, остальное → :3000). Сборка стирает `build/`
+  — статика рисуется заново. `pnpm serve` — перезапуск сервера без сборки (готовые страницы
+  остаются). `pnpm dev:vite` — старый режим с горячей перезагрузкой, только для вёрстки.
   Проверить, откуда пришла страница: `curl -sI <адрес> | grep -i -E 'x-static|x-isr'` —
   `X-Static: nginx` (с диска через nginx), `x-isr: hit` (с диска через Node), `x-isr: miss`
   (нарисована сейчас и сохранена).

@@ -777,7 +777,7 @@ export interface components {
 		 *     так что проверка «не ниже автора» — это `role >= Role::Author`.
 		 * @enum {string}
 		 */
-		Role: 'user' | 'author' | 'admin';
+		Role: 'user' | 'vip' | 'author' | 'admin';
 		/** @description Активная сессия (устройство). */
 		SessionView: {
 			/**

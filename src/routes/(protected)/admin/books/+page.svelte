@@ -14,6 +14,7 @@
 	import type { SchemaBooksIndexStatus } from '#lib/api/generated/catalog.ts';
 	import { api } from '#lib/auth/session.svelte.ts';
 	import Alert from '#lib/components/Alert.svelte';
+	import StaticPagesPanel from '#lib/components/admin/StaticPagesPanel.svelte';
 
 	// Книжный индекс: Tantivy (полнотекст) и слой Б (фасеты и порядки в памяти). Сводка — из
 	// GET /admin/books/index; пока идёт операция, опрашиваем её раз в 3 секунды.
@@ -343,3 +344,7 @@
 		</div>
 	</section>
 {/if}
+
+<div class="mt-4">
+	<StaticPagesPanel />
+</div>
