@@ -4,6 +4,57 @@
  */
 
 export interface paths {
+	'/api/v1/catalog/admin/ai/providers': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get: operations['list_ai_providers'];
+		put?: never;
+		/** Завести провайдера. Первый становится провайдером по умолчанию. */
+		post: operations['create_ai_provider'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/admin/ai/providers/{slug}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		post?: never;
+		delete: operations['delete_ai_provider'];
+		options?: never;
+		head?: never;
+		/** Поменять переданные поля; `api_keys` заменяют прежние ключи целиком. */
+		patch: operations['update_ai_provider'];
+		trace?: never;
+	};
+	'/api/v1/catalog/admin/ai/providers/{slug}/test': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Пробный запрос «ответь OK» на каждый ключ: проверить адрес, модель и ключи. */
+		post: operations['test_ai_provider'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/catalog/admin/archive/demote': {
 		parameters: {
 			query?: never;
@@ -228,6 +279,118 @@ export interface paths {
 		 *     необязательное; итог проверяется целиком, как при создании.
 		 */
 		patch: operations['update_banner'];
+		trace?: never;
+	};
+	'/api/v1/catalog/admin/books/index': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Состояние книжного индекса: оба слоя, место по полям, фасеты, последние сборки. */
+		get: operations['books_index_status'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/admin/books/index/cache': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Сбросить кэш выдачи книг и заново прогреть списки раздела (сразу). */
+		post: operations['clear_books_cache'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/admin/books/index/merge': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Слить сегменты Tantivy в один и убрать старые файлы — в фоне: освобождает место удалённых
+		 *     документов (`deleted_docs`) и ускоряет поиск. Данные не меняются.
+		 */
+		post: operations['merge_books_index'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/admin/books/index/rebuild': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Полная перестройка: Tantivy, слой Б и отпечатки текста — из БД, в фоне. До коммита поиск
+		 *     читает старый индекс целиком. Ход — в `operation` у `GET /admin/books/index`.
+		 */
+		post: operations['rebuild_books_index'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/admin/books/ranks': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Ручной порядок книг по местам. */
+		get: operations['list_book_ranks'];
+		/**
+		 * Заменить ручной порядок книг целиком. Действует сразу (слой Б в RAM), другие реплики
+		 *     подхватывают правку в течение минуты.
+		 */
+		put: operations['put_book_ranks'];
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/admin/books/sidecar': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Пересобрать слой Б книжного поиска (фасеты, сортировки, места) из БД — в фоне. */
+		post: operations['reload_books_sidecar'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
 		trace?: never;
 	};
 	'/api/v1/catalog/admin/entities': {
@@ -490,6 +653,125 @@ export interface paths {
 		 */
 		put: operations['save_ranking'];
 		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/admin/scripts': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get: operations['list_admin_scripts'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/admin/scripts/jobs': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get: operations['list_admin_script_jobs'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/admin/scripts/jobs/{job}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Задача и её лог (со строки `after`): опрашивать, пока `status = running`. */
+		get: operations['get_admin_script_job'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/admin/scripts/jobs/{job}/cancel': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		post: operations['cancel_admin_script_job'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/admin/scripts/{id}/progress': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Прогресс: у чистки книг — `{total, classified, written, remaining, pending_write,
+		 *     exported_not_classified, last_batch, batches_written, updated_at}`.
+		 */
+		get: operations['admin_script_progress'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/admin/scripts/{id}/report': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Отчёт скрипта (у чистки книг — `apply_report.txt` сухого прогона), текст. */
+		get: operations['admin_script_report'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/admin/scripts/{id}/run': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Запустить скрипт в фоне. Одновременно — одна задача. */
+		post: operations['run_admin_script'];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -1314,6 +1596,89 @@ export interface components {
 			/** @description Видна на сайте (активна и вышла / «скоро» / вручную / не из TMDB). */
 			visible: boolean;
 		};
+		/**
+		 * @description Что сделать после успешного (код 0) выполнения.
+		 * @enum {string}
+		 */
+		After: 'books_reindex';
+		/**
+		 * @description Усилие рассуждения модели: `none` — без размышлений (дешевле всего), `low` — дёшево и
+		 *     быстро (по умолчанию), `high` — тщательнее.
+		 * @enum {string}
+		 */
+		AiEffort: 'none' | 'low' | 'medium' | 'high';
+		/**
+		 * @description Протокол API провайдера.
+		 * @enum {string}
+		 */
+		AiKind: 'anthropic' | 'openai';
+		/** @description Провайдер без ключей — то, что видит админка. */
+		AiProvider: {
+			/**
+			 * @description Адрес API; `null` — адрес провайдера по умолчанию.
+			 * @example https://api.deepseek.com
+			 */
+			base_url?: string | null;
+			/**
+			 * @description `low` | `medium` | `high`.
+			 * @example low
+			 */
+			effort: string;
+			is_default: boolean;
+			/** Format: int32 */
+			keys_count: number;
+			/**
+			 * @description Начало и конец первого ключа: `sk-…a1b2`.
+			 * @example sk-…a1b2
+			 */
+			keys_hint: string;
+			/** @example openai */
+			kind: string;
+			/** @example deepseek-chat */
+			model: string;
+			/**
+			 * Format: int32
+			 * @description Записей в одном запросе (книг в пачке).
+			 */
+			per_request: number;
+			/** @example deepseek */
+			slug: string;
+			/**
+			 * Format: int32
+			 * @description Одновременных запросов.
+			 */
+			workers: number;
+		};
+		/** @description Новый провайдер или замена полей (`None` — поле не меняется). */
+		AiProviderInput: {
+			/** @description Ключи; несколько — запросы идут по очереди через все. Заменяют прежние целиком. */
+			api_keys?: string[] | null;
+			/** @description Пустая строка — адрес по умолчанию. */
+			base_url?: string | null;
+			effort?: components['schemas']['AiEffort'] | null;
+			is_default?: boolean | null;
+			kind?: components['schemas']['AiKind'] | null;
+			model?: string | null;
+			/**
+			 * Format: int32
+			 * @description 1..=500.
+			 */
+			per_request?: number | null;
+			/**
+			 * Format: int32
+			 * @description 1..=64.
+			 */
+			workers?: number | null;
+		};
+		/** @description Итог пробного запроса. */
+		AiTest: {
+			/** @description По ключу: `null` — ответил, иначе ошибка провайдера (без самого ключа). */
+			errors: (string | null)[];
+			/** @description Все ключи ответили. */
+			ok: boolean;
+			/** @description Ответ модели на первом рабочем ключе. */
+			reply?: string | null;
+		};
 		AnalysisPoint: {
 			/** @example Девочка с курицей на поясе — эмблема гильдии… */
 			text: string;
@@ -1684,6 +2049,53 @@ export interface components {
 			 */
 			written?: string | null;
 		};
+		/** @description Книга с ручным местом. */
+		BookRank: {
+			/**
+			 * Format: int32
+			 * @description 1..=65535: 1 — первое место.
+			 * @example 1
+			 */
+			rank: number;
+			/** @example master-i-margarita */
+			slug: string;
+			title: string;
+		};
+		BookRankItem: {
+			/**
+			 * Format: int32
+			 * @description 1..=65535.
+			 */
+			rank: number;
+			slug: string;
+		};
+		/** @description Книжный индекс целиком: `GET /admin/books/index`. */
+		BooksIndexStatus: {
+			/**
+			 * Format: int64
+			 * @description Видимых книг в БД — столько должно быть в индексе.
+			 */
+			db_books: number;
+			/**
+			 * Format: int64
+			 * @description Выданных номеров книг (`catalog_book_ords`).
+			 */
+			db_ords: number;
+			last_index_build?: components['schemas']['BuildStatus'] | null;
+			last_sidecar_build?: components['schemas']['BuildStatus'] | null;
+			operation?: components['schemas']['IndexOperation'] | null;
+			sidecar: components['schemas']['SidecarStatus'];
+			text: components['schemas']['TextIndexStatus'];
+		};
+		/** @description Сборка в этом процессе. */
+		BuildStatus: {
+			/** Format: date-time */
+			at: string;
+			/** Format: int64 */
+			books: number;
+			/** Format: int64 */
+			took_ms: number;
+		};
 		/** @enum {string} */
 		ButtonStyle: 'primary' | 'secondary' | 'ghost';
 		/** @description Категория церемонии целиком — тело `PUT .../nominations`. */
@@ -1705,6 +2117,11 @@ export interface components {
 			code: string;
 			/** Format: int64 */
 			count: number;
+		};
+		/** @description Новый провайдер. */
+		CreateAiProvider: components['schemas']['AiProviderInput'] & {
+			/** @example deepseek */
+			slug: string;
 		};
 		/** @description Новая премия. */
 		CreateAward: {
@@ -2195,6 +2612,64 @@ export interface components {
 			 */
 			retry_after?: number | null;
 		};
+		/** @description Один вид фасетов слоя Б. */
+		FacetGroupStatus: {
+			/**
+			 * Format: int64
+			 * @description Битмапы в сжатом виде, байты.
+			 */
+			bytes: number;
+			/**
+			 * @description Префикс ключа: `tag`, `person`, `role`, `pub`, `lang`, `form`, `year`.
+			 * @example tag
+			 */
+			kind: string;
+			/**
+			 * Format: int64
+			 * @description Сколько разных значений.
+			 */
+			values: number;
+		};
+		/** @description Флаг скрипта. */
+		Flag: components['schemas']['FlagKind'] & {
+			/** @description Значение скрипта по умолчанию (подсказка в форме); `null` — не задано. */
+			default?: string | null;
+			/** @description Что делает флаг. */
+			description: string;
+			/**
+			 * @description Имя без `--`: `limit`.
+			 * @example limit
+			 */
+			name: string;
+		};
+		/** @description Тип значения флага. */
+		FlagKind:
+			| {
+					/** @enum {string} */
+					type: 'bool';
+			  }
+			| {
+					/** Format: int64 */
+					max: number;
+					/** Format: int64 */
+					min: number;
+					/** @enum {string} */
+					type: 'int';
+			  }
+			| {
+					options: string[];
+					/** @enum {string} */
+					type: 'choice';
+			  }
+			| {
+					/** @enum {string} */
+					type: 'ai_provider';
+			  }
+			| {
+					pattern: string;
+					/** @enum {string} */
+					type: 'text';
+			  };
 		/** @description Деталь полотна со своим кропом. */
 		Fragment: {
 			crop: components['schemas']['Crop'];
@@ -2275,6 +2750,56 @@ export interface components {
 			 */
 			slugs?: string[] | null;
 		};
+		/** @description Место одного поля Tantivy на диске, байты (сумма по сегментам). */
+		IndexFieldUsage: {
+			/**
+			 * Format: int64
+			 * @description FAST-колонки.
+			 */
+			fast: number;
+			/** @example title */
+			field: string;
+			/**
+			 * Format: int64
+			 * @description Нормы длины поля.
+			 */
+			fieldnorms: number;
+			/**
+			 * Format: int64
+			 * @description Позиции слов (поиск фраз).
+			 */
+			positions: number;
+			/**
+			 * Format: int64
+			 * @description Списки документов по термам.
+			 */
+			postings: number;
+			/**
+			 * Format: int64
+			 * @description Словарь термов.
+			 */
+			termdict: number;
+			/** Format: int64 */
+			total: number;
+		};
+		/** @description Операция админки над индексом. */
+		IndexOperation: {
+			error?: string | null;
+			/**
+			 * Format: date-time
+			 * @description `null` — ещё идёт.
+			 */
+			finished_at?: string | null;
+			/** @description `null` — ещё идёт. */
+			ok?: boolean | null;
+			/**
+			 * @description `rebuild`, `sidecar`, `merge`.
+			 * @example rebuild
+			 */
+			op: string;
+			/** Format: date-time */
+			started_at: string;
+		};
 		IndexResult: {
 			/**
 			 * @description Сколько документов ушло в индекс.
@@ -2306,6 +2831,38 @@ export interface components {
 					/** @enum {string} */
 					type: 'done';
 			  });
+		/** @description Задача без лога. */
+		JobInfo: {
+			/** @description Аргументы, как в терминале: `--limit 5000 --yes`. */
+			args: string[];
+			/** Format: int32 */
+			exit_code?: number | null;
+			/** Format: date-time */
+			finished_at?: string | null;
+			/** Format: int64 */
+			id: number;
+			/**
+			 * Format: int64
+			 * @description Всего строк лога с начала (включая отброшенные из памяти).
+			 */
+			lines_total: number;
+			/** @example books-llm */
+			script: string;
+			/** Format: date-time */
+			started_at: string;
+			status: components['schemas']['JobStatus'];
+		};
+		/** @description Задача и строки лога с номера `from`. */
+		JobLog: components['schemas']['JobInfo'] & {
+			/**
+			 * Format: int64
+			 * @description Номер первой строки в `lines` (строки до него уже отброшены или не запрошены).
+			 */
+			from: number;
+			lines: string[];
+		};
+		/** @enum {string} */
+		JobStatus: 'running' | 'succeeded' | 'failed' | 'stopped' | 'cancelled';
 		LibgenFile: {
 			/**
 			 * @description `fb2`, `epub`, `pdf`, `djvu`…: до 20 символов.
@@ -2629,6 +3186,36 @@ export interface components {
 				title: string;
 				/** Format: date-time */
 				updated_at: string;
+			}[];
+			/**
+			 * Format: int64
+			 * @example 20
+			 */
+			limit: number;
+			/**
+			 * Format: int64
+			 * @example 0
+			 */
+			offset: number;
+			/**
+			 * Format: int64
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @example 137
+			 */
+			total: number;
+		};
+		/** @description Страница списка. */
+		Page_BookRank: {
+			items: {
+				/**
+				 * Format: int32
+				 * @description 1..=65535: 1 — первое место.
+				 * @example 1
+				 */
+				rank: number;
+				/** @example master-i-margarita */
+				slug: string;
+				title: string;
 			}[];
 			/**
 			 * Format: int64
@@ -3043,6 +3630,11 @@ export interface components {
 			/** @example АСТ */
 			name: string;
 		};
+		/** @description Новый ручной список целиком (прежний удаляется). */
+		PutBookRanks: {
+			/** @description До 65 535 книг; slug'и и места не повторяются. Пустой — ручного порядка нет. */
+			items: components['schemas']['BookRankItem'][];
+		};
 		/** @description Церемония целиком: прежние номинации заменяются этими. */
 		PutNominations: {
 			categories: components['schemas']['CategoryNominations'][];
@@ -3197,6 +3789,36 @@ export interface components {
 		 * @enum {string}
 		 */
 		ReleaseStatus: 'released' | 'soon' | 'announced';
+		/**
+		 * @description Значения флагов: `{"limit": 5000, "yes": true, "ai": "deepseek"}`. `null`, `""`, `false` —
+		 *     флаг не передаётся.
+		 */
+		RunScript: {
+			flags?: {
+				[key: string]: unknown;
+			};
+		};
+		/** @description Скрипт реестра. */
+		Script: {
+			after?: components['schemas']['After'] | null;
+			/** @description Команда для терминала — то же самое без админки. */
+			command: string;
+			/** @description Что делает, по шагам. */
+			description: string;
+			flags: components['schemas']['Flag'][];
+			/**
+			 * @description Группа в меню.
+			 * @example Книги
+			 */
+			group: string;
+			/** @description Есть прогресс (`GET /admin/scripts/{id}/progress`). */
+			has_progress: boolean;
+			/** @description Есть отчёт (`GET /admin/scripts/{id}/report`). */
+			has_report: boolean;
+			/** @example books-llm */
+			id: string;
+			title: string;
+		};
 		/**
 		 * @description Сортировка поиска (без неё — по релевантности); у кого значения нет — в конце.
 		 * @enum {string}
@@ -3397,6 +4019,44 @@ export interface components {
 			 */
 			tags: string[];
 		};
+		/** @description Слой Б — RAM (фасеты, сортировки, ручной порядок). */
+		SidecarStatus: {
+			/**
+			 * Format: int64
+			 * @description Видимые книги.
+			 */
+			books: number;
+			facets: components['schemas']['FacetGroupStatus'][];
+			/** Format: int64 */
+			facets_bytes: number;
+			/** @description Книг по виду текста: `book`, `collection`, `article`, `document`. */
+			forms: {
+				[key: string]: number;
+			};
+			/**
+			 * Format: int64
+			 * @description Растёт с каждой подменой слоя (ключ кэша выдачи).
+			 */
+			generation: number;
+			/** Format: int64 */
+			manual_ranks: number;
+			/**
+			 * Format: int64
+			 * @description Оценка памяти: `SortMeta` (8 байт на книгу), готовые порядки, битмапы.
+			 */
+			meta_bytes: number;
+			/** Format: int64 */
+			orders_bytes: number;
+			/**
+			 * Format: int64
+			 * @description Длина массивов по `ord` (с дырами от удалённых книг).
+			 */
+			slots: number;
+			/** Format: int64 */
+			total_bytes: number;
+			/** Format: int64 */
+			with_cover: number;
+		};
 		/** @description Итог «обновить рейтинги». */
 		StatsResult: {
 			/**
@@ -3581,6 +4241,51 @@ export interface components {
 			/** @example sci-fi */
 			slug: string;
 		};
+		/** @description Слой А — Tantivy (текст и карточки). */
+		TextIndexStatus: {
+			/**
+			 * Format: int64
+			 * @description Ответов в кэше выдачи и готовых рядов.
+			 */
+			cache_entries: number;
+			/** Format: int64 */
+			cache_ranked: number;
+			/**
+			 * Format: int64
+			 * @description Удалённые документы, ещё лежащие в сегментах (уйдут при слиянии `merge`).
+			 */
+			deleted_docs: number;
+			/** Format: int64 */
+			deletes_bytes: number;
+			/**
+			 * Format: int64
+			 * @description Все файлы каталога индекса (с ещё не убранными старыми сегментами и `sidecar.bin`).
+			 */
+			disk_bytes: number;
+			/** Format: int64 */
+			docs: number;
+			/** @description Поля по убыванию места. */
+			fields: components['schemas']['IndexFieldUsage'][];
+			/**
+			 * Format: int64
+			 * @description Всё, что занимает индекс по данным Tantivy.
+			 */
+			index_bytes: number;
+			/** @example books-4 */
+			schema_version: string;
+			/** Format: int64 */
+			segments: number;
+			/**
+			 * Format: int64
+			 * @description Снимок слоя Б на диске (`sidecar.bin`).
+			 */
+			sidecar_file_bytes: number;
+			/**
+			 * Format: int64
+			 * @description Хранилище документов (поле `card`; сжато целиком, по полям не делится).
+			 */
+			store_bytes: number;
+		};
 		/** @description Работа человека в карточке выдачи поиска людей. */
 		TopWork: {
 			/**
@@ -3739,6 +4444,12 @@ export interface components {
 export type SchemaActiveResult = components['schemas']['ActiveResult'];
 export type SchemaAddCredit = components['schemas']['AddCredit'];
 export type SchemaAdminEntitySummary = components['schemas']['AdminEntitySummary'];
+export type SchemaAfter = components['schemas']['After'];
+export type SchemaAiEffort = components['schemas']['AiEffort'];
+export type SchemaAiKind = components['schemas']['AiKind'];
+export type SchemaAiProvider = components['schemas']['AiProvider'];
+export type SchemaAiProviderInput = components['schemas']['AiProviderInput'];
+export type SchemaAiTest = components['schemas']['AiTest'];
 export type SchemaAnalysisPoint = components['schemas']['AnalysisPoint'];
 export type SchemaArchiveDoc = components['schemas']['ArchiveDoc'];
 export type SchemaArchiveStats = components['schemas']['ArchiveStats'];
@@ -3757,9 +4468,14 @@ export type SchemaBannerSlide = components['schemas']['BannerSlide'];
 export type SchemaBannerTarget = components['schemas']['BannerTarget'];
 export type SchemaBookFile = components['schemas']['BookFile'];
 export type SchemaBookMetadata = components['schemas']['BookMetadata'];
+export type SchemaBookRank = components['schemas']['BookRank'];
+export type SchemaBookRankItem = components['schemas']['BookRankItem'];
+export type SchemaBooksIndexStatus = components['schemas']['BooksIndexStatus'];
+export type SchemaBuildStatus = components['schemas']['BuildStatus'];
 export type SchemaButtonStyle = components['schemas']['ButtonStyle'];
 export type SchemaCategoryNominations = components['schemas']['CategoryNominations'];
 export type SchemaCountryHit = components['schemas']['CountryHit'];
+export type SchemaCreateAiProvider = components['schemas']['CreateAiProvider'];
 export type SchemaCreateAward = components['schemas']['CreateAward'];
 export type SchemaCreateBanner = components['schemas']['CreateBanner'];
 export type SchemaCreateCategory = components['schemas']['CreateCategory'];
@@ -3783,12 +4499,20 @@ export type SchemaEntitySummary = components['schemas']['EntitySummary'];
 export type SchemaEpisode = components['schemas']['Episode'];
 export type SchemaEpisodeInput = components['schemas']['EpisodeInput'];
 export type SchemaErrorBody = components['schemas']['ErrorBody'];
+export type SchemaFacetGroupStatus = components['schemas']['FacetGroupStatus'];
+export type SchemaFlag = components['schemas']['Flag'];
+export type SchemaFlagKind = components['schemas']['FlagKind'];
 export type SchemaFragment = components['schemas']['Fragment'];
 export type SchemaFragmentInput = components['schemas']['FragmentInput'];
 export type SchemaGameMetadata = components['schemas']['GameMetadata'];
 export type SchemaIndexEntities = components['schemas']['IndexEntities'];
+export type SchemaIndexFieldUsage = components['schemas']['IndexFieldUsage'];
+export type SchemaIndexOperation = components['schemas']['IndexOperation'];
 export type SchemaIndexResult = components['schemas']['IndexResult'];
 export type SchemaJobEvent = components['schemas']['JobEvent'];
+export type SchemaJobInfo = components['schemas']['JobInfo'];
+export type SchemaJobLog = components['schemas']['JobLog'];
+export type SchemaJobStatus = components['schemas']['JobStatus'];
 export type SchemaLibgenFile = components['schemas']['LibgenFile'];
 export type SchemaLibgenSource = components['schemas']['LibgenSource'];
 export type SchemaMetadata = components['schemas']['Metadata'];
@@ -3801,6 +4525,7 @@ export type SchemaPageAdminEntitySummary = components['schemas']['Page_AdminEnti
 export type SchemaPageArchiveDoc = components['schemas']['Page_ArchiveDoc'];
 export type SchemaPageAwardListItem = components['schemas']['Page_AwardListItem'];
 export type SchemaPageBanner = components['schemas']['Page_Banner'];
+export type SchemaPageBookRank = components['schemas']['Page_BookRank'];
 export type SchemaPageEntitySummary = components['schemas']['Page_EntitySummary'];
 export type SchemaPageEpisode = components['schemas']['Page_Episode'];
 export type SchemaPagePersonSummary = components['schemas']['Page_PersonSummary'];
@@ -3818,6 +4543,7 @@ export type SchemaPersonSummary = components['schemas']['PersonSummary'];
 export type SchemaPlannedStep = components['schemas']['PlannedStep'];
 export type SchemaProgressEvent = components['schemas']['ProgressEvent'];
 export type SchemaPublisherHit = components['schemas']['PublisherHit'];
+export type SchemaPutBookRanks = components['schemas']['PutBookRanks'];
 export type SchemaPutNominations = components['schemas']['PutNominations'];
 export type SchemaPutRelation = components['schemas']['PutRelation'];
 export type SchemaRankPreviewRow = components['schemas']['RankPreviewRow'];
@@ -3827,6 +4553,8 @@ export type SchemaReindexResult = components['schemas']['ReindexResult'];
 export type SchemaRelatedWork = components['schemas']['RelatedWork'];
 export type SchemaRelationKind = components['schemas']['RelationKind'];
 export type SchemaReleaseStatus = components['schemas']['ReleaseStatus'];
+export type SchemaRunScript = components['schemas']['RunScript'];
+export type SchemaScript = components['schemas']['Script'];
 export type SchemaSearchSort = components['schemas']['SearchSort'];
 export type SchemaSeasonDetail = components['schemas']['SeasonDetail'];
 export type SchemaSeasonList = components['schemas']['SeasonList'];
@@ -3837,6 +4565,7 @@ export type SchemaSeriesStatus = components['schemas']['SeriesStatus'];
 export type SchemaSetEpisodes = components['schemas']['SetEpisodes'];
 export type SchemaSetFragments = components['schemas']['SetFragments'];
 export type SchemaSetTags = components['schemas']['SetTags'];
+export type SchemaSidecarStatus = components['schemas']['SidecarStatus'];
 export type SchemaStatsResult = components['schemas']['StatsResult'];
 export type SchemaStep = components['schemas']['Step'];
 export type SchemaStepEvent = components['schemas']['StepEvent'];
@@ -3849,6 +4578,7 @@ export type SchemaTag = components['schemas']['Tag'];
 export type SchemaTagHit = components['schemas']['TagHit'];
 export type SchemaTagKind = components['schemas']['TagKind'];
 export type SchemaTagWithCount = components['schemas']['TagWithCount'];
+export type SchemaTextIndexStatus = components['schemas']['TextIndexStatus'];
 export type SchemaTopWork = components['schemas']['TopWork'];
 export type SchemaTrailerProvider = components['schemas']['TrailerProvider'];
 export type SchemaTrailerSource = components['schemas']['TrailerSource'];
@@ -3861,6 +4591,289 @@ export type SchemaUpdatePerson = components['schemas']['UpdatePerson'];
 export type SchemaUpdateTag = components['schemas']['UpdateTag'];
 export type $defs = Record<string, never>;
 export interface operations {
+	list_ai_providers: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Провайдеры ИИ, по умолчанию — первым */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['AiProvider'][];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	create_ai_provider: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['CreateAiProvider'];
+			};
+		};
+		responses: {
+			/** @description Заведён */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['AiProvider'];
+				};
+			};
+			/** @description Нет kind/model/api_keys, лимиты вне диапазона */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Такой slug уже есть */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Не задан AI_SECRET_KEY */
+			503: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	delete_ai_provider: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Удалён */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такого провайдера */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	update_ai_provider: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['AiProviderInput'];
+			};
+		};
+		responses: {
+			/** @description Обновлён */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['AiProvider'];
+				};
+			};
+			/** @description Поле вне диапазона */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такого провайдера */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Не задан AI_SECRET_KEY (при смене ключей) */
+			503: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	test_ai_provider: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Ответ по каждому ключу */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['AiTest'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такого провайдера */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Не задан или не тот AI_SECRET_KEY */
+			503: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
 	archive_demote: {
 		parameters: {
 			query?: never;
@@ -5032,6 +6045,359 @@ export interface operations {
 			};
 		};
 	};
+	books_index_status: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Состояние индекса */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['BooksIndexStatus'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Книжный поиск выключен */
+			503: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	clear_books_cache: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Кэш сброшен */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Книжный поиск выключен */
+			503: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	merge_books_index: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Слияние запущено */
+			202: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Уже идёт другая операция */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Книжный поиск выключен */
+			503: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	rebuild_books_index: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Перестройка запущена */
+			202: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Уже идёт другая операция */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Книжный поиск выключен */
+			503: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	list_book_ranks: {
+		parameters: {
+			query?: {
+				limit?: number;
+				offset?: number;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Книги по местам */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Page_BookRank'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	put_book_ranks: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['PutBookRanks'];
+			};
+		};
+		responses: {
+			/** @description Список заменён */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Место вне 1..65535, повтор slug'а или места */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Книги с таким slug нет */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	reload_books_sidecar: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Пересборка запущена */
+			202: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Уже идёт другая операция */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Книжный поиск выключен */
+			503: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
 	admin_list_entities: {
 		parameters: {
 			query?: {
@@ -6053,6 +7419,360 @@ export interface operations {
 			};
 			/** @description Уже идёт перестройка поиска или операция TMDB */
 			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	list_admin_scripts: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Скрипты: описание, команда для терминала, флаги */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['Script'][];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	list_admin_script_jobs: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Последние задачи этого процесса, новые первыми */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['JobInfo'][];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	get_admin_script_job: {
+		parameters: {
+			query?: {
+				/** @description Строки лога с этого номера (с 0) — для догрузки: `lines_total` прошлого ответа. */
+				after?: number;
+			};
+			header?: never;
+			path: {
+				job: number;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Задача и строки лога */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['JobLog'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такой задачи (или сервер перезапущен) */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	cancel_admin_script_job: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				job: number;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Остановка запрошена */
+			202: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такой идущей задачи */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	admin_script_progress: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Прогресс (как записал скрипт) */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': Record<string, never>;
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет скрипта или прогресса ещё нет */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	admin_script_report: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Текст отчёта (хвост до 512 КБ) */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'text/plain': string;
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет скрипта, у него нет отчёта или отчёт ещё не создан */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	run_admin_script: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description id скрипта из реестра */
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['RunScript'];
+			};
+		};
+		responses: {
+			/** @description Запущен */
+			202: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['JobInfo'];
+				};
+			};
+			/** @description Неизвестный флаг или значение не подходит (field — флаг) */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такого скрипта */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Уже идёт другая задача */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Не задан SCRIPTS_PYTHON */
+			503: {
 				headers: {
 					[name: string]: unknown;
 				};
@@ -7163,6 +8883,14 @@ export interface operations {
 				 *     при включённом индексе Tantivy), в остальных случаях игнорируется.
 				 */
 				has_cover?: boolean;
+				/**
+				 * @description Только книги: вид текста через запятую — `book`, `collection` (сборник), `article`
+				 *     (статья), `document` (журнал, газета, документ) или `all`. По умолчанию `book`: сборники,
+				 *     статьи и документы в обычной выдаче не показываются. Неизвестное значение — 400. Работает
+				 *     в книжном поиске (как `has_cover`), в остальных случаях игнорируется.
+				 * @example book,collection
+				 */
+				book_form?: string;
 				/** @description 1–100, по умолчанию 20. */
 				limit?: number;
 				/** @description С 0. */
@@ -7463,6 +9191,14 @@ export interface operations {
 				 *     при включённом индексе Tantivy), в остальных случаях игнорируется.
 				 */
 				has_cover?: boolean;
+				/**
+				 * @description Только книги: вид текста через запятую — `book`, `collection` (сборник), `article`
+				 *     (статья), `document` (журнал, газета, документ) или `all`. По умолчанию `book`: сборники,
+				 *     статьи и документы в обычной выдаче не показываются. Неизвестное значение — 400. Работает
+				 *     в книжном поиске (как `has_cover`), в остальных случаях игнорируется.
+				 * @example book,collection
+				 */
+				book_form?: string;
 				/** @description 1–100, по умолчанию 20. */
 				limit?: number;
 				/** @description С 0. */

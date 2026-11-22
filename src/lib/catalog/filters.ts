@@ -180,6 +180,61 @@ export interface CatalogFilters {
 	awarded?: boolean;
 	/** Только книги с обложкой (`cover=1`): фильтр книжного поиска. */
 	hasCover?: boolean;
+	/**
+	 * Вид текста книги (`book_form`): `book,collection` или `all`. Пусто — умолчание раздела, параметр
+	 * не передаём: бэкенд отдаёт только книги.
+	 */
+	bookForm?: string;
+}
+
+/** Виды текста в разделе книг, по порядку переключателя. */
+export const BOOK_FORMS = [
+	{ value: 'book', title: 'Книги' },
+	{ value: 'collection', title: 'Сборники' },
+	{ value: 'article', title: 'Статьи' },
+	{ value: 'document', title: 'Документы' },
+	{ value: 'all', title: 'Все' }
+] as const;
+
+export type BookForm = (typeof BOOK_FORMS)[number]['value'];
+
+/**
+ * ?book_form= в нормальный вид: известные значения через запятую, в порядке переключателя; `all`
+ * поглощает остальные. Только «Книги» — умолчание, его в адрес не пишем.
+ */
+export function normalizeBookForm(raw: string | null | undefined): string | undefined {
+	const set = new Set((raw ?? '').split(',').map((v) => v.trim()));
+	if (set.has('all')) return 'all';
+	const forms = BOOK_FORMS.map((f) => f.value).filter((v) => set.has(v));
+	return forms.length && !(forms.length === 1 && forms[0] === 'book') ? forms.join(',') : undefined;
+}
+
+/**
+ * Выбранные виды для переключателя и запроса. У автора (person) по умолчанию «Все»: у кого только
+ * статьи, тот иначе получил бы пустую выдачу.
+ */
+export function bookForms(f: Pick<CatalogFilters, 'bookForm' | 'person'>): BookForm[] {
+	const value = f.bookForm ?? (f.person ? 'all' : 'book');
+	return value.split(',') as BookForm[];
+}
+
+/**
+ * Значение book_form после щелчка по виду: «Все» — только оно; вид — добавить или убрать (последний
+ * не убирается). null — умолчание, параметр из адреса убираем.
+ */
+export function toggleBookForm(
+	f: Pick<CatalogFilters, 'bookForm' | 'person'>,
+	form: BookForm
+): string | null {
+	const current = bookForms(f).filter((v) => v !== 'all');
+	let next: string[];
+	if (form === 'all') next = ['all'];
+	else if (current.includes(form))
+		next = current.length > 1 ? current.filter((v) => v !== form) : current;
+	else next = [...current, form];
+	const value = normalizeBookForm(next.join(',')) ?? 'book';
+	const fallback = f.person ? 'all' : 'book';
+	return value === fallback ? null : value;
 }
 
 export function readFilters(url: UrlLike): CatalogFilters {
@@ -208,7 +263,12 @@ export function readFilters(url: UrlLike): CatalogFilters {
 		award,
 		awardYear: award ? readYear(url, 'award_year') : undefined,
 		awarded: url.searchParams.get('awarded') === '1' || undefined,
-		hasCover: url.searchParams.get('cover') === '1' || undefined
+		hasCover: url.searchParams.get('cover') === '1' || undefined,
+		// Явное «Книги» у автора тоже значимо: там умолчание — «Все».
+		bookForm:
+			person && url.searchParams.get('book_form') === 'book'
+				? 'book'
+				: normalizeBookForm(url.searchParams.get('book_form'))
 	};
 }
 
@@ -235,7 +295,8 @@ export function hasFilters(f: CatalogFilters): boolean {
 		f.person ||
 		f.award ||
 		f.awarded ||
-		f.hasCover
+		f.hasCover ||
+		f.bookForm
 	);
 }
 

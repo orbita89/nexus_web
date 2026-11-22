@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+	bookForms,
+	toggleBookForm,
 	filterSet,
 	hasFilters,
 	readArchive,
@@ -106,5 +108,38 @@ describe('filterSet', () => {
 	it('издатель читается из адреса и считается фильтром', () => {
 		expect(readFilters(at('?publisher=%D0%90%D0%A1%D0%A2')).publisher).toBe('АСТ');
 		expect(hasFilters(readFilters(at('?publisher=АСТ')))).toBe(true);
+	});
+});
+
+describe('book_form', () => {
+	const url = (q: string) => new URL(`https://x/books?${q}`);
+
+	it('по умолчанию «Книги» — параметра нет', () => {
+		expect(readFilters(url('')).bookForm).toBeUndefined();
+		expect(readFilters(url('book_form=book')).bookForm).toBeUndefined();
+		expect(bookForms({})).toEqual(['book']);
+	});
+
+	it('нормализует порядок, мусор и all', () => {
+		expect(readFilters(url('book_form=article,xxx,collection')).bookForm).toBe(
+			'collection,article'
+		);
+		expect(readFilters(url('book_form=book,all')).bookForm).toBe('all');
+		expect(hasFilters(readFilters(url('book_form=collection')))).toBe(true);
+	});
+
+	it('у автора по умолчанию «Все»', () => {
+		expect(bookForms({ person: 'tolstoy' })).toEqual(['all']);
+		expect(readFilters(url('person=tolstoy&book_form=book')).bookForm).toBe('book');
+	});
+
+	it('переключает виды', () => {
+		expect(toggleBookForm({}, 'collection')).toBe('book,collection');
+		expect(toggleBookForm({ bookForm: 'book,collection' }, 'book')).toBe('collection');
+		expect(toggleBookForm({ bookForm: 'collection' }, 'collection')).toBe('collection');
+		expect(toggleBookForm({ bookForm: 'collection' }, 'all')).toBe('all');
+		expect(toggleBookForm({ bookForm: 'all' }, 'book')).toBeNull();
+		expect(toggleBookForm({ person: 'x' }, 'all')).toBeNull();
+		expect(toggleBookForm({ person: 'x' }, 'book')).toBe('book');
 	});
 });

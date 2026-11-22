@@ -10,7 +10,7 @@
 import type { Api } from '#lib/api/client.ts';
 import { unwrap } from '#lib/api/errors.ts';
 import type { SchemaEntityKind, SchemaSearchSort } from '#lib/api/generated/catalog.ts';
-import { searchSortParam, type CatalogFilters, type Mode } from './filters.ts';
+import { bookForms, searchSortParam, type CatalogFilters, type Mode } from './filters.ts';
 import { PAGE_SIZE } from './url.ts';
 
 /**
@@ -52,8 +52,16 @@ export function searchQuery(f: CatalogFilters, options: SearchOptions) {
 		award_year: f.award ? f.awardYear : undefined,
 		awarded: f.awarded,
 		has_cover: f.hasCover,
+		// Вид текста — только у книг; другим разделам бэкенд его не ждёт.
+		book_form: kinds.length === 1 && kinds[0] === 'book' ? bookFormParam(f) : undefined,
 		sort: options.sort
 	};
+}
+
+/** book_form для API: только «Книги» — умолчание бэкенда, параметр не передаём. */
+function bookFormParam(f: CatalogFilters): string | undefined {
+	const forms = bookForms(f);
+	return forms.length === 1 && forms[0] === 'book' ? undefined : forms.join(',');
 }
 
 /** Страница поиска с фильтрами из адреса; studioSlug — фильмы страницы студии. */

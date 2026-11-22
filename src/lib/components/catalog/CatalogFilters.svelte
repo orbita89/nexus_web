@@ -5,10 +5,13 @@
 	import type { SchemaTagWithCount } from '#lib/api/generated/catalog.ts';
 	import { guestApi } from '#lib/auth/session.svelte.ts';
 	import {
+		BOOK_FORMS,
+		bookForms,
 		filterSet,
 		hasFilters,
 		PERSON_ROLES,
 		roleOptions,
+		toggleBookForm,
 		yearLabel,
 		type CatalogFilters
 	} from '#lib/catalog/filters.ts';
@@ -407,7 +410,7 @@
 		{#if titleField}
 			<form method="GET" action={path} onsubmit={submitTitle} class="flex gap-2" role="search">
 				<!-- Без JS форма уходит обычным GET: остальные фильтры — скрытыми полями. -->
-				{#each ['tag', 'year', 'year_from', 'year_to', 'studio', 'publisher', 'museum', 'country', 'person', 'role', 'archive', 'award', 'award_year', 'awarded', 'cover'] as key (key)}
+				{#each ['tag', 'year', 'year_from', 'year_to', 'studio', 'publisher', 'museum', 'country', 'person', 'role', 'archive', 'award', 'award_year', 'awarded', 'cover', 'book_form'] as key (key)}
 					{@const value = page.url.searchParams.get(key)}
 					{#if value}<input type="hidden" name={key} {value} />{/if}
 				{/each}
@@ -606,6 +609,23 @@
 				/>
 			</FilterMenu>
 		</div>
+
+		{#if kind?.kind === 'book'}
+			<!-- Вид текста (book_form): можно несколько; «Все» — отдельно от остальных. -->
+			{@const selected = bookForms(filters)}
+			<div class="flex flex-wrap gap-1" role="group" aria-label="Вид текста">
+				{#each BOOK_FORMS as form (form.value)}
+					{@const on = selected.includes(form.value)}
+					<button
+						type="button"
+						class={['btn btn-sm', on ? 'btn-primary' : 'btn-ghost']}
+						aria-pressed={on}
+						onclick={() => apply({ book_form: toggleBookForm(filters, form.value) })}
+						>{form.title}</button
+					>
+				{/each}
+			</div>
+		{/if}
 
 		<!-- Нижняя строка есть всегда: в ней «С наградами», архив, плашки и сброс. -->
 		<div class="flex flex-wrap items-center gap-2">

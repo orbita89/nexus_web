@@ -17,7 +17,8 @@
 		{ href: '/admin/collections', title: 'Подборки' },
 		{ href: '/admin/chat', title: 'Комнаты чата' },
 		{ href: '/admin/users', title: 'Пользователи' },
-		{ href: '/admin/index', title: 'Индексация' }
+		{ href: '/admin/index', title: 'Индексация' },
+		{ href: '/admin/books', title: 'Книжный индекс' }
 	];
 	const isActive = (href: string) =>
 		href === '/admin' ? page.url.pathname === href : page.url.pathname.startsWith(href);
