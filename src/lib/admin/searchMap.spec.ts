@@ -5,6 +5,7 @@ describe('searchMap', () => {
 	it('подписи файлов', () => {
 		expect(describeFile('sidecar-entities.cols')).toContain('порядков');
 		expect(describeFile('abc123.store')).toContain('карточки');
+		expect(describeFile('sidecar-refs.cols')).toContain('студий');
 		expect(describeFile('abc123.idx')).toContain('postings');
 		expect(describeFile('unknown.xyz')).toBe('Файл сегмента Tantivy');
 	});

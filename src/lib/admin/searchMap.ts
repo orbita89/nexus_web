@@ -18,6 +18,8 @@ export function describeFile(name: string): string {
 		return 'Слой Б: SortMeta, даты, балл и 8 готовых порядков сортировки (номера и позиции)';
 	if (name === 'sidecar-entities.bin')
 		return 'Слой Б: битовые карты мелких фильтров и таблицы подсказок — читаются в память';
+	if (name === 'sidecar-refs.cols')
+		return 'Справочники студий (slug, логотип) и тегов (название, описание) для подсказок фильтров — mmap';
 	if (name === 'sidecar-people.cols')
 		return 'Слой Б людей: известность и порядки по известности и имени';
 	if (name === 'sidecar-people.bin')
@@ -50,8 +52,8 @@ export const FIELD_INFO: Record<string, FieldInfo> = {
 		how: 'Самый слабый вес'
 	},
 	facet: {
-		what: 'Фильтры с большим числом значений: люди, роли, студии, издатели, музеи, награды',
-		how: 'Один терм на значение (studio:pixar, role:director:christopher-nolan); фильтр — запрос к Tantivy, в RAM ничего'
+		what: 'Фильтры с большим числом значений: люди и роли (весь состав), студии, издатели, музеи, награды, slug',
+		how: 'Один терм на значение (studio:pixar, role:director:christopher-nolan, slug:matrix); фильтр — запрос к Tantivy, в RAM ничего, в БД не ходит'
 	},
 	kind: { what: 'Вид: book, movie, …, person', how: 'Нужен перестройке одного вида' },
 	ord: {

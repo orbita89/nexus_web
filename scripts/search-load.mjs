@@ -58,7 +58,7 @@ const SORTS = [
 	'awarded',
 	'title'
 ];
-const PEOPLE = ['leonardo-dicaprio', 'christopher-nolan', 'brad-pitt', 'tom-hanks', 'stephen-king'];
+const PEOPLE = ['leonardo-dicaprio', 'christopher-nolan', 'brad-pitt', 'tom-hanks', 'stiven-king'];
 const ROLES = ['actor', 'director', 'author'];
 
 // ONLY=text,list — только эти виды запросов (замер цены одного вида).
