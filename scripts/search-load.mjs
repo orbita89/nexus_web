@@ -5,6 +5,7 @@
 //
 //   node scripts/search-load.mjs                       # http://localhost, 8 потоков, 30 с
 //   BASE=https://site CONCURRENCY=16 SECONDS=60 node scripts/search-load.mjs
+//   ONLY=text,list node scripts/search-load.mjs        # только эти виды
 //
 // Часть запросов уникальна (случайные слова и страницы): кэш ответов не спасает, видна цена
 // самого поиска.
@@ -60,6 +61,9 @@ const SORTS = [
 const PEOPLE = ['leonardo-dicaprio', 'christopher-nolan', 'brad-pitt', 'tom-hanks', 'stephen-king'];
 const ROLES = ['actor', 'director', 'author'];
 
+// ONLY=text,list — только эти виды запросов (замер цены одного вида).
+const ONLY = (process.env.ONLY ?? '').split(',').filter(Boolean);
+
 const pick = (list) => list[Math.floor(Math.random() * list.length)];
 const page = () => pick([0, 0, 0, 24, 48, 240, 2400]);
 
@@ -89,13 +93,15 @@ const SCENARIOS = [
 	]
 ];
 
+const ACTIVE = ONLY.length ? SCENARIOS.filter(([name]) => ONLY.includes(name)) : SCENARIOS;
+
 const stats = new Map();
 let errors = 0;
 const firstErrors = [];
 
 async function worker(until) {
 	while (Date.now() < until) {
-		const [name, url] = pick(SCENARIOS);
+		const [name, url] = pick(ACTIVE);
 		const path = url();
 		const started = performance.now();
 		try {
