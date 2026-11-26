@@ -94,6 +94,26 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/social/admin/collections/index/rebuild': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Перестроить поисковый индекс коллекций (Tantivy) из БД: новое поколение, в фоне. Вызывается
+		 *     со страницы «Индексы» админки; сам индекс описывает `GET /catalog/admin/search/indexes`.
+		 */
+		post: operations['rebuild_collections_index'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/social/admin/collections/{id}': {
 		parameters: {
 			query?: never;
@@ -681,7 +701,7 @@ export interface paths {
 		};
 		/**
 		 * Новые публичные коллекции, а с `?q=` — поиск по названию и описанию.
-		 * @description Поиск идёт через Meilisearch (индекс [`crate::collection_search`]): опечатки, сортировка по
+		 * @description Поиск идёт через Tantivy (индекс [`crate::collection_search`]): опечатки, сортировка по
 		 *     релевантности, при равной — свежие выше. В индексе только публичные коллекции, поэтому
 		 *     приватные не найдёт и их владелец. Страница ответа та же, что и без запроса.
 		 */
@@ -2815,7 +2835,7 @@ export interface components {
 			offset: number;
 			/**
 			 * Format: int64
-			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений).
 			 * @example 137
 			 */
 			total: number;
@@ -2934,7 +2954,7 @@ export interface components {
 			offset: number;
 			/**
 			 * Format: int64
-			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений).
 			 * @example 137
 			 */
 			total: number;
@@ -2971,7 +2991,7 @@ export interface components {
 			offset: number;
 			/**
 			 * Format: int64
-			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений).
 			 * @example 137
 			 */
 			total: number;
@@ -3028,7 +3048,7 @@ export interface components {
 			offset: number;
 			/**
 			 * Format: int64
-			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений).
 			 * @example 137
 			 */
 			total: number;
@@ -3055,7 +3075,7 @@ export interface components {
 			offset: number;
 			/**
 			 * Format: int64
-			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений).
 			 * @example 137
 			 */
 			total: number;
@@ -3086,7 +3106,7 @@ export interface components {
 			offset: number;
 			/**
 			 * Format: int64
-			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений).
 			 * @example 137
 			 */
 			total: number;
@@ -3113,7 +3133,7 @@ export interface components {
 			offset: number;
 			/**
 			 * Format: int64
-			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений).
 			 * @example 137
 			 */
 			total: number;
@@ -3140,7 +3160,7 @@ export interface components {
 			offset: number;
 			/**
 			 * Format: int64
-			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений).
 			 * @example 137
 			 */
 			total: number;
@@ -3168,7 +3188,7 @@ export interface components {
 			offset: number;
 			/**
 			 * Format: int64
-			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений).
 			 * @example 137
 			 */
 			total: number;
@@ -3198,7 +3218,7 @@ export interface components {
 			offset: number;
 			/**
 			 * Format: int64
-			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений).
 			 * @example 137
 			 */
 			total: number;
@@ -3228,7 +3248,7 @@ export interface components {
 			offset: number;
 			/**
 			 * Format: int64
-			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений).
 			 * @example 137
 			 */
 			total: number;
@@ -3255,7 +3275,7 @@ export interface components {
 			offset: number;
 			/**
 			 * Format: int64
-			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений).
 			 * @example 137
 			 */
 			total: number;
@@ -3301,7 +3321,7 @@ export interface components {
 			offset: number;
 			/**
 			 * Format: int64
-			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений).
 			 * @example 137
 			 */
 			total: number;
@@ -3333,7 +3353,7 @@ export interface components {
 			offset: number;
 			/**
 			 * Format: int64
-			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений).
 			 * @example 137
 			 */
 			total: number;
@@ -3359,7 +3379,7 @@ export interface components {
 			offset: number;
 			/**
 			 * Format: int64
-			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений).
 			 * @example 137
 			 */
 			total: number;
@@ -3417,7 +3437,7 @@ export interface components {
 			offset: number;
 			/**
 			 * Format: int64
-			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений).
 			 * @example 137
 			 */
 			total: number;
@@ -3449,7 +3469,7 @@ export interface components {
 			offset: number;
 			/**
 			 * Format: int64
-			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений).
 			 * @example 137
 			 */
 			total: number;
@@ -3476,7 +3496,7 @@ export interface components {
 			offset: number;
 			/**
 			 * Format: int64
-			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений).
 			 * @example 137
 			 */
 			total: number;
@@ -3516,7 +3536,7 @@ export interface components {
 			offset: number;
 			/**
 			 * Format: int64
-			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений).
 			 * @example 137
 			 */
 			total: number;
@@ -3564,7 +3584,7 @@ export interface components {
 			offset: number;
 			/**
 			 * Format: int64
-			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений).
 			 * @example 137
 			 */
 			total: number;
@@ -3594,7 +3614,7 @@ export interface components {
 			offset: number;
 			/**
 			 * Format: int64
-			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений).
 			 * @example 137
 			 */
 			total: number;
@@ -3622,7 +3642,7 @@ export interface components {
 			offset: number;
 			/**
 			 * Format: int64
-			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений).
 			 * @example 137
 			 */
 			total: number;
@@ -4769,6 +4789,51 @@ export interface operations {
 			};
 			/** @description Нужна роль admin */
 			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	rebuild_collections_index: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Перестройка запущена */
+			202: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Поиск выключен (`SEARCH_INDEX_DIR` не задан) */
+			503: {
 				headers: {
 					[name: string]: unknown;
 				};
@@ -7195,7 +7260,7 @@ export interface operations {
 		parameters: {
 			query?: {
 				/**
-				 * @description Поиск по названию и описанию (Meilisearch, опечатки допустимы). Пустой или не передан —
+				 * @description Поиск по названию и описанию (опечатки допустимы). Пустой или не передан —
 				 *     новые публичные коллекции, как и раньше.
 				 * @example фильмы про космос
 				 */
@@ -7229,7 +7294,7 @@ export interface operations {
 					'application/json': components['schemas']['ErrorBody'];
 				};
 			};
-			/** @description Meilisearch недоступен */
+			/** @description Поиск недоступен */
 			503: {
 				headers: {
 					[name: string]: unknown;

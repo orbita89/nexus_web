@@ -26,7 +26,7 @@ export const _PEOPLE_ROLES = [
 	{ value: 'game_designer', title: 'Геймдизайнеры' }
 ] as const;
 
-// /people?q=брэ&role=actor&offset=24 — поиск людей в Meilisearch (GET /search/people): по имени,
+// /people?q=брэ&role=actor&offset=24 — поиск людей в Tantivy (GET /search/people): по имени,
 // русскому и латиницей, с опечатками и по началу слова; из одинаково подходящих выше известные.
 // Без запроса — самые известные: «Популярные люди».
 export const load: PageLoad = async ({ fetch, url }) => {

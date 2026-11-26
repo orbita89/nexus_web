@@ -9,6 +9,7 @@
 	import { JobInterrupted, emptyJob, runJob, type JobState } from '#lib/admin/job.ts';
 	import { entityHref } from '#lib/catalog/kinds.ts';
 	import Alert from '#lib/components/Alert.svelte';
+	import CoverUpload from '#lib/components/admin/CoverUpload.svelte';
 	import CreditsEditor from '#lib/components/admin/CreditsEditor.svelte';
 	import DemoteDialog from '#lib/components/admin/DemoteDialog.svelte';
 	import EntityForm from '#lib/components/admin/EntityForm.svelte';
@@ -124,7 +125,13 @@
 			}}
 			submitLabel="Сохранить"
 			onsubmit={save}
-		/>
+		>
+			{#snippet cover()}
+				{#if entity?.kind === 'book'}
+					<CoverUpload entity={entity!} onchange={(updated) => (entity = updated)} />
+				{/if}
+			{/snippet}
+		</EntityForm>
 	{/key}
 
 	<div class="mt-10 max-w-3xl">

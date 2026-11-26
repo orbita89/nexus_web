@@ -1,5 +1,5 @@
 // Студии: страница /studios/{slug} (GET /studios/{slug}) и её фильмы — тот же список, что в
-// каталоге: Meilisearch с фильтром `studio_slug`.
+// каталоге: Tantivy с фильтром `studio_slug`.
 import type { Api } from '#lib/api/client.ts';
 import { listPage } from './search.ts';
 import type { ListSort } from './sort.ts';

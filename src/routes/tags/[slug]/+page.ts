@@ -8,7 +8,7 @@ import { readText } from '#lib/catalog/url.ts';
 import type { PageLoad } from './$types';
 
 // /tags/sci-fi?kind=books,games&offset=24. Тег — GET /tags/{slug} (нет — 404), произведения — из
-// Meilisearch (listPage).
+// Tantivy (listPage).
 /** Потолок на случай огромного тега: больше этого за раз не тянем. */
 const MAX_SHOWN = 1000;
 

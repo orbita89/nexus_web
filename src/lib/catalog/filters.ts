@@ -4,7 +4,7 @@
 //   /films?q=дюна&studio=Warner%20Bros.%20Pictures&person=christopher-nolan&role=director
 //         &tag=drama&year_from=2000&year_to=2010&archive=1&sort=new
 //
-// Выдача всегда из Meilisearch (GET /search): быстро и без PostgreSQL. С текстом — по
+// Выдача всегда из Tantivy (GET /search): быстро и без PostgreSQL. С текстом — по
 // релевантности, без него — «Рекомендуемые». Жанр — тоже тег (kind = genre): фильтр один, `tag`. Год — либо ровно (`year`), либо период
 // (`year_from` / `year_to`, можно одну границу). Архив — фильмы GET /archive/search за фильмами
 // сайта в той же выдаче, только по названию (без названия и фильтров — весь архив); выключен по

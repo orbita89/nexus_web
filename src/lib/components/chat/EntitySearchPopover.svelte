@@ -5,7 +5,7 @@
 	import { yearOf } from '#lib/catalog/labels.ts';
 	import type { PickedEntity } from '#lib/components/social/EntityPicker.svelte';
 
-	// Поиск карточки для вставки в сообщение. Только Meilisearch: в GET /entities поиска нет.
+	// Поиск карточки для вставки в сообщение. Только Tantivy: в GET /entities поиска нет.
 	let { onpick, onclose }: { onpick: (entity: PickedEntity) => void; onclose: () => void } =
 		$props();
 

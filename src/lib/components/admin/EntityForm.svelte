@@ -16,7 +16,7 @@
 </script>
 
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, type Snippet } from 'svelte';
 	import { unwrap } from '#lib/api/errors.ts';
 	import type { SchemaMetadata, SchemaTagWithCount } from '#lib/api/generated/catalog.ts';
 	import { guestApi } from '#lib/auth/session.svelte.ts';
@@ -40,8 +40,11 @@
 		initial,
 		kind: initialKind = 'movie',
 		submitLabel,
-		onsubmit
+		onsubmit,
+		cover
 	}: {
+		/** Под полем обложки: загрузка файла (у книг, на странице правки). */
+		cover?: Snippet;
 		initial?: EntityFields;
 		kind?: SchemaEntityKind;
 		submitLabel: string;
@@ -198,6 +201,7 @@
 		<fieldset class="fieldset">
 			<legend class="fieldset-legend">Обложка (ссылка https://)</legend>
 			<input class="input w-full" type="url" name="cover_url" bind:value={form.cover_url} />
+			{#if cover}<div class="mt-2">{@render cover()}</div>{/if}
 		</fieldset>
 
 		<fieldset class="fieldset rounded-box bg-base-200 p-4 ring-1 ring-base-300">

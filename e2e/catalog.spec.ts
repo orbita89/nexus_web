@@ -460,7 +460,7 @@ test('в подвале — атрибуция TMDB', async ({ page }) => {
 	);
 });
 
-test('раздел: порядок в адресе, выдача из Meilisearch, оценки одним запросом', async ({ page }) => {
+test('раздел: порядок в адресе, выдача из Tantivy, оценки одним запросом', async ({ page }) => {
 	let ratingRequests = 0;
 	const dbLists: string[] = [];
 	page.on('request', (r) => {
@@ -471,7 +471,7 @@ test('раздел: порядок в адресе, выдача из Meilisearc
 	await page.goto('/films');
 	const sort = page.getByLabel('Сортировка');
 	await expect(sort).toHaveValue('recommended');
-	// Порядки по оценкам Nexus — тоже из Meilisearch.
+	// Порядки по оценкам Nexus — тоже из Tantivy.
 	await expect(sort.locator('option[value="rating"]')).toHaveCount(1);
 
 	// До гидрации список ещё не связан с адресом — повторяем, пока адрес не сменится.
@@ -486,7 +486,7 @@ test('раздел: порядок в адресе, выдача из Meilisearc
 	// «Рекомендуемые» — по умолчанию, в адрес не пишутся.
 	await sort.selectOption('recommended');
 	await expect(page).toHaveURL('/films');
-	// Списки — только из Meilisearch (GET /search), не из PostgreSQL.
+	// Списки — только из Tantivy (GET /search), не из PostgreSQL.
 	expect(dbLists).toEqual([]);
 });
 

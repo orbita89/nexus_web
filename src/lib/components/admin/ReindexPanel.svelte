@@ -28,11 +28,11 @@
 
 	/** Новый индекс меньше 80% текущего — бэкенд не переключил поиск; можно настоять. */
 	const checkFailed = $derived(
-		job?.steps.some((s) => s.step === 'check' && s.status === 'failed') ?? false
+		job?.steps.some((s) => s.step === 'works' && s.status === 'failed') ?? false
 	);
 	const result = $derived(job?.done?.reindex);
 	/** Почему проверка не пропустила: «Новый индекс: 12 документов, текущий: 100 (12%)…». */
-	const checkMessage = $derived(job?.steps.find((s) => s.step === 'check')?.message ?? '');
+	const checkMessage = $derived(job?.steps.find((s) => s.step === 'works')?.message ?? '');
 
 	// Подтверждение перед запуском: обычная переиндексация или без проверки 80% (force).
 	let confirmDialog = $state<HTMLDialogElement>();
@@ -139,7 +139,7 @@
 						фоне.
 					</p>
 					<p class="text-base-content/60">
-						На большом каталоге это занимает минуты и нагружает базу, Meilisearch и фронтенд-сервер.
+						На большом каталоге это занимает минуты и нагружает базу, Tantivy и фронтенд-сервер.
 						Если новый индекс окажется меньше 80% текущего, поиск не переключится, а страницы не
 						пересоберутся.
 					</p>

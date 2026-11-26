@@ -13,7 +13,7 @@ import type { PageLoad } from './$types';
 const PEOPLE_SHOWN = 6;
 
 // /search?q=дюна&kind=films,games&studio=…&tag=drama&year_from=2000&archive=1&offset=24 — поиск через
-// Meilisearch, фильтры те же, что в разделах (filters.ts). Параллельно с фильмами — люди (только по
+// Tantivy, фильтры те же, что в разделах (filters.ts). Параллельно с фильмами — люди (только по
 // тексту, без фильтров фильмов); их ошибка не ломает выдачу — блока просто нет. Архив (archive=1)
 // догружает страница (archive.svelte.ts): переключатель не перезапрашивает выдачу.
 export const load: PageLoad = async ({ fetch, url }) => {
@@ -79,7 +79,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
 	]);
 	const base = { ...blank, tags: tags.data ?? [], personName: person, people };
 	if (!found.page) {
-		// 503 — Meilisearch недоступен; остальной каталог при этом работает.
+		// 503 — Tantivy недоступен; остальной каталог при этом работает.
 		const unavailable = found.error instanceof ApiError && found.error.status === 503;
 		return { ...base, unavailable, error: unavailable ? null : errorMessage(found.error) };
 	}

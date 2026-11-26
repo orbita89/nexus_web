@@ -18,7 +18,9 @@
 		{ href: '/admin/chat', title: 'Комнаты чата' },
 		{ href: '/admin/users', title: 'Пользователи' },
 		{ href: '/admin/index', title: 'Индексация' },
-		{ href: '/admin/books', title: 'Книжный индекс' },
+		{ href: '/admin/search', title: 'Индексы' },
+		{ href: '/admin/ranking', title: 'Сортировка' },
+		{ href: '/admin/search-map', title: 'Устройство поиска' },
 		{ href: '/admin/ai', title: 'Провайдеры ИИ' },
 		{ href: '/admin/prompts', title: 'Промпты ИИ' },
 		{ href: '/admin/scripts', title: 'Скрипты' }

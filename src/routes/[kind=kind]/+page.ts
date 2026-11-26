@@ -9,7 +9,7 @@ import { PAGE_SIZE, feedKey, readOffset, shownSize } from '#lib/catalog/url.ts';
 import type { PageLoad } from './$types';
 
 // /films?q=дюна&studio=…&person=…&role=actor&tag=…&year=2014&archive=1&sort=new&offset=24 —
-// всё состояние выдачи в адресе (filters.ts). Текст, студия, человек — поиск Meilisearch;
+// всё состояние выдачи в адресе (filters.ts). Текст, студия, человек — поиск Tantivy;
 // без них — обычный список. Архив (archive=1) здесь не читаем — его догружает страница
 // (archive.svelte.ts), чтобы переключатель не перезапрашивал выдачу сайта.
 export const load: PageLoad = async ({ fetch, url, params }) => {

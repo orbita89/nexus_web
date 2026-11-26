@@ -453,7 +453,9 @@ export interface paths {
 		};
 		/**
 		 * Все сущности, включая скрытые с сайта (`active` в каждой): найти и включить. Фильтры и
-		 *     сортировки — как у `GET /entities`, плюс `active`.
+		 *     сортировки — как у `GET /entities`, плюс `active`. Без `sort` — новые сверху; `total` не
+		 *     больше 10 000. Книги (`kind=book`, без `active=false` и `studio`, книжный поиск включён) —
+		 *     из индекса Tantivy в нашем порядке (ручные места, затем балл), флаги — из PostgreSQL.
 		 */
 		get: operations['admin_list_entities'];
 		put?: never;
@@ -486,6 +488,26 @@ export interface paths {
 		 *     помечает `active_manual`: «пересобрать активные» её больше не трогает.
 		 */
 		patch: operations['update_entity'];
+		trace?: never;
+	};
+	'/api/v1/catalog/admin/entities/{id}/cover': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Заменить обложку книги файлом AVIF: тот же путь и тот же `cover_url` (или путь по правилам
+		 *     выше, если обложки не было), старый файл заменяется.
+		 */
+		post: operations['upload_book_cover'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
 		trace?: never;
 	};
 	'/api/v1/catalog/admin/entities/{id}/credits': {
@@ -662,6 +684,64 @@ export interface paths {
 		/** Настройки балла «Рекомендуемые» и окна «Скоро премьера». */
 		get: operations['get_ranking'];
 		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/admin/ranking/kinds': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Настройки сортировки всех видов и людей. */
+		get: operations['list_rank_kinds'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/admin/ranking/kinds/{kind}/preview': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Предпросмотр: топ вида по формуле с настройками из тела, с составляющими балла. Ничего не
+		 *     записывает. У `person` — пусто (известность людей считается из их работ).
+		 */
+		post: operations['preview_rank_kind'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/admin/ranking/kinds/{kind}/stream': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/**
+		 * Сохранить настройки вида и применить, потоком: `rank` (пересчёт балла вида в БД), `search`
+		 *     (баллы в слой Б без перестройки Tantivy, веса поиска), затем `done`. Статические страницы
+		 *     не пересобираются.
+		 */
+		put: operations['save_rank_kind'];
 		post?: never;
 		delete?: never;
 		options?: never;
@@ -852,6 +932,126 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/catalog/admin/search/explain': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Объяснить запрос поиска: те же параметры, что у `GET /search`; ответ — шаги (сколько
+		 *     сущностей осталось и сколько занял шаг) и первые `limit` мест с разбором (уровень, доля
+		 *     текста, популярность, вес вида, итог). Без кэша.
+		 */
+		get: operations['explain_search'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/admin/search/indexes': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Все поисковые индексы: размер, документы, сегменты, поколения, число по БД, ход операций. */
+		get: operations['list_search_indexes'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/admin/search/indexes/catalog/sidecar': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Пересобрать слой Б единого индекса (фасеты, сортировки, ручные места, люди) из БД — в фоне,
+		 *     Tantivy не трогается.
+		 */
+		post: operations['reload_catalog_sidecar'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/admin/search/indexes/{id}/merge': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Слить сегменты индекса в один и убрать старые файлы — в фоне: освобождает место удалённых
+		 *     документов и ускоряет поиск. Данные не меняются.
+		 */
+		post: operations['merge_search_index'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/admin/search/indexes/{id}/rebuild': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Перестроить индекс из БД в фоне: `catalog` (или `all`) — всё, либо только вид (`book`,
+		 *     `movie`, `series`, `game`, `painting`) или `people`. Ход — в `operation` у
+		 *     `GET /admin/search/indexes`. Вид заменяется одним коммитом (поиск не видит дыры); если новых
+		 *     документов меньше `SEARCH_REINDEX_MIN_PERCENT`% прежних, коммита нет (`force` — применить).
+		 */
+		post: operations['rebuild_search_index'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/admin/search/layout': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Устройство поиска: файлы каталога индекса (слой А и слой Б, как читаются), поля Tantivy,
+		 *     готовые порядки с первыми записями, группы фильтров и где они хранятся.
+		 */
+		get: operations['get_search_layout'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/catalog/admin/search/reindex': {
 		parameters: {
 			query?: never;
@@ -891,6 +1091,40 @@ export interface paths {
 		 *     доводится до конца, даже если клиент закрыл соединение.
 		 */
 		post: operations['reindex_stream'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/admin/search/sidecar': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Состав слоя Б и память по частям. */
+		get: operations['get_catalog_sidecar'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/catalog/admin/search/sidecar/item': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Слой Б об одной сущности или человеке по slug. */
+		get: operations['inspect_catalog_sidecar'];
+		put?: never;
+		post?: never;
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -1260,7 +1494,7 @@ export interface paths {
 		 * @description Наши оценки — из сводок `entity_ratings`, которые присылает `social` (`EntityRatings`): каталог в
 		 *     таблицы рецензий не ходит.
 		 *
-		 *     Поиска по названию здесь нет: весь поиск на сайте — `GET /search` (Meilisearch); `q` — 400
+		 *     Поиска по названию здесь нет: весь поиск на сайте — `GET /search` (Tantivy); `q` — 400
 		 *     `use_search`.
 		 */
 		get: operations['list_entities'];
@@ -1281,7 +1515,7 @@ export interface paths {
 		};
 		/**
 		 * Карточка сущности: поля, теги и участники в порядке титров.
-		 * @description Читается из PostgreSQL, без кэша и Meilisearch: публичные страницы отдаёт статика
+		 * @description Читается из PostgreSQL, без кэша и индекса: публичные страницы отдаёт статика
 		 *     фронтенда (SSG/ISR), сюда приходят её пересборка и админка.
 		 *
 		 *     Невидимая (скрыта или фильм из TMDB ещё не в окне «Скоро премьера») — 404 для всех, кроме
@@ -1330,7 +1564,7 @@ export interface paths {
 		 *     Работы нет в выдаче (фильтры ей не подходят, слишком длинный ряд) — `{"prev": null,
 		 *     "next": null}`, а не 404: фронт в этом случае показывает похожие.
 		 *
-		 *     Позиции и длины ряда здесь нет намеренно: Meilisearch не умеет «дай номер документа в
+		 *     Позиции и длины ряда здесь нет намеренно: индекс не отдаёт «номер документа в
 		 *     выдаче», а счётчика «14 из 142» в интерфейсе нет.
 		 */
 		get: operations['entity_neighbors'];
@@ -1373,7 +1607,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Похожие на сущность: того же типа, с хотя бы одним из её тегов (Meilisearch), сверху — по
+		 * Похожие на сущность: того же типа, с хотя бы одним из её тегов (Tantivy), сверху — по
 		 *     баллу «Рекомендуемые», затем новее. Только видимые; у невидимой — 404. Без самой сущности и её
 		 *     связанных (они и так на карточке). Нет тегов — пустая страница.
 		 */
@@ -1482,7 +1716,7 @@ export interface paths {
 		};
 		/**
 		 * Карточка человека: данные и все его работы любых типов, новые сверху.
-		 * @description Читается из PostgreSQL, без кэша и Meilisearch: публичные страницы отдаёт статика
+		 * @description Читается из PostgreSQL, без кэша и индекса: публичные страницы отдаёт статика
 		 *     фронтенда (SSG/ISR), сюда приходят её пересборка и админка.
 		 */
 		get: operations['get_person'];
@@ -1619,7 +1853,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Подсказки студий для фильтра `studio` (facet search Meilisearch по полю `studios`): по части
+		 * Подсказки студий для фильтра `studio` (фасет по полю `studios`): по части
 		 *     названия с опечатками; без `q` — самые частые. `count` — сколько видимых сущностей в индексе,
 		 *     `slug` и `logo_url` — из `studios` (одним запросом на ответ), логотип тот же, что на странице
 		 *     студии.
@@ -2416,7 +2650,7 @@ export interface components {
 			db_books: number;
 			/**
 			 * Format: int64
-			 * @description Выданных номеров книг (`catalog_book_ords`).
+			 * @description Выданных номеров книг (`catalog_entity_ords`).
 			 */
 			db_ords: number;
 			last_index_build?: components['schemas']['BuildStatus'] | null;
@@ -2984,6 +3218,39 @@ export interface components {
 			 */
 			retry_after?: number | null;
 		};
+		/** @description Место в выдаче. */
+		ExplainItemView: {
+			detail?: components['schemas']['RankDetailView'] | null;
+			kind: string;
+			/** Format: int32 */
+			ord: number;
+			/** Format: int32 */
+			position: number;
+			slug: string;
+			title: string;
+		};
+		/** @description Шаг ответа поиска. */
+		ExplainStepView: {
+			/**
+			 * Format: int64
+			 * @description Сколько сущностей осталось после шага.
+			 */
+			count: number;
+			/** Format: int64 */
+			micros: number;
+			name: string;
+		};
+		/** @description Как поиск ответил на запрос — по шагам. */
+		ExplainView: {
+			approximate: boolean;
+			/** @description Термы фильтров слоя А (`studio:…`, `person:…`). */
+			facet_terms: string[];
+			items: components['schemas']['ExplainItemView'][];
+			relevance: boolean;
+			steps: components['schemas']['ExplainStepView'][];
+			/** Format: int64 */
+			total: number;
+		};
 		/** @description Один вид фасетов слоя Б. */
 		FacetGroupStatus: {
 			/**
@@ -3001,6 +3268,30 @@ export interface components {
 			 * @description Сколько разных значений.
 			 */
 			values: number;
+		};
+		/** @description Группа фильтров и где она хранится. */
+		FilterGroupView: {
+			/**
+			 * Format: int64
+			 * @description Байт в памяти (у Tantivy — 0: на диске).
+			 */
+			bytes: number;
+			/** @description `kind`, `tag`, `studio`, `person`… */
+			group: string;
+			/** @description `ram` — битовые карты слоя Б; `tantivy` — термы поля `facet` слоя А. */
+			storage: string;
+			/** @description Самые частые значения: значение и сколько у него сущностей (у Tantivy — приблизительно). */
+			top: components['schemas']['FilterValue'][];
+			/**
+			 * Format: int64
+			 * @description Значений (у Tantivy — термов, сумма по сегментам).
+			 */
+			values: number;
+		};
+		FilterValue: {
+			/** Format: int64 */
+			count: number;
+			value: string;
 		};
 		/** @description Флаг скрипта. */
 		Flag: components['schemas']['FlagKind'] & {
@@ -3109,6 +3400,15 @@ export interface components {
 			 */
 			trivia?: string[] | null;
 		};
+		/** @description Поколение каталога индекса (`<name>.v<ms>`). */
+		GenerationInfo: {
+			/** Format: int64 */
+			bytes: number;
+			/** @description Его читает поиск. */
+			current: boolean;
+			/** @example works.v1795475848838 */
+			name: string;
+		};
 		/** @description Какие сущности дослать в поисковый индекс: `slugs` или `ids`, ровно одно из двух. */
 		IndexEntities: {
 			/** @description Id сущностей: до 1000. */
@@ -3121,6 +3421,14 @@ export interface components {
 			 *     ]
 			 */
 			slugs?: string[] | null;
+		};
+		IndexFacetInfo: {
+			/** Format: int64 */
+			bytes: number;
+			/** @example tag */
+			kind: string;
+			/** Format: int64 */
+			values: number;
 		};
 		/** @description Место одного поля Tantivy на диске, байты (сумма по сегментам). */
 		IndexFieldUsage: {
@@ -3154,6 +3462,42 @@ export interface components {
 			/** Format: int64 */
 			total: number;
 		};
+		/** @description Поле Tantivy и его место на диске. */
+		IndexFieldView: {
+			/** Format: int64 */
+			fast: number;
+			/** Format: int64 */
+			fieldnorms: number;
+			name: string;
+			/** Format: int64 */
+			positions: number;
+			/** Format: int64 */
+			postings: number;
+			/** Format: int64 */
+			termdict: number;
+		};
+		/** @description Файл каталога индекса. */
+		IndexFile: {
+			/** @description `mmap` — читается с диска страницами; `ram` — читается в кучу при открытии; `meta`. */
+			access: string;
+			/** Format: int64 */
+			bytes: number;
+			/** @description `A` — Tantivy (текст и карточки), `B` — слой Б (фасеты, сортировки). */
+			layer: string;
+			name: string;
+		};
+		/** @description Документы одного вида в едином индексе. */
+		IndexKindInfo: {
+			/**
+			 * Format: int64
+			 * @description Сколько должно быть по БД.
+			 */
+			db_docs?: number | null;
+			/** Format: int64 */
+			docs: number;
+			/** @example movie */
+			kind: string;
+		};
 		/** @description Операция админки над индексом. */
 		IndexOperation: {
 			error?: string | null;
@@ -3169,8 +3513,18 @@ export interface components {
 			 * @example rebuild
 			 */
 			op: string;
+			progress?: components['schemas']['IndexProgress'] | null;
 			/** Format: date-time */
 			started_at: string;
+		};
+		/** @description Ход операции над индексом. */
+		IndexProgress: {
+			/** Format: int64 */
+			done: number;
+			/** @description Заголовок шага: «Индекс работ», «Люди». */
+			step: string;
+			/** Format: int64 */
+			total: number;
 		};
 		IndexResult: {
 			/**
@@ -3183,6 +3537,25 @@ export interface components {
 			 * @example 0
 			 */
 			removed: number;
+		};
+		/** @description Слой Б единого индекса. */
+		IndexSidecarInfo: {
+			/**
+			 * Format: int64
+			 * @description Видимые сущности и люди в RAM.
+			 */
+			entities: number;
+			/**
+			 * Format: int64
+			 * @description Оценка памяти: массивы, порядки, битмапы фасетов, люди.
+			 */
+			entities_bytes: number;
+			/** @description Фасеты сущностей: префикс ключа → значения и байты. */
+			facets: components['schemas']['IndexFacetInfo'][];
+			/** Format: int64 */
+			people: number;
+			/** Format: int64 */
+			people_bytes: number;
 		};
 		/** @description Событие потока. */
 		JobEvent:
@@ -3235,6 +3608,100 @@ export interface components {
 		};
 		/** @enum {string} */
 		JobStatus: 'running' | 'succeeded' | 'failed' | 'stopped' | 'cancelled';
+		/** @description Строка предпросмотра: сущность и составляющие балла. */
+		KindPreviewRow: {
+			/** Format: double */
+			c_part: number;
+			/** Format: double */
+			p_part: number;
+			/**
+			 * Format: double
+			 * @description Вклад рейтинга, популярности, свежести, сайта, полноты; `score` — их сумма.
+			 */
+			q_part: number;
+			/**
+			 * Format: double
+			 * @description Байесовский рейтинг (`null` — нет оценок).
+			 */
+			quality?: number | null;
+			/** Format: double */
+			r_part: number;
+			/** Format: date */
+			release_date?: string | null;
+			/** Format: double */
+			s_part: number;
+			/** Format: double */
+			score: number;
+			slug: string;
+			title: string;
+		};
+		/** @description Настройки сортировки вида. */
+		KindRanking: {
+			/**
+			 * Format: double
+			 * @description Через сколько лет свежесть падает вдвое, 0.1–100.
+			 * @example 4
+			 */
+			half_life_years: number;
+			/**
+			 * @description `movie`, `series`, `book`, `game`, `painting`, `person`; в запросе не нужен (вид — из
+			 *     адреса), присланный игнорируется.
+			 */
+			kind?: string;
+			/**
+			 * Format: int32
+			 * @description Меньше голосов IMDb — рейтинг IMDb не учитывается.
+			 * @example 1000
+			 */
+			min_votes: number;
+			/**
+			 * Format: double
+			 * @description Доля популярности в релевантности поиска, 0–1 (0 — только текст).
+			 * @example 0.6
+			 */
+			search_popularity: number;
+			/**
+			 * Format: int32
+			 * @description «Доверительные» голоса байесовского рейтинга.
+			 * @example 5000
+			 */
+			trust_votes: number;
+			/**
+			 * Format: date-time
+			 * @description Когда сохранены; в запросе игнорируется.
+			 */
+			updated_at?: string | null;
+			/**
+			 * Format: double
+			 * @description Вес полноты карточки (обложка, описание), 0–10.
+			 * @example 0
+			 */
+			weight_complete: number;
+			/**
+			 * Format: double
+			 * @description Вес популярности (TMDB или работы автора), 0–10.
+			 * @example 0.3
+			 */
+			weight_popularity: number;
+			/**
+			 * Format: double
+			 * @description Вес рейтинга (IMDb или оценки сайта), 0–10.
+			 * @example 0.5
+			 */
+			weight_quality: number;
+			/**
+			 * Format: double
+			 * @description Вес свежести, 0–10.
+			 * @example 0.2
+			 */
+			weight_recency: number;
+			/**
+			 * Format: double
+			 * @description Вес активности на сайте (число оценок), 0–10.
+			 * @example 0.1
+			 */
+			weight_site: number;
+		};
 		LibgenFile: {
 			/**
 			 * @description `fb2`, `epub`, `pdf`, `djvu`…: до 20 символов.
@@ -3396,6 +3863,34 @@ export interface components {
 			title_override?: string | null;
 			won?: boolean;
 		};
+		OrderHead: {
+			/** Format: int32 */
+			ord: number;
+			title: string;
+		};
+		/** @description Позиция в готовом порядке. */
+		OrderPosition: {
+			/** Format: int64 */
+			of: number;
+			/**
+			 * @description `recommended`, `new`, `title`, `popular`, `rating`, `trending`, `top_rated`, `awarded`,
+			 *     у людей — `fame`.
+			 */
+			order: string;
+			/**
+			 * Format: int32
+			 * @description С нуля; `null` — не входит в порядок (например, нет даты для `new`).
+			 */
+			position?: number | null;
+		};
+		/** @description Готовый порядок слоя Б и его начало. */
+		OrderView: {
+			head: components['schemas']['OrderHead'][];
+			/** Format: int64 */
+			len: number;
+			/** @description `recommended`, `new`, `title`, `popular`, `rating`, `trending`, `top_rated`, `awarded`. */
+			name: string;
+		};
 		/** @description Страница списка. */
 		Page_AdminEntitySummary: {
 			items: (components['schemas']['EntitySummary'] & {
@@ -3417,7 +3912,7 @@ export interface components {
 			offset: number;
 			/**
 			 * Format: int64
-			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений).
 			 * @example 137
 			 */
 			total: number;
@@ -3439,7 +3934,7 @@ export interface components {
 			offset: number;
 			/**
 			 * Format: int64
-			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений).
 			 * @example 137
 			 */
 			total: number;
@@ -3489,7 +3984,7 @@ export interface components {
 			offset: number;
 			/**
 			 * Format: int64
-			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений).
 			 * @example 137
 			 */
 			total: number;
@@ -3525,7 +4020,7 @@ export interface components {
 			offset: number;
 			/**
 			 * Format: int64
-			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений).
 			 * @example 137
 			 */
 			total: number;
@@ -3593,7 +4088,7 @@ export interface components {
 			offset: number;
 			/**
 			 * Format: int64
-			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений).
 			 * @example 137
 			 */
 			total: number;
@@ -3623,7 +4118,7 @@ export interface components {
 			offset: number;
 			/**
 			 * Format: int64
-			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений).
 			 * @example 137
 			 */
 			total: number;
@@ -3686,7 +4181,7 @@ export interface components {
 			offset: number;
 			/**
 			 * Format: int64
-			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений).
 			 * @example 137
 			 */
 			total: number;
@@ -3743,7 +4238,7 @@ export interface components {
 			offset: number;
 			/**
 			 * Format: int64
-			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений).
 			 * @example 137
 			 */
 			total: number;
@@ -3773,7 +4268,7 @@ export interface components {
 			offset: number;
 			/**
 			 * Format: int64
-			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений).
 			 * @example 137
 			 */
 			total: number;
@@ -4003,6 +4498,24 @@ export interface components {
 			/** @example Индексация сущностей */
 			title: string;
 		};
+		/** @description Память процесса (Linux `/proc/self`), байт. */
+		ProcessMemory: {
+			/**
+			 * Format: int64
+			 * @description Куча и прочая анонимная память (слой Б, кэши, буферы, освобождённое, но не отданное ОС).
+			 */
+			anon: number;
+			/**
+			 * Format: int64
+			 * @description Отображённые файлы (индекс Tantivy с диска; ОС вытесняет их при нехватке памяти).
+			 */
+			file: number;
+			/**
+			 * Format: int64
+			 * @description Всё, что процесс держит в RAM.
+			 */
+			rss: number;
+		};
 		/** @description Счётчик длинного шага: «Проиндексировано 500/100000». */
 		ProgressEvent: {
 			/**
@@ -4052,6 +4565,29 @@ export interface components {
 			position?: number | null;
 			/** Format: uuid */
 			to_id: string;
+		};
+		/** @description Разбор места по релевантности. */
+		RankDetailView: {
+			/** Format: float */
+			bm25: number;
+			exact: boolean;
+			in_title: boolean;
+			/** Format: int32 */
+			manual_rank: number;
+			/** Format: float */
+			popularity: number;
+			/** Format: float */
+			text: number;
+			/**
+			 * Format: int32
+			 * @description 0 — точное название с ручным местом, 1 — сильное совпадение с ручным местом,
+			 *     2 — совпало в названии, 3 — только люди, серия, студия.
+			 */
+			tier: number;
+			/** Format: float */
+			total: number;
+			/** Format: float */
+			weight: number;
 		};
 		/** @description Строка предпросмотра: фильм и составляющие балла. */
 		RankPreviewRow: {
@@ -4243,6 +4779,81 @@ export interface components {
 			/** @example books-llm */
 			id: string;
 			title: string;
+		};
+		/** @description Состояние одного индекса. */
+		SearchIndexInfo: {
+			can_merge: boolean;
+			can_rebuild: boolean;
+			/**
+			 * Format: int64
+			 * @description Сколько должно быть по БД (`null` — не считается).
+			 */
+			db_docs?: number | null;
+			/** Format: int64 */
+			deleted_docs: number;
+			/** @description Что в индексе. */
+			description: string;
+			/** @description Каталог текущего поколения. */
+			dir?: string | null;
+			/**
+			 * Format: int64
+			 * @description Размер текущего поколения на диске.
+			 */
+			disk_bytes: number;
+			/**
+			 * Format: int64
+			 * @description Документов в индексе (`null` — индекса ещё нет).
+			 */
+			docs?: number | null;
+			/** @description Каталог индекса задан (`SEARCH_INDEX_DIR`, `BOOKS_INDEX_DIR`, `ARCHIVE_DIR`). */
+			enabled: boolean;
+			/** @description Из чего состоит индекс: место по полям (словарь, документы, позиции, колонки, нормы). */
+			fields: components['schemas']['IndexFieldUsage'][];
+			/** @description Все поколения каталога; у книг и архива — одно. */
+			generations: components['schemas']['GenerationInfo'][];
+			/**
+			 * @description `works`, `people`, `books`, `collections`, `archive`.
+			 * @example works
+			 */
+			id: string;
+			/**
+			 * Format: int64
+			 * @description Всё, что занимает индекс по данным Tantivy.
+			 */
+			index_bytes: number;
+			/** @description Единый индекс: документы по видам (`book`, `movie`, …, `person`) и сколько должно быть по БД. */
+			kinds: components['schemas']['IndexKindInfo'][];
+			operation?: components['schemas']['IndexOperation'] | null;
+			/** @description Перестройка не здесь, а по этому адресу (коллекции живут в `social`). */
+			rebuild_path?: string | null;
+			/** @description Версия схемы (файл `nexus-schema`). */
+			schema_version?: string | null;
+			/** Format: int64 */
+			segments: number;
+			sidecar?: components['schemas']['IndexSidecarInfo'] | null;
+			/**
+			 * Format: int64
+			 * @description Хранилище документов (поле `card`, сжато целиком — по полям не делится).
+			 */
+			store_bytes: number;
+			/** @example Работы */
+			title: string;
+		};
+		/** @description Как устроен поиск сейчас: файлы, поля, порядки, фильтры. */
+		SearchLayout: {
+			dir: string;
+			/** Format: int64 */
+			docs: number;
+			fields: components['schemas']['IndexFieldView'][];
+			files: components['schemas']['IndexFile'][];
+			filters: components['schemas']['FilterGroupView'][];
+			orders: components['schemas']['OrderView'][];
+			/** @description Индекс только читается (прод). */
+			readonly: boolean;
+			/** Format: int64 */
+			segments: number;
+			/** Format: int64 */
+			store_bytes: number;
 		};
 		/**
 		 * @description Сортировка поиска (без неё — по релевантности); у кого значения нет — в конце.
@@ -4461,6 +5072,65 @@ export interface components {
 			 */
 			tags: string[];
 		};
+		/** @description Что слой Б знает об одной сущности или человеке. */
+		SidecarItem: {
+			/** @description Карточка, сохранённая в Tantivy (поле `card`): её отдают поиск и подсказки. */
+			card?: unknown;
+			/** Format: double */
+			db_rank_score?: number | null;
+			/** @description Значения фасетов, в которых он есть (`kind:movie`, `tag:…`, `year:2010`). */
+			facets: string[];
+			has_author: boolean;
+			has_cover: boolean;
+			has_description: boolean;
+			kind: string;
+			/**
+			 * Format: int32
+			 * @description Ручное место (0 — нет).
+			 */
+			manual_rank: number;
+			/**
+			 * Format: int32
+			 * @description Номер: индекс в массивах слоя Б и бит в битовых картах.
+			 */
+			ord: number;
+			/**
+			 * Format: double
+			 * @description Популярность в поиске (`rank_score` × 10⁶; у людей — известность).
+			 */
+			popularity: number;
+			positions: components['schemas']['OrderPosition'][];
+			/**
+			 * Format: int64
+			 * @description Балл «Рекомендуемые» из слоя Б (×1000) и он же в БД.
+			 */
+			rank: number;
+			/**
+			 * Format: int32
+			 * @description Дата выхода в днях от начала эры (0 — нет).
+			 */
+			release_day: number;
+			slug: string;
+			/** @description `entity` или `person`. */
+			space: string;
+			title: string;
+			/** @description Виден в выдаче. */
+			visible: boolean;
+		};
+		/** @description Часть слоя Б в памяти. */
+		SidecarPart: {
+			/** Format: int64 */
+			bytes: number;
+			/**
+			 * Format: int64
+			 * @description Элементов: номеров в порядке, значений фасета, людей в роли.
+			 */
+			items: number;
+			/** @description Лежит в отображённом файле: в куче процесса нет, в RAM — только прочитанные страницы. */
+			mapped: boolean;
+			/** @description `meta`, `base_rank`, `order:popular`, `facet:tag`, `people:fame`… */
+			name: string;
+		};
 		/** @description Слой Б — RAM (фасеты, сортировки, ручной порядок). */
 		SidecarStatus: {
 			/**
@@ -4498,6 +5168,42 @@ export interface components {
 			total_bytes: number;
 			/** Format: int64 */
 			with_cover: number;
+		};
+		/** @description Слой Б целиком. */
+		SidecarView: {
+			/**
+			 * Format: int64
+			 * @description Записей в кэше ответов: страницы поиска, ряды выдачи, страницы людей.
+			 */
+			cache_pages: number;
+			/** Format: int64 */
+			cache_people: number;
+			/** Format: int64 */
+			cache_ranked: number;
+			/** Format: int64 */
+			entities: number;
+			/** Format: int64 */
+			entities_bytes: number;
+			/**
+			 * Format: int64
+			 * @description Длина плоских массивов (наибольший номер + 1).
+			 */
+			entity_slots: number;
+			/**
+			 * Format: int64
+			 * @description Из частей слоя Б: в куче процесса и в отображённых файлах.
+			 */
+			heap_bytes: number;
+			/** Format: int64 */
+			mapped_bytes: number;
+			parts: components['schemas']['SidecarPart'][];
+			/** Format: int64 */
+			people: number;
+			/** Format: int64 */
+			people_bytes: number;
+			/** Format: int64 */
+			people_slots: number;
+			process: components['schemas']['ProcessMemory'];
 		};
 		/** @description Страница, которая не перерисовалась. */
 		StaticFailure: {
@@ -4563,12 +5269,8 @@ export interface components {
 		Step:
 			| 'db'
 			| 'search'
-			| 'create_index'
-			| 'fill'
-			| 'fill_people'
-			| 'check'
-			| 'swap'
-			| 'rotate'
+			| 'works'
+			| 'people'
 			| 'isr'
 			| 'tmdb_export'
 			| 'imdb_ratings'
@@ -4584,7 +5286,7 @@ export interface components {
 			duration_ms?: number | null;
 			/**
 			 * @description Строка для лога в админке.
-			 * @example Meilisearch обновлён
+			 * @example Индексы обновлены
 			 */
 			message: string;
 			status: components['schemas']['StepStatus'];
@@ -4747,7 +5449,7 @@ export interface components {
 			 * @description Всё, что занимает индекс по данным Tantivy.
 			 */
 			index_bytes: number;
-			/** @example books-4 */
+			/** @example catalog-1 */
 			schema_version: string;
 			/** Format: int64 */
 			segments: number;
@@ -5029,20 +5731,34 @@ export type SchemaEntitySummary = components['schemas']['EntitySummary'];
 export type SchemaEpisode = components['schemas']['Episode'];
 export type SchemaEpisodeInput = components['schemas']['EpisodeInput'];
 export type SchemaErrorBody = components['schemas']['ErrorBody'];
+export type SchemaExplainItemView = components['schemas']['ExplainItemView'];
+export type SchemaExplainStepView = components['schemas']['ExplainStepView'];
+export type SchemaExplainView = components['schemas']['ExplainView'];
 export type SchemaFacetGroupStatus = components['schemas']['FacetGroupStatus'];
+export type SchemaFilterGroupView = components['schemas']['FilterGroupView'];
+export type SchemaFilterValue = components['schemas']['FilterValue'];
 export type SchemaFlag = components['schemas']['Flag'];
 export type SchemaFlagKind = components['schemas']['FlagKind'];
 export type SchemaFragment = components['schemas']['Fragment'];
 export type SchemaFragmentInput = components['schemas']['FragmentInput'];
 export type SchemaGameMetadata = components['schemas']['GameMetadata'];
+export type SchemaGenerationInfo = components['schemas']['GenerationInfo'];
 export type SchemaIndexEntities = components['schemas']['IndexEntities'];
+export type SchemaIndexFacetInfo = components['schemas']['IndexFacetInfo'];
 export type SchemaIndexFieldUsage = components['schemas']['IndexFieldUsage'];
+export type SchemaIndexFieldView = components['schemas']['IndexFieldView'];
+export type SchemaIndexFile = components['schemas']['IndexFile'];
+export type SchemaIndexKindInfo = components['schemas']['IndexKindInfo'];
 export type SchemaIndexOperation = components['schemas']['IndexOperation'];
+export type SchemaIndexProgress = components['schemas']['IndexProgress'];
 export type SchemaIndexResult = components['schemas']['IndexResult'];
+export type SchemaIndexSidecarInfo = components['schemas']['IndexSidecarInfo'];
 export type SchemaJobEvent = components['schemas']['JobEvent'];
 export type SchemaJobInfo = components['schemas']['JobInfo'];
 export type SchemaJobLog = components['schemas']['JobLog'];
 export type SchemaJobStatus = components['schemas']['JobStatus'];
+export type SchemaKindPreviewRow = components['schemas']['KindPreviewRow'];
+export type SchemaKindRanking = components['schemas']['KindRanking'];
 export type SchemaLibgenFile = components['schemas']['LibgenFile'];
 export type SchemaLibgenSource = components['schemas']['LibgenSource'];
 export type SchemaMetadata = components['schemas']['Metadata'];
@@ -5051,6 +5767,9 @@ export type SchemaMovieMetadata = components['schemas']['MovieMetadata'];
 export type SchemaNeighbors = components['schemas']['Neighbors'];
 export type SchemaNomination = components['schemas']['Nomination'];
 export type SchemaNominationInput = components['schemas']['NominationInput'];
+export type SchemaOrderHead = components['schemas']['OrderHead'];
+export type SchemaOrderPosition = components['schemas']['OrderPosition'];
+export type SchemaOrderView = components['schemas']['OrderView'];
 export type SchemaPageAdminEntitySummary = components['schemas']['Page_AdminEntitySummary'];
 export type SchemaPageAiThreadWithEntity = components['schemas']['Page_AiThreadWithEntity'];
 export type SchemaPageArchiveDoc = components['schemas']['Page_ArchiveDoc'];
@@ -5073,12 +5792,14 @@ export type SchemaPersonRef = components['schemas']['PersonRef'];
 export type SchemaPersonSummary = components['schemas']['PersonSummary'];
 export type SchemaPlaceholder = components['schemas']['Placeholder'];
 export type SchemaPlannedStep = components['schemas']['PlannedStep'];
+export type SchemaProcessMemory = components['schemas']['ProcessMemory'];
 export type SchemaProgressEvent = components['schemas']['ProgressEvent'];
 export type SchemaPublisherHit = components['schemas']['PublisherHit'];
 export type SchemaPutAiPrompt = components['schemas']['PutAiPrompt'];
 export type SchemaPutBookRanks = components['schemas']['PutBookRanks'];
 export type SchemaPutNominations = components['schemas']['PutNominations'];
 export type SchemaPutRelation = components['schemas']['PutRelation'];
+export type SchemaRankDetailView = components['schemas']['RankDetailView'];
 export type SchemaRankPreviewRow = components['schemas']['RankPreviewRow'];
 export type SchemaRankingSettings = components['schemas']['RankingSettings'];
 export type SchemaRatingValue = components['schemas']['RatingValue'];
@@ -5091,6 +5812,8 @@ export type SchemaRelationKind = components['schemas']['RelationKind'];
 export type SchemaReleaseStatus = components['schemas']['ReleaseStatus'];
 export type SchemaRunScript = components['schemas']['RunScript'];
 export type SchemaScript = components['schemas']['Script'];
+export type SchemaSearchIndexInfo = components['schemas']['SearchIndexInfo'];
+export type SchemaSearchLayout = components['schemas']['SearchLayout'];
 export type SchemaSearchSort = components['schemas']['SearchSort'];
 export type SchemaSeasonDetail = components['schemas']['SeasonDetail'];
 export type SchemaSeasonList = components['schemas']['SeasonList'];
@@ -5102,7 +5825,10 @@ export type SchemaSeriesStatus = components['schemas']['SeriesStatus'];
 export type SchemaSetEpisodes = components['schemas']['SetEpisodes'];
 export type SchemaSetFragments = components['schemas']['SetFragments'];
 export type SchemaSetTags = components['schemas']['SetTags'];
+export type SchemaSidecarItem = components['schemas']['SidecarItem'];
+export type SchemaSidecarPart = components['schemas']['SidecarPart'];
 export type SchemaSidecarStatus = components['schemas']['SidecarStatus'];
+export type SchemaSidecarView = components['schemas']['SidecarView'];
 export type SchemaStaticFailure = components['schemas']['StaticFailure'];
 export type SchemaStaticRun = components['schemas']['StaticRun'];
 export type SchemaStaticStatus = components['schemas']['StaticStatus'];
@@ -7385,6 +8111,79 @@ export interface operations {
 			};
 		};
 	};
+	upload_book_cover: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description id книги */
+				id: string;
+			};
+			cookie?: never;
+		};
+		/** @description multipart/form-data с одним файловым полем (AVIF) */
+		requestBody: {
+			content: {
+				'multipart/form-data': string;
+			};
+		};
+		responses: {
+			/** @description Карточка с обложкой */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['EntityDetail'];
+				};
+			};
+			/** @description Не AVIF (`not_avif`), больше 10 МБ (`file_too_large`), не книга, пустой запрос */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет сущности */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description BOOK_COVERS_DIR не задан */
+			503: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
 	add_credit: {
 		parameters: {
 			query?: never;
@@ -8057,6 +8856,173 @@ export interface operations {
 			};
 		};
 	};
+	list_rank_kinds: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Настройки по видам */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['KindRanking'][];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	preview_rank_kind: {
+		parameters: {
+			query?: {
+				/** @description 1–200, по умолчанию 50. */
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				/** @description Вид */
+				kind: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['KindRanking'];
+			};
+		};
+		responses: {
+			/** @description Топ по формуле */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['KindPreviewRow'][];
+				};
+			};
+			/** @description Неверные настройки */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такого вида */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	save_rank_kind: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Вид */
+				kind: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['KindRanking'];
+			};
+		};
+		responses: {
+			/** @description Сохранено; поток пересчёта */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'text/event-stream': components['schemas']['JobEvent'];
+				};
+			};
+			/** @description Неверные настройки */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такого вида */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
 	preview_ranking: {
 		parameters: {
 			query?: {
@@ -8574,7 +9540,426 @@ export interface operations {
 					'application/json': components['schemas']['ErrorBody'];
 				};
 			};
-			/** @description Meilisearch недоступен */
+			/** @description Поиск недоступен */
+			503: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	explain_search: {
+		parameters: {
+			query?: {
+				/**
+				 * @description Поисковый запрос: название, оригинальное название, студии. Опечатки допустимы. Пустой —
+				 *     все, кто подходит под фильтры.
+				 * @example дюан
+				 */
+				q?: string;
+				/** @description Не передан — по релевантности. */
+				sort?: components['schemas']['SearchSort'];
+				/** @description Slug тега. */
+				tag?: string;
+				/**
+				 * @description Ровно этот год выхода. Вместе с `year_from` / `year_to` — 400.
+				 * @example 2001
+				 */
+				year?: number;
+				/**
+				 * @description Год выхода от (включительно).
+				 * @example 2000
+				 */
+				year_from?: number;
+				/**
+				 * @description Год выхода до (включительно).
+				 * @example 2010
+				 */
+				year_to?: number;
+				/**
+				 * @description Студия — точное название (без учёта регистра); подсказки — `GET /search/studios`.
+				 * @example Warner Bros. Pictures
+				 */
+				studio?: string;
+				/**
+				 * @description Slug студии (`GET /studios/{slug}`): её фильмы, без запроса названия. Неизвестный slug —
+				 *     пустая выдача.
+				 * @example warner-bros-pictures
+				 */
+				studio_slug?: string;
+				/**
+				 * @description Издатель — точное название (без учёта регистра): издательство книги, издатель или
+				 *     разработчик игры. Подсказки — `GET /search/publishers`.
+				 * @example АСТ
+				 */
+				publisher?: string;
+				/**
+				 * @description Музей или собрание картины — точное название (без учёта регистра). Подсказки —
+				 *     `GET /search/museums`.
+				 * @example Лувр
+				 */
+				museum?: string;
+				/**
+				 * @description Slug человека: сущности с его участием (в любой роли).
+				 * @example christopher-nolan
+				 */
+				person?: string;
+				/**
+				 * @description Роль человека из `person` в этой сущности: `actor`, `director`, `producer`, `writer`, ...
+				 *     Без `person` — 400.
+				 * @example director
+				 */
+				role?: string;
+				/**
+				 * @description Slug премии (`GET /awards/{slug}`): работы с её наградой или номинацией.
+				 * @example oscar
+				 */
+				award?: string;
+				/**
+				 * @description Год церемонии: вместе с `award` — «лауреаты и номинанты „Оскара“ 2024».
+				 * @example 2024
+				 */
+				award_year?: number;
+				/** @description `true` — только полученные награды (у работы есть хотя бы одна победа). */
+				awarded?: boolean;
+				/**
+				 * @description Только книги: `true` — с обложкой, `false` — без. Работает в книжном поиске (`kind=book`
+				 *     при включённом индексе Tantivy), в остальных случаях игнорируется.
+				 */
+				has_cover?: boolean;
+				/**
+				 * @description Только книги: вид текста через запятую — `book`, `collection` (сборник), `article`
+				 *     (статья), `document` (журнал, газета, документ) или `all`. По умолчанию `book`: сборники,
+				 *     статьи и документы в обычной выдаче не показываются. Неизвестное значение — 400. Работает
+				 *     в книжном поиске (как `has_cover`), в остальных случаях игнорируется.
+				 * @example book,collection
+				 */
+				book_form?: string;
+				/** @description 1–100, по умолчанию 20. */
+				limit?: number;
+				/** @description С 0. */
+				offset?: number;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Разбор запроса */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ExplainView'];
+				};
+			};
+			/** @description Неверный фильтр */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Поиск недоступен */
+			503: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	list_search_indexes: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Индексы */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['SearchIndexInfo'][];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	reload_catalog_sidecar: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Пересборка запущена */
+			202: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Уже идёт операция */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Индекс выключен */
+			503: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	merge_search_index: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description `catalog` или `collections` */
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Слияние запущено */
+			202: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Неизвестный индекс */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Уже идёт операция */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Индекс выключен */
+			503: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	rebuild_search_index: {
+		parameters: {
+			query?: {
+				/** @description Переключить, даже если новый индекс меньше `SEARCH_REINDEX_MIN_PERCENT`% текущего. */
+				force?: boolean;
+			};
+			header?: never;
+			path: {
+				/** @description `catalog`, `all`, `book`, `movie`, `series`, `game`, `painting` или `people` */
+				id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Перестройка запущена */
+			202: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Неизвестный индекс или его нельзя перестроить здесь */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Уже идёт операция или перестройка */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Индекс выключен */
+			503: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	get_search_layout: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Устройство поиска */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['SearchLayout'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Индекс выключен */
 			503: {
 				headers: {
 					[name: string]: unknown;
@@ -8633,7 +10018,7 @@ export interface operations {
 					'application/json': components['schemas']['ErrorBody'];
 				};
 			};
-			/** @description Meilisearch недоступен */
+			/** @description Поиск недоступен */
 			503: {
 				headers: {
 					[name: string]: unknown;
@@ -8692,7 +10077,113 @@ export interface operations {
 					'application/json': components['schemas']['ErrorBody'];
 				};
 			};
-			/** @description Meilisearch недоступен */
+			/** @description Поиск недоступен */
+			503: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	get_catalog_sidecar: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Слой Б: части и память */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['SidecarView'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Индекс выключен */
+			503: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	inspect_catalog_sidecar: {
+		parameters: {
+			query: {
+				/** @description Slug сущности или человека. */
+				slug: string;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Данные слоя Б */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['SidecarItem'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нужна роль admin */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет такого slug или нет номера */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Индекс выключен */
 			503: {
 				headers: {
 					[name: string]: unknown;
@@ -9984,7 +11475,7 @@ export interface operations {
 					'application/json': components['schemas']['ErrorBody'];
 				};
 			};
-			/** @description Meilisearch недоступен */
+			/** @description Поиск недоступен */
 			503: {
 				headers: {
 					[name: string]: unknown;
@@ -10084,7 +11575,7 @@ export interface operations {
 					'application/json': components['schemas']['ErrorBody'];
 				};
 			};
-			/** @description Meilisearch недоступен */
+			/** @description Поиск недоступен */
 			503: {
 				headers: {
 					[name: string]: unknown;
@@ -10540,7 +12031,7 @@ export interface operations {
 					'application/json': components['schemas']['ErrorBody'];
 				};
 			};
-			/** @description Meilisearch недоступен */
+			/** @description Поиск недоступен */
 			503: {
 				headers: {
 					[name: string]: unknown;
@@ -10588,7 +12079,7 @@ export interface operations {
 					'application/json': components['schemas']['ErrorBody'];
 				};
 			};
-			/** @description Meilisearch недоступен */
+			/** @description Поиск недоступен */
 			503: {
 				headers: {
 					[name: string]: unknown;
@@ -10636,7 +12127,7 @@ export interface operations {
 					'application/json': components['schemas']['ErrorBody'];
 				};
 			};
-			/** @description Meilisearch недоступен */
+			/** @description Поиск недоступен */
 			503: {
 				headers: {
 					[name: string]: unknown;
@@ -10689,7 +12180,7 @@ export interface operations {
 					'application/json': components['schemas']['ErrorBody'];
 				};
 			};
-			/** @description Meilisearch недоступен */
+			/** @description Поиск недоступен */
 			503: {
 				headers: {
 					[name: string]: unknown;
@@ -10737,7 +12228,7 @@ export interface operations {
 					'application/json': components['schemas']['ErrorBody'];
 				};
 			};
-			/** @description Meilisearch недоступен */
+			/** @description Поиск недоступен */
 			503: {
 				headers: {
 					[name: string]: unknown;
@@ -10785,7 +12276,7 @@ export interface operations {
 					'application/json': components['schemas']['ErrorBody'];
 				};
 			};
-			/** @description Meilisearch недоступен */
+			/** @description Поиск недоступен */
 			503: {
 				headers: {
 					[name: string]: unknown;
@@ -10833,7 +12324,7 @@ export interface operations {
 					'application/json': components['schemas']['ErrorBody'];
 				};
 			};
-			/** @description Meilisearch недоступен */
+			/** @description Поиск недоступен */
 			503: {
 				headers: {
 					[name: string]: unknown;

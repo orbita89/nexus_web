@@ -86,12 +86,12 @@ describe('applyEvent', () => {
 	it('шаг не из плана — в конец лога', () => {
 		const state = applyEvent(emptyJob(), {
 			type: 'step',
-			step: 'swap',
+			step: 'people',
 			status: 'running',
 			message: 'Переключение'
 		});
 		expect(state.steps).toMatchObject([
-			{ step: 'swap', status: 'running', message: 'Переключение' }
+			{ step: 'people', status: 'running', message: 'Переключение' }
 		]);
 	});
 });

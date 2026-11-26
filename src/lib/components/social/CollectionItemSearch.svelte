@@ -11,7 +11,7 @@
 	import { yearOf } from '#lib/catalog/labels.ts';
 	import Poster from '#lib/components/catalog/Poster.svelte';
 
-	// Быстрое добавление прямо со страницы коллекции: поиск по каталогу (только Meilisearch,
+	// Быстрое добавление прямо со страницы коллекции: поиск по каталогу (только Tantivy,
 	// GET /catalog/search) и добавление в конец по клику. Правка заметок и порядка — в «Изменить содержимое».
 	let {
 		collectionId,

@@ -16,7 +16,7 @@ export const prerender = 'auto';
 
 export const load: PageServerLoad = async ({ fetch, url, params }) => {
 	const api = publicApi(fetch, url);
-	// Фильмы — из Meilisearch по slug студии, параллельно со студией. Тоже orError, а не ошибка на
+	// Фильмы — из Tantivy по slug студии, параллельно со студией. Тоже orError, а не ошибка на
 	// странице: сбой поиска не должен попасть в статику.
 	const [studio, films] = await Promise.all([
 		orError(

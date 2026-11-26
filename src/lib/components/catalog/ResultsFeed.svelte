@@ -51,7 +51,7 @@
 	// Новый запрос (другой first) — выдача заново; «Показать ещё» дописывает поверх.
 	let site = $derived([...first.items]);
 	let siteNext = $derived(first.offset + first.items.length);
-	/** total у поиска — оценка Meilisearch: пустая порция тоже значит «всё». */
+	/** total у поиска — оценка Tantivy: пустая порция тоже значит «всё». */
 	let siteDone = $derived(first.offset + first.items.length >= first.total);
 	let archived = $derived([...(archive?.first.items ?? [])]);
 	let moreRatings = $state<Ratings>({});

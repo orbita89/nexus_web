@@ -17,7 +17,7 @@
 	import { yearOf } from '#lib/catalog/labels.ts';
 	import { LIMITS } from '#lib/social/forum.ts';
 
-	// Произведения темы: поиск по каталогу (Meilisearch; недоступен — подстрока в названии),
+	// Произведения темы: поиск по каталогу (Tantivy; недоступен — подстрока в названии),
 	// до 10 штук, первое — главное, порядок меняется стрелками.
 	let {
 		selected = $bindable([]),
@@ -33,7 +33,7 @@
 	let query = $state('');
 	let results = $state<PickedEntity[]>([]);
 	let searching = $state(false);
-	/** Поиск недоступен (Meilisearch упал) — пишем об этом, а не молчим. */
+	/** Поиск недоступен (Tantivy упал) — пишем об этом, а не молчим. */
 	let failed = $state(false);
 	let timer: ReturnType<typeof setTimeout> | undefined;
 
@@ -41,7 +41,7 @@
 	const label = (e: PickedEntity) =>
 		[e.title, yearOf(e.release_date), kindName(e.kind)].filter(Boolean).join(' · ');
 
-	// Только Meilisearch: в GET /entities поиска по названию нет.
+	// Только Tantivy: в GET /entities поиска по названию нет.
 	async function search(q: string) {
 		const params = { query: { q, limit: 8 } };
 		return (await unwrap(guestApi.catalog.GET('/api/v1/catalog/search', { params }))).items;

@@ -1,5 +1,5 @@
 // Порядок списков каталога: ?sort=trending|top_rated|new|soon|popular|rating|title. Списки — из
-// Meilisearch (GET /search), поэтому и порядки — его. По умолчанию — «Рекомендуемые» (балл
+// Tantivy (GET /search), поэтому и порядки — его. По умолчанию — «Рекомендуемые» (балл
 // бэкенда: рейтинг IMDb + популярность + свежесть), в адрес не пишется (у одной выдачи один
 // адрес). popular и rating — по оценкам Кассандра: в индекс они попадают с задержкой до минуты.
 import type { SchemaSearchSort } from '#lib/api/generated/catalog.ts';

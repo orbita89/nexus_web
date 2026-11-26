@@ -3,7 +3,7 @@
 	import { api } from '#lib/auth/session.svelte.ts';
 	import ReindexPanel from '#lib/components/admin/ReindexPanel.svelte';
 
-	// Индексация: у каждой сущности сайта два «индекса» — поисковый (Meilisearch) и статические
+	// Индексация: у каждой сущности сайта два «индекса» — поисковый (Tantivy) и статические
 	// страницы (HTML + __data.json, nginx отдаёт с диска). Правки в админке обновляют оба сами;
 	// здесь — полная перестройка. Новая сущность — ещё один ReindexPanel со своим эндпоинтом.
 
@@ -20,7 +20,7 @@
 
 <h1 class="mb-2 text-3xl font-black">Индексация</h1>
 <p class="mb-6 max-w-3xl text-sm text-base-content/60">
-	У каждого раздела два индекса: <strong>поиск</strong> (Meilisearch) и
+	У каждого раздела два индекса: <strong>поиск</strong> (Tantivy) и
 	<strong>статические страницы</strong> — готовые HTML и данные, которые сайт отдаёт без рендера.
 	Правки в админке обновляют оба сами. Полная переиндексация нужна, если данные загружали в обход
 	API (например, <code>make seed</code>) или поиск и страницы разошлись с базой. Страницы

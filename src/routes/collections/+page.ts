@@ -5,7 +5,7 @@ import { PAGE_SIZE, readOffset, readText } from '#lib/catalog/url.ts';
 import type { PageLoad } from './$types';
 
 // /collections?q=космос&offset=24 — новые публичные коллекции, а с запросом — поиск по
-// названию и описанию (Meilisearch; приватных в индексе нет вовсе).
+// названию и описанию (Tantivy; приватных в индексе нет вовсе).
 export const load: PageLoad = async ({ fetch, url }) => {
 	const q = readText(url, 'q');
 	const collections = await settle(

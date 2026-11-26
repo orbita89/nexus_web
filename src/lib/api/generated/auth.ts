@@ -732,7 +732,7 @@ export interface components {
 			offset: number;
 			/**
 			 * Format: int64
-			 * @description Всего записей под фильтром (в поиске — точное число совпадений Meilisearch).
+			 * @description Всего записей под фильтром (в поиске — точное число совпадений).
 			 * @example 137
 			 */
 			total: number;

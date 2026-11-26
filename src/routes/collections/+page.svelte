@@ -28,7 +28,7 @@
 	<NewCollection />
 </header>
 
-<!-- Поиск по названию и описанию: ?q= (Meilisearch, приватных в индексе нет). -->
+<!-- Поиск по названию и описанию: ?q= (Tantivy, приватных в индексе нет). -->
 <form method="GET" action="/collections" role="search" class="mb-6 flex max-w-xl gap-2">
 	<input
 		type="search"
