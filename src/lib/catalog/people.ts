@@ -1,14 +1,17 @@
-import { publicApi } from '#lib/api/client.ts';
+import type { Api } from '#lib/api/client.ts';
 import { unwrap } from '#lib/api/errors.ts';
-import { settle } from '#lib/catalog/load.ts';
-import { PAGE_SIZE, readText } from '#lib/catalog/url.ts';
-import type { PageLoad } from './$types';
+import { PAGE_SIZE } from '#lib/catalog/url.ts';
+
+// Список людей /people: поиск в Tantivy (GET /search/people) по имени, русскому и латиницей, с
+// опечатками и по началу слова; из одинаково подходящих выше известные. Без запроса — самые
+// известные: «Популярные люди». Нужен и серверу (статика — «Популярные» без фильтров), и браузеру
+// (?q=, ?role=).
 
 /** Без поиска первые три человека идут крупно, поверх обычных 24 — сетка под ними ровная. */
 const PODIUM = 3;
 
 /** Фильтр по основной роли (known_for); пустой — все. */
-export const _PEOPLE_ROLES = [
+export const PEOPLE_ROLES = [
 	{ value: undefined, title: 'Все' },
 	{ value: 'actor', title: 'Актёры' },
 	{ value: 'director', title: 'Режиссёры' },
@@ -26,20 +29,13 @@ export const _PEOPLE_ROLES = [
 	{ value: 'game_designer', title: 'Геймдизайнеры' }
 ] as const;
 
-// /people?q=брэ&role=actor&offset=24 — поиск людей в Tantivy (GET /search/people): по имени,
-// русскому и латиницей, с опечатками и по началу слова; из одинаково подходящих выше известные.
-// Без запроса — самые известные: «Популярные люди».
-export const load: PageLoad = async ({ fetch, url }) => {
-	const q = readText(url, 'q');
-	const role = _PEOPLE_ROLES.find((r) => r.value && r.value === readText(url, 'role'))?.value;
-	const list = await settle(
-		unwrap(
-			publicApi(fetch, url).catalog.GET('/api/v1/catalog/search/people', {
-				params: {
-					query: { q, known_for: role, limit: q ? PAGE_SIZE : PAGE_SIZE + PODIUM, offset: 0 }
-				}
-			})
-		)
+/** Первая страница выдачи. */
+export function peopleList(api: Pick<Api, 'catalog'>, q?: string, role?: string) {
+	return unwrap(
+		api.catalog.GET('/api/v1/catalog/search/people', {
+			params: {
+				query: { q, known_for: role, limit: q ? PAGE_SIZE : PAGE_SIZE + PODIUM, offset: 0 }
+			}
+		})
 	);
-	return { q, role, list };
-};
+}

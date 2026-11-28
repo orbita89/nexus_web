@@ -58,9 +58,18 @@ const MAX_PATHS = 100;
  */
 const HOME_REFRESH_SEC = Number(process.env.ISR_HOME_REFRESH_SEC ?? 600);
 if (HOME_REFRESH_SEC > 0) {
-	const tick = () =>
-		isr.regenerate('/').catch((error) => console.error('ISR /:', error));
+	const tick = () => isr.regenerate('/').catch((error) => console.error('ISR /:', error));
 	setInterval(tick, HOME_REFRESH_SEC * 1000).unref();
+}
+
+/**
+ * «Популярные люди» (/people): известность меняется медленно, а адреса для сигнала бэкенда у
+ * страницы нет — перерисовываем раз в ISR_PEOPLE_REFRESH_SEC (по умолчанию час). 0 — выключено.
+ */
+const PEOPLE_REFRESH_SEC = Number(process.env.ISR_PEOPLE_REFRESH_SEC ?? 3600);
+if (PEOPLE_REFRESH_SEC > 0) {
+	const tick = () => isr.regenerate('/people').catch((e) => console.error('ISR /people:', e));
+	setInterval(tick, PEOPLE_REFRESH_SEC * 1000).unref();
 }
 
 const httpServer = http.createServer(async (req, res) => {
@@ -236,7 +245,9 @@ async function revalidate(req, res) {
 		try {
 			return reply(202, { started: isr.regenerateAll(kind) });
 		} catch {
-			return reply(400, { error: 'kind: movie, series, book, game, painting' });
+			return reply(400, {
+				error: 'kind: movie, series, book, game, painting, person, tag, studio, award, home'
+			});
 		}
 	}
 

@@ -11,7 +11,18 @@
 	// (/admin/static/*). Пока идёт пересборка, опрашиваем ход раз в 3 секунды.
 	const POLL_MS = 3000;
 
-	type Kind = '' | 'movie' | 'series' | 'book' | 'game' | 'painting';
+	type Kind =
+		| ''
+		| 'movie'
+		| 'series'
+		| 'book'
+		| 'game'
+		| 'painting'
+		| 'person'
+		| 'tag'
+		| 'studio'
+		| 'award'
+		| 'home';
 	/** '' — вся статика: главная, все разделы, студии, премии. */
 	let { kind: initial = '' }: { kind?: Kind } = $props();
 	const KINDS: { value: Kind; label: string }[] = [
@@ -20,7 +31,12 @@
 		{ value: 'series', label: 'Сериалы' },
 		{ value: 'book', label: 'Книги' },
 		{ value: 'game', label: 'Игры' },
-		{ value: 'painting', label: 'Картины' }
+		{ value: 'painting', label: 'Картины' },
+		{ value: 'person', label: 'Люди' },
+		{ value: 'tag', label: 'Теги и жанры' },
+		{ value: 'studio', label: 'Студии' },
+		{ value: 'award', label: 'Премии' },
+		{ value: 'home', label: 'Главная' }
 	];
 	// svelte-ignore state_referenced_locally
 	let kind = $state<Kind>(initial);
@@ -158,7 +174,11 @@
 	{#if run}
 		<div class="text-sm">
 			<p class="flex flex-wrap items-center gap-2">
-				<strong>Последняя пересборка{run.kind ? '' : ' (вся статика)'}</strong>
+				<strong
+					>Последняя пересборка: {(
+						KINDS.find((k) => k.value === (run?.kind ?? ''))?.label ?? run.kind
+					)?.toLowerCase()}</strong
+				>
 				{#if run.running}
 					<span class="badge badge-soft badge-info"
 						><span class="loading loading-xs loading-spinner"></span>идёт</span

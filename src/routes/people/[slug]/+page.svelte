@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { SvelteSet } from 'svelte/reactivity';
+	import { guestApi } from '#lib/auth/session.svelte.ts';
 	import { formatDate, summary, WORKS_SHOWN } from '#lib/catalog/labels.ts';
+	import { ratingsFor } from '#lib/catalog/load.ts';
 	import Awards from '#lib/components/card/Awards.svelte';
 	import EmptyState from '#lib/components/catalog/EmptyState.svelte';
 	import EntityGrid from '#lib/components/catalog/EntityGrid.svelte';
@@ -11,6 +13,7 @@
 	import PersonLikeButton from '#lib/components/social/PersonLikeButton.svelte';
 	import TargetComments from '#lib/components/social/TargetComments.svelte';
 	import WatchButton from '#lib/components/social/WatchButton.svelte';
+	import { liveQuery } from '#lib/social/card-live.svelte.ts';
 	import { Watch } from '#lib/social/watch.svelte.ts';
 	import type { PageProps } from './$types';
 
@@ -46,6 +49,19 @@
 			.join('\n\n')
 			.trim()
 	);
+	// Оценки — в браузере (страница статическая): одним запросом с лимитом, сначала видимое.
+	const ratingsQuery = liveQuery(
+		() => data.roles,
+		(roles) =>
+			ratingsFor(
+				guestApi,
+				[
+					...roles.flatMap((r) => r.works.slice(0, WORKS_SHOWN)),
+					...roles.flatMap((r) => r.works.slice(WORKS_SHOWN))
+				].map((w) => w.entity)
+			)
+	);
+	const ratings = $derived(ratingsQuery.current?.data ?? {});
 	const open = new SvelteSet<string>();
 	// Роли — вкладки на одном уровне; открыта главная (первая), если выбранной у этого человека нет.
 	let picked = $state<string>();
@@ -148,7 +164,7 @@
 	{/if}
 	{#if tab === TOP}
 		<div id="panel-top" role="tabpanel" aria-labelledby="tab-top">
-			<EntityGrid entities={topWorks} ratings={data.ratings} />
+			<EntityGrid entities={topWorks} {ratings} />
 		</div>
 	{:else if active}
 		{@const role = active}
@@ -169,7 +185,7 @@
 				row={{ filters: { person: data.person.slug, role: role.role }, sort: 'new' }}
 				entities={(all ? role.works : role.works.slice(0, WORKS_SHOWN)).map((w) => w.entity)}
 				caption={(e) => captions.get(e.id)}
-				ratings={data.ratings}
+				{ratings}
 			/>
 			{#if role.works.length > WORKS_SHOWN}
 				<button

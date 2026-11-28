@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { afterNavigate, goto } from '$app/navigation';
-	import { navigating, page } from '$app/state';
+	import { page } from '$app/state';
 	import { count } from '#lib/catalog/labels.ts';
 	import { feedKey, filterUrl, withQuery } from '#lib/catalog/url.ts';
 	import EmptyState from '#lib/components/catalog/EmptyState.svelte';
@@ -8,52 +8,82 @@
 	import PeopleFeed from '#lib/components/catalog/PeopleFeed.svelte';
 	import { roleHue } from '#lib/components/catalog/PersonCard.svelte';
 	import Seo from '#lib/components/catalog/Seo.svelte';
-	import { _PEOPLE_ROLES } from './+page.ts';
+	import { onMount } from 'svelte';
+	import { guestApi } from '#lib/auth/session.svelte.ts';
+	import { settle } from '#lib/catalog/load.ts';
+	import { PEOPLE_ROLES, peopleList } from '#lib/catalog/people.ts';
+	import { readText } from '#lib/catalog/url.ts';
+	import { liveQuery } from '#lib/social/card-live.svelte.ts';
 	import type { PageProps } from './$types';
 
 	// Люди: поиск по мере ввода (через 300 мс, без новой записи в истории — «брэ» сразу покажет
 	// Брэда Питта), фильтр по основной роли. Без запроса — самые известные.
 	let { data }: PageProps = $props();
 
+	// Страница статическая (+page.server.ts): в data — «Популярные люди». Поиск и роль из адреса
+	// читаем только в браузере (nginx отдаёт файл без учёта query) и грузим из Tantivy сами.
+	let mounted = $state(false);
+	onMount(() => (mounted = true));
+	const q = $derived(mounted ? readText(page.url, 'q') : undefined);
+	const role = $derived(
+		mounted
+			? PEOPLE_ROLES.find((r) => r.value && r.value === readText(page.url, 'role'))?.value
+			: undefined
+	);
+	const isDefault = $derived(!q && !role);
+	const asked = liveQuery(
+		() => ({ q, role }),
+		async (key) => ({
+			...key,
+			list: key.q || key.role ? await settle(peopleList(guestApi, key.q, key.role)) : null
+		})
+	);
+	const answer = $derived(
+		asked.current?.data && asked.current.data.q === q && asked.current.data.role === role
+			? asked.current.data.list
+			: null
+	);
+	const list = $derived(isDefault ? { data: data.list, error: null } : answer);
+
 	let text = $state(page.url.searchParams.get('q') ?? '');
 	let timer: ReturnType<typeof setTimeout> | undefined;
-	const loading = $derived(navigating.to?.url.pathname === page.url.pathname);
+	const loading = $derived(!isDefault && !answer);
 
 	// «Назад», «вперёд», ссылка — поле следует за адресом; свой goto поле не трогает.
 	afterNavigate(({ type }) => {
-		if (type !== 'goto') text = data.q ?? '';
+		if (type !== 'goto') text = page.url.searchParams.get('q') ?? '';
 	});
 
 	// Всегда на виду: Все, актёры, режиссёры, художники, авторы книг; остальное — в «Ещё».
 	const PRIMARY = [undefined, 'actor', 'director', 'artist', 'author'];
-	const facets = $derived(data.list.data?.facets?.known_for);
+	const facets = $derived(list?.data?.facets?.known_for);
 	// Роли без людей прячем (кроме «Все» и выбранной): вкладка не должна вести на пустой экран.
 	const roles = $derived(
-		_PEOPLE_ROLES.filter((r) => !facets || !r.value || facets[r.value] || r.value === data.role)
+		PEOPLE_ROLES.filter((r) => !facets || !r.value || facets[r.value] || r.value === role)
 	);
 	const primary = $derived(PRIMARY.flatMap((v) => roles.filter((r) => r.value === v)));
 	const more = $derived(roles.filter((r) => !PRIMARY.includes(r.value)));
-	const moreActive = $derived(more.find((r) => r.value === data.role));
+	const moreActive = $derived(more.find((r) => r.value === role));
 	/** Число людей у чипа: у «Все» — сумма по ролям. */
 	function roleCount(value?: string): number | undefined {
 		if (!facets) return undefined;
 		return value ? facets[value] : Object.values(facets).reduce((a, b) => a + b, 0);
 	}
 	const compact = new Intl.NumberFormat('ru', { notation: 'compact' });
-	const items = $derived(data.list.data?.items ?? []);
-	const hue = $derived(roleHue(data.role));
+	const items = $derived(list?.data?.items ?? []);
+	const hue = $derived(roleHue(role));
 
 	function search(delay: number) {
 		clearTimeout(timer);
 		timer = setTimeout(() => {
-			if (text.trim() === (data.q ?? '')) return;
+			if (text.trim() === (q ?? '')) return;
 			goto(filterUrl(page.url, { q: text }), { replace: true, reset: false });
 		}, delay);
 	}
 </script>
 
 <Seo
-	title={data.q ? `Люди: ${data.q}` : 'Популярные люди'}
+	title={q ? `Люди: ${q}` : 'Популярные люди'}
 	description="Актёры, режиссёры, сценаристы и композиторы в каталоге Кассандра."
 />
 
@@ -65,14 +95,15 @@
 
 <header class="mb-6">
 	<h1 class="text-3xl font-black tracking-tight sm:text-5xl">
-		{data.q ? 'Люди' : 'Популярные люди'}
+		{q ? 'Люди' : 'Популярные люди'}
 	</h1>
 	<p class="mt-2 text-sm text-base-content/60">
-		{#if data.list.data && data.q}
-			Найдено {data.list.data.total > data.list.data.limit ? 'около ' : ''}{count(
-				data.list.data.total,
-				['человек', 'человека', 'человек']
-			)}
+		{#if list?.data && q}
+			Найдено {list?.data.total > list?.data.limit ? 'около ' : ''}{count(list?.data.total, [
+				'человек',
+				'человека',
+				'человек'
+			])}
 		{:else}
 			Актёры, режиссёры, авторы книг и создатели игр — в одном месте
 		{/if}
@@ -89,7 +120,7 @@
 	role="search"
 	class="relative mb-5 max-w-xl"
 >
-	{#if data.role}<input type="hidden" name="role" value={data.role} />{/if}
+	{#if role}<input type="hidden" name="role" value={role} />{/if}
 	<svg
 		class="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-base-content/40"
 		viewBox="0 0 24 24"
@@ -113,9 +144,9 @@
 <nav class="mb-8" aria-label="Основная роль">
 	<div class="flex flex-wrap items-center gap-2">
 		{#each primary as r (r.title)}
-			{@const active = r.value === data.role}
+			{@const active = r.value === role}
 			<a
-				href={withQuery('/people', { q: data.q, role: r.value })}
+				href={withQuery('/people', { q: q, role: r.value })}
 				data-sveltekit-noscroll
 				class={[
 					'rounded-full border px-4 py-1.5 text-sm font-medium transition-colors',
@@ -148,9 +179,9 @@
 				{#each more as r (r.title)}
 					<li>
 						<a
-							href={withQuery('/people', { q: data.q, role: r.value })}
+							href={withQuery('/people', { q: q, role: r.value })}
 							data-sveltekit-noscroll
-							class={{ 'menu-active': r.value === data.role }}
+							class={{ 'menu-active': r.value === role }}
 							onclick={() => (document.activeElement as HTMLElement | null)?.blur()}
 							>{r.title}{#if roleCount(r.value)}<span class="ml-auto text-xs opacity-60"
 									>{compact.format(roleCount(r.value) ?? 0)}</span
@@ -170,15 +201,15 @@
 {/snippet}
 
 <div aria-busy={loading}>
-	{#if data.list.error}
-		<LoadError message={data.list.error} />
+	{#if list?.error}
+		<LoadError message={list?.error} />
 	{:else if loading}
 		<ul class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
 			{@render skeleton(12)}
 		</ul>
 	{:else if items.length}
 		{#key feedKey(page.url)}
-			<PeopleFeed first={data.list.data!} q={data.q} role={data.role} />
+			<PeopleFeed first={list!.data!} {q} {role} />
 		{/key}
 	{:else}
 		<EmptyState title="Никого не нашлось">

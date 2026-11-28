@@ -18,7 +18,7 @@ const gz = promisify(gzip);
  * не попадут `..` и `%2e`. Те же адреса — в location статики deploy/nginx.conf.
  */
 export const STATIC_PAGE =
-	/^(\/(?:films|series|books|games|paintings|studios)\/[a-z0-9]+(?:-[a-z0-9]+)*|\/awards\/[a-z0-9]+(?:-[a-z0-9]+)*(?:\/\d{4})?)(\/__data\.json)?$/;
+	/^(\/people|\/(?:films|series|books|games|paintings|studios|people|tags)\/[a-z0-9]+(?:-[a-z0-9]+)*|\/awards\/[a-z0-9]+(?:-[a-z0-9]+)*(?:\/\d{4})?)(\/__data\.json)?$/;
 
 /** Главная: адрес без слага, поэтому её данные лежат в /__data.json, а не в //__data.json. */
 export const HOME = /^\/(__data\.json)?$/;
@@ -38,7 +38,7 @@ export function staticPage(pathname) {
  * Карточки разделов: их десятки и сотни тысяч, поэтому на диске они по папкам из первых двух
  * символов slug и только в .br (staticFiles, brOnly). Премии и главная — плоско, с .html/.gz.
  */
-const SHARDED = /^\/(films|series|books|games|paintings|studios)\/([a-z0-9-]+)$/;
+const SHARDED = /^\/(films|series|books|games|paintings|studios|people|tags)\/([a-z0-9-]+)$/;
 
 /**
  * Файлы страницы на диске (без корня): HTML и данные. Адрес сайта не меняется — меняется только
@@ -60,7 +60,9 @@ export function staticFiles(path) {
 export function pathOfFile(file) {
 	const path = file.replace(/\.html(\.br)?$/, '');
 	const card =
-		/^\/(films|series|books|games|paintings|studios)\/[a-z0-9-]{1,2}\/([a-z0-9-]+)$/.exec(path);
+		/^\/(films|series|books|games|paintings|studios|people|tags)\/[a-z0-9-]{1,2}\/([a-z0-9-]+)$/.exec(
+			path
+		);
 	return card ? `/${card[1]}/${card[2]}` : path;
 }
 
@@ -122,10 +124,21 @@ const SECTION = {
 	painting: 'paintings'
 };
 /**
- * Каталоги статики на диске: разделы карточек, студии и награды (списка студий в API нет — только
- * диск; у наград внутри премии ещё и годы, поэтому обход рекурсивный).
+ * Что можно пересобрать отдельно (kind в POST /_isr/revalidate {"all": true, "kind": …}, кнопка в
+ * админке). dir — каталог на диске (что там уже лежит, тоже перерисовывается: удалённое так уходит
+ * из статики); у разделов произведений адреса ещё и из API каталога, у людей, тегов и премий —
+ * из их списков. Студий списком в API нет — только диск. Без kind — всё сразу и главная.
  */
-const STATIC_DIRS = [...Object.values(SECTION), 'studios', 'awards'];
+const GROUPS = {
+	...Object.fromEntries(Object.entries(SECTION).map(([kind, dir]) => [kind, { dir }])),
+	person: { dir: 'people' },
+	tag: { dir: 'tags' },
+	studio: { dir: 'studios' },
+	award: { dir: 'awards' },
+	home: { dir: null }
+};
+/** Каталоги статики на диске (обход рекурсивный: шарды, годы церемоний). */
+const STATIC_DIRS = Object.values(GROUPS).flatMap((g) => (g.dir ? [g.dir] : []));
 /** Сколько страниц рисовать одновременно при пересборке всего: не забить CPU и бэкенд. */
 const ALL_CONCURRENCY = Number(process.env.ISR_CONCURRENCY ?? 8);
 
@@ -206,7 +219,7 @@ export function createIsr({ server, root, origin, backend }) {
 	 */
 	function regenerateAll(kind = null) {
 		if (all) return false;
-		if (kind && !(kind in SECTION)) throw new Error(`kind: ${kind}`);
+		if (kind && !(kind in GROUPS)) throw new Error(`kind: ${kind}`);
 		progress = {
 			kind,
 			total: 0,
@@ -233,12 +246,14 @@ export function createIsr({ server, root, origin, backend }) {
 	/** @param {NonNullable<typeof progress>} run */
 	async function regenerateAllNow(run) {
 		const started = Date.now();
-		const section = run.kind ? /** @type {Record<string, string>} */ (SECTION)[run.kind] : null;
+		const group = run.kind
+			? /** @type {Record<string, { dir: string | null }>} */ (GROUPS)[run.kind]
+			: null;
 		const paths = new Set([
-			// Главная — в полной пересборке (без kind), её данные берутся из всех разделов.
-			...(run.kind ? [] : ['/']),
-			...(await cataloguePaths(run.kind)),
-			...(await diskPaths(section ? [section] : STATIC_DIRS))
+			// Главная — в полной пересборке и отдельно (home): её данные берутся из всех разделов.
+			...(!run.kind || run.kind === 'home' ? ['/'] : []),
+			...(await listedPaths(run.kind)),
+			...(await diskPaths(group ? (group.dir ? [group.dir] : []) : STATIC_DIRS))
 		]);
 		run.total = paths.size;
 		console.log(`ISR all${run.kind ? ` (${run.kind})` : ''}: ${paths.size} страниц`);
@@ -268,17 +283,57 @@ export function createIsr({ server, root, origin, backend }) {
 	/** Ход последней пересборки (или null, если её не было с запуска). */
 	const status = () => progress && { ...progress, running: all !== null };
 
+	/**
+	 * Адреса из API: карточки каталога, люди, теги, премии. Без kind — всё это сразу.
+	 * @param {string | null} kind
+	 */
+	async function listedPaths(kind) {
+		const lists = [];
+		if (!kind || kind in SECTION) lists.push(cataloguePaths(kind));
+		if (!kind || kind === 'person')
+			lists.push(pagedPaths('people', (p) => `/people/${p.slug}`).then((p) => ['/people', ...p]));
+		if (!kind || kind === 'award') lists.push(pagedPaths('awards', (a) => `/awards/${a.slug}`));
+		if (!kind || kind === 'tag') lists.push(tagPaths());
+		return (await Promise.all(lists)).flat();
+	}
+
+	/** @param {string} url */
+	async function getJson(url) {
+		const response = await fetch(`${backend}${url}`);
+		if (!response.ok) throw new Error(`${url}: ${response.status}`);
+		return response.json();
+	}
+
+	/**
+	 * Все страницы списка API с offset-пагинацией по 100 ({items, total}).
+	 * @param {string} list people | awards
+	 * @param {(item: { slug: string }) => string} path
+	 */
+	async function pagedPaths(list, path) {
+		const paths = [];
+		for (let offset = 0, total = Infinity; offset < total; offset += 100) {
+			const page = await getJson(`/api/v1/catalog/${list}?limit=100&offset=${offset}`);
+			total = page.total;
+			if (!page.items.length) break;
+			paths.push(...page.items.map(path));
+		}
+		return paths;
+	}
+
+	/** Теги и жанры: список одним ответом; без работ страницы нет — пропускаем. */
+	async function tagPaths() {
+		/** @type {{ slug: string, entities_count: number }[]} */
+		const tags = await getJson('/api/v1/catalog/tags');
+		return tags.filter((t) => t.entities_count > 0).map((t) => `/tags/${t.slug}`);
+	}
+
 	/** Адреса всех карточек каталога (offset-страницы API по 100). */
 	/** @param {string | null} kind */
 	async function cataloguePaths(kind) {
 		const paths = [];
 		const only = kind ? `&kind=${kind}` : '';
 		for (let offset = 0, total = Infinity; offset < total; offset += 100) {
-			const response = await fetch(
-				`${backend}/api/v1/catalog/entities?limit=100&offset=${offset}${only}`
-			);
-			if (!response.ok) throw new Error(`каталог: ${response.status}`);
-			const page = await response.json();
+			const page = await getJson(`/api/v1/catalog/entities?limit=100&offset=${offset}${only}`);
 			total = page.total;
 			if (!page.items.length) break;
 			for (const e of page.items) {
@@ -303,7 +358,7 @@ export function createIsr({ server, root, origin, backend }) {
 				// parentPath — каталог файла: у церемонии это build/prerendered/awards/oscar.
 				const inside = join(file.parentPath, file.name).slice(join(root, dir).length);
 				const path = pathOfFile(`/${dir}${inside}`);
-				if (STATIC_PAGE.test(path)) paths.push(path);
+				if (staticPage(path)) paths.push(path);
 			}
 		}
 		return paths;

@@ -7,7 +7,7 @@
 	import LoadError from '#lib/components/catalog/LoadError.svelte';
 	import Seo from '#lib/components/catalog/Seo.svelte';
 	import { KINDS } from '#lib/catalog/kinds.ts';
-	import { listMyMarks, rememberLaterEmpty } from '#lib/social/marks.ts';
+	import { listMyMarks, saveLater } from '#lib/social/marks.ts';
 
 	// «Отложено»: всё, что отмечено «позже», новые сверху. Личное — только владельцу, как «Из книг».
 	const PAGE = 24;
@@ -39,8 +39,8 @@
 				if (stale) return;
 				items = cards(p);
 				total = p.total;
-				// Заодно уточняем флаг главной: пусто или нет.
-				if (session.user) rememberLaterEmpty(session.user.username, p.total === 0);
+				// Заодно обновляем кэш блока на главной.
+				if (session.user) saveLater(session.user.username, p);
 			})
 			.catch((e) => !stale && (error = errorMessage(e)))
 			.finally(() => !stale && (loading = false));
@@ -75,7 +75,9 @@
 		>Нажмите «Посмотреть позже» на карточке — и она появится здесь.</EmptyState
 	>
 {:else}
-	<p class="mb-4 text-sm text-base-content/50">{total.toLocaleString('ru-RU')} — видно только вам</p>
+	<p class="mb-4 text-sm text-base-content/50">
+		{total.toLocaleString('ru-RU')} — видно только вам
+	</p>
 	<ul class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5" aria-label="Отложено">
 		{#each items as entity (entity.slug)}
 			<li><EntityCard {entity} showKind /></li>

@@ -2,17 +2,24 @@
 	import { errorMessage } from '#lib/api/errors.ts';
 	import { api, session } from '#lib/auth/session.svelte.ts';
 	import { KINDS } from '#lib/catalog/kinds.ts';
-	import { laterKnownEmpty, listMyMarks, rememberLaterEmpty } from '#lib/social/marks.ts';
+	import { LATER_SHOWN, listMyMarks, readLater, saveLater } from '#lib/social/marks.ts';
 	import type { CardEntity } from './EntityCard.svelte';
 	import PosterStrip from './PosterStrip.svelte';
 
 	// «Отложено» — отложенное самим человеком. Личное, поэтому грузится в браузере с токеном
 	// (главная — общая для всех и лежит готовым файлом), а у гостя блока нет вовсе. Блок стоит
 	// ниже каталога, и запрос уходит, только когда до него докрутили (или он уже рядом с экраном);
-	// если на этом устройстве уже известно, что отложенного нет, сервер не спрашиваем вовсе.
-	const SIZE = 12;
+	// свежий ответ (≤ 15 мин) хранится на устройстве — тогда сервер не спрашиваем вовсе (marks.ts).
 
 	let items = $state<CardEntity[]>([]);
+
+	// В social `EntityRef.kind` — строка, а не перечисление: раздел сверяем со своим списком,
+	// незнакомый тип просто пропускаем.
+	const cards = (marks: readonly { entity: Omit<CardEntity, 'kind'> & { kind: string } }[]) =>
+		marks.flatMap((m) => {
+			const kind = KINDS.find((k) => k.kind === m.entity.kind)?.kind;
+			return kind ? [{ ...m.entity, kind }] : [];
+		});
 	let error = $state('');
 	let anchor = $state<HTMLElement>();
 	let near = $state(false);
@@ -37,18 +44,18 @@
 			items = [];
 			return;
 		}
-		if (!near || laterKnownEmpty(user.username)) return;
+		if (!near) return;
+		const cached = readLater(user.username);
+		if (cached) {
+			items = cards(cached.items);
+			return;
+		}
 		let stale = false;
-		listMyMarks(api, 'later', { limit: SIZE })
-			// В social `EntityRef.kind` — строка, а не перечисление: раздел сверяем со своим списком,
-			// незнакомый тип просто пропускаем.
+		listMyMarks(api, 'later', { limit: LATER_SHOWN })
 			.then((page) => {
 				if (stale) return;
-				rememberLaterEmpty(user.username, page.total === 0);
-				items = page.items.flatMap((m) => {
-					const kind = KINDS.find((k) => k.kind === m.entity.kind)?.kind;
-					return kind ? [{ ...m.entity, kind }] : [];
-				});
+				saveLater(user.username, page);
+				items = cards(page.items);
 			})
 			.catch((e) => !stale && (error = errorMessage(e)));
 		return () => {
