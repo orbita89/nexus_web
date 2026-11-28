@@ -192,11 +192,22 @@
 		clearTimeout(refreshTimer);
 		refreshTimer = setTimeout(() => live.refresh(), 800);
 	}
-	// Живые обновления карточки (новые рецензии, обсуждения, реакции) — только вошедшему: у него
-	// соединение и так открыто. Гостю (большинство заходов на статические карточки) WebSocket не
-	// открываем — каждое соединение держит память сервера; он видит то, что загрузилось при открытии.
+	// ВРЕМЕННО ОТКЛЮЧЕНО (docs/realtime.md): живые обновления карточки по WebSocket. Сокет теперь
+	// только у открытого чата; карточка видит то, что загрузилось при открытии, и свои действия.
+	// Включить обратно — вернуть `[`entity:${entity.slug}`]` для вошедшего вместо `[]`.
+	// Вместо сокета — перечитать, когда вкладка вернулась из фона (была скрыта дольше минуты):
+	// данные свежие, когда на них смотрят, и ни одного запроса, пока вкладка в фоне.
+	$effect(() => {
+		let hiddenAt = 0;
+		const onVisibility = () => {
+			if (document.visibilityState === 'hidden') hiddenAt = Date.now();
+			else if (hiddenAt && Date.now() - hiddenAt > 60_000) refreshSoon();
+		};
+		document.addEventListener('visibilitychange', onVisibility);
+		return () => document.removeEventListener('visibilitychange', onVisibility);
+	});
 	useRealtime(
-		() => (session.status === 'authed' ? [`entity:${entity.slug}`] : []),
+		() => [],
 		(event) => {
 			if (event.data.author_id === session.user?.id) return;
 			// entity.reacted — кто-то поставил эмодзи: в событии только id, какое именно — узнаём,

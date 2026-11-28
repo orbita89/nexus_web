@@ -1,11 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { backoff, IDLE_CLOSE_MS, Realtime, type SocketLike } from './client';
+import {
+	backoff,
+	CLOSE_REPLACED,
+	IDLE_CLOSE_MS,
+	MAX_ATTEMPTS,
+	Realtime,
+	type SocketLike
+} from './client';
 
 class FakeSocket implements SocketLike {
 	readyState = 0;
 	sent: Record<string, unknown>[] = [];
 	onopen: (() => void) | null = null;
-	onclose: (() => void) | null = null;
+	onclose: ((event?: { code?: number }) => void) | null = null;
 	onmessage: ((event: { data: unknown }) => void) | null = null;
 	send(data: string) {
 		this.sent.push(JSON.parse(data));
@@ -17,9 +24,9 @@ class FakeSocket implements SocketLike {
 		this.readyState = 1;
 		this.onopen?.();
 	}
-	drop() {
+	drop(code?: number) {
 		this.readyState = 3;
-		this.onclose?.();
+		this.onclose?.({ code });
 	}
 	receive(message: object) {
 		this.onmessage?.({ data: JSON.stringify(message) });
@@ -39,7 +46,9 @@ function client() {
 		token: async () => token,
 		now: () => Date.now(),
 		setTimeout: (fn, ms) => setTimeout(fn, ms),
-		clearTimeout: (id) => clearTimeout(id as ReturnType<typeof setTimeout>)
+		clearTimeout: (id) => clearTimeout(id as ReturnType<typeof setTimeout>),
+		// Без разброса: пауза ровно backoff().
+		random: () => 0.5
 	});
 }
 
@@ -198,14 +207,15 @@ describe('вход', () => {
 		expect(sockets[1].sent).toEqual([{ type: 'subscribe', channels: ['thread:1'] }]);
 	});
 
-	it('без подписок и без входа соединение не открывается', () => {
+	it('без подписок соединение не открывается — и вход его не открывает', () => {
 		const rt = client();
 		rt.setAuth(false);
+		rt.setAuth(true);
 		expect(sockets).toHaveLength(0);
 	});
 });
 
-describe('простой гостя', () => {
+describe('простой (чат закрыли)', () => {
 	it('последняя отписка — соединение закрывается через IDLE_CLOSE_MS', async () => {
 		const rt = client();
 		const off = rt.subscribe(['entity:x'], () => {});
@@ -234,7 +244,7 @@ describe('простой гостя', () => {
 		expect(sockets[0].readyState).toBe(1);
 	});
 
-	it('вошедшему соединение не закрывается', async () => {
+	it('вошедшему соединение тоже закрывается', async () => {
 		token = 't';
 		const rt = client();
 		rt.setAuth(true);
@@ -242,7 +252,78 @@ describe('простой гостя', () => {
 		sockets[0].open();
 		await flush();
 		off();
-		await vi.advanceTimersByTimeAsync(IDLE_CLOSE_MS * 2);
-		expect(sockets[0].readyState).toBe(1);
+		await vi.advanceTimersByTimeAsync(IDLE_CLOSE_MS);
+		expect(sockets[0].readyState).toBe(3);
+		expect(rt.status).toBe('idle');
+	});
+});
+
+describe('статус, потолок попыток, замена', () => {
+	it('connecting → open; MAX_ATTEMPTS неудач подряд — offline без новых попыток; retry — снова', async () => {
+		const rt = client();
+		const seen: string[] = [];
+		rt.onStatus((s) => seen.push(s));
+		rt.subscribe(['thread:1'], () => {});
+		expect(rt.status).toBe('connecting');
+		sockets[0].open();
+		await flush();
+		expect(rt.status).toBe('open');
+
+		for (let i = 0; i < MAX_ATTEMPTS; i++) {
+			sockets.at(-1)!.drop();
+			await vi.advanceTimersByTimeAsync(backoff(i));
+		}
+		expect(sockets).toHaveLength(MAX_ATTEMPTS + 1);
+		sockets.at(-1)!.drop();
+		expect(rt.status).toBe('offline');
+		await vi.advanceTimersByTimeAsync(120_000);
+		expect(sockets).toHaveLength(MAX_ATTEMPTS + 1);
+		expect(rt.send({ type: 'chat.send' })).toBe(false);
+
+		rt.retry();
+		expect(sockets).toHaveLength(MAX_ATTEMPTS + 2);
+		expect(rt.status).toBe('connecting');
+		expect(seen[0]).toBe('connecting');
+		expect(seen).toContain('offline');
+	});
+
+	it('разброс паузы: 0,5–1,5 от backoff', async () => {
+		const make = (r: number) =>
+			new Realtime({
+				connect: () => {
+					const s = new FakeSocket();
+					sockets.push(s);
+					return s;
+				},
+				token: async () => null,
+				now: () => Date.now(),
+				setTimeout: (fn, ms) => setTimeout(fn, ms),
+				clearTimeout: (id) => clearTimeout(id as ReturnType<typeof setTimeout>),
+				random: () => r
+			});
+		const rt = make(0);
+		rt.subscribe(['thread:1'], () => {});
+		sockets[0].drop();
+		await vi.advanceTimersByTimeAsync(499);
+		expect(sockets).toHaveLength(1);
+		await vi.advanceTimersByTimeAsync(1);
+		expect(sockets).toHaveLength(2);
+	});
+
+	it('код 4000 (открыт в другом окне) — replaced, без переподключения; закрыли чат — сброс', async () => {
+		const rt = client();
+		const off = rt.subscribe(['thread:1'], () => {});
+		sockets[0].open();
+		await flush();
+		sockets[0].drop(CLOSE_REPLACED);
+		expect(rt.status).toBe('replaced');
+		await vi.advanceTimersByTimeAsync(120_000);
+		expect(sockets).toHaveLength(1);
+
+		off();
+		await vi.advanceTimersByTimeAsync(IDLE_CLOSE_MS);
+		expect(rt.status).toBe('idle');
+		rt.subscribe(['thread:1'], () => {});
+		expect(sockets).toHaveLength(2);
 	});
 });

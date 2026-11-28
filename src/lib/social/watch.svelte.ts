@@ -48,8 +48,11 @@ export class Watch {
 				});
 		});
 
+		// ВРЕМЕННО ОТКЛЮЧЕНО (docs/realtime.md): синхронизация колокольчика между вкладками и
+		// устройствами по WebSocket. Состояние берётся по REST при открытии страницы.
+		// Включить обратно — вернуть `['user:me']` для вошедшего вместо `[]`.
 		useRealtime(
-			() => (session.status === 'authed' ? ['user:me'] : []),
+			() => [],
 			(event) => {
 				if (event.data[TARGETS[target]] !== id()) return;
 				if (event.event === 'interest.added') this.watching = true;

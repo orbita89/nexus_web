@@ -2,7 +2,6 @@
 	import './layout.css';
 	import favicon from '#lib/assets/favicon.svg';
 	import Navbar from '#lib/components/Navbar.svelte';
-	import ReplyToasts from '#lib/components/social/ReplyToasts.svelte';
 	import ChatPanel from '#lib/components/chat/ChatPanel.svelte';
 	import { chat } from '#lib/chat/chat.svelte.ts';
 	import { syncRealtimeAuth } from '#lib/realtime/realtime.svelte.ts';
@@ -136,7 +135,7 @@
 			</div>
 		</footer>
 	{/if}
-	<ReplyToasts />
+	<!-- Уведомления об ответах (ReplyToasts) временно отключены: без постоянного WebSocket. -->
 </div>
 {#if !reading}<ChatPanel />{/if}
 

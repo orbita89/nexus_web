@@ -5,7 +5,12 @@
 	import { chat } from '#lib/chat/chat.svelte.ts';
 	import { authorName, isSystemRoom, roomMeta, TOPICS, unreadLabel } from '#lib/chat/rooms.ts';
 	import type { Tab } from '#lib/chat/chat.svelte.ts';
-	import { useRealtime, useRealtimeReplies } from '#lib/realtime/realtime.svelte.ts';
+	import {
+		realtimeState,
+		retryRealtime,
+		useRealtime,
+		useRealtimeReplies
+	} from '#lib/realtime/realtime.svelte.ts';
 	import ChatList from './ChatList.svelte';
 	import ChatRoom from './ChatRoom.svelte';
 	import PeopleSearch from './PeopleSearch.svelte';
@@ -21,9 +26,14 @@
 		void chat.loadChats();
 	});
 
-	// Вошедшему — все события соединения (интересы и комнаты сервер подписывает сам).
+	// WebSocket — только вошедшему и только пока панель на экране: закрыли чат — через 4 с сокет
+	// закрывается (один на браузер, см. realtime/tabs.ts). Гость читает чат по REST, без сокета.
+	// Почему так — docs/realtime.md.
+	const live = $derived(session.status === 'authed' && chat.visible);
+
+	// Все события соединения (интересы и комнаты сервер подписывает сам).
 	useRealtime(
-		() => (session.status === 'authed' ? null : []),
+		() => (live ? null : []),
 		(event) => chat.onEvent(event),
 		() => chat.resync()
 	);
@@ -32,18 +42,16 @@
 		if (chat.visible) chat.wake();
 	});
 
-	// Каналы ниже — только пока панель на экране: у скрытой панели нет ни запросов, ни подписок,
-	// и гостю на странице без живых блоков WebSocket не открывается вовсе.
 	// Канал общего списка комнат: новая комната появляется в «Обсуждается» без перезагрузки.
 	useRealtime(
-		() => (chat.visible ? ['rooms'] : []),
+		() => (live ? ['rooms'] : []),
 		(event) => chat.onEvent(event)
 	);
-	// Открытая комната не из интересов (и у гостя) — подписать её канал.
+	// Открытая комната не из интересов — подписать её канал. События приходят в подписку «на всё»
+	// выше, здесь только канал на сервере.
 	useRealtime(
-		() => (chat.visible && chat.current && !chat.member ? [chat.current.room] : []),
-		(event) => session.status !== 'authed' && chat.onEvent(event),
-		() => session.status !== 'authed' && chat.resync()
+		() => (live && chat.current && !chat.member ? [chat.current.room] : []),
+		() => {}
 	);
 	useRealtimeReplies((reply) => chat.onReply(reply));
 
@@ -118,6 +126,17 @@
 	{/if}
 
 	<div class={['min-h-0 flex-1 flex-col', chat.collapsed ? 'flex lg:hidden' : 'flex']}>
+		{#if live && realtimeState.status === 'offline'}
+			<div role="alert" class="m-2 alert py-2 text-sm alert-warning">
+				<span>Нет связи с чатом.</span>
+				<button class="btn btn-xs" onclick={retryRealtime}>Повторить</button>
+			</div>
+		{:else if live && realtimeState.status === 'replaced'}
+			<div role="status" class="m-2 alert py-2 text-sm">
+				<span>Чат открыт в другом окне или на другом устройстве.</span>
+				<button class="btn btn-xs" onclick={retryRealtime}>Подключиться здесь</button>
+			</div>
+		{/if}
 		<div class="flex items-center justify-end gap-1 px-2 py-2">
 			<p class="mr-auto pl-2 text-xs font-bold tracking-widest text-base-content/60 uppercase">
 				Чат
