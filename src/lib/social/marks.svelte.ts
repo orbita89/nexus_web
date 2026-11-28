@@ -3,7 +3,7 @@
 // сразу, ошибка — откат и сообщение.
 import { ApiError, errorMessage, unwrap } from '#lib/api/errors.ts';
 import { api, session } from '#lib/auth/session.svelte.ts';
-import type { Mark } from './marks.ts';
+import { rememberLaterEmpty, type Mark } from './marks.ts';
 
 export class Marks {
 	/** null — нет отметки или ещё не знаем (гость, сессия грузится). */
@@ -52,6 +52,8 @@ export class Marks {
 				await unwrap(
 					api.social.PUT('/api/v1/social/entities/{slug}/mark', { params, body: { kind: next } })
 				);
+				// Появилось отложенное — «пусто» с главной больше не верно.
+				if (next === 'later' && session.user) rememberLaterEmpty(session.user.username, false);
 			} else {
 				await unwrap(api.social.DELETE('/api/v1/social/entities/{slug}/mark', { params }));
 			}

@@ -104,9 +104,6 @@
 	</div>
 </section>
 
-<!-- Своё — выше общего: вошедший продолжает с отложенного, гость этого блока не видит. -->
-<ContinueStrip />
-
 {#if data.featured.length}
 	<section class="mb-10" aria-labelledby="featured-collections">
 		<div class="mb-3 flex items-baseline justify-between gap-4">
@@ -155,20 +152,12 @@
 	{/if}
 {/each}
 
-<!-- Дальше — то, чего нет в разделах: общая лента по оценкам, люди и живой форум. Без них
-     страница кончалась пятью полосами каталога и footer'ом. -->
-{#if data.rated.length}
-	<section class="mb-10" aria-labelledby="top-rated">
-		<div class="mb-3 flex items-baseline justify-between gap-4">
-			<!-- Без пояснения «фильмы и книги вместе»: порядок top_rated ведёт рейтинг IMDb, и на
-			     деле в ленте одни фильмы — подпись обещала бы то, чего в ней нет. -->
-			<h2 id="top-rated" class="text-xl font-bold">Высокий рейтинг</h2>
-			<a href="/search?sort=top_rated" class="link text-sm link-primary link-hover">Все →</a>
-		</div>
-		<PosterStrip entities={data.rated} label="Высокий рейтинг" ratings={data.ratings} showKind />
-	</section>
-{/if}
+<!-- Личное — ниже каталога: первый экран общий для всех, а запрос за отложенным уходит, только
+     когда до блока докрутили (ContinueStrip). Гость этого блока не видит. -->
+<ContinueStrip />
 
+<!-- Дальше — то, чего нет в разделах: люди и живой форум. Без них
+     страница кончалась пятью полосами каталога и footer'ом. -->
 <!-- Сообщество — отдельная зона: своя подложка во всю ширину окна отделяет «кто здесь» от
      каталожных полос выше, и страница читается как три части — найти, посмотреть, поговорить. -->
 {#if data.people.length || data.rooms.length}

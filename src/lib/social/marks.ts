@@ -35,3 +35,28 @@ export function listMyMarks(
 		})
 	);
 }
+
+// Главная — статика, поэтому «Отложено» грузится отдельным запросом с токеном. Чтобы не спрашивать
+// сервер у тех, у кого отложенного нет, «пусто» запоминается на устройстве: ключ хранит имя
+// владельца (чужой вход на этом устройстве флаг не наследует). Новая отметка «позже» флаг снимает.
+const LATER_EMPTY_KEY = 'nexus.later.empty';
+
+/** Известно, что у этого пользователя отложенного нет (не спрашиваем сервер). */
+export function laterKnownEmpty(username: string): boolean {
+	try {
+		return localStorage.getItem(LATER_EMPTY_KEY) === username;
+	} catch {
+		return false;
+	}
+}
+
+/** Запомнить результат: `empty` — пусто, иначе флаг снимается. */
+export function rememberLaterEmpty(username: string, empty: boolean) {
+	try {
+		if (empty) localStorage.setItem(LATER_EMPTY_KEY, username);
+		else if (localStorage.getItem(LATER_EMPTY_KEY) === username)
+			localStorage.removeItem(LATER_EMPTY_KEY);
+	} catch {
+		// Хранилище недоступно — просто будем спрашивать сервер.
+	}
+}

@@ -7,6 +7,9 @@
 //   - в одной вкладке параллельные обновления склеиваются в один запрос (inflight);
 //   - между вкладками обновление идёт под Web Lock, а refresh-токен читается из localStorage
 //     уже внутри блокировки — к этому моменту другая вкладка могла его заменить;
+//   - access вместе с профилем лежит в localStorage до своего истечения: перезагрузка страницы и
+//     новая вкладка берут его оттуда и не ходят в /auth/refresh (бэкенд и так отвечает «кто я»
+//     из токена; refresh остаётся раз в ~15 минут, а не на каждую страницу);
 //   - новый access рассылается остальным вкладкам (BroadcastChannel), чтобы они не обновлялись зря.
 
 import { ApiError } from '#lib/api/errors.ts';
@@ -16,6 +19,7 @@ export type User = SchemaUserView;
 export type TokenResponse = SchemaTokenResponse;
 
 export const REFRESH_KEY = 'nexus.refresh';
+export const ACCESS_KEY = 'nexus.access';
 const LOCK_NAME = 'nexus.auth.refresh';
 /** Access, которому осталось меньше этого, обновляем заранее, а не ждём 401. */
 const EXPIRY_MARGIN_MS = 30_000;
@@ -63,6 +67,28 @@ export function createAuth(deps: AuthDeps) {
 		});
 	}
 
+	/** Свежий access с профилем из хранилища (его мог положить другой экран или вкладка). */
+	function stored(): { access: Access; user: User } | null {
+		try {
+			const raw = deps.storage.getItem(ACCESS_KEY);
+			if (!raw) return null;
+			const saved = JSON.parse(raw) as { token?: string; expiresAt?: number; user?: User };
+			if (!saved.token || !saved.user || typeof saved.expiresAt !== 'number') return null;
+			const a = { token: saved.token, expiresAt: saved.expiresAt };
+			return isFresh(a) ? { access: a, user: saved.user } : null;
+		} catch {
+			return null;
+		}
+	}
+
+	function persist(a: Access, u: User) {
+		try {
+			deps.storage.setItem(ACCESS_KEY, JSON.stringify({ ...a, user: u }));
+		} catch {
+			// Хранилище переполнено или закрыто — обойдёмся refresh'ем.
+		}
+	}
+
 	function withLock<T>(fn: () => Promise<T>): Promise<T> {
 		return deps.locks ? deps.locks.request(LOCK_NAME, fn) : fn();
 	}
@@ -84,6 +110,7 @@ export function createAuth(deps: AuthDeps) {
 	function signIn(tokens: TokenResponse) {
 		deps.storage.setItem(REFRESH_KEY, tokens.refresh_token);
 		access = { token: tokens.access_token, expiresAt: now() + tokens.expires_in * 1000 };
+		persist(access, tokens.user);
 		setUser(tokens.user);
 		deps.channel?.postMessage({ type: 'tokens', access, user: tokens.user } satisfies Message);
 	}
@@ -91,6 +118,7 @@ export function createAuth(deps: AuthDeps) {
 	/** Забыть сессию локально (во всех вкладках), без запроса к серверу. */
 	function forget() {
 		deps.storage.removeItem(REFRESH_KEY);
+		deps.storage.removeItem(ACCESS_KEY);
 		access = null;
 		setUser(null);
 		deps.channel?.postMessage({ type: 'logout' } satisfies Message);
@@ -99,6 +127,13 @@ export function createAuth(deps: AuthDeps) {
 	async function doRefresh(stale: string | null): Promise<boolean> {
 		// Пока ждали блокировку, другая вкладка могла обновиться и прислать свежий access.
 		if (isFresh(access) && access.token !== stale) return true;
+		// Или обновилась и не успела прислать — тогда свежий access уже в хранилище.
+		const fresh = stored();
+		if (fresh && fresh.access.token !== stale) {
+			access = fresh.access;
+			setUser(fresh.user);
+			return true;
+		}
 		const token = deps.storage.getItem(REFRESH_KEY);
 		if (!token) {
 			if (user || access) forget();
@@ -161,6 +196,12 @@ export function createAuth(deps: AuthDeps) {
 	function init(): Promise<void> {
 		initialized ??= (async () => {
 			if (!deps.storage.getItem(REFRESH_KEY)) return setUser(null);
+			// Access ещё действует — сессия восстановлена без единого запроса.
+			const fresh = stored();
+			if (fresh) {
+				access = fresh.access;
+				return setUser(fresh.user);
+			}
 			try {
 				await refresh();
 			} catch {
@@ -209,6 +250,7 @@ export function createAuth(deps: AuthDeps) {
 		logoutAll,
 		/** Профиль изменился (PATCH /me, смена email) — обновить без перевыпуска токенов. */
 		updateUser(next: User) {
+			if (access) persist(access, next);
 			setUser(next);
 		},
 		get user() {

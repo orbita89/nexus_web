@@ -2,40 +2,63 @@
 	import { errorMessage } from '#lib/api/errors.ts';
 	import { api, session } from '#lib/auth/session.svelte.ts';
 	import { KINDS } from '#lib/catalog/kinds.ts';
-	import { listMyMarks } from '#lib/social/marks.ts';
+	import { laterKnownEmpty, listMyMarks, rememberLaterEmpty } from '#lib/social/marks.ts';
 	import type { CardEntity } from './EntityCard.svelte';
 	import PosterStrip from './PosterStrip.svelte';
 
-	// «Продолжить» — отложенное самим человеком. Личное, поэтому грузится в браузере с токеном
-	// (главная — общая для всех и кэшируется), а у гостя блока нет вовсе.
+	// «Отложено» — отложенное самим человеком. Личное, поэтому грузится в браузере с токеном
+	// (главная — общая для всех и лежит готовым файлом), а у гостя блока нет вовсе. Блок стоит
+	// ниже каталога, и запрос уходит, только когда до него докрутили (или он уже рядом с экраном);
+	// если на этом устройстве уже известно, что отложенного нет, сервер не спрашиваем вовсе.
 	const SIZE = 12;
 
 	let items = $state<CardEntity[]>([]);
 	let error = $state('');
+	let anchor = $state<HTMLElement>();
+	let near = $state(false);
 
 	$effect(() => {
-		if (session.status !== 'authed') {
+		if (near || !anchor || session.status !== 'authed') return;
+		// Без IntersectionObserver (старые браузеры) — грузим сразу, как раньше.
+		if (typeof IntersectionObserver === 'undefined') return void (near = true);
+		const observer = new IntersectionObserver(
+			(entries) => {
+				if (entries.some((e) => e.isIntersecting)) near = true;
+			},
+			{ rootMargin: '400px 0px' }
+		);
+		observer.observe(anchor);
+		return () => observer.disconnect();
+	});
+
+	$effect(() => {
+		const user = session.user;
+		if (session.status !== 'authed' || !user) {
 			items = [];
 			return;
 		}
+		if (!near || laterKnownEmpty(user.username)) return;
 		let stale = false;
 		listMyMarks(api, 'later', { limit: SIZE })
 			// В social `EntityRef.kind` — строка, а не перечисление: раздел сверяем со своим списком,
 			// незнакомый тип просто пропускаем.
-			.then(
-				(page) =>
-					!stale &&
-					(items = page.items.flatMap((m) => {
-						const kind = KINDS.find((k) => k.kind === m.entity.kind)?.kind;
-						return kind ? [{ ...m.entity, kind }] : [];
-					}))
-			)
+			.then((page) => {
+				if (stale) return;
+				rememberLaterEmpty(user.username, page.total === 0);
+				items = page.items.flatMap((m) => {
+					const kind = KINDS.find((k) => k.kind === m.entity.kind)?.kind;
+					return kind ? [{ ...m.entity, kind }] : [];
+				});
+			})
 			.catch((e) => !stale && (error = errorMessage(e)));
 		return () => {
 			stale = true;
 		};
 	});
 </script>
+
+<!-- Метка для IntersectionObserver: нулевая высота, у гостя её нет. -->
+{#if session.status === 'authed'}<div bind:this={anchor} aria-hidden="true"></div>{/if}
 
 {#if items.length}
 	<section class="mb-10" aria-labelledby="continue">

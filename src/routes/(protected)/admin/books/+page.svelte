@@ -346,5 +346,5 @@
 {/if}
 
 <div class="mt-4">
-	<StaticPagesPanel />
+	<StaticPagesPanel kind="book" />
 </div>

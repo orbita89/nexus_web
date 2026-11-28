@@ -19,7 +19,7 @@ import { handler } from '../build/handler.js';
 import { base, dir, origin as builtOrigin, server } from '../build/adapter-node.js';
 import { promisify } from 'node:util';
 import { brotliDecompress } from 'node:zlib';
-import { STATIC_PAGE, acceptsBrotli, brOnly, createIsr, staticFiles } from './isr.js';
+import { acceptsBrotli, brOnly, createIsr, staticFiles, staticPage } from './isr.js';
 
 const unbr = promisify(brotliDecompress);
 
@@ -50,6 +50,19 @@ const STATIC_CACHE = 'public, max-age=300';
 /** Не больше 100 адресов за запрос (бэкенд шлёт пачками по 100); на всё сразу — {"all": true}. */
 const MAX_PATHS = 100;
 
+/**
+ * Главная собрана из каталога, подборок, каналов и оценок — они меняются без правки карточки
+ * (активность каналов, подборки редакции), поэтому её перерисовываем по таймеру, а не только по
+ * сигналу бэкенда. Один рендер раз в HOME_REFRESH_SEC (по умолчанию 10 минут) вместо ~20
+ * запросов к API на каждого посетителя. 0 — выключено.
+ */
+const HOME_REFRESH_SEC = Number(process.env.ISR_HOME_REFRESH_SEC ?? 600);
+if (HOME_REFRESH_SEC > 0) {
+	const tick = () =>
+		isr.regenerate('/').catch((error) => console.error('ISR /:', error));
+	setInterval(tick, HOME_REFRESH_SEC * 1000).unref();
+}
+
 const httpServer = http.createServer(async (req, res) => {
 	const url = new URL(req.url ?? '/', 'http://internal');
 
@@ -61,7 +74,7 @@ const httpServer = http.createServer(async (req, res) => {
 	// снята при сборке и после перерисовки врёт. Файл на диске есть — отдаём его (x-isr: hit, без
 	// бэкенда) с ETag, как nginx: 5 минут браузер берёт её из своего кэша, потом переспрашивает и
 	// получает 304 без тела; нет файла — рисуем, сохраняем и отдаём свежий (x-isr: miss).
-	const page = STATIC_PAGE.exec(url.pathname);
+	const page = staticPage(url.pathname);
 	if (page && (req.method === 'GET' || req.method === 'HEAD')) {
 		const isData = Boolean(page[2]);
 		/**
@@ -237,7 +250,7 @@ async function revalidate(req, res) {
 
 	const results = await Promise.all(
 		/** @type {string[]} */ (paths).map((path) => {
-			const page = STATIC_PAGE.exec(path)?.[1];
+			const page = staticPage(path)?.[1];
 			if (!page) return { path, skipped: true };
 			return isr.regenerate(page).then(
 				({ status }) => ({ path, status }),

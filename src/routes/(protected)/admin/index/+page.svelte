@@ -2,6 +2,7 @@
 	import { unwrap } from '#lib/api/errors.ts';
 	import { api } from '#lib/auth/session.svelte.ts';
 	import ReindexPanel from '#lib/components/admin/ReindexPanel.svelte';
+	import StaticPagesPanel from '#lib/components/admin/StaticPagesPanel.svelte';
 
 	// Индексация: у каждой сущности сайта два «индекса» — поисковый (Tantivy) и статические
 	// страницы (HTML + __data.json, nginx отдаёт с диска). Правки в админке обновляют оба сами;
@@ -46,4 +47,5 @@
 			'Пока страницы людей рендерятся на каждый запрос, а правки в них видны сразу'
 		]}
 	/>
+	<StaticPagesPanel />
 </div>

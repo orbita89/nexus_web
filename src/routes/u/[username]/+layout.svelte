@@ -46,6 +46,8 @@
 		{ href: `${base}/reviews`, title: 'Рецензии', n: profile.reviews_count },
 		{ href: `${base}/threads`, title: 'Темы', n: profile.threads_count },
 		{ href: `${base}/collections`, title: 'Коллекции', n: profile.collections_count },
+		// Отложенное («позже») — личное, вкладка только у владельца.
+		{ href: `${base}/later`, title: 'Отложено', n: null, ownerOnly: true },
 		// Закладки и выделения в читалке — личные, вкладка только у владельца.
 		{ href: `${base}/books`, title: 'Из книг', n: null, ownerOnly: true },
 		// Обсуждения книг с ИИ-преподавателем — личные.

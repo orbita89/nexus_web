@@ -606,6 +606,15 @@ class Chat {
 		return mobile ? this.sheet : !this.collapsed;
 	}
 
+	/**
+	 * Нужен ли список чатов: на десктопе всегда (полоса иконок со счётчиком непрочитанного), на
+	 * мобильном — только пока открыт лист: панели физически нет, запрос был бы напрасным.
+	 */
+	get wantsChats(): boolean {
+		if (typeof matchMedia === 'undefined') return false;
+		return matchMedia('(min-width: 64rem)').matches || this.sheet;
+	}
+
 	/** Комната открыта, но не загружена (панель была скрыта). */
 	#stale = false;
 

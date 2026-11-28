@@ -20,15 +20,36 @@ const gz = promisify(gzip);
 export const STATIC_PAGE =
 	/^(\/(?:films|series|books|games|paintings|studios)\/[a-z0-9]+(?:-[a-z0-9]+)*|\/awards\/[a-z0-9]+(?:-[a-z0-9]+)*(?:\/\d{4})?)(\/__data\.json)?$/;
 
+/** Главная: адрес без слага, поэтому её данные лежат в /__data.json, а не в //__data.json. */
+export const HOME = /^\/(__data\.json)?$/;
+
+/**
+ * Статическая страница по адресу: карточки (STATIC_PAGE) и главная. Тот же вид, что у
+ * STATIC_PAGE.exec: [полное, адрес страницы, '/__data.json' или undefined].
+ * @param {string} pathname
+ */
+export function staticPage(pathname) {
+	const home = HOME.exec(pathname);
+	if (home) return [pathname, '/', home[1] ? '/__data.json' : undefined];
+	return STATIC_PAGE.exec(pathname);
+}
+
+/**
+ * Карточки разделов: их десятки и сотни тысяч, поэтому на диске они по папкам из первых двух
+ * символов slug и только в .br (staticFiles, brOnly). Премии и главная — плоско, с .html/.gz.
+ */
+const SHARDED = /^\/(films|series|books|games|paintings|studios)\/([a-z0-9-]+)$/;
+
 /**
  * Файлы страницы на диске (без корня): HTML и данные. Адрес сайта не меняется — меняется только
  * раскладка: книги (их сотни тысяч) лежат по папкам из первых двух символов slug —
- * /books/belaya-gvardiya → books/be/belaya-gvardiya.html. Та же раскладка — в nginx (location книг).
+ * /films/interstellar → films/in/interstellar.html.br. Та же раскладка — в nginx (location карточек).
  * @param {string} path адрес страницы без __data.json
  */
 export function staticFiles(path) {
-	const book = /^\/books\/([a-z0-9-]+)$/.exec(path);
-	const base = book ? `/books/${book[1].slice(0, 2)}/${book[1]}` : path;
+	const card = SHARDED.exec(path);
+	if (path === '/') return { html: '/index.html', data: '/__data.json' };
+	const base = card ? `/${card[1]}/${card[2].slice(0, 2)}/${card[2]}` : path;
 	return { html: `${base}.html`, data: `${base}/__data.json` };
 }
 
@@ -38,18 +59,19 @@ export function staticFiles(path) {
  */
 export function pathOfFile(file) {
 	const path = file.replace(/\.html(\.br)?$/, '');
-	const book = /^\/books\/[a-z0-9]{1,2}\/([a-z0-9-]+)$/.exec(path);
-	return book ? `/books/${book[1]}` : path;
+	const card =
+		/^\/(films|series|books|games|paintings|studios)\/[a-z0-9-]{1,2}\/([a-z0-9-]+)$/.exec(path);
+	return card ? `/${card[1]}/${card[2]}` : path;
 }
 
 /**
- * Страница хранится только сжатой (`.br`): книги. Их сотни тысяч, а brotli понимают все
+ * Страница хранится только сжатой (`.br`): карточки разделов (SHARDED). Их сотни тысяч, а brotli понимают все
  * современные браузеры (~97%) — nginx отдаёт им `.br` как есть. Остальным (старые браузеры,
  * роботы превью, curl) `.br` распаковывает Node (server/index.js) — тоже с диска, без API.
  * Несжатого файла и `.gz` нет: место на диске в разы меньше, inode — вдвое.
  * @param {string} path адрес страницы
  */
-export const brOnly = (path) => path.startsWith('/books/');
+export const brOnly = (path) => SHARDED.test(path);
 
 /**
  * Клиент принимает brotli: `br` в Accept-Encoding, и не с `q=0`.
@@ -213,6 +235,8 @@ export function createIsr({ server, root, origin, backend }) {
 		const started = Date.now();
 		const section = run.kind ? /** @type {Record<string, string>} */ (SECTION)[run.kind] : null;
 		const paths = new Set([
+			// Главная — в полной пересборке (без kind), её данные берутся из всех разделов.
+			...(run.kind ? [] : ['/']),
 			...(await cataloguePaths(run.kind)),
 			...(await diskPaths(section ? [section] : STATIC_DIRS))
 		]);

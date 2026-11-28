@@ -12,8 +12,6 @@ import type { PageLoad } from './$types';
 const STRIP_SIZE = 12;
 /** Людей в ленте: круглые портреты мельче постеров, их влезает больше. */
 const PEOPLE_SIZE = 14;
-/** Лучших в каждом разделе: три на раздел — лента из пятнадцати работ вперемешку. */
-const RATED_PER_KIND = 3;
 /** Каналов: четыре штуки — две строки по две, показывают, что в чате живут. */
 const ROOMS_SIZE = 4;
 /** Жанров в блоке: по два на раздел — ровно две строки плиток по четыре. */
@@ -43,7 +41,7 @@ function takenGenres(all: TagEntry[]) {
 
 export const load: PageLoad = async ({ fetch, url }) => {
 	const api = publicApi(fetch, url);
-	const [sections, tags, featured, rated, people, archive, rooms] = await Promise.all([
+	const [sections, tags, featured, people, archive, rooms] = await Promise.all([
 		Promise.all(
 			KINDS.map(async (k) => ({
 				...k,
@@ -54,14 +52,6 @@ export const load: PageLoad = async ({ fetch, url }) => {
 		),
 		settle(listTags(api)),
 		settle(getFeaturedCollections(api)),
-		// Смысловая лента: не раздел, а повод. Берём лучшее в каждом разделе отдельно и
-		// чередуем — один общий запрос отдавал одни фильмы (top_rated ведёт рейтинг IMDb),
-		// а смысл сайта как раз в том, что книга и картина стоят рядом с фильмом.
-		Promise.all(
-			KINDS.map((k) =>
-				settle(listPage(api, {}, { kind: k.kind, sort: 'top_rated', limit: RATED_PER_KIND }))
-			)
-		),
 		settle(
 			unwrap(
 				api.catalog.GET('/api/v1/catalog/search/people', {
@@ -82,21 +72,11 @@ export const load: PageLoad = async ({ fetch, url }) => {
 			)
 		)
 	]);
-	// Лучшее по кругу: фильм, сериал, книга, игра, картина — и снова фильм.
-	const byKind = rated.map((r) => r.data?.items ?? []);
-	const mixed = Array.from({ length: RATED_PER_KIND }, (_, i) =>
-		byKind.map((items) => items[i]).filter((e) => e !== undefined)
-	).flat();
-
 	// Оценки всех полос — одним запросом.
-	const ratings = await ratingsFor(api, [
-		...sections.flatMap((s) => s.result.data?.items ?? []),
-		...mixed
-	]);
+	const ratings = await ratingsFor(api, sections.flatMap((s) => s.result.data?.items ?? []));
 	const all: TagEntry[] = tags.data ?? [];
 	return {
 		sections,
-		rated: mixed,
 		// Сколько всего в каталоге: сумма total по разделам — цифра под поиском.
 		total: sections.reduce((sum, s) => sum + (s.result.data?.total ?? 0), 0),
 		archive,

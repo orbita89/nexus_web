@@ -23,7 +23,7 @@
 	// Список — у вошедшего; вход, выход — перечитать.
 	$effect(() => {
 		void session.status;
-		void chat.loadChats();
+		if (chat.wantsChats) void chat.loadChats();
 	});
 
 	// WebSocket — только вошедшему и только пока панель на экране: закрыли чат — через 4 с сокет
