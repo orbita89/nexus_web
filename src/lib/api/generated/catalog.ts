@@ -1728,6 +1728,24 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/catalog/people/{slug}/tutor': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Свои обсуждения человека, свежие сверху. */
+		get: operations['list_person_ai_threads'];
+		put?: never;
+		/** Начать обсуждение человека. */
+		post: operations['create_person_ai_thread'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/catalog/search': {
 		parameters: {
 			query?: never;
@@ -1855,8 +1873,8 @@ export interface paths {
 		/**
 		 * Подсказки студий для фильтра `studio` (фасет по полю `studios`): по части
 		 *     названия с опечатками; без `q` — самые частые. `count` — сколько видимых сущностей в индексе,
-		 *     `slug` и `logo_url` — из `studios` (одним запросом на ответ), логотип тот же, что на странице
-		 *     студии.
+		 *     `slug` и `logo_url` — из справочника индекса (`sidecar-refs.cols`, собирается из `studios`),
+		 *     логотип тот же, что на странице студии. В БД не ходит.
 		 */
 		get: operations['search_studios'];
 		put?: never;
@@ -1877,7 +1895,7 @@ export interface paths {
 		/**
 		 * Подсказки тегов и жанров для фильтра `tag` (facet search по полю `tags`): только те, что есть
 		 *     у сущностей этого типа — жанры фильмов не предлагаются в книгах. Фасет хранит slug'и, поэтому
-		 *     названия и `kind` тегов дочитываются из `tags` одним запросом на ответ. Запрос `q` по названию
+		 *     названия и `kind` тегов берутся из справочника индекса (собирается из `tags`), без БД. Запрос `q` по названию
 		 *     бессмысленен (в фасете slug'и), фильтровать по названию — на стороне клиента.
 		 */
 		get: operations['search_tags'];
@@ -2237,14 +2255,16 @@ export interface components {
 			/** Format: date-time */
 			updated_at: string;
 		};
-		/** @description Обсуждение целиком: книга и все сообщения. */
+		/** @description Обсуждение целиком: цель (книга или человек) и все сообщения. */
 		AiThreadDetail: components['schemas']['AiThread'] & {
-			entity: components['schemas']['EntityRef'];
+			entity?: components['schemas']['EntityRef'] | null;
 			messages: components['schemas']['AiMessage'][];
+			person?: components['schemas']['PersonRef'] | null;
 		};
-		/** @description Обсуждение в своём списке (профиль): то же плюс книга. */
+		/** @description Обсуждение в своём списке (профиль): то же плюс его цель — книга или человек. */
 		AiThreadWithEntity: components['schemas']['AiThread'] & {
-			entity: components['schemas']['EntityRef'];
+			entity?: components['schemas']['EntityRef'] | null;
+			person?: components['schemas']['PersonRef'] | null;
 		};
 		AnalysisPoint: {
 			/** @example Девочка с курицей на поясе — эмблема гильдии… */
@@ -3920,7 +3940,8 @@ export interface components {
 		/** @description Страница списка. */
 		Page_AiThreadWithEntity: {
 			items: (components['schemas']['AiThread'] & {
-				entity: components['schemas']['EntityRef'];
+				entity?: components['schemas']['EntityRef'] | null;
+				person?: components['schemas']['PersonRef'] | null;
 			})[];
 			/**
 			 * Format: int64
@@ -4420,6 +4441,13 @@ export interface components {
 			/** @description Награды и номинации человека: с работой, за которую он номинирован. */
 			awards: components['schemas']['EntityAward'][];
 			credits: components['schemas']['PersonCredit'][];
+			/**
+			 * @description Оценки Кассандра работ из `credits` по slug (своя копия `entity_ratings`): страница
+			 *     человека статическая и рисует их без запроса к `social`. Работ без оценок здесь нет.
+			 */
+			entity_ratings: {
+				[key: string]: components['schemas']['RatingBrief'];
+			};
 			/** @description Лайкнул ли его вошедший. Гостю — `false`. */
 			liked: boolean;
 			/**
@@ -4428,6 +4456,13 @@ export interface components {
 			 * @example 42
 			 */
 			likes_count: number;
+			/** @description Средняя оценка самого человека пользователями (данные `social`, справочник `PersonLikes`). */
+			rating: components['schemas']['RatingBrief'];
+			/**
+			 * @description Реакции-эмодзи на человека (данные `social`, справочник `PersonLikes::reactions`): по
+			 *     убыванию числа. Своя отметка — в снимке «моего», страница статическая.
+			 */
+			reactions: components['schemas']['PersonReactionCount'][];
 		};
 		/** @description Человек в выдаче поиска людей. */
 		PersonHit: {
@@ -4465,7 +4500,17 @@ export interface components {
 			/** @example https://image.tmdb.org/t/p/h632/abc.jpg */
 			url: string;
 		};
-		/** @description Человек в титрах сущности. */
+		/** @description Сколько раз поставили эмодзи. */
+		PersonReactionCount: {
+			/**
+			 * Format: int64
+			 * @example 12
+			 */
+			count: number;
+			/** @example 🔥 */
+			emoji: string;
+		};
+		/** @description Человек каталога (автор, режиссёр, актёр) в чужих ответах: ссылка на его страницу. */
 		PersonRef: {
 			/** @example Дени Вильнёв */
 			full_name: string;
@@ -4664,6 +4709,20 @@ export interface components {
 			 */
 			weight_recency: number;
 		};
+		/** @description Средняя оценка 1–10 и число оценок. */
+		RatingBrief: {
+			/**
+			 * Format: double
+			 * @description `null` — оценок нет.
+			 * @example 8.4
+			 */
+			average?: number | null;
+			/**
+			 * Format: int64
+			 * @example 12
+			 */
+			count: number;
+		};
 		/**
 		 * @description Средняя оценка сущности и число оценок: те же числа и та же семантика, что у карточки
 		 *     (`entity_ratings`, сводки присылает `social`).
@@ -4698,7 +4757,8 @@ export interface components {
 		/** @description Что пересобрать. */
 		RegenerateStatic: {
 			/**
-			 * @description Раздел: `book`, `movie`, `series`, `game`, `painting`. Не задан — вся статика.
+			 * @description Группа: `movie`, `series`, `book`, `game`, `painting`, `person`, `tag`, `studio`, `award`,
+			 *     `home`. Не задана — вся статика.
 			 * @example book
 			 */
 			kind?: string | null;
@@ -5788,6 +5848,7 @@ export type SchemaPersonCredit = components['schemas']['PersonCredit'];
 export type SchemaPersonDetail = components['schemas']['PersonDetail'];
 export type SchemaPersonHit = components['schemas']['PersonHit'];
 export type SchemaPersonPhoto = components['schemas']['PersonPhoto'];
+export type SchemaPersonReactionCount = components['schemas']['PersonReactionCount'];
 export type SchemaPersonRef = components['schemas']['PersonRef'];
 export type SchemaPersonSummary = components['schemas']['PersonSummary'];
 export type SchemaPlaceholder = components['schemas']['Placeholder'];
@@ -5802,6 +5863,7 @@ export type SchemaPutRelation = components['schemas']['PutRelation'];
 export type SchemaRankDetailView = components['schemas']['RankDetailView'];
 export type SchemaRankPreviewRow = components['schemas']['RankPreviewRow'];
 export type SchemaRankingSettings = components['schemas']['RankingSettings'];
+export type SchemaRatingBrief = components['schemas']['RatingBrief'];
 export type SchemaRatingValue = components['schemas']['RatingValue'];
 export type SchemaRegeneratePages = components['schemas']['RegeneratePages'];
 export type SchemaRegenerateStarted = components['schemas']['RegenerateStarted'];
@@ -11899,6 +11961,105 @@ export interface operations {
 			};
 			/** @description Не найден или все работы скрыты */
 			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	list_person_ai_threads: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug человека
+				 * @example denis-villeneuve
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['AiThread'][];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Человек не найден */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	create_person_ai_thread: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug человека
+				 * @example denis-villeneuve
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['CreateAiThread'];
+			};
+		};
+		responses: {
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['AiThread'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Человек не найден */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Слишком много обсуждений */
+			409: {
 				headers: {
 					[name: string]: unknown;
 				};

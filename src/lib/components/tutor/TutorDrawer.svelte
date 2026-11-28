@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { TutorTarget } from '#lib/tutor/api.ts';
 	import TutorChat from './TutorChat.svelte';
 
 	// Панель ИИ-преподавателя справа поверх страницы (на телефоне — на весь экран). Закрывается
@@ -6,6 +7,7 @@
 	let {
 		open = $bindable(false),
 		slug,
+		target = 'book',
 		title,
 		quote = $bindable(null),
 		chapter = null,
@@ -13,6 +15,7 @@
 	}: {
 		open?: boolean;
 		slug: string;
+		target?: TutorTarget;
 		title: string;
 		quote?: string | null;
 		chapter?: string | null;
@@ -40,8 +43,12 @@
 		>
 			<header class="flex items-center gap-2 border-b border-base-300 px-3 py-2">
 				<div class="min-w-0 flex-1">
-					<p class="text-sm font-semibold">ИИ-преподаватель</p>
-					<p class="truncate text-xs text-base-content/50">«{title}»</p>
+					<p class="text-sm font-semibold">
+						{target === 'person' ? 'Обсуждение с ИИ' : 'ИИ-преподаватель'}
+					</p>
+					<p class="truncate text-xs text-base-content/50">
+						{target === 'person' ? title : `«${title}»`}
+					</p>
 				</div>
 				<button
 					type="button"
@@ -51,7 +58,14 @@
 				>
 			</header>
 			<div class="min-h-0 flex-1">
-				<TutorChat {slug} {quote} {chapter} {fraction} onquoteclear={() => (quote = null)} />
+				<TutorChat
+					{slug}
+					{target}
+					{quote}
+					{chapter}
+					{fraction}
+					onquoteclear={() => (quote = null)}
+				/>
 			</div>
 		</div>
 	</div>

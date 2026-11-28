@@ -2,6 +2,7 @@
 	import { page } from '$app/state';
 	import { errorMessage, unwrap } from '#lib/api/errors.ts';
 	import { api, guestApi, session } from '#lib/auth/session.svelte.ts';
+	import { me } from '#lib/social/me.svelte.ts';
 	import { loginUrl } from '#lib/utils/redirect.ts';
 	import { HERO_ICON } from './buttons.ts';
 
@@ -14,7 +15,8 @@
 	let { slug }: { slug: string } = $props();
 
 	let likes = $state(0);
-	let liked = $state(false);
+	// Свой лайк — из снимка «моего» (me.svelte.ts); число — общее, запросом без токена.
+	const liked = $derived(session.status === 'authed' && !!me.entity(slug).liked);
 	let busy = $state(false);
 	let error = $state('');
 
@@ -22,18 +24,15 @@
 
 	$effect(() => {
 		const current = slug;
-		void session.status;
 		let stale = false;
 		unwrap(
-			(session.status === 'authed' ? api : guestApi).social.GET(
-				'/api/v1/social/entities/{slug}/likes',
-				{ params: { path: { slug: current } } }
-			)
+			guestApi.social.GET('/api/v1/social/entities/{slug}/likes', {
+				params: { path: { slug: current } }
+			})
 		)
 			.then((r) => {
 				if (stale) return;
 				likes = r.likes;
-				liked = r.mine;
 			})
 			.catch(() => {});
 		return () => {
@@ -45,7 +44,7 @@
 		if (busy) return;
 		const next = !liked;
 		const before = { likes, liked };
-		liked = next;
+		me.patchEntity(slug, { liked: next });
 		likes = Math.max(0, likes + (next ? 1 : -1));
 		busy = true;
 		error = '';
@@ -58,7 +57,7 @@
 			);
 		} catch (e) {
 			likes = before.likes;
-			liked = before.liked;
+			me.patchEntity(slug, { liked: before.liked });
 			error = errorMessage(e);
 		} finally {
 			busy = false;

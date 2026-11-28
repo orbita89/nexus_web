@@ -80,7 +80,7 @@
 						<span class="text-xs text-base-content/40"><TimeAgo iso={t.updated_at} /></span>
 					</div>
 					<p class="text-sm text-base-content/60">
-						«{t.entity.title}» · сообщений: {t.messages_count}
+						{t.entity ? `«${t.entity.title}»` : (t.person?.full_name ?? '')} · сообщений: {t.messages_count}
 					</p>
 				</a>
 			</li>

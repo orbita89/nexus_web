@@ -14,13 +14,48 @@ export type AiThreadDetail = SchemaAiThreadDetail;
 export type AiMessage = AiThreadDetail['messages'][number];
 export type UserAiProvider = SchemaUserAiProvider;
 
-export const listBookThreads = (api: Api, slug: string) =>
-	unwrap(api.catalog.GET('/api/v1/catalog/books/{slug}/tutor', { params: { path: { slug } } }));
+/** Что обсуждаем: книгу или человека каталога. */
+export type TutorTarget = 'book' | 'person';
 
-export const createThread = (api: Api, slug: string) =>
-	unwrap(
-		api.catalog.POST('/api/v1/catalog/books/{slug}/tutor', { params: { path: { slug } }, body: {} })
+export const listThreads = (api: Api, target: TutorTarget, slug: string) => {
+	const params = { path: { slug } };
+	return unwrap(
+		target === 'person'
+			? api.catalog.GET('/api/v1/catalog/people/{slug}/tutor', { params })
+			: api.catalog.GET('/api/v1/catalog/books/{slug}/tutor', { params })
 	);
+};
+
+export const createThread = (api: Api, target: TutorTarget, slug: string) => {
+	const params = { path: { slug } };
+	return unwrap(
+		target === 'person'
+			? api.catalog.POST('/api/v1/catalog/people/{slug}/tutor', { params, body: {} })
+			: api.catalog.POST('/api/v1/catalog/books/{slug}/tutor', { params, body: {} })
+	);
+};
+
+/** Цель обсуждения из ответа API: книга или человек — ссылка и подпись. */
+export function threadTarget(t: {
+	entity?: { slug: string; title: string } | null;
+	person?: { slug: string; full_name: string } | null;
+}): { target: TutorTarget; slug: string; title: string; href: string } | null {
+	if (t.entity)
+		return {
+			target: 'book',
+			slug: t.entity.slug,
+			title: t.entity.title,
+			href: `/books/${t.entity.slug}`
+		};
+	if (t.person)
+		return {
+			target: 'person',
+			slug: t.person.slug,
+			title: t.person.full_name,
+			href: `/people/${t.person.slug}`
+		};
+	return null;
+}
 
 export const getThread = (api: Api, id: string) =>
 	unwrap(api.catalog.GET('/api/v1/catalog/tutor/{id}', { params: { path: { id } } }));

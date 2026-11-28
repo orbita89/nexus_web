@@ -39,6 +39,21 @@
 	let busy = $state(false);
 	let error = $state('');
 	let attempt = $state(0);
+	// Комментарии грузятся, только когда блок подъехал к экрану (запас 400px): большинство
+	// посетителей до низа страницы не доходит, а запрос — поход в базу.
+	let root = $state<HTMLElement>();
+	let near = $state(false);
+
+	$effect(() => {
+		if (near || !root) return;
+		if (typeof IntersectionObserver === 'undefined') return void (near = true);
+		const observer = new IntersectionObserver(
+			(entries) => entries.some((e) => e.isIntersecting) && (near = true),
+			{ rootMargin: '400px 0px' }
+		);
+		observer.observe(root);
+		return () => observer.disconnect();
+	});
 
 	function fetchPage(current: string, offset: number, limit: number) {
 		return unwrap(
@@ -52,6 +67,7 @@
 	$effect(() => {
 		void attempt;
 		const current = target;
+		if (!near) return;
 		items = [];
 		total = null;
 		replyTo = null;
@@ -176,7 +192,7 @@
 	</div>
 {/snippet}
 
-<div class="flex max-w-3xl flex-col gap-4">
+<div bind:this={root} class="flex max-w-3xl flex-col gap-4">
 	{#if threads.length}
 		<ul class="flex flex-col gap-4" aria-label="Комментарии">
 			{#each threads as thread (thread.root.id)}
@@ -199,7 +215,7 @@
 				onclick={more}>Показать ещё</button
 			>
 		{/if}
-	{:else if loading}
+	{:else if loading || !near}
 		<div class="h-20 skeleton" aria-label="Загрузка комментариев"></div>
 	{:else if total === 0}
 		<p class="text-sm text-base-content/40">Комментариев пока нет. Будьте первым.</p>

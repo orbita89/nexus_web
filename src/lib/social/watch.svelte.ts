@@ -2,9 +2,10 @@
 // комнаты — в «Мои чаты».
 // Одно состояние на карточку: колокольчик в шапке и в липкой мобильной шапке — одна подписка.
 // Изменили на другом устройстве или вкладке — interest.added / interest.removed в user:me.
-import { ApiError, errorMessage, unwrap } from '#lib/api/errors.ts';
+import { errorMessage, unwrap } from '#lib/api/errors.ts';
 import { api, session } from '#lib/auth/session.svelte.ts';
 import { useRealtime } from '#lib/realtime/realtime.svelte.ts';
+import { me } from './me.svelte.ts';
 
 /** Что в интересах: путь API и поле id в событиях interest.added / interest.removed. */
 const TARGETS = {
@@ -15,50 +16,46 @@ const TARGETS = {
 export type WatchTarget = keyof typeof TARGETS;
 
 export class Watch {
-	/** null — ещё не знаем (гость, сессия грузится, запрос в пути). */
-	watching = $state<boolean | null>(null);
 	busy = $state(false);
 	error = $state('');
 
 	#slug: () => string;
 	#target: WatchTarget;
 
-	/** Создавать при инициализации компонента: внутри $effect и подписка реалтайма. */
+	/**
+	 * Следит ли пользователь. null — ещё не знаем (гость, сессия грузится, снимок не пришёл).
+	 * Берётся из снимка «моего» (me.svelte.ts) — отдельного запроса нет.
+	 */
+	get watching(): boolean | null {
+		if (session.status !== 'authed' || !me.ready) return null;
+		const slug = this.#slug();
+		if (this.#target === 'tags') return me.watchingTag(slug);
+		if (this.#target === 'people') return !!me.person(slug).watching;
+		return !!me.entity(slug).watching;
+	}
+
+	/** Создавать при инициализации компонента: внутри подписка реалтайма. */
 	constructor(slug: () => string, id: () => string, target: WatchTarget = 'entities') {
 		this.#slug = slug;
 		this.#target = target;
-		$effect(() => {
-			const current = slug();
-			this.watching = null;
-			this.error = '';
-			if (session.status !== 'authed') return;
-			unwrap(
-				api.social.GET(
-					`/api/v1/social/${target}/{slug}/interest` as '/api/v1/social/entities/{slug}/interest',
-					{
-						params: { path: { slug: current } }
-					}
-				)
-			)
-				.then(() => current === slug() && (this.watching = true))
-				.catch((e) => {
-					if (current !== slug()) return;
-					if (e instanceof ApiError && e.status === 404) this.watching = false;
-					else this.error = errorMessage(e);
-				});
-		});
 
 		// ВРЕМЕННО ОТКЛЮЧЕНО (docs/realtime.md): синхронизация колокольчика между вкладками и
-		// устройствами по WebSocket. Состояние берётся по REST при открытии страницы.
-		// Включить обратно — вернуть `['user:me']` для вошедшего вместо `[]`.
+		// устройствами по WebSocket. Включить обратно — вернуть `['user:me']` для вошедшего.
 		useRealtime(
 			() => [],
 			(event) => {
 				if (event.data[TARGETS[target]] !== id()) return;
-				if (event.event === 'interest.added') this.watching = true;
-				if (event.event === 'interest.removed') this.watching = false;
+				if (event.event === 'interest.added') this.#set(true);
+				if (event.event === 'interest.removed') this.#set(false);
 			}
 		);
+	}
+
+	#set(watching: boolean) {
+		const slug = this.#slug();
+		if (this.#target === 'tags') me.setTag(slug, watching);
+		else if (this.#target === 'people') me.patchPerson(slug, { watching });
+		else me.patchEntity(slug, { watching });
 	}
 
 	async toggle() {
@@ -71,7 +68,7 @@ export class Watch {
 		this.error = '';
 		try {
 			await unwrap(next ? api.social.PUT(path, { params }) : api.social.DELETE(path, { params }));
-			this.watching = next;
+			this.#set(next);
 		} catch (e) {
 			this.error = errorMessage(e);
 		} finally {

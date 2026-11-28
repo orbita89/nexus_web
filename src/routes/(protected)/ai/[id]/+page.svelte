@@ -5,11 +5,11 @@
 	import LoadError from '#lib/components/catalog/LoadError.svelte';
 	import Seo from '#lib/components/catalog/Seo.svelte';
 	import TutorChat from '#lib/components/tutor/TutorChat.svelte';
-	import { getThread } from '#lib/tutor/api.ts';
+	import { getThread, threadTarget } from '#lib/tutor/api.ts';
 
 	// Обсуждение с ИИ из профиля: та же беседа, можно продолжить.
 	const id = $derived(page.params.id ?? '');
-	let book = $state<{ slug: string; title: string } | null>(null);
+	let book = $state<ReturnType<typeof threadTarget>>(null);
 	let error = $state('');
 
 	$effect(() => {
@@ -17,7 +17,11 @@
 		book = null;
 		error = '';
 		getThread(api, current)
-			.then((t) => current === id && (book = { slug: t.entity.slug, title: t.entity.title }))
+			.then((t) => {
+				if (current !== id) return;
+				book = threadTarget(t);
+				if (!book) error = 'Обсуждение недоступно';
+			})
 			.catch((e) => (error = errorMessage(e)));
 	});
 </script>
@@ -28,11 +32,15 @@
 	<LoadError message={error} />
 {:else if book}
 	<div class="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-		<h1 class="text-2xl font-bold">ИИ-преподаватель</h1>
-		<a href="/books/{book.slug}" class="link text-sm link-primary">«{book.title}»</a>
+		<h1 class="text-2xl font-bold">
+			{book.target === 'person' ? 'Обсуждение с ИИ' : 'ИИ-преподаватель'}
+		</h1>
+		<a href={book.href} class="link text-sm link-primary"
+			>{book.target === 'person' ? book.title : `«${book.title}»`}</a
+		>
 	</div>
 	<div class="h-[70vh] overflow-hidden rounded-box bg-base-100 ring-1 ring-base-300">
-		{#key id}<TutorChat slug={book.slug} threadId={id} />{/key}
+		{#key id}<TutorChat slug={book.slug} target={book.target} threadId={id} />{/key}
 	</div>
 {:else}
 	<div class="h-[70vh] animate-pulse rounded-box bg-base-200" aria-hidden="true"></div>

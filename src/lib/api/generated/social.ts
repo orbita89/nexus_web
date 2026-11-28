@@ -1340,6 +1340,42 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/api/v1/social/people/{slug}/rating': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/** Поставить или изменить свою оценку человеку. */
+		put: operations['rate_person'];
+		post?: never;
+		/** Снять свою оценку → сводка без неё (даже если оценки не было). */
+		delete: operations['unrate_person'];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/social/people/{slug}/reaction': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/** Поставить реакцию человеку. Повторная та же ничего не меняет. */
+		put: operations['put_person_reaction'];
+		post?: never;
+		/** Снять свою реакцию (с телом — эту, без тела — все свои) → реакции без неё. */
+		delete: operations['delete_person_reaction'];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/api/v1/social/posts/{id}': {
 		parameters: {
 			query?: never;
@@ -1602,6 +1638,23 @@ export interface paths {
 		 *     `kind=entity` (по умолчанию) — о произведениях, `kind=person` — о людях.
 		 */
 		get: operations['list_own_notes'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/social/users/me/state': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Всё моё одним ответом. С `If-None-Match` и той же версией — `304` без тела. */
+		get: operations['get_my_state'];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -2570,6 +2623,23 @@ export interface components {
 			/** @example Дюна */
 			title: string;
 		};
+		/** @description Моё о произведении. Пустые поля не отдаются. */
+		EntityState: {
+			liked?: boolean;
+			/** @description `later` / `done`. */
+			mark?: string | null;
+			/** @description Своя заметка. */
+			note?: string | null;
+			/**
+			 * Format: int32
+			 * @description Своя оценка 1–10 (из рецензии).
+			 */
+			rating?: number | null;
+			/** @description Свои реакции-эмодзи. */
+			reactions?: string[];
+			/** @description В интересах («Следить»). */
+			watching?: boolean;
+		};
 		/** @description Тело любого ответа с ошибкой. Нужно для документации API. */
 		ErrorBody: {
 			/**
@@ -2803,6 +2873,29 @@ export interface components {
 			created_at: string;
 			entity: components['schemas']['EntityRef'];
 			kind: components['schemas']['MarkKind'];
+		};
+		/** @description Снимок «моего». */
+		MyState: {
+			/** @description Свой голос за подборку по её id: `1` / `-1`. */
+			collections: {
+				[key: string]: number;
+			};
+			/** @description По slug произведения. */
+			entities: {
+				[key: string]: components['schemas']['EntityState'];
+			};
+			/** @description По slug человека. */
+			people: {
+				[key: string]: components['schemas']['PersonState'];
+			};
+			/** @description slug тегов в интересах. */
+			tags: string[];
+			/**
+			 * Format: int64
+			 * @description Версия снимка, она же `ETag`.
+			 * @example 42
+			 */
+			version: number;
 		};
 		/** @description Личная заметка о произведении: видит только автор. Оценка живёт в рецензии и публична. */
 		Note: {
@@ -3656,6 +3749,19 @@ export interface components {
 			 */
 			since: string;
 		};
+		/** @description Своя оценка человека. */
+		PersonRatingBody: {
+			/**
+			 * Format: int32
+			 * @description 1–10.
+			 * @example 9
+			 */
+			rating: number;
+		};
+		/** @description Реакции человека после записи — уже с учётом своей. */
+		PersonReactions: {
+			items: components['schemas']['ReactionItem'][];
+		};
 		/** @description Человек каталога (автор, режиссёр, актёр) в чужих ответах: ссылка на его страницу. */
 		PersonRef: {
 			/** @example Дени Вильнёв */
@@ -3665,6 +3771,19 @@ export interface components {
 			photo_url?: string | null;
 			/** @example denis-villeneuve */
 			slug: string;
+		};
+		/** @description Моё о человеке каталога. Пустые поля не отдаются. */
+		PersonState: {
+			liked?: boolean;
+			note?: string | null;
+			/**
+			 * Format: int32
+			 * @description Своя оценка 1–10.
+			 */
+			rating?: number | null;
+			/** @description Свои реакции-эмодзи. */
+			reactions?: string[];
+			watching?: boolean;
 		};
 		/** @description Сообщение в теме. Ветки — через `parent_id`: список плоский, по времени. */
 		Post: {
@@ -4383,6 +4502,7 @@ export type SchemaEmojiReaction = components['schemas']['EmojiReaction'];
 export type SchemaEntityLikes = components['schemas']['EntityLikes'];
 export type SchemaEntityReactions = components['schemas']['EntityReactions'];
 export type SchemaEntityRef = components['schemas']['EntityRef'];
+export type SchemaEntityState = components['schemas']['EntityState'];
 export type SchemaErrorBody = components['schemas']['ErrorBody'];
 export type SchemaFeatureCollection = components['schemas']['FeatureCollection'];
 export type SchemaFeedItem = components['schemas']['FeedItem'];
@@ -4399,6 +4519,7 @@ export type SchemaMark = components['schemas']['Mark'];
 export type SchemaMarkCounts = components['schemas']['MarkCounts'];
 export type SchemaMarkKind = components['schemas']['MarkKind'];
 export type SchemaMarkedEntity = components['schemas']['MarkedEntity'];
+export type SchemaMyState = components['schemas']['MyState'];
 export type SchemaNote = components['schemas']['Note'];
 export type SchemaOwnNotesPage = components['schemas']['OwnNotesPage'];
 export type SchemaPageAnnotationWithEntity = components['schemas']['Page_AnnotationWithEntity'];
@@ -4424,7 +4545,10 @@ export type SchemaPageThread = components['schemas']['Page_Thread'];
 export type SchemaPageUserComment = components['schemas']['Page_UserComment'];
 export type SchemaPageUserRef = components['schemas']['Page_UserRef'];
 export type SchemaPersonInterest = components['schemas']['PersonInterest'];
+export type SchemaPersonRatingBody = components['schemas']['PersonRatingBody'];
+export type SchemaPersonReactions = components['schemas']['PersonReactions'];
 export type SchemaPersonRef = components['schemas']['PersonRef'];
+export type SchemaPersonState = components['schemas']['PersonState'];
 export type SchemaPost = components['schemas']['Post'];
 export type SchemaProfileRatings = components['schemas']['ProfileRatings'];
 export type SchemaProfileStats = components['schemas']['ProfileStats'];
@@ -10048,6 +10172,231 @@ export interface operations {
 			};
 		};
 	};
+	rate_person: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug человека
+				 * @example denis-villeneuve
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['PersonRatingBody'];
+			};
+		};
+		responses: {
+			/** @description Сводка с учётом своей оценки */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['RatingBrief'];
+				};
+			};
+			/** @description Оценка не 1–10 */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Человека нет или он скрыт */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	unrate_person: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug человека
+				 * @example denis-villeneuve
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Сводка без своей оценки */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['RatingBrief'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Человека нет или он скрыт */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	put_person_reaction: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug человека
+				 * @example denis-villeneuve
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['EmojiReaction'];
+			};
+		};
+		responses: {
+			/** @description Реакции с учётом своей */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['PersonReactions'];
+				};
+			};
+			/** @description Не эмодзи (`code`: `bad_emoji`) */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Человека нет или он скрыт */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description У человека уже 30 разных эмодзи (`reaction_limit`) */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	delete_person_reaction: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/**
+				 * @description slug человека
+				 * @example denis-villeneuve
+				 */
+				slug: string;
+			};
+			cookie?: never;
+		};
+		/** @description Какую снять; без тела — все свои */
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['DeleteReaction'];
+			};
+		};
+		responses: {
+			/** @description Реакции без снятой */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['PersonReactions'];
+				};
+			};
+			/** @description Не эмодзи (`code`: `bad_emoji`) */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+			/** @description Человека нет или он скрыт */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
 	delete_post: {
 		parameters: {
 			query?: never;
@@ -11178,6 +11527,45 @@ export interface operations {
 				content: {
 					'application/json': components['schemas']['ErrorBody'];
 				};
+			};
+			/** @description Нет токена */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ErrorBody'];
+				};
+			};
+		};
+	};
+	get_my_state: {
+		parameters: {
+			query?: never;
+			header?: {
+				/** @description ETag прошлого ответа */
+				'If-None-Match'?: string | null;
+			};
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Снимок; ETag — версия */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['MyState'];
+				};
+			};
+			/** @description Не изменился с версии из If-None-Match */
+			304: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
 			};
 			/** @description Нет токена */
 			401: {

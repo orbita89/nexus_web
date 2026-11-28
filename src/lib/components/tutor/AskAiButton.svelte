@@ -3,11 +3,16 @@
 	import { session } from '#lib/auth/session.svelte.ts';
 	import { HERO_GLASS } from '#lib/components/card/buttons.ts';
 	import { loginUrl } from '#lib/utils/redirect.ts';
+	import type { TutorTarget } from '#lib/tutor/api.ts';
 	import TutorDrawer from './TutorDrawer.svelte';
 
-	// «Обсудить с ИИ» на странице книги: страница статическая — кнопка одна для всех, а что она
+	// «Обсудить с ИИ» на странице книги или человека: страница статическая — кнопка одна для всех, а что она
 	// делает, решается в браузере: вошедшему открывает чат, гостю — вход.
-	let { slug, title }: { slug: string; title: string } = $props();
+	let {
+		slug,
+		title,
+		target = 'book'
+	}: { slug: string; title: string; target?: TutorTarget } = $props();
 	let open = $state(false);
 </script>
 
@@ -28,12 +33,12 @@
 {/snippet}
 
 {#if session.status === 'guest'}
-	<a href={loginUrl(page.url)} class={HERO_GLASS} title="Войдите, чтобы обсуждать книгу с ИИ"
+	<a href={loginUrl(page.url)} class={HERO_GLASS} title="Войдите, чтобы обсуждать с ИИ"
 		>{@render spark()} Обсудить с ИИ</a
 	>
 {:else}
 	<button type="button" class={HERO_GLASS} onclick={() => (open = true)}
 		>{@render spark()} Обсудить с ИИ</button
 	>
-	<TutorDrawer bind:open {slug} {title} />
+	<TutorDrawer bind:open {slug} {target} {title} />
 {/if}

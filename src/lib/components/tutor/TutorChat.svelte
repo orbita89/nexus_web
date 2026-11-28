@@ -9,7 +9,8 @@
 		createThread,
 		deleteThread,
 		getThread,
-		listBookThreads,
+		listThreads,
+		type TutorTarget,
 		type AiMessage,
 		type AiThread
 	} from '#lib/tutor/api.ts';
@@ -19,6 +20,7 @@
 	// на своём ключе пользователя; нет ключа — ведём в настройки.
 	let {
 		slug,
+		target = 'book',
 		threadId = null,
 		quote = null,
 		chapter = null,
@@ -26,6 +28,8 @@
 		onquoteclear
 	}: {
 		slug: string;
+		/** Книга или человек каталога. */
+		target?: TutorTarget;
 		/** Открыть это обсуждение (из профиля); иначе — последнее или новое. */
 		threadId?: string | null;
 		/** Фрагмент из читалки: к нему относится следующий вопрос. */
@@ -36,12 +40,21 @@
 		onquoteclear?: () => void;
 	} = $props();
 
-	const SUGGESTIONS = [
-		'В чём главный смысл книги?',
-		'Чем закончилась книга? (спойлер)',
-		'Какие ключевые темы и символы?',
-		'Расскажи о контексте эпохи'
-	];
+	const SUGGESTIONS = $derived(
+		target === 'person'
+			? [
+					'С каких работ начать знакомство?',
+					'Чем узнаваем его стиль?',
+					'Как начинался его путь?',
+					'Интересные факты'
+				]
+			: [
+					'В чём главный смысл книги?',
+					'Чем закончилась книга? (спойлер)',
+					'Какие ключевые темы и символы?',
+					'Расскажи о контексте эпохи'
+				]
+	);
 
 	let threads = $state<AiThread[]>([]);
 	let current = $state<string | null>(null);
@@ -80,7 +93,7 @@
 	onMount(() => {
 		(async () => {
 			try {
-				threads = await listBookThreads(api, slug);
+				threads = await listThreads(api, target, slug);
 				// Вопрос по фрагменту — новое обсуждение; иначе — указанное или последнее.
 				const start = quote ? null : (threadId ?? threads[0]?.id ?? null);
 				await open(start);
@@ -102,7 +115,7 @@
 		try {
 			let id = current;
 			if (!id) {
-				const created = await createThread(api, slug);
+				const created = await createThread(api, target, slug);
 				threads = [created, ...threads];
 				id = current = created.id;
 			}
@@ -146,7 +159,7 @@
 			streaming = '';
 			if (usedQuote) onquoteclear?.();
 			// Название и счётчики обновились на сервере.
-			threads = await listBookThreads(api, slug).catch(() => threads);
+			threads = await listThreads(api, target, slug).catch(() => threads);
 		} catch (e) {
 			if (e instanceof NoProviderError) noProvider = true;
 			else if (!(e instanceof DOMException && e.name === 'AbortError')) error = errorMessage(e);
@@ -207,7 +220,9 @@
 			<div class="flex justify-center py-10"><span class="loading loading-spinner"></span></div>
 		{:else if !messages.length && !streaming}
 			<p class="mb-3 text-sm text-base-content/60">
-				Спросите о книге: смысл, герои, эпоха, непонятное место. Ответы — по вашему ключу ИИ, видны
+				{target === 'person'
+					? 'Спросите о человеке: путь, работы, стиль, с чего начать знакомство.'
+					: 'Спросите о книге: смысл, герои, эпоха, непонятное место.'} Ответы — по вашему ключу ИИ, видны
 				только вам.
 			</p>
 			{#if !quote}
@@ -260,8 +275,7 @@
 	{#if noProvider}
 		<div role="alert" class="m-2 alert alert-soft text-sm alert-warning">
 			<span
-				>Чтобы обсуждать книги с ИИ, добавьте свой ключ (OpenAI, DeepSeek, Claude и другие) в
-				настройках.</span
+				>Чтобы обсуждать с ИИ, добавьте свой ключ (OpenAI, DeepSeek, Claude и другие) в настройках.</span
 			>
 			<a href="/settings/ai" class="btn btn-sm">Добавить ключ</a>
 		</div>
@@ -297,7 +311,11 @@
 				class="textarea min-h-10 flex-1 textarea-sm"
 				rows="2"
 				maxlength="2000"
-				placeholder={quote ? 'Что непонятно в этом фрагменте?' : 'Ваш вопрос о книге'}
+				placeholder={quote
+					? 'Что непонятно в этом фрагменте?'
+					: target === 'person'
+						? 'Ваш вопрос о человеке'
+						: 'Ваш вопрос о книге'}
 				bind:value={text}
 				onkeydown={onKeydown}
 				disabled={loading}></textarea>

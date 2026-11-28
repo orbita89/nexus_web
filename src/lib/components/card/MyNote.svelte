@@ -1,16 +1,10 @@
 <script lang="ts">
-	import { ApiError, errorMessage } from '#lib/api/errors.ts';
+	import { errorMessage } from '#lib/api/errors.ts';
 	import { api, session } from '#lib/auth/session.svelte.ts';
 	import Markdown from '#lib/components/social/Markdown.svelte';
 	import { noteComposer } from '#lib/social/note.svelte.ts';
-	import {
-		getNote,
-		NOTE_LIMIT,
-		putNote,
-		removeNote,
-		type Note,
-		type NoteTarget
-	} from '#lib/social/notes.ts';
+	import { me } from '#lib/social/me.svelte.ts';
+	import { NOTE_LIMIT, putNote, removeNote, type NoteTarget } from '#lib/social/notes.ts';
 
 	// «Моя заметка» — личная запись о произведении: её не видит никто, кроме автора. Пока заметки
 	// нет, это одна негромкая строка с замком, а не раздел с заголовком и пустой плашкой во весь
@@ -18,8 +12,10 @@
 	// оттенке, чтобы она не смешивалась с публичными блоками рядом.
 	let { slug, target = 'entities' }: { slug: string; target?: NoteTarget } = $props();
 
-	let note = $state<Note | null>(null);
-	let loaded = $state(false);
+	// Текст заметки — из снимка «моего» (me.svelte.ts): отдельного запроса нет.
+	const mine = $derived(target === 'people' ? me.person(slug) : me.entity(slug));
+	const note = $derived(mine.note ? { body: mine.note } : null);
+	const loaded = $derived(session.status === 'guest' || (session.status === 'authed' && me.ready));
 	let editing = $state(false);
 	let draft = $state('');
 	let busy = $state(false);
@@ -27,24 +23,15 @@
 	let confirmDelete = $state(false);
 
 	$effect(() => {
-		const current = slug;
-		note = null;
+		void slug;
 		editing = false;
 		error = '';
-		loaded = session.status === 'guest';
-		if (session.status !== 'authed') return;
-		let stale = false;
-		getNote(api, current, target)
-			.then((n) => !stale && (note = n))
-			.catch((e) => {
-				// 404 — заметки просто нет, это обычное состояние.
-				if (!stale && !(e instanceof ApiError && e.status === 404)) error = errorMessage(e);
-			})
-			.finally(() => !stale && (loaded = true));
-		return () => {
-			stale = true;
-		};
 	});
+
+	function remember(body: string | undefined) {
+		if (target === 'people') me.patchPerson(slug, { note: body });
+		else me.patchEntity(slug, { note: body });
+	}
 
 	function start() {
 		draft = note?.body ?? '';
@@ -68,7 +55,7 @@
 		busy = true;
 		error = '';
 		try {
-			note = await putNote(api, slug, body, target);
+			remember((await putNote(api, slug, body, target)).body);
 			editing = false;
 		} catch (e) {
 			error = errorMessage(e);
@@ -82,7 +69,7 @@
 		error = '';
 		try {
 			await removeNote(api, slug, target);
-			note = null;
+			remember(undefined);
 			editing = false;
 			confirmDelete = false;
 		} catch (e) {

@@ -5,6 +5,8 @@
 	import ChatPanel from '#lib/components/chat/ChatPanel.svelte';
 	import { chat } from '#lib/chat/chat.svelte.ts';
 	import { syncRealtimeAuth } from '#lib/realtime/realtime.svelte.ts';
+	import { session } from '#lib/auth/session.svelte.ts';
+	import { me } from '#lib/social/me.svelte.ts';
 	import { dropLegacyStorage } from '#lib/utils/legacy-storage.ts';
 	import { onMount } from 'svelte';
 	import { KINDS } from '#lib/catalog/kinds.ts';
@@ -16,6 +18,17 @@
 
 	// Реалтайм-соединение входит и выходит вместе с сессией.
 	syncRealtimeAuth();
+	// Снимок «моего» (me.svelte.ts): вход, выход, смена пользователя; при возврате на вкладку —
+	// перечитать, если устарел (запрос с If-None-Match, обычно 304).
+	$effect(() => {
+		if (session.status === 'loading') return;
+		me.sync(session.status === 'authed' ? (session.user?.username ?? null) : null);
+	});
+	onMount(() => {
+		const onVisible = () => document.visibilityState === 'visible' && void me.refresh();
+		document.addEventListener('visibilitychange', onVisible);
+		return () => document.removeEventListener('visibilitychange', onVisible);
+	});
 	onMount(() => {
 		try {
 			dropLegacyStorage(localStorage);

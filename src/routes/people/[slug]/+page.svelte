@@ -1,8 +1,6 @@
 <script lang="ts">
 	import { SvelteSet } from 'svelte/reactivity';
-	import { guestApi } from '#lib/auth/session.svelte.ts';
 	import { formatDate, summary, WORKS_SHOWN } from '#lib/catalog/labels.ts';
-	import { ratingsFor } from '#lib/catalog/load.ts';
 	import Awards from '#lib/components/card/Awards.svelte';
 	import EmptyState from '#lib/components/catalog/EmptyState.svelte';
 	import EntityGrid from '#lib/components/catalog/EntityGrid.svelte';
@@ -11,9 +9,11 @@
 	import MyNote from '#lib/components/card/MyNote.svelte';
 	import ChatButton from '#lib/components/chat/ChatButton.svelte';
 	import PersonLikeButton from '#lib/components/social/PersonLikeButton.svelte';
+	import PersonRating from '#lib/components/social/PersonRating.svelte';
+	import PersonReactions from '#lib/components/social/PersonReactions.svelte';
+	import AskAiButton from '#lib/components/tutor/AskAiButton.svelte';
 	import TargetComments from '#lib/components/social/TargetComments.svelte';
 	import WatchButton from '#lib/components/social/WatchButton.svelte';
-	import { liveQuery } from '#lib/social/card-live.svelte.ts';
 	import { Watch } from '#lib/social/watch.svelte.ts';
 	import type { PageProps } from './$types';
 
@@ -49,19 +49,8 @@
 			.join('\n\n')
 			.trim()
 	);
-	// Оценки — в браузере (страница статическая): одним запросом с лимитом, сначала видимое.
-	const ratingsQuery = liveQuery(
-		() => data.roles,
-		(roles) =>
-			ratingsFor(
-				guestApi,
-				[
-					...roles.flatMap((r) => r.works.slice(0, WORKS_SHOWN)),
-					...roles.flatMap((r) => r.works.slice(WORKS_SHOWN))
-				].map((w) => w.entity)
-			)
-	);
-	const ratings = $derived(ratingsQuery.current?.data ?? {});
+	// Оценки работ — в самой статической странице (PersonDetail.entity_ratings), без запроса.
+	const ratings = $derived(person.entity_ratings);
 	const open = new SvelteSet<string>();
 	// Роли — вкладки на одном уровне; открыта главная (первая), если выбранной у этого человека нет.
 	let picked = $state<string>();
@@ -101,8 +90,14 @@
 			</p>
 		{/if}
 		<div class="mt-4 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
-			<PersonLikeButton slug={person.slug} likesCount={person.likes_count} liked={person.liked} />
+			<PersonRating
+				slug={person.slug}
+				average={person.rating.average}
+				total={person.rating.count}
+			/>
+			<PersonLikeButton slug={person.slug} likesCount={person.likes_count} />
 			<WatchButton {watch} />
+			<AskAiButton slug={person.slug} title={person.full_name} target="person" />
 			<ChatButton
 				meta={{
 					room: `person:${person.slug}`,
@@ -111,6 +106,9 @@
 					image: person.photo_url ?? null
 				}}
 			/>
+		</div>
+		<div class="mt-3 flex justify-center sm:justify-start">
+			<PersonReactions slug={person.slug} initial={person.reactions} />
 		</div>
 		{#if bio}
 			<p class="mt-4 max-w-2xl leading-relaxed whitespace-pre-line text-base-content/80">

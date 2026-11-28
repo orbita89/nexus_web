@@ -1,13 +1,12 @@
-// Отметка «Посмотреть позже» / «Просмотрено» на карточке: GET …/mark (404 — нет), PUT {kind},
-// DELETE. Личное — только у вошедшего, отдельным запросом с токеном. Нажатие меняет отметку
-// сразу, ошибка — откат и сообщение.
-import { ApiError, errorMessage, unwrap } from '#lib/api/errors.ts';
+// Отметка «Посмотреть позже» / «Просмотрено» на карточке. Своя отметка — из снимка «моего»
+// (me.svelte.ts), без запроса; PUT {kind} / DELETE. Нажатие меняет отметку сразу, ошибка — откат
+// и сообщение.
+import { errorMessage, unwrap } from '#lib/api/errors.ts';
 import { api, session } from '#lib/auth/session.svelte.ts';
 import { dropLater, type Mark } from './marks.ts';
+import { me } from './me.svelte.ts';
 
 export class Marks {
-	/** null — нет отметки или ещё не знаем (гость, сессия грузится). */
-	mark = $state<Mark | null>(null);
 	busy = $state(false);
 	error = $state('');
 
@@ -16,37 +15,24 @@ export class Marks {
 	/** Создавать при инициализации компонента. */
 	constructor(slug: () => string) {
 		this.#slug = slug;
-		$effect(() => {
-			// Новая карточка или вход/выход — перечитать.
-			const current = slug();
-			this.mark = null;
-			this.error = '';
-			if (session.status !== 'authed') return;
-			let stale = false;
-			unwrap(
-				api.social.GET('/api/v1/social/entities/{slug}/mark', {
-					params: { path: { slug: current } }
-				})
-			)
-				.then((m) => !stale && (this.mark = m.kind))
-				.catch((e) => {
-					if (!stale && !(e instanceof ApiError && e.status === 404)) this.error = errorMessage(e);
-				});
-			return () => {
-				stale = true;
-			};
-		});
+	}
+
+	/** null — нет отметки или ещё не знаем (гость, сессия грузится, снимок не пришёл). */
+	get mark(): Mark | null {
+		if (session.status !== 'authed') return null;
+		return (me.entity(this.#slug()).mark as Mark | undefined) ?? null;
 	}
 
 	/** Поставить отметку; повторно ту же — снять. */
 	async toggle(mark: Mark) {
 		if (this.busy || session.status !== 'authed') return;
+		const slug = this.#slug();
 		const before = this.mark;
 		const next = before === mark ? null : mark;
-		this.mark = next;
+		me.patchEntity(slug, { mark: next ?? undefined });
 		this.busy = true;
 		this.error = '';
-		const params = { path: { slug: this.#slug() } };
+		const params = { path: { slug } };
 		try {
 			if (next) {
 				await unwrap(
@@ -58,7 +44,7 @@ export class Marks {
 			// «Отложено» на главной изменилось (поставили, сняли или «позже» сменилось на «просмотрено»).
 			if (next === 'later' || before === 'later') dropLater();
 		} catch (e) {
-			this.mark = before;
+			me.patchEntity(slug, { mark: before ?? undefined });
 			this.error = errorMessage(e);
 		} finally {
 			this.busy = false;
